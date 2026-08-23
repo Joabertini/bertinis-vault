@@ -145,3 +145,5 @@ export function groupByName<T extends IndexRow>(rows: T[]): Array<{ name: string
 
   return [...byName.entries()].map(([name, variants]) => ({ name, variants }));
 }
+
+export * from "./resolve.js";

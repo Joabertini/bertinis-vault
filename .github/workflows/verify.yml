@@ -38,6 +38,9 @@ jobs:
       - name: Verify Web Surface
         run: corepack pnpm web:verify
 
+      - name: Verify Contracts
+        run: corepack pnpm --filter @bertinis-vault/contracts test
+
       - name: Verify API Backend
         run: corepack pnpm --filter @bertinis-vault/api test
 
