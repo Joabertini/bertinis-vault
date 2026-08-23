@@ -1,0 +1,18 @@
+.bertinis-vault-import {
+  width: 100%;
+}
+
+.bertinis-vault-prompt input[name="code"] {
+  width: 100%;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.4rem;
+  letter-spacing: 0.12em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.bertinis-vault-prompt .notes {
+  font-size: 0.85em;
+  opacity: 0.7;
+  margin-top: 0.5rem;
+}

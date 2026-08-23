@@ -1,0 +1,23 @@
+{
+  "bertinis-vault.ui.importButton": "Importar del Vault",
+  "bertinis-vault.ui.importTitle": "Importar un personaje",
+  "bertinis-vault.ui.importAction": "Importar",
+  "bertinis-vault.ui.promptHelp": "Ingresá el código de tu personaje en Bertini's Vault.",
+  "bertinis-vault.ui.promptNote": "No importan las mayúsculas ni los guiones.",
+  "bertinis-vault.settings.vaultUrl.name": "Dirección del Vault",
+  "bertinis-vault.settings.vaultUrl.hint": "De dónde se traen los personajes. Dejalo como está salvo que lo self-hostees.",
+  "bertinis-vault.settings.folderName.name": "Carpeta de importación",
+  "bertinis-vault.settings.folderName.hint": "Los actores van acá. Vacío para importar en la raíz.",
+  "bertinis-vault.settings.openSheet.name": "Abrir la hoja al importar",
+  "bertinis-vault.settings.openSheet.hint": "Mostrar la hoja de personaje apenas termina la importación.",
+  "bertinis-vault.notifications.plutoniumMissing": "Bertini's Vault necesita Plutonium para importar personajes. Instalalo y activalo, después recargá.",
+  "bertinis-vault.notifications.importing": "Importando {name}...",
+  "bertinis-vault.notifications.imported": "{name} importado con {count} entradas.",
+  "bertinis-vault.notifications.importedWithFailures": "{name} importado, pero {count} entradas no se pudieron resolver. Mirá la consola.",
+  "bertinis-vault.errors.notFound": "No hay ningún personaje con el código {code}. Puede haber vencido.",
+  "bertinis-vault.errors.badCode": "{code} no es un código válido.",
+  "bertinis-vault.errors.server": "El Vault respondió con un error ({status}).",
+  "bertinis-vault.errors.offline": "No se pudo conectar con el Vault en {url}.",
+  "bertinis-vault.errors.payloadVersion": "Este personaje se exportó en un formato más nuevo (versión {version}). Actualizá el módulo.",
+  "bertinis-vault.errors.importFailed": "Falló la importación: {message}"
+}

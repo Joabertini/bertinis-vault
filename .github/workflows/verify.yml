@@ -47,6 +47,9 @@ jobs:
       - name: Verify Worker
         run: corepack pnpm --filter @bertinis-vault/worker test
 
+      - name: Verify Foundry Module
+        run: corepack pnpm --filter @bertinis-vault/foundry-module test
+
       - name: Verify Domain Rules
         run: corepack pnpm --filter @bertinis-vault/domain test
 
