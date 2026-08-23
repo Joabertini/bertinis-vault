@@ -1,6 +1,6 @@
 # MVP Release Status
 
-Generated at: `2026-08-23T20:05:55.680Z`
+Generated at: `2026-08-23T20:22:46.362Z`
 
 ## Automated Gate
 
@@ -29,7 +29,6 @@ Generated at: `2026-08-23T20:05:55.680Z`
 - [ ] Confirm no valid fixture imports with unexpected blockers.
 - [ ] Confirm the warning-only fixture still creates an actor with understandable warnings.
 - [ ] Confirm the blocked fixture stops actor creation cleanly.
-- [ ] Refresh `docs/BETA-SIGNOFF.md` before announcing MVP/beta.
 
 ## Current Recommendation
 

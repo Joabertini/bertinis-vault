@@ -1,28 +1,31 @@
-# Bertini's Vault Foundry Module
+# Foundry Module
 
-Este directorio representa el destino del modulo de Foundry dentro de la arquitectura nueva.
+Where the Foundry module is going. It is not built yet.
 
-Por ahora, el prototipo funcional sigue viviendo en la raiz del repo:
+The working module still lives at the repository root:
 
 - [module.json](../../module.json)
 - [scripts/vault-app.js](../../scripts/vault-app.js)
 - [scripts/character-builder.js](../../scripts/character-builder.js)
 
-La migracion correcta sera:
+That prototype builds actors by fabricating item documents, which is why
+imported spells and equipment never functioned. It stays until this replaces it.
 
-1. extraer reglas y contratos compartidos;
-2. reconstruir el import/export sobre esos contratos;
-3. mover el modulo a este workspace cuando deje de ser el origen de la logica.
+## What this module does
 
-Como referencia procedural para esa reconstruccion, usar tambien:
+1. Take a short code from the player.
+2. Fetch the build it identifies.
+3. Resolve each `{page, source, hash}` reference through Plutonium.
+4. Create the actor, batching the imports onto it.
 
-- [`docs/DDIMPORT-COMPARISON.md`](../../docs/DDIMPORT-COMPARISON.md)
+It never constructs an item. Plutonium returns the real document, with its
+activities, damage and icons intact.
 
-La leccion principal de esa comparativa es que este modulo no solo debe "importar un payload".
+See [docs/PLUTONIUM-INTEGRATION.md](../../docs/PLUTONIUM-INTEGRATION.md) for the
+API surface, and [scripts/uuid-resolver.js](../../scripts/uuid-resolver.js) for
+the prototype of reference resolution that already exists in the legacy module.
 
-Tambien deberia orquestar:
+## Requirements
 
-1. preflight de compatibilidad;
-2. import/sync como job explicito;
-3. reporte de warnings y bloqueos;
-4. persistencia de preferencias del operador.
+Plutonium 2.17.2 requires Foundry v14, dnd5e 5.3.x and lib-wrapper. The root
+`module.json` still declares Foundry 12-13 and has to move.

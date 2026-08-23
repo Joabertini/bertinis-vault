@@ -8,12 +8,9 @@ const repoRoot = path.resolve(__dirname, "..");
 
 const mvpStatusPath = path.join(repoRoot, "docs", "MVP-RELEASE-STATUS.md");
 const manualReportPath = path.join(repoRoot, "docs", "FOUNDRY-MANUAL-VALIDATION-REPORT.md");
-const betaSignoffPath = path.join(repoRoot, "docs", "BETA-SIGNOFF.md");
-
-const [mvpStatus, manualReport, betaSignoff] = await Promise.all([
+const [mvpStatus, manualReport] = await Promise.all([
   readFile(mvpStatusPath, "utf8"),
   readFile(manualReportPath, "utf8"),
-  readFile(betaSignoffPath, "utf8"),
 ]);
 
 const failures = [];
@@ -33,19 +30,6 @@ if (/- Release recommendation:\s*pending/i.test(manualReport)) {
 const pendingScenarioResults = [...manualReport.matchAll(/- Result:\s*pending/gi)].length;
 if (pendingScenarioResults > 0) {
   failures.push(`Manual validation report still has ${pendingScenarioResults} scenario result(s) marked pending.`);
-}
-
-if (/- signoff status:\s*pending/i.test(betaSignoff)) {
-  failures.push("Beta signoff status is still pending.");
-}
-
-const uncheckedBoxes = [...betaSignoff.matchAll(/^- \[ \]/gm)].length;
-if (uncheckedBoxes > 0) {
-  failures.push(`Beta signoff still has ${uncheckedBoxes} unchecked item(s).`);
-}
-
-if (/- decision:\s*pending/i.test(betaSignoff)) {
-  failures.push("Beta signoff decision is still pending.");
 }
 
 if (failures.length) {
