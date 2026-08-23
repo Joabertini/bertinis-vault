@@ -13,6 +13,7 @@ import type {
   CharacterBuild,
   ImportPayload,
   PayloadRulesVersion,
+  SourceBooks,
   VetoolsRefPayload,
 } from "@bertinis-vault/contracts";
 import { IMPORT_PAYLOAD_VERSION } from "@bertinis-vault/contracts";
@@ -38,16 +39,22 @@ export function rulesVersionFromMeta(meta: CharacterBuild["meta"]): PayloadRules
   return meta.rulesVersion === "5e-2014" ? "2014" : "2024";
 }
 
+/** The key a build files a pick's book under. */
+export function sourceBookKey(prop: VetoolsProp, id: string): string {
+  return `${prop}:${id}`;
+}
+
 /** Resolve one pick, recording the failure rather than raising it. */
 function tryResolve(
   resolver: RefResolver,
   prop: VetoolsProp,
   query: string | undefined,
   failures: ResolutionFailure[],
+  sourceBooks?: SourceBooks,
 ): VetoolsRefPayload | null {
   if (!query) return null;
 
-  const result = resolver.resolve(prop, query);
+  const result = resolver.resolve(prop, query, sourceBooks?.[sourceBookKey(prop, query)]);
   if (result.ok) return result.value;
 
   failures.push(result.failure);
@@ -67,32 +74,33 @@ function tryResolve(
 export function buildToPayload(build: CharacterBuild, resolver: RefResolver): BuildConversion {
   const failures: ResolutionFailure[] = [];
   const normalized = build.choices.normalized;
+  const books = build.sourceBooks;
 
-  const raceRef = tryResolve(resolver, "race", build.ancestry.raceId, failures);
-  const subraceRef = tryResolve(resolver, "race", build.ancestry.subraceId, failures);
-  const backgroundRef = tryResolve(resolver, "background", build.background.backgroundId, failures);
+  const raceRef = tryResolve(resolver, "race", build.ancestry.raceId, failures, books);
+  const subraceRef = tryResolve(resolver, "race", build.ancestry.subraceId, failures, books);
+  const backgroundRef = tryResolve(resolver, "background", build.background.backgroundId, failures, books);
 
   const classes = build.classing.classes.map((entry) => {
-    const ref = tryResolve(resolver, "class", entry.classId, failures);
-    const subclass = tryResolve(resolver, "subclass", entry.subclassId, failures);
+    const ref = tryResolve(resolver, "class", entry.classId, failures, books);
+    const subclass = tryResolve(resolver, "subclass", entry.subclassId, failures, books);
     return ref ? { ref, level: entry.level, ...(subclass ? { subclass } : {}) } : null;
   });
 
   const feats = [...build.background.grantedFeatIds, ...build.choices.feats]
-    .map((featId) => tryResolve(resolver, "feat", featId, failures))
+    .map((featId) => tryResolve(resolver, "feat", featId, failures, books))
     .filter((ref): ref is VetoolsRefPayload => ref !== null)
     .map((ref) => ({ ref }));
 
   const spells = (normalized?.spells ?? [])
     .map((entry) => {
-      const ref = tryResolve(resolver, "spell", entry.spellId ?? entry.label, failures);
+      const ref = tryResolve(resolver, "spell", entry.spellId ?? entry.label, failures, books);
       return ref ? { ref } : null;
     })
     .filter((entry): entry is { ref: VetoolsRefPayload } => entry !== null);
 
   const equipment = (normalized?.equipment ?? [])
     .map((entry) => {
-      const ref = tryResolve(resolver, "item", entry.itemId ?? entry.label, failures);
+      const ref = tryResolve(resolver, "item", entry.itemId ?? entry.label, failures, books);
       return ref ? { ref, quantity: entry.quantity } : null;
     })
     .filter((entry): entry is { ref: VetoolsRefPayload; quantity: number } => entry !== null);

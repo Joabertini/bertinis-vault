@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-export const rulesVersionSchema = z.literal("5e-2014");
+/**
+ * The ruleset a build targets.
+ *
+ * It decides which books are legal, and therefore which document a pick
+ * resolves to: most entities exist in both editions under different sources
+ * and different hashes, so the same name imports as a different thing.
+ */
+export const rulesVersionSchema = z.enum(["5e-2014", "5e-2024"]);
 export const sourceProfileSchema = z.literal("vault-v1");
 export const canonicalIdSchema = z.string().trim().min(1);
 export const canonicalLabelSchema = z.string().trim().min(1);
@@ -156,6 +163,21 @@ export const derivedSchema = z.object({
   spellcasting: spellcastingSchema.optional(),
 });
 
+/**
+ * Which book each pick came from, keyed by `"<prop>:<id>"`.
+ *
+ * A build identifies everything by slug, and a slug does not say which book
+ * the entity came from. Most of the time that is enough. It is not enough for
+ * the 25 races whose name appears in more than one book legal for the same
+ * edition: resolving those by name alone is ambiguous, and the resolver
+ * refuses rather than guessing.
+ *
+ * A side table rather than a field on every pick, so that adding it changes
+ * no existing shape. Absent means "resolve by name", which is what every build
+ * written before this did.
+ */
+export const sourceBooksSchema = z.record(z.string(), z.string());
+
 export const characterBuildInputSchema = z.object({
   meta: characterMetaSchema,
   identity: identitySchema,
@@ -164,6 +186,7 @@ export const characterBuildInputSchema = z.object({
   background: backgroundSchema,
   abilities: abilitiesSchema,
   choices: choicesSchema,
+  sourceBooks: sourceBooksSchema.optional(),
 });
 
 export const characterBuildSchema = characterBuildInputSchema.extend({
@@ -185,6 +208,7 @@ export type NormalizedEquipmentEntry = z.infer<typeof normalizedEquipmentEntrySc
 export type NormalizedFeatureEntry = z.infer<typeof normalizedFeatureEntrySchema>;
 export type NormalizedChoices = z.infer<typeof normalizedChoicesSchema>;
 export type Choices = z.infer<typeof choicesSchema>;
+export type SourceBooks = z.infer<typeof sourceBooksSchema>;
 export type Spellcasting = z.infer<typeof spellcastingSchema>;
 export type Derived = z.infer<typeof derivedSchema>;
 export type CharacterBuildInput = z.infer<typeof characterBuildInputSchema>;

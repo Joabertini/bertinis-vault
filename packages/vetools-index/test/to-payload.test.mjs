@@ -184,3 +184,46 @@ test("the converted payload stays small", () => {
 
   assert.ok(JSON.stringify(payload).length < 8 * 1024);
 });
+
+/* --------------------------------------------------------- source books -- */
+
+test("a name that appears in several books of one edition fails without a book", () => {
+  const { payload, failures } = buildToPayload(makeBuild({ ancestry: { raceId: "aarakocra" } }), resolver);
+
+  assert.equal(payload, null);
+  const failure = failures.find((entry) => entry.query === "aarakocra");
+  assert.equal(failure.reason, "ambiguous");
+  assert.deepEqual(failure.availableIn, ["DMG", "EEPC", "MPMM"]);
+});
+
+test("naming the book resolves what the name alone could not", () => {
+  const { payload, failures } = buildToPayload(
+    makeBuild({
+      ancestry: { raceId: "aarakocra" },
+      sourceBooks: { "race:aarakocra": "MPMM" },
+    }),
+    resolver,
+  );
+
+  assert.equal(failures.length, 0);
+  assert.equal(payload.race.ref.source, "MPMM");
+});
+
+test("a book that does not carry the entity is ignored rather than obeyed", () => {
+  const { payload } = buildToPayload(
+    makeBuild({ sourceBooks: { "race:human": "NOT-A-BOOK" } }),
+    resolver,
+  );
+
+  assert.equal(payload.race.ref.source, "PHB");
+});
+
+test("a build with no source books converts exactly as it did before", () => {
+  const withTable = buildToPayload(makeBuild({ sourceBooks: {} }), resolver);
+  const without = buildToPayload(makeBuild(), resolver);
+
+  assert.deepEqual(
+    { ...withTable.payload, exportedAt: null },
+    { ...without.payload, exportedAt: null },
+  );
+});

@@ -14,7 +14,6 @@ import {
   getClassFallbackMeta,
   getClassSkillOptions,
   getClassSkillPickCount,
-  getClassWeaponOptionIds,
   getRaceLanguageRule,
   getSubracesForRace,
 } from "@bertinis-vault/data-engine";
@@ -36,12 +35,10 @@ import {
   isCharacterNameMissing,
   removeLine,
 } from "./builder";
-import {
-  fallbackBuilderOptions,
-  loadBuilderOptions,
-  type BuilderOptionsPayload,
-} from "./builder-options";
+import { fallbackBuilderOptions, type BuilderOptionsPayload } from "./builder-options";
 import { getFeatureSuggestions } from "./feature-suggestions";
+import { IndexPicker } from "./components/IndexPicker";
+import { optionById, spellInfoFor, type IndexOption } from "./index-options";
 
 const numericDraftKeys = ["str", "dex", "con", "int", "wis", "cha"] as const;
 type NumericDraftKey = (typeof numericDraftKeys)[number];
@@ -149,19 +146,6 @@ function mergeSpellInfo(...entries: Array<Partial<SpellInfo> | null | undefined>
   );
 }
 
-function hasRichSpellInfo(entry: SpellInfo | null) {
-  if (!entry) return false;
-  return Boolean(
-    entry.school ||
-      entry.summary?.trim() ||
-      entry.castingTimeLabel ||
-      entry.rangeLabel ||
-      entry.durationLabel ||
-      entry.componentsLabel ||
-      entry.classes?.length,
-  );
-}
-
 function roll4d6DropLowest() {
   const dice = [...Array(4)].map(() => Math.ceil(Math.random() * 6)).sort((a, b) => b - a) as [number, number, number, number];
   return { total: dice[0] + dice[1] + dice[2], dice };
@@ -169,8 +153,10 @@ function roll4d6DropLowest() {
 
 export function App() {
   const [stepIndex, setStepIndex] = useState(0);
-  const [builderOptions, setBuilderOptions] = useState<BuilderOptionsPayload>(fallbackBuilderOptions);
-  const [datasetState, setDatasetState] = useState("Usando catalogo local");
+  const [builderOptions] = useState<BuilderOptionsPayload>(fallbackBuilderOptions);
+  // What the player picks from comes from the bundled index; what the rules do
+  // with a pick still comes from the local catalog. Neither needs a server.
+  const [datasetState] = useState("Indice 5etools incluido");
   const [state, setState] = useState<BuilderState>(() => {
     if (typeof window === "undefined") return initialState;
     const storedDraft = window.localStorage.getItem(builderDraftStorageKey);
@@ -213,6 +199,11 @@ export function App() {
       new RefResolver(rulesVersion, collections),
     [rulesVersion],
   );
+  const selectedRaceOption = optionById("race", rulesVersion, state.raceId, state.sourceBooks[`race:${state.raceId}`]);
+  const selectedBackgroundOption = optionById("background", rulesVersion, state.backgroundId, state.sourceBooks[`background:${state.backgroundId}`]);
+  const selectedFeatOption = optionById("feat", rulesVersion, state.featId, state.sourceBooks[`feat:${state.featId}`]);
+  const selectedWeaponOption = optionById("item", rulesVersion, state.weaponId, state.sourceBooks[`item:${state.weaponId}`]);
+
 
   const conversion = useMemo(
     () => buildToPayload(canonicalSnapshot, refResolver),
@@ -228,7 +219,6 @@ export function App() {
   const raceOptions = builderOptions.races;
   const backgroundOptions = builderOptions.backgrounds;
   const featOptions = builderOptions.feats;
-  const weaponOptions = builderOptions.equipment.weapons;
   const armorOptions = builderOptions.equipment.armor;
 
   const selectedClassMetaRemote = builderOptions.classes.find((entry) => entry.id === state.classId);
@@ -300,16 +290,15 @@ export function App() {
   const selectedSpells = uniqueLines(state.spellsText);
   const selectedFeatures = uniqueLines(state.featuresText);
   const selectedEquipment = uniqueLines(state.extraEquipmentText);
-  const apiBaseUrl = import.meta.env.VITE_BERTINIS_API_URL?.trim() || "http://127.0.0.1:3001";
-  const allowedWeaponIds = getClassWeaponOptionIds(state.classId).length
-    ? getClassWeaponOptionIds(state.classId)
-    : weaponOptions.slice(0, 6).map((entry) => entry.id);
-  const allowedArmorIds = getClassArmorOptionIds(state.classId).length
-    ? getClassArmorOptionIds(state.classId)
-    : armorOptions.map((entry) => entry.id);
-  const filteredWeaponOptions = weaponOptions.filter((entry) => allowedWeaponIds.includes(entry.id));
-  const filteredArmorOptions = armorOptions.filter((entry) => allowedArmorIds.includes(entry.id));
-  const selectedWeaponMeta = weaponOptions.find((entry) => entry.id === state.weaponId);
+  // Memoised because it is an effect dependency: a fresh array on every render
+  // makes that effect run on every render, and an effect that writes state is
+  // then one self-assignment away from a render loop.
+  const filteredArmorOptions = useMemo(() => {
+    const allowed = getClassArmorOptionIds(state.classId);
+    const allowedIds = allowed.length ? allowed : armorOptions.map((entry) => entry.id);
+
+    return armorOptions.filter((entry) => allowedIds.includes(entry.id));
+  }, [armorOptions, state.classId]);
   const isSpellcaster = Boolean(selectedClassMeta?.spellcastingAbility);
   const derivedSpellcasting = canonicalSnapshot.derived.spellcasting;
   const spellProgression = derivedSpellcasting ? getSpellProgressionForClass(state.classId) : "none";
@@ -353,13 +342,52 @@ export function App() {
     setState((current) => ({ ...current, [key]: value }));
   }
 
+  /**
+   * Record a pick made through the index, with the book it came from.
+   *
+   * The book matters because a name is not unique: 25 races legal for 2014
+   * appear in more than one book, and resolving those by name alone is
+   * ambiguous. The old book is dropped so a draft does not accumulate keys for
+   * picks that were replaced.
+   */
+  function pickFromIndex(
+    prop: "race" | "background" | "feat" | "item",
+    key: "raceId" | "backgroundId" | "featId" | "weaponId",
+    option: IndexOption,
+  ) {
+    setState((current) => {
+      const sourceBooks = { ...current.sourceBooks };
+      delete sourceBooks[`${prop}:${current[key]}`];
+      sourceBooks[`${prop}:${option.id}`] = option.source;
+
+      return { ...current, [key]: option.id, sourceBooks };
+    });
+  }
+
+  function clearFeat() {
+    setState((current) => {
+      const sourceBooks = { ...current.sourceBooks };
+      delete sourceBooks[`feat:${current.featId}`];
+
+      return { ...current, featId: "", sourceBooks };
+    });
+  }
+
   function toggleLineField(key: keyof Pick<BuilderState, "proficienciesText" | "languagesText" | "cantripsText" | "spellsText" | "featuresText" | "extraEquipmentText">, value: string) {
     const current = state[key];
     updateField(key, (current.includes(value) ? removeLine(current, value) : appendUniqueLine(current, value)) as BuilderState[typeof key]);
   }
 
-  async function showSpellInfo(entry: SpellInfo) {
-    const localFallback = mergeSpellInfo(
+  /**
+   * Fill the detail panel from the bundled index.
+   *
+   * This used to fetch from `apps/api`, which is not deployed: in production
+   * every request failed silently and the panel showed "Sin dato" for most
+   * spells. The index ships with the app, so it answers offline and instantly.
+   */
+  function showSpellInfo(entry: SpellInfo) {
+    const indexed = spellInfoFor(entry.label, rulesVersion);
+    const catalogued = mergeSpellInfo(
       fallbackBuilderOptions.spells.cantrips.find((spell) => spell.id === entry.id),
       fallbackBuilderOptions.spells.spells.find((spell) => spell.id === entry.id),
       builderOptions.spells.cantrips.find((spell) => spell.id === entry.id),
@@ -367,25 +395,20 @@ export function App() {
       entry,
     );
 
-    setActiveSpellInfo(localFallback);
-
-    if (hasRichSpellInfo(localFallback)) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`${apiBaseUrl}/spells/${encodeURIComponent(entry.id)}`);
-      if (!response.ok) {
-        return;
-      }
-
-      const detail = (await response.json()) as Partial<SpellInfo>;
-      setActiveSpellInfo((current) =>
-        mergeSpellInfo(current, detail),
-      );
-    } catch {
-      // Keep the best local spell metadata we already resolved.
-    }
+    setActiveSpellInfo(
+      mergeSpellInfo(
+        catalogued,
+        indexed
+          ? {
+              school: indexed.school,
+              castingTimeLabel: indexed.castingTimeLabel,
+              rangeLabel: indexed.rangeLabel,
+              componentsLabel: indexed.componentsLabel,
+              level: indexed.level,
+            }
+          : null,
+      ),
+    );
   }
 
   function handleNumericChange(key: NumericDraftKey, rawValue: string) {
@@ -521,23 +544,13 @@ export function App() {
     }
   }, [classSkillChoices, classSkillSelectionLimit, lockedProficiencies, selectedClassSkills, state.proficienciesText]);
 
+  // The weapon comes from the index now, so there is no list of a handful of
+  // allowed ids to snap it back to.
   useEffect(() => {
-    const nextFeatId = selectedBackgroundGrantedFeats[0] ?? "";
-    if (selectedBackgroundGrantedFeats.length > 0 && state.featId !== nextFeatId) {
-      updateField("featId", nextFeatId);
-    }
-  }, [selectedBackgroundGrantedFeats, state.featId]);
+    if (filteredArmorOptions.length === 0) return;
+    if (filteredArmorOptions.some((entry) => entry.id === state.armorId)) return;
 
-  useEffect(() => {
-    if (!filteredWeaponOptions.some((entry) => entry.id === state.weaponId)) {
-      updateField("weaponId", filteredWeaponOptions[0]?.id ?? state.weaponId);
-    }
-  }, [filteredWeaponOptions, state.weaponId]);
-
-  useEffect(() => {
-    if (!filteredArmorOptions.some((entry) => entry.id === state.armorId)) {
-      updateField("armorId", filteredArmorOptions[0]?.id ?? state.armorId);
-    }
+    updateField("armorId", filteredArmorOptions[0]?.id ?? state.armorId);
   }, [filteredArmorOptions, state.armorId]);
 
   useEffect(() => {
@@ -593,23 +606,6 @@ export function App() {
     setSaveState("Guardado local automatico");
   }, [state]);
 
-  useEffect(() => {
-    let cancelled = false;
-    loadBuilderOptions()
-      .then((payload) => {
-        if (cancelled) return;
-        setBuilderOptions(payload);
-        setDatasetState(`API conectada: ${payload.source.mode}`);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setBuilderOptions(fallbackBuilderOptions);
-        setDatasetState("Fallback local activo");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const spentPointBuy = Object.values(pointBuy).reduce((acc, value) => acc + (pointBuyCost[value] ?? 0), 0);
 
@@ -623,6 +619,21 @@ export function App() {
               {nameMissing && <div className="field-warning">Falta el nombre del personaje. Podes seguir armandolo, pero no vas a poder generar el codigo.</div>}</div>
             <div className="field"><label htmlFor="player-name">Nombre del jugador</label>
               <input id="player-name" type="text" value={state.playerName} onChange={(event) => updateField("playerName", event.target.value)} /></div>
+            <div className="field"><label htmlFor="rules-version">Reglas <span>*</span></label>
+              <select
+                id="rules-version"
+                onChange={(event) => updateField("rulesVersion", event.target.value as BuilderState["rulesVersion"])}
+                value={state.rulesVersion}
+              >
+                <option value="5e-2014">D&amp;D 5e 2014</option>
+                <option value="5e-2024">D&amp;D 5e 2024</option>
+              </select>
+              <div className="field-warning">
+                Decide que libros son legales y, por lo tanto, que documento importa cada eleccion:
+                el mismo nombre en las dos ediciones es otra cosa. Los numeros que calcula el
+                builder (PG, CA, espacios de conjuro) todavia salen de las tablas de 2014.
+              </div>
+            </div>
             <div className="field"><label>Nivel inicial <span>*</span></label>
               <select value={String(state.level)} onChange={(event) => updateField("level", Number(event.target.value))}>
                 {Array.from({ length: 20 }, (_, index) => index + 1).map((level) => (
@@ -673,16 +684,16 @@ export function App() {
       case "race":
         return (
           <>
-            <div className="field"><label>Raza <span>*</span></label>
-              <div className="options-grid">
-                {raceOptions.map((option) => (
-                  <label className={`opt${state.raceId === option.id ? " selected" : ""}`} key={option.id}>
-                    <input checked={state.raceId === option.id} name="race" onChange={() => updateField("raceId", option.id)} type="radio" />
-                    {option.label}
-                  </label>
-                ))}
-              </div>
-            </div>
+            <IndexPicker
+              inputId="race-search"
+              label="Raza *"
+              onPick={(option) => pickFromIndex("race", "raceId", option)}
+              prop="race"
+              rulesVersion={rulesVersion}
+              selectedId={state.raceId}
+              selectedLabel={selectedRaceOption?.label ?? state.raceId}
+              selectedSource={state.sourceBooks[`race:${state.raceId}`] ?? ""}
+            />
             {raceSubraceOptions.length ? (
               <div className="field"><label>Subraza</label>
                 <div className="options-grid">
@@ -719,12 +730,16 @@ export function App() {
       case "background":
         return (
           <>
-            <div className="field"><label>Trasfondo</label>
-              <select value={state.backgroundId} onChange={(event) => updateField("backgroundId", event.target.value)}>
-                {backgroundOptions.map((option) => (
-                  <option key={option.id} value={option.id}>{option.label}</option>
-                ))}
-              </select></div>
+            <IndexPicker
+              inputId="background-search"
+              label="Trasfondo *"
+              onPick={(option) => pickFromIndex("background", "backgroundId", option)}
+              prop="background"
+              rulesVersion={rulesVersion}
+              selectedId={state.backgroundId}
+              selectedLabel={selectedBackgroundOption?.label ?? state.backgroundId}
+              selectedSource={state.sourceBooks[`background:${state.backgroundId}`] ?? ""}
+            />
             <div className="bg-feat-auto" style={{ display: "block" }}>
               <b>Trasfondo</b>: {selectedBackgroundMeta?.label ?? state.backgroundId}
               <br />
@@ -734,6 +749,19 @@ export function App() {
               <br />
               <b>Skills de trasfondo</b>: {(getBackgroundGrantedProficiencies(state.backgroundId).length ? getBackgroundGrantedProficiencies(state.backgroundId) : ["Flexible"]).join(", ")}
             </div>
+            <IndexPicker
+              inputId="feat-search"
+              label="Feat"
+              onPick={(option) => pickFromIndex("feat", "featId", option)}
+              prop="feat"
+              rulesVersion={rulesVersion}
+              selectedId={state.featId}
+              selectedLabel={selectedFeatOption?.label ?? state.featId}
+              selectedSource={state.sourceBooks[`feat:${state.featId}`] ?? ""}
+            />
+            {state.featId ? (
+              <button className="btn btn-next" onClick={() => clearFeat()} type="button">QUITAR FEAT</button>
+            ) : null}
           </>
         );
       case "stats":
@@ -844,24 +872,21 @@ export function App() {
       case "equipment":
         return (
           <>
-            <div className="field"><label>Arma principal</label>
-              <select value={state.weaponId} onChange={(event) => updateField("weaponId", event.target.value)}>
-                {filteredWeaponOptions.map((entry) => (
-                  <option key={entry.id} value={entry.id}>{entry.label}</option>
-                ))}
-              </select>
+            <IndexPicker
+              inputId="weapon-search"
+              label="Arma principal"
+              onPick={(option) => pickFromIndex("item", "weaponId", option)}
+              prop="item"
+              rulesVersion={rulesVersion}
+              selectedId={state.weaponId}
+              selectedLabel={selectedWeaponOption?.label ?? state.weaponId}
+              selectedSource={state.sourceBooks[`item:${state.weaponId}`] ?? ""}
+              weaponsOnly
+            />
+            <div className="bg-feat-auto" style={{ display: "block" }}>
+              El arma se importa desde su propio documento, con su daño y sus propiedades. La
+              armadura se elige aparte porque de ella sale la CA que el builder calcula.
             </div>
-            {selectedWeaponMeta ? (
-              <div className="bg-feat-auto" style={{ display: "block" }}>
-                <b>{selectedWeaponMeta.label}</b>
-                <br />
-                <b>Daño</b>: {selectedWeaponMeta.damage ?? "Sin dato"}
-                <br />
-                <b>Tipo de daño</b>: {selectedWeaponMeta.damageType ?? "Sin dato"}
-                <br />
-                <b>Tipo de ataque</b>: {selectedWeaponMeta.attackType ?? "Sin dato"}
-              </div>
-            ) : null}
             <div className="field"><label>Armadura / Proteccion</label>
               <div className="options-grid">
                 {filteredArmorOptions.map((entry) => (
@@ -916,7 +941,7 @@ export function App() {
                   const checked = selectedCantrips.includes(entry.label);
                   const disabled = !checked && selectedCantrips.length >= availableCantripCount;
                   return (
-                  <label className={`opt${checked ? " selected" : ""}${disabled ? " disabled" : ""}`} key={entry.id} onClick={() => void showSpellInfo(entry)}>
+                  <label className={`opt${checked ? " selected" : ""}${disabled ? " disabled" : ""}`} key={entry.id} onClick={() => showSpellInfo(entry)}>
                     <input checked={checked} disabled={disabled} onChange={() => toggleLineField("cantripsText", entry.label)} type="checkbox" />
                     {entry.label}
                   </label>
@@ -930,7 +955,7 @@ export function App() {
                   const checked = selectedSpells.includes(label);
                   const disabled = !checked && selectedSpells.length >= availableSpellCount;
                   return (
-                    <label className={`opt${checked ? " selected" : ""}${disabled ? " disabled" : ""}`} key={entry.id} onClick={() => void showSpellInfo(entry)}>
+                    <label className={`opt${checked ? " selected" : ""}${disabled ? " disabled" : ""}`} key={entry.id} onClick={() => showSpellInfo(entry)}>
                       <input checked={checked} disabled={disabled} onChange={() => toggleLineField("spellsText", label)} type="checkbox" />
                       {entry.label} {entry.level ? `(Nv${entry.level})` : ""}
                     </label>
@@ -1033,7 +1058,7 @@ export function App() {
       <header>
         <div className="title-rule"><div className="diamond"></div></div>
         <h1>VAULT<em>CREACION DE PERSONAJE</em></h1>
-        <p className="tagline">D&D 5e 2014 · builder funcional para exportar a Foundry</p>
+        <p className="tagline">{state.rulesVersion === "5e-2024" ? "D&D 5e 2024" : "D&D 5e 2014"} · builder funcional para exportar a Foundry</p>
         <div className="title-rule"><div className="diamond"></div></div>
       </header>
 

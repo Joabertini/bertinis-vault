@@ -16,8 +16,17 @@ import {
 } from "@bertinis-vault/data-engine";
 import { deriveCharacterBuild } from "@bertinis-vault/domain";
 
+export type BuilderRulesVersion = "5e-2014" | "5e-2024";
+
 export type BuilderState = {
   createdAt: string;
+  /**
+   * Which edition the character is built for.
+   *
+   * It decides which books are legal, and so which document each pick becomes
+   * on import. The derived numbers still come from the 2014 tables.
+   */
+  rulesVersion: BuilderRulesVersion;
   characterName: string;
   playerName: string;
   alignment: string;
@@ -47,6 +56,14 @@ export type BuilderState = {
   bond: string;
   flaw: string;
   notes: string;
+  /**
+   * Which book each pick came from, keyed by `"<prop>:<id>"`.
+   *
+   * Only the picks whose name is not unique within the ruleset need it, but
+   * recording it for every pick made through the index costs nothing and keeps
+   * the draft resolvable if a later book adds a colliding name.
+   */
+  sourceBooks: Record<string, string>;
 };
 
 function parseLineList(value: string) {
@@ -232,6 +249,7 @@ function optionalLabel(value: string): string | undefined {
 
 export const initialState: BuilderState = {
   createdAt: new Date().toISOString(),
+  rulesVersion: "5e-2014",
   characterName: "Seraphina Vale",
   playerName: "Martin",
   alignment: "Neutral Bueno",
@@ -261,6 +279,7 @@ export const initialState: BuilderState = {
   bond: "Su mentor desaparecido dejo pistas sobre una biblioteca sellada.",
   flaw: "Le cuesta abandonar una pista, incluso cuando pone al grupo en riesgo.",
   notes: "Lleva un grimorio con observaciones sobre portales, constelaciones y runas rotas.",
+  sourceBooks: {},
 };
 
 export function coerceBuilderState(value: unknown): BuilderState {
@@ -313,7 +332,21 @@ export function coerceBuilderState(value: unknown): BuilderState {
     bond: typeof candidate.bond === "string" ? candidate.bond : initialState.bond,
     flaw: typeof candidate.flaw === "string" ? candidate.flaw : initialState.flaw,
     notes: typeof candidate.notes === "string" ? candidate.notes : initialState.notes,
+    rulesVersion: candidate.rulesVersion === "5e-2024" ? "5e-2024" : "5e-2014",
+    sourceBooks: coerceSourceBooks(candidate.sourceBooks),
   };
+}
+
+/** Drafts saved before the builder recorded books have none. That is fine. */
+function coerceSourceBooks(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object") return {};
+
+  const result: Record<string, string> = {};
+  for (const [key, book] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof book === "string" && book.length > 0) result[key] = book;
+  }
+
+  return result;
 }
 
 export function abilityModifier(score: number) {
@@ -368,7 +401,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
 
   const buildInput: CharacterBuildInput = {
     meta: {
-      rulesVersion: "5e-2014",
+      rulesVersion: state.rulesVersion,
       sourceProfile: "vault-v1",
       createdAt: state.createdAt,
       updatedAt: new Date().toISOString(),
@@ -452,6 +485,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
           features: features.map((entry) => normalizeFeatureEntry(entry, state)),
       },
     },
+    ...(Object.keys(state.sourceBooks).length > 0 ? { sourceBooks: state.sourceBooks } : {}),
   };
 
   return deriveCharacterBuild(buildInput);
