@@ -9,7 +9,7 @@
     "web:dev": "corepack pnpm --filter @bertinis-vault/web dev",
     "web:typecheck": "corepack pnpm --filter @bertinis-vault/web typecheck",
     "web:build": "corepack pnpm --filter @bertinis-vault/web build",
-    "web:verify": "corepack pnpm --filter @bertinis-vault/web typecheck && corepack pnpm --filter @bertinis-vault/web build",
+    "web:verify": "corepack pnpm --filter @bertinis-vault/web typecheck && corepack pnpm --filter @bertinis-vault/web test && corepack pnpm --filter @bertinis-vault/web build",
     "web:preview": "corepack pnpm --filter @bertinis-vault/web preview",
     "foundry:fixtures": "corepack pnpm --filter @bertinis-vault/foundry-exporter build && node ./scripts/export-foundry-validation-fixtures.mjs",
     "foundry:verify": "corepack pnpm foundry:fixtures && node ./scripts/verify-foundry-validation-baseline.mjs",

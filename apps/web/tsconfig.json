@@ -3,7 +3,7 @@
   "compilerOptions": {
     "baseUrl": ".",
     "jsx": "react-jsx",
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "types": [
       "vite/client"
@@ -31,6 +31,9 @@
   },
   "include": [
     "src/**/*.ts",
-    "src/**/*.tsx"
+    "src/**/*.tsx",
+    "test/**/*.ts",
+    "test/**/*.tsx",
+    "*.config.ts"
   ]
 }

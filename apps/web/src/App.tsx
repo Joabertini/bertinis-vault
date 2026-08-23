@@ -33,6 +33,7 @@ import {
   buildCanonicalSnapshot,
   coerceBuilderState,
   initialState,
+  isCharacterNameMissing,
   removeLine,
 } from "./builder";
 import {
@@ -202,6 +203,7 @@ export function App() {
   >({ status: "idle" });
 
   const canonicalSnapshot = buildCanonicalSnapshot(state);
+  const nameMissing = isCharacterNameMissing(state);
 
   // One resolver per ruleset, rebuilt only when the ruleset changes: indexing
   // 4336 rows on every keystroke would be wasteful.
@@ -441,6 +443,14 @@ export function App() {
   }
 
   async function publishForFoundry() {
+    if (nameMissing) {
+      setPublishState({
+        status: "error",
+        message: "Falta el nombre del personaje.",
+      });
+      return;
+    }
+
     if (!conversion.payload) {
       setPublishState({
         status: "error",
@@ -608,10 +618,11 @@ export function App() {
       case "basic":
         return (
           <>
-            <div className="field"><label>Nombre del personaje <span>*</span></label>
-              <input type="text" value={state.characterName} onChange={(event) => updateField("characterName", event.target.value)} /></div>
-            <div className="field"><label>Nombre del jugador <span>*</span></label>
-              <input type="text" value={state.playerName} onChange={(event) => updateField("playerName", event.target.value)} /></div>
+            <div className="field"><label htmlFor="character-name">Nombre del personaje <span>*</span></label>
+              <input id="character-name" type="text" value={state.characterName} onChange={(event) => updateField("characterName", event.target.value)} />
+              {nameMissing && <div className="field-warning">Falta el nombre del personaje. Podes seguir armandolo, pero no vas a poder generar el codigo.</div>}</div>
+            <div className="field"><label htmlFor="player-name">Nombre del jugador</label>
+              <input id="player-name" type="text" value={state.playerName} onChange={(event) => updateField("playerName", event.target.value)} /></div>
             <div className="field"><label>Nivel inicial <span>*</span></label>
               <select value={String(state.level)} onChange={(event) => updateField("level", Number(event.target.value))}>
                 {Array.from({ length: 20 }, (_, index) => index + 1).map((level) => (
@@ -965,7 +976,7 @@ export function App() {
               <button
                 className="btn btn-next"
                 onClick={publishForFoundry}
-                disabled={publishState.status === "publishing" || !conversion.payload}
+                disabled={publishState.status === "publishing" || !conversion.payload || nameMissing}
                 type="button"
               >
                 {publishState.status === "publishing" ? "GENERANDO..." : "GENERAR CODIGO"}
