@@ -1,0 +1,23 @@
+{
+  "bertinis-vault.ui.importButton": "Import from Vault",
+  "bertinis-vault.ui.importTitle": "Import a character",
+  "bertinis-vault.ui.importAction": "Import",
+  "bertinis-vault.ui.promptHelp": "Enter the code from your character in Bertini's Vault.",
+  "bertinis-vault.ui.promptNote": "Case and dashes do not matter.",
+  "bertinis-vault.settings.vaultUrl.name": "Vault address",
+  "bertinis-vault.settings.vaultUrl.hint": "Where builds are fetched from. Leave as-is unless you self-host.",
+  "bertinis-vault.settings.folderName.name": "Import folder",
+  "bertinis-vault.settings.folderName.hint": "Actors land here. Leave empty to import into the root.",
+  "bertinis-vault.settings.openSheet.name": "Open sheet after import",
+  "bertinis-vault.settings.openSheet.hint": "Show the character sheet as soon as the import finishes.",
+  "bertinis-vault.notifications.plutoniumMissing": "Bertini's Vault needs Plutonium to import characters. Install and enable it, then reload.",
+  "bertinis-vault.notifications.importing": "Importing {name}...",
+  "bertinis-vault.notifications.imported": "Imported {name} with {count} entries.",
+  "bertinis-vault.notifications.importedWithFailures": "Imported {name}, but {count} entries could not be resolved. See the console.",
+  "bertinis-vault.errors.notFound": "No build found for code {code}. It may have expired.",
+  "bertinis-vault.errors.badCode": "{code} is not a valid build code.",
+  "bertinis-vault.errors.server": "The Vault responded with an error ({status}).",
+  "bertinis-vault.errors.offline": "Could not reach the Vault at {url}.",
+  "bertinis-vault.errors.payloadVersion": "This build was exported in a newer format (version {version}). Update the module.",
+  "bertinis-vault.errors.importFailed": "Import failed: {message}"
+}

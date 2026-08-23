@@ -1,0 +1,225 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+
+import {
+  baseActorData,
+  biographyHtml,
+  derivedUpdates,
+  findByRef,
+  orderedRefs,
+  proficiencyUpdates,
+} from "../src/import.js";
+
+const ref = (prop, page, name, source) => ({
+  page,
+  source,
+  hash: `${encodeURIComponent(name.toLowerCase()).toLowerCase()}_${source.toLowerCase()}`,
+  prop,
+});
+
+function payload(overrides = {}) {
+  return {
+    version: 1,
+    rulesVersion: "2014",
+    exportedAt: "2026-08-23T12:00:00.000Z",
+    identity: { characterName: "Seraphina Vale", alignment: "Neutral Good" },
+    race: { ref: ref("race", "races.html", "Half-Elf", "PHB") },
+    classes: [
+      {
+        ref: ref("class", "classes.html", "Warlock", "PHB"),
+        level: 5,
+        subclass: ref("subclass", "classes.html", "The Fiend", "PHB"),
+      },
+    ],
+    background: { ref: ref("background", "backgrounds.html", "Sage", "PHB") },
+    abilities: { str: 8, dex: 14, con: 14, int: 12, wis: 10, cha: 17 },
+    proficiencies: {
+      skills: ["arcana", "deception"],
+      languages: ["common", "infernal"],
+      tools: [],
+      savingThrows: ["wis", "cha"],
+      expertise: [],
+    },
+    feats: [{ ref: ref("feat", "feats.html", "Alert", "PHB") }],
+    spells: [{ ref: ref("spell", "spells.html", "Hex", "PHB"), prepared: true }],
+    equipment: [{ ref: ref("item", "items.html", "Leather Armor", "PHB"), quantity: 1, equipped: true }],
+    derived: {
+      hp: 38,
+      ac: 13,
+      proficiencyBonus: 3,
+      spellcasting: { ability: "cha", attackBonus: 6, saveDC: 14, slots: { 3: 2 } },
+    },
+    ...overrides,
+  };
+}
+
+test("documents are imported in an order the importers can build on", () => {
+  const refs = orderedRefs(payload());
+
+  // Race, class and subclass and background come before anything that attaches
+  // to them, because the importers derive proficiencies and progression there.
+  assert.deepEqual(
+    refs.map((r) => r.prop),
+    ["race", "class", "subclass", "background", "feat", "spell", "item"],
+  );
+});
+
+test("a multiclass build keeps each class next to its own subclass", () => {
+  const refs = orderedRefs(
+    payload({
+      classes: [
+        { ref: ref("class", "classes.html", "Warlock", "PHB"), level: 3, subclass: ref("subclass", "classes.html", "The Fiend", "PHB") },
+        { ref: ref("class", "classes.html", "Sorcerer", "PHB"), level: 2 },
+      ],
+    }),
+  );
+
+  assert.deepEqual(
+    refs.map((r) => r.hash),
+    [
+      "half-elf_phb",
+      "warlock_phb",
+      "the%20fiend_phb",
+      "sorcerer_phb",
+      "sage_phb",
+      "alert_phb",
+      "hex_phb",
+      "leather%20armor_phb",
+    ],
+  );
+});
+
+test("a payload with no optional collections still yields the required refs", () => {
+  const bare = payload();
+  delete bare.feats;
+  delete bare.spells;
+  delete bare.equipment;
+
+  assert.equal(orderedRefs(bare).length, 4);
+});
+
+test("the base actor carries only what Plutonium cannot know", () => {
+  const actor = baseActorData(payload());
+
+  assert.equal(actor.name, "Seraphina Vale");
+  assert.equal(actor.type, "character");
+  assert.equal(actor.system.abilities.cha.value, 17);
+  assert.equal(actor.system.attributes.hp.max, 38);
+  assert.equal(actor.system.details.alignment, "Neutral Good");
+
+  // No items: every one of those arrives as an imported document.
+  assert.equal(actor.items, undefined);
+});
+
+test("the actor is stamped with what produced it", () => {
+  const flags = baseActorData(payload()).flags["bertinis-vault"];
+
+  assert.equal(flags.rulesVersion, "2014");
+  assert.equal(flags.payloadVersion, 1);
+  assert.ok(Date.parse(flags.importedAt));
+});
+
+test("an unaligned character does not get a literal undefined", () => {
+  const bare = payload({ identity: { characterName: "Nameless" } });
+  assert.equal(baseActorData(bare).system.details.alignment, "");
+});
+
+test("biography renders only the fields that were filled in", () => {
+  const html = biographyHtml({ trait: "Writes everything down.", flaw: "Trusts books over people." });
+
+  assert.match(html, /<strong>Trait:<\/strong> Writes everything down\./);
+  assert.match(html, /<strong>Flaw:<\/strong>/);
+  assert.ok(!html.includes("Ideal"));
+  assert.equal(biographyHtml(undefined), "");
+  assert.equal(biographyHtml({}), "");
+});
+
+test("chosen skills, saves and languages become actor updates", () => {
+  const updates = proficiencyUpdates(payload());
+
+  assert.equal(updates["system.skills.arcana.value"], 1);
+  assert.equal(updates["system.skills.deception.value"], 1);
+  assert.equal(updates["system.abilities.cha.proficient"], 1);
+  assert.deepEqual(updates["system.traits.languages.value"], ["common", "infernal"]);
+});
+
+test("expertise is a second rank, not a duplicate proficiency", () => {
+  const build = payload();
+  build.proficiencies.expertise = ["arcana"];
+
+  assert.equal(proficiencyUpdates(build)["system.skills.arcana.value"], 2);
+});
+
+test("weapon and armour proficiencies are left to the class documents", () => {
+  const serialized = JSON.stringify(proficiencyUpdates(payload()));
+
+  assert.ok(!serialized.includes("weaponProf"));
+  assert.ok(!serialized.includes("armorProf"));
+});
+
+test("no proficiencies produces no updates rather than empty writes", () => {
+  const bare = payload({
+    proficiencies: { skills: [], languages: [], tools: [], savingThrows: [], expertise: [] },
+  });
+
+  assert.deepEqual(proficiencyUpdates(bare), {});
+});
+
+test("the builder's hp wins over whatever the importers computed", () => {
+  const updates = derivedUpdates(payload());
+
+  assert.equal(updates["system.attributes.hp.value"], 38);
+  assert.equal(updates["system.attributes.hp.max"], 38);
+});
+
+test("spell slots are written per level", () => {
+  const updates = derivedUpdates(payload());
+
+  assert.equal(updates["system.spells.spell3.value"], 2);
+  assert.equal(updates["system.spells.spell3.max"], 2);
+});
+
+test("pact slots keep their own key rather than becoming spellpact", () => {
+  const build = payload();
+  build.derived.spellcasting.slots = { pact: 2 };
+
+  const updates = derivedUpdates(build);
+
+  assert.equal(updates["system.spells.pact.value"], 2);
+  assert.equal(updates["system.spells.spellpact.value"], undefined);
+});
+
+test("a character with no spellcasting gets no slot updates", () => {
+  const build = payload();
+  delete build.derived.spellcasting;
+
+  assert.equal(JSON.stringify(derivedUpdates(build)).includes("spells"), false);
+});
+
+test("an imported item is matched back to the reference that asked for it", () => {
+  const items = new Map([
+    ["Leather Armor", { id: "abc", name: "Leather Armor" }],
+    ["Dagger", { id: "def", name: "Dagger" }],
+  ]);
+
+  const found = findByRef(items, ref("item", "items.html", "Leather Armor", "PHB"));
+  assert.equal(found.id, "abc");
+});
+
+test("matching survives the encoding a hash puts a name through", () => {
+  const items = new Map([["Heroes' Feast", { id: "xyz", name: "Heroes' Feast" }]]);
+
+  assert.equal(findByRef(items, ref("spell", "spells.html", "Heroes' Feast", "PHB")).id, "xyz");
+});
+
+test("matching is case-insensitive, since the hash lowercases", () => {
+  const items = new Map([["LEATHER ARMOR", { id: "up", name: "LEATHER ARMOR" }]]);
+
+  assert.equal(findByRef(items, ref("item", "items.html", "Leather Armor", "PHB")).id, "up");
+});
+
+test("an item that never arrived returns null instead of a wrong match", () => {
+  const items = new Map([["Dagger", { id: "def", name: "Dagger" }]]);
+
+  assert.equal(findByRef(items, ref("item", "items.html", "Plate Armor", "PHB")), null);
+});
