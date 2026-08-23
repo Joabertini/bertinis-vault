@@ -103,6 +103,22 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
+  packages/vetools-index:
+    dependencies:
+      '@bertinis-vault/vetools-ref':
+        specifier: workspace:*
+        version: link:../vetools-ref
+    devDependencies:
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
+  packages/vetools-ref:
+    devDependencies:
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
 packages:
 
   '@babel/code-frame@7.29.0':

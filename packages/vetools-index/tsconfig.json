@@ -1,0 +1,11 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "paths": {
+      "@bertinis-vault/vetools-ref": ["../vetools-ref/dist/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

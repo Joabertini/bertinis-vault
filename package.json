@@ -13,12 +13,13 @@
     "web:preview": "corepack pnpm --filter @bertinis-vault/web preview",
     "foundry:fixtures": "corepack pnpm --filter @bertinis-vault/foundry-exporter build && node ./scripts/export-foundry-validation-fixtures.mjs",
     "foundry:verify": "corepack pnpm foundry:fixtures && node ./scripts/verify-foundry-validation-baseline.mjs",
-    "mvp:verify": "corepack pnpm verify:env && corepack pnpm packages:build && corepack pnpm web:verify && corepack pnpm --filter @bertinis-vault/api test && corepack pnpm --filter @bertinis-vault/domain test && corepack pnpm --filter @bertinis-vault/vetools-ref test && corepack pnpm foundry:verify && node ./scripts/build-mvp-release-status.mjs",
+    "mvp:verify": "corepack pnpm verify:env && corepack pnpm packages:build && corepack pnpm web:verify && corepack pnpm --filter @bertinis-vault/api test && corepack pnpm --filter @bertinis-vault/domain test && corepack pnpm --filter @bertinis-vault/vetools-ref test && corepack pnpm --filter @bertinis-vault/vetools-index test && corepack pnpm foundry:verify && node ./scripts/build-mvp-release-status.mjs",
     "release:ready": "node ./scripts/check-release-readiness.mjs",
     "verify:env": "node ./scripts/verify-env.mjs",
     "build": "corepack pnpm -r build",
     "typecheck": "corepack pnpm -r typecheck",
     "test": "corepack pnpm -r test",
-    "packages:build": "corepack pnpm -r --filter '!@bertinis-vault/web' --filter '!@bertinis-vault/api' build"
+    "packages:build": "corepack pnpm -r --filter '!@bertinis-vault/web' --filter '!@bertinis-vault/api' build",
+    "vetools:index": "node ./scripts/build-vetools-index.mjs"
   }
 }
