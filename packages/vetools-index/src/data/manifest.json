@@ -1,13 +1,13 @@
 {
   "spell": {
     "count": 1050,
-    "bytes": 151656,
-    "gzip": 13175
+    "bytes": 205113,
+    "gzip": 17312
   },
   "item": {
     "count": 2658,
-    "bytes": 314558,
-    "gzip": 29933
+    "bytes": 678427,
+    "gzip": 35822
   },
   "feat": {
     "count": 276,
@@ -16,8 +16,8 @@
   },
   "race": {
     "count": 160,
-    "bytes": 7407,
-    "gzip": 1145
+    "bytes": 12563,
+    "gzip": 1582
   },
   "background": {
     "count": 161,
@@ -26,7 +26,17 @@
   },
   "class": {
     "count": 31,
-    "bytes": 1135,
-    "gzip": 274
+    "bytes": 4836,
+    "gzip": 575
+  },
+  "subclass": {
+    "count": 203,
+    "bytes": 22217,
+    "gzip": 2558
+  },
+  "subrace": {
+    "count": 98,
+    "bytes": 10729,
+    "gzip": 1458
   }
 }

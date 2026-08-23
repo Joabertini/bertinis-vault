@@ -16,7 +16,10 @@ import {
   searchByName,
   type IndexRow,
   type ItemRow,
+  type RaceRow,
   type SpellRow,
+  type SubclassRow,
+  type SubraceRow,
 } from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
@@ -56,12 +59,16 @@ function toOptions(rows: IndexRow[]): IndexOption[] {
 }
 
 export type OptionQuery = {
-  prop: "race" | "background" | "feat" | "item";
+  prop: "race" | "background" | "feat" | "item" | "subclass" | "subrace" | "class";
   rulesVersion: RulesVersion;
   search: string;
   limit?: number | undefined;
   /** Narrow items to the weapons, which is all the weapon picker wants. */
   weaponsOnly?: boolean | undefined;
+  /** Narrow items to armour and shields, which carry an armour class. */
+  armorOnly?: boolean | undefined;
+  /** Narrow subclasses or subraces to the class or species that owns them. */
+  parentName?: string | undefined;
 };
 
 /**
@@ -71,12 +78,40 @@ export type OptionQuery = {
  * that start with the query above names that merely contain it, so typing
  * "long" surfaces Longsword before Hooked Longsword.
  */
-export function optionsFor({ prop, rulesVersion, search, limit = 40, weaponsOnly }: OptionQuery): IndexOption[] {
+export function optionsFor({
+  prop,
+  rulesVersion,
+  search,
+  limit = 40,
+  weaponsOnly,
+  armorOnly,
+  parentName,
+}: OptionQuery): IndexOption[] {
   const all = collections[prop] ?? [];
   const legal = forRulesVersion(all, rulesVersion);
-  const scoped = weaponsOnly ? legal.filter((row) => isWeapon(row as ItemRow)) : legal;
+
+  let scoped = legal;
+  if (weaponsOnly) scoped = scoped.filter((row) => isWeapon(row as ItemRow));
+  if (armorOnly) scoped = scoped.filter((row) => isArmor(row as ItemRow));
+  if (parentName) scoped = scoped.filter((row) => parentOf(row) === parentName);
 
   return toOptions(searchByName(scoped, search, limit));
+}
+
+/** The class a subclass belongs to, or the species a subrace belongs to. */
+function parentOf(row: IndexRow): string | null {
+  const asSubclass = row as SubclassRow;
+  if (asSubclass.className) return asSubclass.className;
+
+  const asSubrace = row as SubraceRow;
+  return asSubrace.raceName ?? null;
+}
+
+/** Armour and shields, the item types that carry an armour class. */
+const armorTypes = new Set(["HA", "MA", "LA", "S"]);
+
+function isArmor(row: ItemRow): boolean {
+  return row.type ? armorTypes.has(row.type.split("|")[0] ?? "") : false;
 }
 
 /** The option a stored id and book refer to, so a saved draft can show a label. */
@@ -164,4 +199,76 @@ export function spellInfoFor(name: string, rulesVersion: RulesVersion, sourceBoo
     concentration: Boolean(row.concentration),
     ritual: Boolean(row.ritual),
   };
+}
+
+/**
+ * The species bonus the index records.
+ *
+ * Null means the species leaves the bonus to the player — which Monsters of
+ * the Multiverse did to nearly everything it reprinted, and which 2024 did to
+ * every species by moving the bonus to the background. A null is an answer,
+ * not a gap: it says "ask".
+ */
+export function speciesBonusFromIndex(
+  raceId: string,
+  rulesVersion: RulesVersion,
+  sourceBook?: string,
+): Record<string, number> | null {
+  const legal = forRulesVersion(collections.race ?? [], rulesVersion) as RaceRow[];
+  const matches = legal.filter((row) => slugOf(row.name) === raceId);
+  const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
+
+  return row?.ability ?? null;
+}
+
+/** The spells one class can cast, for the ruleset, at or below a level. */
+export function spellOptionsForClass(
+  className: string,
+  classSource: string,
+  rulesVersion: RulesVersion,
+  maxLevel: number,
+): SpellRow[] {
+  const legal = forRulesVersion(collections.spell ?? [], rulesVersion) as SpellRow[];
+  const key = `${className}|${classSource}`;
+
+  return legal
+    .filter((row) => row.level <= maxLevel && row.classes.includes(key))
+    .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+}
+
+/** What the index knows about an item: enough to show a weapon or armour. */
+export function itemInfoFor(
+  id: string,
+  rulesVersion: RulesVersion,
+  sourceBook?: string,
+): ItemRow | null {
+  const legal = forRulesVersion(collections.item ?? [], rulesVersion) as ItemRow[];
+  const matches = legal.filter((row) => slugOf(row.name) === id);
+
+  return (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0] || null;
+}
+
+/** The class row for a class id, which carries its saves and hit die. */
+export function classInfoFor(classId: string, rulesVersion: RulesVersion) {
+  const legal = forRulesVersion(collections.class ?? [], rulesVersion);
+  return legal.find((row) => slugOf(row.name) === classId) ?? null;
+}
+
+/**
+ * How a piece of armour computes armour class, in the rules layer's notation.
+ *
+ * Light adds the whole Dexterity modifier, medium caps it at two, heavy adds
+ * none. A shield is not a formula: it stacks its bonus on whatever the armour
+ * produced.
+ */
+export function armorFormulaOf(row: ItemRow): { formula?: string; shield?: boolean } {
+  const type = row.type?.split("|")[0] ?? "";
+  if (type === "S") return { shield: true };
+  if (row.ac == null) return {};
+
+  if (type === "LA") return { formula: `${row.ac}+DEX` };
+  if (type === "MA") return { formula: `${row.ac}+DEX2` };
+  if (type === "HA") return { formula: `${row.ac}` };
+
+  return {};
 }

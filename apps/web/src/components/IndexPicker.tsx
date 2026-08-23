@@ -7,6 +7,8 @@ type Props = {
   prop: OptionQuery["prop"];
   rulesVersion: OptionQuery["rulesVersion"];
   weaponsOnly?: boolean;
+  armorOnly?: boolean;
+  parentName?: string;
   /** The slug currently chosen, if any. */
   selectedId: string;
   /** The book chosen for that slug, when the name alone is ambiguous. */
@@ -29,6 +31,8 @@ export function IndexPicker({
   prop,
   rulesVersion,
   weaponsOnly,
+  armorOnly,
+  parentName,
   selectedId,
   selectedSource,
   selectedLabel,
@@ -38,8 +42,8 @@ export function IndexPicker({
   const [search, setSearch] = useState("");
 
   const options = useMemo(
-    () => optionsFor({ prop, rulesVersion, search, weaponsOnly }),
-    [prop, rulesVersion, search, weaponsOnly],
+    () => optionsFor({ prop, rulesVersion, search, weaponsOnly, armorOnly, parentName }),
+    [prop, rulesVersion, search, weaponsOnly, armorOnly, parentName],
   );
 
   return (

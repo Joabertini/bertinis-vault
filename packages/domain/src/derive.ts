@@ -33,15 +33,21 @@ export function deriveCharacterBuild(
     constitutionModifier: modifiers.con,
   });
 
+  // An armour picked from the index brings its own formula; the catalog is the
+  // fallback for builds written before the index carried armour class.
+  const normalizedEquipment = parsedInput.choices.normalized?.equipment ?? [];
+  const indexedArmor = normalizedEquipment.find((entry) => entry.armorFormula);
   const armorEntry = parsedInput.choices.equipment
     .map((entry) => getArmorCatalogEntry(entry))
     .find((entry) => Boolean(entry));
-  const hasShield = parsedInput.choices.equipment
-    .map((entry) => getArmorCatalogEntry(entry))
-    .some((entry) => entry?.grantsShieldBonus);
+  const hasShield =
+    normalizedEquipment.some((entry) => entry.grantsShieldBonus) ||
+    parsedInput.choices.equipment
+      .map((entry) => getArmorCatalogEntry(entry))
+      .some((entry) => entry?.grantsShieldBonus);
 
   const ac = calculateArmorClass({
-    armorFormula: armorEntry?.armorFormula ?? "10+DEX",
+    armorFormula: indexedArmor?.armorFormula ?? armorEntry?.armorFormula ?? "10+DEX",
     dexModifier: modifiers.dex,
     hasShield,
   });
