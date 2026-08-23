@@ -203,6 +203,13 @@ h1 em {
   margin-left: 4px;
 }
 
+.field-warning {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--gold2);
+}
+
 input[type="text"],
 input[type="number"],
 textarea,

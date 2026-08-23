@@ -204,6 +204,32 @@ function normalizeFeatureEntry(entry: string, state: BuilderState) {
 
 export const builderDraftStorageKey = "bertinis-vault:web-builder:draft";
 
+/**
+ * What the sheet calls a character the player has not named yet.
+ *
+ * The canonical schema requires a name, which is right for a character being
+ * exported. A draft is not that: the builder derives a snapshot on every
+ * keystroke, including the one that empties the field, and the schema used to
+ * throw straight through the render.
+ */
+export const unnamedCharacterLabel = "Personaje sin nombre";
+
+/** Whether the draft still owes us a name before it can be published. */
+export function isCharacterNameMissing(state: BuilderState) {
+  return state.characterName.trim().length === 0;
+}
+
+/**
+ * An optional label, or nothing at all.
+ *
+ * The schema reads these as `.min(1).optional()`, so an empty string is a
+ * violation while an absent key is fine. A cleared field means absent.
+ */
+function optionalLabel(value: string): string | undefined {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 export const initialState: BuilderState = {
   createdAt: new Date().toISOString(),
   characterName: "Seraphina Vale",
@@ -348,15 +374,15 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       updatedAt: new Date().toISOString(),
     },
     identity: {
-      characterName: state.characterName,
-      playerName: state.playerName,
-      alignment: state.alignment,
+      characterName: state.characterName.trim() || unnamedCharacterLabel,
+      playerName: optionalLabel(state.playerName),
+      alignment: optionalLabel(state.alignment),
       biography: {
-        trait: state.trait,
-        ideal: state.ideal,
-        bond: state.bond,
-        flaw: state.flaw,
-        notes: state.notes,
+        trait: optionalLabel(state.trait),
+        ideal: optionalLabel(state.ideal),
+        bond: optionalLabel(state.bond),
+        flaw: optionalLabel(state.flaw),
+        notes: optionalLabel(state.notes),
       },
     },
     ancestry: {

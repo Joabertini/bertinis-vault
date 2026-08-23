@@ -8,23 +8,28 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsc -p tsconfig.json --noEmit && vite build"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@bertinis-vault/contracts": "workspace:*",
     "@bertinis-vault/data-engine": "workspace:*",
     "@bertinis-vault/domain": "workspace:*",
     "@bertinis-vault/foundry-exporter": "workspace:*",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
     "@bertinis-vault/vetools-index": "workspace:*",
-    "@bertinis-vault/vetools-ref": "workspace:*"
+    "@bertinis-vault/vetools-ref": "workspace:*",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.6",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.4.1",
+    "jsdom": "^30.0.1",
     "typescript": "^5.8.2",
-    "vite": "^6.2.4"
+    "vite": "^6.2.4",
+    "vitest": "^4.1.11"
   }
 }
