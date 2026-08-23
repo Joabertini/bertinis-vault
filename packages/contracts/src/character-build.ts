@@ -125,6 +125,16 @@ export const normalizedEquipmentEntrySchema = z.object({
   label: canonicalLabelSchema,
   quantity: z.number().int().min(1).default(1),
   category: normalizedEquipmentCategorySchema.default("other"),
+  /**
+   * How this armour computes armour class, e.g. `"14+DEX2"`.
+   *
+   * Present when the armour came from the index, which carries a base AC for
+   * every armour in the game. Without it the rules layer falls back to its own
+   * catalog, which knows five.
+   */
+  armorFormula: z.string().min(1).optional(),
+  /** Whether this counts as a shield, which stacks its bonus on the formula. */
+  grantsShieldBonus: z.boolean().optional(),
 });
 
 export const normalizedFeatureEntrySchema = z.object({

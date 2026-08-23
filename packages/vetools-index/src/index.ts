@@ -29,11 +29,20 @@ export type SpellRow = IndexRow & {
   level: number;
   school: string;
   time: string | null;
+  /** A printable distance, e.g. "120 feet", "self", "touch". */
   range: string | null;
   /** Flattened component flags, e.g. "vsm". */
   components: string;
   concentration: 0 | 1;
   ritual: 0 | 1;
+  /**
+   * The class lists this spell is on, as `"Wizard|PHB"`.
+   *
+   * A spell belongs to a class list by the class's say-so, not its own, and
+   * the class's source keeps the editions apart: Fire Bolt is on both
+   * `Wizard|PHB` and `Wizard|XPHB`, which are different documents.
+   */
+  classes: string[];
 };
 
 export type ItemRow = IndexRow & {
@@ -42,23 +51,73 @@ export type ItemRow = IndexRow & {
   weight: number | null;
   value: number | null;
   attunement: 0 | 1;
+  damage: string | null;
+  damageType: string | null;
+  versatileDamage: string | null;
+  /** Property codes, e.g. "V", "F", "2H". */
+  properties: string[];
+  /** 2024 weapon mastery names, e.g. "Topple". Null for everything else. */
+  mastery: string[] | null;
+  /** Base armour class, for armour and shields. */
+  ac: number | null;
+  /** Minimum Strength the armour asks for, as a string of digits. */
+  strength: string | null;
+  stealthDisadvantage: 0 | 1;
 };
 
-export type RaceRow = IndexRow & { size: string | null };
+export type AbilityBonuses = Record<string, number>;
+
+export type RaceRow = IndexRow & {
+  size: string | null;
+  /** The fixed part of the species bonus. Null when the player chooses it. */
+  ability: AbilityBonuses | null;
+  speed: number | null;
+};
+
+export type SubraceRow = IndexRow & {
+  raceName: string;
+  raceSource: string;
+  ability: AbilityBonuses | null;
+};
+
 export type FeatRow = IndexRow;
 export type BackgroundRow = IndexRow;
-export type ClassRow = IndexRow;
+
+export type ClassRow = IndexRow & {
+  hitDie: number | null;
+  /** The two abilities the class grants saving throw proficiency in. */
+  savingThrows: string[];
+  spellcastingAbility: string | null;
+  casterProgression: string | null;
+  preparedSpells: string | null;
+};
+
+export type SubclassRow = IndexRow & {
+  shortName: string | null;
+  className: string | null;
+  classSource: string | null;
+};
 
 /** The props this index covers, and the row type each yields. */
-export type IndexedProp = "spell" | "item" | "feat" | "race" | "background" | "class";
+export type IndexedProp =
+  | "spell"
+  | "item"
+  | "feat"
+  | "race"
+  | "subrace"
+  | "background"
+  | "class"
+  | "subclass";
 
 export type RowFor = {
   spell: SpellRow;
   item: ItemRow;
   feat: FeatRow;
   race: RaceRow;
+  subrace: SubraceRow;
   background: BackgroundRow;
   class: ClassRow;
+  subclass: SubclassRow;
 };
 
 /** The reference for a row, ready to hand to Plutonium. */

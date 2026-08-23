@@ -42,7 +42,15 @@ import {
 import { fallbackBuilderOptions, type BuilderOptionsPayload } from "./builder-options";
 import { getFeatureSuggestions } from "./feature-suggestions";
 import { IndexPicker } from "./components/IndexPicker";
-import { optionById, spellInfoFor, type IndexOption } from "./index-options";
+import {
+  itemInfoFor,
+  optionById,
+  slugOf,
+  spellInfoFor,
+  spellOptionsForClass,
+  speciesBonusFromIndex,
+  type IndexOption,
+} from "./index-options";
 
 const numericDraftKeys = ["str", "dex", "con", "int", "wis", "cha"] as const;
 type NumericDraftKey = (typeof numericDraftKeys)[number];
@@ -212,6 +220,14 @@ export function App() {
   const selectedBackgroundOption = optionById("background", rulesVersion, state.backgroundId, state.sourceBooks[`background:${state.backgroundId}`]);
   const selectedFeatOption = optionById("feat", rulesVersion, state.featId, state.sourceBooks[`feat:${state.featId}`]);
   const selectedWeaponOption = optionById("item", rulesVersion, state.weaponId, state.sourceBooks[`item:${state.weaponId}`]);
+  const selectedClassOption = optionById("class", rulesVersion, state.classId);
+  const selectedSubclassOption = optionById("subclass", rulesVersion, state.subclassId, state.sourceBooks[`subclass:${state.subclassId}`]);
+  // Most classes choose at 3. The three that choose at 1 are the ones whose
+  // whole identity is the subclass.
+  const subclassLevel = ["cleric", "sorcerer", "warlock"].includes(state.classId) ? 1 : 3;
+  const selectedArmorOption = optionById("item", rulesVersion, state.armorId, state.sourceBooks[`item:${state.armorId}`]);
+  const weaponInfo = itemInfoFor(state.weaponId, rulesVersion, state.sourceBooks[`item:${state.weaponId}`]);
+  const armorInfo = itemInfoFor(state.armorId, rulesVersion, state.sourceBooks[`item:${state.armorId}`]);
 
 
   const conversion = useMemo(
@@ -257,11 +273,33 @@ export function App() {
   };
   const selectedBackgroundMeta = builderOptions.backgrounds.find((entry) => entry.id === state.backgroundId);
   const selectedBackgroundGrantedFeats = selectedBackgroundMeta?.grantedFeatIds ?? [];
-  const filteredCantrips = builderOptions.spells.cantrips.filter(
-    (entry) => !entry.classes?.length || entry.classes.includes(state.classId),
+  // The class list the spells come from. 5etools records it on the class's
+  // say-so, with the class's own source, which is what keeps the 2014 and 2024
+  // lists apart.
+  const spellClassKey = {
+    name: selectedClassOption?.label ?? "",
+    source: selectedClassOption?.source ?? "",
+  };
+  const classSpells = useMemo(
+    () =>
+      spellClassKey.name
+        ? spellOptionsForClass(spellClassKey.name, spellClassKey.source, rulesVersion, 9)
+        : [],
+    [rulesVersion, spellClassKey.name, spellClassKey.source],
   );
-  const filteredSpells = builderOptions.spells.spells.filter(
-    (entry) => !entry.classes?.length || entry.classes.includes(state.classId),
+  const filteredCantrips = useMemo(
+    () =>
+      classSpells
+        .filter((row) => row.level === 0)
+        .map((row) => ({ id: slugOf(row.name), label: row.name, level: row.level, source: row.source })),
+    [classSpells],
+  );
+  const filteredSpells = useMemo(
+    () =>
+      classSpells
+        .filter((row) => row.level > 0)
+        .map((row) => ({ id: slugOf(row.name), label: row.name, level: row.level, source: row.source })),
+    [classSpells],
   );
   const raceSubraceOptions = getSubracesForRace(state.raceId);
   const raceLanguageRule = getRaceLanguageRule(state.raceId);
@@ -360,8 +398,8 @@ export function App() {
    * picks that were replaced.
    */
   function pickFromIndex(
-    prop: "race" | "background" | "feat" | "item",
-    key: "raceId" | "backgroundId" | "featId" | "weaponId",
+    prop: "race" | "background" | "feat" | "item" | "subclass",
+    key: "raceId" | "backgroundId" | "featId" | "weaponId" | "armorId" | "subclassId",
     option: IndexOption,
   ) {
     setState((current) => {
@@ -430,8 +468,24 @@ export function App() {
     }));
   }
 
+  /**
+   * Fill the bonus from the index, falling back to the hand-written table.
+   *
+   * The index records the fixed part of a species bonus for all 160 species.
+   * A species that leaves the bonus to the player records none — which is most
+   * of them since Monsters of the Multiverse, and all of them in 2024.
+   */
   function applySuggestedBonuses() {
-    updateField("abilityBonuses", suggestedAbilityBonuses(state.raceId, state.subraceId));
+    const indexed = speciesBonusFromIndex(
+      state.raceId,
+      rulesVersion,
+      state.sourceBooks[`race:${state.raceId}`],
+    );
+
+    updateField(
+      "abilityBonuses",
+      indexed ?? suggestedAbilityBonuses(state.raceId, state.subraceId),
+    );
   }
 
   function adjustImprovement(key: NumericDraftKey, delta: number) {
@@ -699,7 +753,7 @@ export function App() {
                       name="cls"
                       onChange={() => {
                         updateField("classId", option.id);
-                        updateField("subclassId", (builderOptions.subclasses[option.id] ?? [])[0]?.id ?? "");
+                        updateField("subclassId", "");
                       }}
                       type="radio"
                     />
@@ -708,13 +762,24 @@ export function App() {
                 ))}
               </div>
             </div>
-            <div className="field"><label>Subclase</label>
-              <select value={state.subclassId} onChange={(event) => updateField("subclassId", event.target.value)}>
-                {(subclassOptions.length ? subclassOptions : [{ id: "", label: "Sin subclase aun" }]).map((option) => (
-                  <option key={option.id || "none"} value={option.id}>{option.label}</option>
-                ))}
-              </select>
-            </div>
+            {subclassLevel > state.level ? (
+              <div className="field-warning">
+                Un {selectedClassOption?.label ?? state.classId} elige subclase a nivel {subclassLevel}.
+                Este personaje es nivel {state.level}, asi que todavia no le toca.
+              </div>
+            ) : (
+              <IndexPicker
+                inputId="subclass-search"
+                label="Subclase"
+                onPick={(option) => pickFromIndex("subclass", "subclassId", option)}
+                parentName={selectedClassOption?.label ?? ""}
+                prop="subclass"
+                rulesVersion={rulesVersion}
+                selectedId={state.subclassId}
+                selectedLabel={selectedSubclassOption?.label ?? state.subclassId}
+                selectedSource={state.sourceBooks[`subclass:${state.subclassId}`] ?? ""}
+              />
+            )}
             <div className="feat-info">
               Hit Die: <strong>{selectedClassMeta?.hitDie ? `d${selectedClassMeta.hitDie}` : "Pendiente"}</strong> | Spellcaster: <strong>{selectedClassMeta?.spellcastingAbility ? `Si (${selectedClassMeta.spellcastingAbility.toUpperCase()})` : "No"}</strong> | Abilities primarias: <strong>{selectedClassMeta?.primaryAbilities?.join(" / ") || "Flexible"}</strong>
             </div>
@@ -966,20 +1031,38 @@ export function App() {
               selectedSource={state.sourceBooks[`item:${state.weaponId}`] ?? ""}
               weaponsOnly
             />
-            <div className="bg-feat-auto" style={{ display: "block" }}>
-              El arma se importa desde su propio documento, con su daño y sus propiedades. La
-              armadura se elige aparte porque de ella sale la CA que el builder calcula.
-            </div>
-            <div className="field"><label>Armadura / Proteccion</label>
-              <div className="options-grid">
-                {filteredArmorOptions.map((entry) => (
-                  <label className={`opt${state.armorId === entry.id ? " selected" : ""}`} key={entry.id}>
-                    <input checked={state.armorId === entry.id} onChange={() => updateField("armorId", entry.id)} type="radio" />
-                    {entry.label}
-                  </label>
-                ))}
+            {weaponInfo ? (
+              <div className="bg-feat-auto" style={{ display: "block" }}>
+                <b>{weaponInfo.name}</b> <span className="opt-source">{weaponInfo.source}</span>
+                <br />
+                <b>Daño</b>: {weaponInfo.damage ?? "Sin dato"} {weaponInfo.damageType ?? ""}
+                {weaponInfo.versatileDamage ? ` (versatil ${weaponInfo.versatileDamage})` : ""}
+                <br />
+                <b>Propiedades</b>: {weaponInfo.properties.length ? weaponInfo.properties.join(", ") : "Ninguna"}
+                <br />
+                <b>Maestria</b>: {weaponInfo.mastery?.length ? weaponInfo.mastery.join(", ") : "Sin maestria (es de 2024)"}
               </div>
-            </div>
+            ) : null}
+            <IndexPicker
+              armorOnly
+              inputId="armor-search"
+              label="Armadura / Proteccion"
+              onPick={(option) => pickFromIndex("item", "armorId", option)}
+              prop="item"
+              rulesVersion={rulesVersion}
+              selectedId={state.armorId}
+              selectedLabel={selectedArmorOption?.label ?? state.armorId}
+              selectedSource={state.sourceBooks[`item:${state.armorId}`] ?? ""}
+            />
+            {armorInfo ? (
+              <div className="bg-feat-auto" style={{ display: "block" }}>
+                <b>{armorInfo.name}</b> <span className="opt-source">{armorInfo.source}</span>
+                <br />
+                <b>CA base</b>: {armorInfo.ac ?? "Sin dato"}
+                {armorInfo.strength ? <> | <b>Fuerza minima</b>: {armorInfo.strength}</> : null}
+                {armorInfo.stealthDisadvantage ? " | Desventaja en Sigilo" : ""}
+              </div>
+            ) : null}
             <div className="field"><label>Equipo inicial sugerido</label>
               <div className="options-grid">
                 {gearChoices.map((entry) => (

@@ -26,14 +26,24 @@ export function calculateArmorClass(input: {
 
   if (formulaBase !== undefined && formula) {
     base = formulaBase + (formula.endsWith("+DEX") ? dexContribution : 0);
-  } else if (formula === "13+DEX2") {
-    base = 13 + Math.min(input.dexModifier, 2);
-  } else if (formula === "14+DEX2") {
-    base = 14 + Math.min(input.dexModifier, 2);
-  } else if (formula === "15+DEX2") {
-    base = 15 + Math.min(input.dexModifier, 2);
   } else if (formula === "special") {
     base = 10 + input.dexModifier + (input.unarmoredAbilityModifier ?? 0);
+  } else if (formula) {
+    // Armour picked from the index brings its own base, so the shapes have to
+    // be read rather than looked up: "14" for heavy, "11+DEX" for light,
+    // "14+DEX2" for medium.
+    const parsed = /^(\d+)(?:\+DEX(\d+)?)?$/.exec(formula);
+    if (parsed) {
+      const armorBase = Number(parsed[1]);
+      const cap = parsed[2] === undefined ? undefined : Number(parsed[2]);
+      const dexPart = formula.includes("+DEX")
+        ? cap === undefined
+          ? input.dexModifier
+          : Math.min(input.dexModifier, cap)
+        : 0;
+
+      base = armorBase + dexPart;
+    }
   }
 
   return base + (input.hasShield ? 2 : 0);

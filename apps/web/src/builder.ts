@@ -22,6 +22,7 @@ import {
   suggestedAbilityBonuses,
   type AbilityBonusMap,
 } from "@bertinis-vault/domain";
+import { armorFormulaOf, itemInfoFor, slugOf } from "./index-options";
 
 export type BuilderRulesVersion = "5e-2014" | "5e-2024";
 
@@ -178,6 +179,31 @@ function classifyProficiencyKind(entry: string) {
   }
 
   return { kind: "other" as const, id: undefined };
+}
+
+/**
+ * The armour, with the formula that computes its armour class.
+ *
+ * The index knows every armour in the game and what it is worth; the old
+ * catalog knew five. Falling back to the catalog keeps drafts written before
+ * the index carried armour class working.
+ */
+function normalizeArmorEntry(state: BuilderState) {
+  const rulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const row = itemInfoFor(state.armorId, rulesVersion, state.sourceBooks[`item:${state.armorId}`]);
+  const base = normalizeEquipmentEntry(state.armorId);
+  if (!row) return base;
+
+  const { formula, shield } = armorFormulaOf(row);
+
+  return {
+    ...base,
+    itemId: slugOf(row.name),
+    label: row.name,
+    category: shield ? ("shield" as const) : ("armor" as const),
+    ...(formula ? { armorFormula: formula } : {}),
+    ...(shield ? { grantsShieldBonus: true } : {}),
+  };
 }
 
 function normalizeEquipmentEntry(entry: string) {
@@ -433,7 +459,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const languageEntries = uniqueEntries(parseLineList(state.languagesText));
   const languages = languageEntries.map((entry) => `Language: ${entry}`);
   const normalizedWeapon = normalizeEquipmentEntry(state.weaponId);
-  const normalizedArmor = normalizeEquipmentEntry(state.armorId);
+  const normalizedArmor = normalizeArmorEntry(state);
   const spellEntries = [
     ...parseLineList(state.cantripsText).map((entry) => ({ label: entry, level: 0 })),
     ...leveledSpells.map((entry) => {
