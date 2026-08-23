@@ -146,3 +146,41 @@ export function dedupeRefs(entries: BuildRefEntry[]): BuildRefEntry[] {
 
   return [...byKey.values()];
 }
+
+export {
+  EDITION_THRESHOLD,
+  getSourceMeta,
+  isClassicSource,
+  isKnownSource,
+  isSourceAllowed,
+  listSources,
+  rulesVersionOf,
+  SOURCES,
+  sourcesForRulesVersion,
+  SRC_XPHB,
+  type RulesVersion,
+  type SourceMeta,
+} from "./sources.js";
+
+import { isSourceAllowed as isSourceAllowedForVersion, type RulesVersion as Rules } from "./sources.js";
+
+/**
+ * Split a reference list by whether each entry is legal for the build's
+ * ruleset. Mixing editions is the most likely way to end up with a character
+ * that imports but plays wrong, so callers should surface `rejected` rather
+ * than dropping it silently.
+ */
+export function partitionByRulesVersion(
+  entries: BuildRefEntry[],
+  rulesVersion: Rules,
+): { allowed: BuildRefEntry[]; rejected: BuildRefEntry[] } {
+  const allowed: BuildRefEntry[] = [];
+  const rejected: BuildRefEntry[] = [];
+
+  for (const entry of entries) {
+    if (isSourceAllowedForVersion(entry.ref.source, rulesVersion)) allowed.push(entry);
+    else rejected.push(entry);
+  }
+
+  return { allowed, rejected };
+}
