@@ -61,8 +61,10 @@ Do not delete it before its replacement has run in a live world.
 
 In order, and stated as what blocks each:
 
-1. **Deploy the worker.** Needs a Cloudflare account: `wrangler login` and
-   creating the KV namespace. See `DEPLOY.md`.
+1. ~~**Deploy the worker.**~~ Done. It is live at
+   `https://bertinis-vault.bertinisdnd.workers.dev`, backed by the `BUILDS` KV
+   namespace, and a build has round-tripped through it. `ALLOWED_ORIGINS` is
+   still `*`; narrow it once the builder has a public address.
 2. **Run the module in a live world.** Needs Foundry v14, dnd5e 5.3.x and
    Plutonium. This is the only way to close the open questions at the end of
    `PLUTONIUM-INTEGRATION.md`, all of which were answered by reading source

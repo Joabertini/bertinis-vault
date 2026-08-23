@@ -32,7 +32,7 @@ corepack pnpm worker:deploy
 Check it answers:
 
 ```bash
-curl https://bertinis-vault.<your-subdomain>.workers.dev/health
+curl https://bertinis-vault.bertinisdnd.workers.dev/health
 # {"ok":true}
 ```
 
@@ -53,7 +53,7 @@ A static build. `corepack pnpm web:build` writes `apps/web/dist`.
 It needs one variable, the worker's address:
 
 ```
-VITE_VAULT_URL=https://bertinis-vault.<your-subdomain>.workers.dev
+VITE_VAULT_URL=https://bertinis-vault.bertinisdnd.workers.dev
 ```
 
 Without it the builder still works — the index is bundled, so browsing and
