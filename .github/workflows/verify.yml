@@ -33,7 +33,7 @@ jobs:
         run: corepack pnpm verify:env
 
       - name: Build Shared Packages
-        run: corepack pnpm -r --filter '!@bertinis-vault/web' build
+        run: corepack pnpm packages:build
 
       - name: Verify Web Surface
         run: corepack pnpm web:verify

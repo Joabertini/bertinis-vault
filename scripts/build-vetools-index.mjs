@@ -17,7 +17,7 @@ import fs from "node:fs";
 import path from "node:path";
 import zlib from "node:zlib";
 
-const OUT_DIR = path.join(process.cwd(), "packages", "vetools-index", "data");
+const OUT_DIR = path.join(process.cwd(), "packages", "vetools-index", "src", "data");
 
 /** Companion files that repeat entities already present in the source files. */
 const SKIP_FILES = new Set(["foundry.json", "roll20.json", "index.json", "sources.json", "fluff-index.json"]);

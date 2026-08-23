@@ -35,6 +35,12 @@ importers:
       '@bertinis-vault/foundry-exporter':
         specifier: workspace:*
         version: link:../../packages/foundry-exporter
+      '@bertinis-vault/vetools-index':
+        specifier: workspace:*
+        version: link:../../packages/vetools-index
+      '@bertinis-vault/vetools-ref':
+        specifier: workspace:*
+        version: link:../../packages/vetools-ref
       react:
         specifier: ^19.0.0
         version: 19.2.4
@@ -115,6 +121,9 @@ importers:
 
   packages/vetools-index:
     dependencies:
+      '@bertinis-vault/contracts':
+        specifier: workspace:*
+        version: link:../contracts
       '@bertinis-vault/vetools-ref':
         specifier: workspace:*
         version: link:../vetools-ref

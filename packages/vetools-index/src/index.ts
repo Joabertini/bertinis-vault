@@ -147,3 +147,5 @@ export function groupByName<T extends IndexRow>(rows: T[]): Array<{ name: string
 }
 
 export * from "./resolve.js";
+export * from "./to-payload.js";
+export * from "./data.js";

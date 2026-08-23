@@ -14,7 +14,7 @@ import {
   searchByName,
 } from "../dist/index.js";
 
-const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "data");
+const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "data");
 const load = (prop) => JSON.parse(fs.readFileSync(path.join(DATA, `${prop}.json`), "utf8"));
 
 const spells = load("spell");

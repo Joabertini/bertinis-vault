@@ -4,8 +4,15 @@
     "rootDir": "src",
     "outDir": "dist",
     "paths": {
-      "@bertinis-vault/vetools-ref": ["../vetools-ref/dist/index.d.ts"]
+      "@bertinis-vault/vetools-ref": [
+        "../vetools-ref/dist/index.d.ts"
+      ],
+      "@bertinis-vault/contracts": [
+        "../contracts/dist/index.d.ts"
+      ]
     }
   },
-  "include": ["src/**/*.ts"]
+  "include": [
+    "src/**/*.ts"
+  ]
 }

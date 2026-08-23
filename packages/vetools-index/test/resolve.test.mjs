@@ -6,7 +6,7 @@ import { fileURLToPath } from "node:url";
 
 import { RefResolver, resolveAll } from "../dist/index.js";
 
-const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "data");
+const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "src", "data");
 const load = (prop) => JSON.parse(fs.readFileSync(path.join(DATA, `${prop}.json`), "utf8"));
 
 const collections = {

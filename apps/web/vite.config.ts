@@ -18,6 +18,12 @@ export default defineConfig({
       "@bertinis-vault/foundry-exporter": fileURLToPath(
         new URL("../../packages/foundry-exporter/src/index.ts", import.meta.url),
       ),
+      "@bertinis-vault/vetools-index": fileURLToPath(
+        new URL("../../packages/vetools-index/src/index.ts", import.meta.url),
+      ),
+      "@bertinis-vault/vetools-ref": fileURLToPath(
+        new URL("../../packages/vetools-ref/src/index.ts", import.meta.url),
+      ),
     },
   },
   server: {
