@@ -6,7 +6,7 @@ compatibility_date = "2026-08-01"
 #   wrangler kv namespace create BUILDS
 [[kv_namespaces]]
 binding = "BUILDS"
-id = "REPLACE_ME"
+id = "fee3b01501c04a439392fdaf962659fb"
 
 [vars]
 ALLOWED_ORIGINS = "*"
