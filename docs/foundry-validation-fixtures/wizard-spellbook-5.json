@@ -3,7 +3,7 @@
   "label": "Wizard spellbook",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-04-03T08:11:04.806Z",
+    "generatedAt": "2026-08-23T19:05:07.200Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -435,113 +435,17 @@
       },
       "tools": {
         "thief": {
-          "ability": "dex",
-          "bonus": "",
           "value": 1,
-          "prof": 1,
-          "roll": {
-            "min": null,
-            "max": null,
-            "mode": 0
-          },
-          "custom": "Thieves' Tools"
-        }
-      },
-      "attributes": {
-        "ac": {
-          "calc": "default",
-          "flat": null
-        },
-        "hp": {
-          "max": null,
-          "temp": null,
-          "tempmax": 0,
-          "value": 32,
-          "bonuses": {}
-        },
-        "spellcasting": "int",
-        "init": {
-          "ability": "",
-          "roll": {
-            "min": 10,
-            "max": null,
-            "mode": 0
-          },
-          "bonus": ""
-        },
-        "movement": {
-          "units": null,
-          "hover": false,
-          "ignoredDifficultTerrain": []
-        },
-        "attunement": {
-          "max": 3
-        },
-        "senses": {
-          "darkvision": null,
-          "blindsight": null,
-          "tremorsense": null,
-          "truesight": null,
-          "units": null,
-          "special": ""
-        },
-        "exhaustion": 0,
-        "concentration": {
-          "ability": "",
+          "ability": "dex",
           "roll": {
             "min": null,
             "max": null,
             "mode": 0
           },
           "bonuses": {
-            "save": ""
-          },
-          "limit": 1
-        },
-        "loyalty": {},
-        "death": {
-          "roll": {
-            "min": null,
-            "max": null,
-            "mode": 0
-          },
-          "success": 0,
-          "failure": 0,
-          "bonuses": {
-            "save": ""
+            "check": ""
           }
-        },
-        "inspiration": false
-      },
-      "bastion": {
-        "name": "",
-        "description": ""
-      },
-      "details": {
-        "alignment": "Neutral Good",
-        "biography": {
-          "value": "<p><em>Trait:</em> Always writes everything down.</p><p><em>Ideal:</em> Knowledge before fear.</p>",
-          "public": ""
-        },
-        "race": "human",
-        "background": "sage",
-        "originalClass": "wizard",
-        "xp": {
-          "value": 0
-        },
-        "trait": "Always writes everything down.",
-        "appearance": "",
-        "ideal": "Knowledge before fear.",
-        "bond": "",
-        "flaw": "",
-        "eyes": "",
-        "height": "",
-        "faith": "",
-        "hair": "",
-        "weight": "",
-        "gender": "",
-        "skin": "",
-        "age": ""
+        }
       },
       "spells": {
         "spell1": {
@@ -574,6 +478,109 @@
         "pact": {
           "value": 0
         }
+      },
+      "attributes": {
+        "ac": {
+          "calc": "default",
+          "flat": null
+        },
+        "init": {
+          "ability": "",
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "bonus": ""
+        },
+        "movement": {
+          "units": null,
+          "hover": false,
+          "ignoredDifficultTerrain": [],
+          "walk": "",
+          "burrow": "",
+          "climb": "",
+          "fly": "",
+          "swim": "",
+          "bonus": "",
+          "special": ""
+        },
+        "attunement": {
+          "max": 3
+        },
+        "senses": {
+          "darkvision": null,
+          "blindsight": null,
+          "tremorsense": null,
+          "truesight": null,
+          "units": null,
+          "special": ""
+        },
+        "spellcasting": "int",
+        "exhaustion": 0,
+        "concentration": {
+          "ability": "",
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "bonuses": {
+            "save": ""
+          },
+          "limit": 1
+        },
+        "loyalty": {},
+        "hp": {
+          "max": null,
+          "temp": null,
+          "tempmax": 0,
+          "value": 32,
+          "bonuses": {}
+        },
+        "death": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "success": 0,
+          "failure": 0,
+          "bonuses": {
+            "save": ""
+          }
+        },
+        "inspiration": false
+      },
+      "bastion": {
+        "name": "",
+        "description": ""
+      },
+      "details": {
+        "biography": {
+          "value": "<p><em>Trait:</em> Always writes everything down.</p><p><em>Ideal:</em> Knowledge before fear.</p>",
+          "public": ""
+        },
+        "alignment": "Neutral Good",
+        "ideal": "Knowledge before fear.",
+        "bond": "",
+        "flaw": "",
+        "race": "human",
+        "background": "sage",
+        "originalClass": "wizard",
+        "xp": {
+          "value": 0
+        },
+        "appearance": "",
+        "trait": "Always writes everything down.",
+        "eyes": "",
+        "height": "",
+        "faith": "",
+        "hair": "",
+        "weight": "",
+        "gender": "",
+        "skin": "",
+        "age": ""
       },
       "traits": {
         "size": "med",
@@ -648,7 +655,7 @@
     },
     "items": [
       {
-        "_id": "yI25ycEltsgylIEC",
+        "_id": "jtvXg7Eu3rkEe5YI",
         "name": "wizard",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -708,7 +715,7 @@
         }
       },
       {
-        "_id": "9n5EmYe3n3MpK3lK",
+        "_id": "CneXgHpV9bFG8JDl",
         "name": "Magic Initiate",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -766,7 +773,7 @@
         }
       },
       {
-        "_id": "9OBnDaZFr41jD5qR",
+        "_id": "jWmpiMHEnPaehNxd",
         "name": "Alert",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -824,7 +831,7 @@
         }
       },
       {
-        "_id": "S1qafIwmqEAsmTtN",
+        "_id": "77Pn47daNKwJhpKv",
         "name": "Arcane Recovery",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -882,7 +889,7 @@
         }
       },
       {
-        "_id": "d409v0gGgJ1shpJ2",
+        "_id": "LLQh36onnhWW2Cyw",
         "name": "Mage Hand",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1038,7 +1045,7 @@
         }
       },
       {
-        "_id": "t6cfeUbe41bvjMq7",
+        "_id": "BkcyuBysZOmh2OV3",
         "name": "Shield",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1194,7 +1201,7 @@
         }
       },
       {
-        "_id": "7Rud9M3O8hybBCx6",
+        "_id": "Y0rvUPNZ16M3clQN",
         "name": "Fireball",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1351,7 +1358,7 @@
         }
       },
       {
-        "_id": "sstEXdqQEBBkDAIl",
+        "_id": "1fvkIZIAD8IrbCRL",
         "name": "quarterstaff",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1550,7 +1557,7 @@
         }
       },
       {
-        "_id": "CcHWOlPab780DKMA",
+        "_id": "BT9dp4KuKwZ5Nvpr",
         "name": "Spellbook",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",
@@ -1601,7 +1608,7 @@
         }
       },
       {
-        "_id": "KkGU89HB3Q92fj6I",
+        "_id": "x6kaO40WiEBNnV8J",
         "name": "Component Pouch",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",
@@ -1766,7 +1773,13 @@
     "_stats": {
       "compendiumSource": null,
       "duplicateSource": null,
-      "exportSource": null,
+      "exportSource": {
+        "worldId": "vault-character",
+        "uuid": "",
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.2.5"
+      },
       "coreVersion": "13.351",
       "systemId": "dnd5e",
       "systemVersion": "5.2.5",

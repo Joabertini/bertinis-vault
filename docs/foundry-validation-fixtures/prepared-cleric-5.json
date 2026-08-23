@@ -3,7 +3,7 @@
   "label": "Prepared caster cleric",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-04-03T08:11:04.797Z",
+    "generatedAt": "2026-08-23T19:05:07.185Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -434,102 +434,6 @@
         }
       },
       "tools": {},
-      "attributes": {
-        "ac": {
-          "calc": "default",
-          "flat": null
-        },
-        "hp": {
-          "max": null,
-          "temp": null,
-          "tempmax": 0,
-          "value": 33,
-          "bonuses": {}
-        },
-        "spellcasting": "wis",
-        "init": {
-          "ability": "",
-          "roll": {
-            "min": 10,
-            "max": null,
-            "mode": 0
-          },
-          "bonus": ""
-        },
-        "movement": {
-          "units": null,
-          "hover": false,
-          "ignoredDifficultTerrain": []
-        },
-        "attunement": {
-          "max": 3
-        },
-        "senses": {
-          "darkvision": null,
-          "blindsight": null,
-          "tremorsense": null,
-          "truesight": null,
-          "units": null,
-          "special": ""
-        },
-        "exhaustion": 0,
-        "concentration": {
-          "ability": "",
-          "roll": {
-            "min": null,
-            "max": null,
-            "mode": 0
-          },
-          "bonuses": {
-            "save": ""
-          },
-          "limit": 1
-        },
-        "loyalty": {},
-        "death": {
-          "roll": {
-            "min": null,
-            "max": null,
-            "mode": 0
-          },
-          "success": 0,
-          "failure": 0,
-          "bonuses": {
-            "save": ""
-          }
-        },
-        "inspiration": false
-      },
-      "bastion": {
-        "name": "",
-        "description": ""
-      },
-      "details": {
-        "alignment": "Neutral Good",
-        "biography": {
-          "value": "<p><em>Trait:</em> Always writes everything down.</p><p><em>Ideal:</em> Knowledge before fear.</p>",
-          "public": ""
-        },
-        "race": "aasimar",
-        "background": "acolyte",
-        "originalClass": "cleric",
-        "xp": {
-          "value": 0
-        },
-        "trait": "Always writes everything down.",
-        "appearance": "",
-        "ideal": "Knowledge before fear.",
-        "bond": "",
-        "flaw": "",
-        "eyes": "",
-        "height": "",
-        "faith": "",
-        "hair": "",
-        "weight": "",
-        "gender": "",
-        "skin": "",
-        "age": ""
-      },
       "spells": {
         "spell1": {
           "value": 4
@@ -561,6 +465,109 @@
         "pact": {
           "value": 0
         }
+      },
+      "attributes": {
+        "ac": {
+          "calc": "default",
+          "flat": null
+        },
+        "init": {
+          "ability": "",
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "bonus": ""
+        },
+        "movement": {
+          "units": null,
+          "hover": false,
+          "ignoredDifficultTerrain": [],
+          "walk": "",
+          "burrow": "",
+          "climb": "",
+          "fly": "",
+          "swim": "",
+          "bonus": "",
+          "special": ""
+        },
+        "attunement": {
+          "max": 3
+        },
+        "senses": {
+          "darkvision": null,
+          "blindsight": null,
+          "tremorsense": null,
+          "truesight": null,
+          "units": null,
+          "special": ""
+        },
+        "spellcasting": "wis",
+        "exhaustion": 0,
+        "concentration": {
+          "ability": "",
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "bonuses": {
+            "save": ""
+          },
+          "limit": 1
+        },
+        "loyalty": {},
+        "hp": {
+          "max": null,
+          "temp": null,
+          "tempmax": 0,
+          "value": 33,
+          "bonuses": {}
+        },
+        "death": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "success": 0,
+          "failure": 0,
+          "bonuses": {
+            "save": ""
+          }
+        },
+        "inspiration": false
+      },
+      "bastion": {
+        "name": "",
+        "description": ""
+      },
+      "details": {
+        "biography": {
+          "value": "<p><em>Trait:</em> Always writes everything down.</p><p><em>Ideal:</em> Knowledge before fear.</p>",
+          "public": ""
+        },
+        "alignment": "Neutral Good",
+        "ideal": "Knowledge before fear.",
+        "bond": "",
+        "flaw": "",
+        "race": "aasimar",
+        "background": "acolyte",
+        "originalClass": "cleric",
+        "xp": {
+          "value": 0
+        },
+        "appearance": "",
+        "trait": "Always writes everything down.",
+        "eyes": "",
+        "height": "",
+        "faith": "",
+        "hair": "",
+        "weight": "",
+        "gender": "",
+        "skin": "",
+        "age": ""
       },
       "traits": {
         "size": "med",
@@ -638,7 +645,7 @@
     },
     "items": [
       {
-        "_id": "yHohBLigJFCW1fIt",
+        "_id": "8yFzSum6gSHOk4h4",
         "name": "cleric",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -698,7 +705,7 @@
         }
       },
       {
-        "_id": "1zs96WdRtdhHf0yy",
+        "_id": "MnRlnocCSnNvCMHv",
         "name": "Channel Divinity",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -756,7 +763,7 @@
         }
       },
       {
-        "_id": "Se42JYUxNuzp2Pa8",
+        "_id": "Ws339zzChoDxeSD7",
         "name": "Sacred Flame",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -912,7 +919,7 @@
         }
       },
       {
-        "_id": "1R3kbd9nLFfhpCpD",
+        "_id": "DQXD8j80PjhawJvA",
         "name": "Spirit Guardians",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1068,7 +1075,7 @@
         }
       },
       {
-        "_id": "TtYEV6wivV5IknZw",
+        "_id": "aEzetbC2ItDIJuP3",
         "name": "mace",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1267,7 +1274,7 @@
         }
       },
       {
-        "_id": "gIc1dSYESK5TwZNB",
+        "_id": "euqsAmAZoqSKlCZq",
         "name": "Shield",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1333,7 +1340,7 @@
         }
       },
       {
-        "_id": "NPwN0DZcdVxZHf7b",
+        "_id": "p9WPa5MAINBdjygm",
         "name": "Chain Mail",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1399,7 +1406,7 @@
         }
       },
       {
-        "_id": "tG3IDEMsU3rRfUa9",
+        "_id": "mok4gUY3QrQoK1Tc",
         "name": "Holy Symbol",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",
@@ -1564,7 +1571,13 @@
     "_stats": {
       "compendiumSource": null,
       "duplicateSource": null,
-      "exportSource": null,
+      "exportSource": {
+        "worldId": "vault-character",
+        "uuid": "",
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.2.5"
+      },
       "coreVersion": "13.351",
       "systemId": "dnd5e",
       "systemVersion": "5.2.5",
