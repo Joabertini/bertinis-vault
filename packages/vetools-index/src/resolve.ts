@@ -12,9 +12,9 @@
  * plays wrong.
  */
 
-import { buildRef, type RulesVersion, type VetoolsProp, type VetoolsRef } from "@bertinis-vault/vetools-ref";
+import { buildRef, buildSubclassRef, type RulesVersion, type VetoolsProp, type VetoolsRef } from "@bertinis-vault/vetools-ref";
 
-import { forRulesVersion, normalizeForSearch, type IndexRow } from "./index.js";
+import { forRulesVersion, isSubclassRow, normalizeForSearch, type IndexRow } from "./index.js";
 
 /** Why a pick could not be resolved. */
 export type ResolutionFailureReason = "not-found" | "wrong-edition" | "ambiguous";
@@ -41,6 +41,27 @@ export type Resolution<T> =
  */
 function slugKey(value: string): string {
   return normalizeForSearch(value).replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Turn a matched row into its reference.
+ *
+ * A subclass hashes as state on its class's page, so it needs the class it
+ * came from as well as itself. Every other prop hashes from name and source
+ * alone.
+ */
+function refForRow(prop: VetoolsProp, row: IndexRow): VetoolsRef {
+  if (prop === "subclass" && isSubclassRow(row)) {
+    return buildSubclassRef({
+      name: row.name,
+      source: row.source,
+      className: row.className as string,
+      classSource: row.classSource as string,
+      shortName: row.shortName ?? undefined,
+    });
+  }
+
+  return buildRef(prop, row.name, row.source);
 }
 
 /** An index scoped to one ruleset, keyed for slug lookup. */
@@ -112,7 +133,7 @@ export class RefResolver {
 
     if (preferredSource) {
       const match = candidates.find((row) => row.source === preferredSource);
-      if (match) return { ok: true, value: buildRef(prop, match.name, match.source) };
+      if (match) return { ok: true, value: refForRow(prop, match) };
     }
 
     if (candidates.length > 1) {
@@ -128,7 +149,7 @@ export class RefResolver {
     }
 
     const only = candidates[0] as IndexRow;
-    return { ok: true, value: buildRef(prop, only.name, only.source) };
+    return { ok: true, value: refForRow(prop, only) };
   }
 
   /** Whether a pick resolves, without building the reference. */

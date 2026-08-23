@@ -16,6 +16,7 @@ const collections = {
   race: load("race"),
   background: load("background"),
   class: load("class"),
+  subclass: load("subclass"),
 };
 
 const classic = new RefResolver("2014", collections);
@@ -139,4 +140,37 @@ test("a resolver built for one prop does not answer for another", () => {
 
   assert.ok(!resolver.resolve("item", "fire-bolt").ok);
   assert.equal(resolver.has("item", "longsword"), false);
+});
+
+test("a resolved subclass carries the class hash, not a generic one", () => {
+  const resolver = new RefResolver("2014", collections);
+  const result = resolver.resolve("subclass", "school-of-abjuration");
+
+  assert.ok(result.ok);
+  assert.equal(result.value.hash, "wizard_phb,state:sub_abjuration_phb=b1");
+  assert.equal(result.value.page, "classes.html");
+});
+
+test("the 2024 subclasses are a different set, not the same names again", () => {
+  const twentyFour = new RefResolver("2024", collections);
+
+  // The 2024 Wizard replaced the schools with named specialists, so the 2014
+  // name is not merely a different hash here — it is not legal at all.
+  assert.ok(!twentyFour.resolve("subclass", "school-of-abjuration").ok);
+
+  const abjurer = twentyFour.resolve("subclass", "abjurer");
+  assert.ok(abjurer.ok);
+  assert.equal(abjurer.value.hash, "wizard_xphb,state:sub_abjurer_xphb=b1");
+});
+
+test("both editions of every dual-published class keep their subclasses", () => {
+  const inFourteen = new RefResolver("2014", collections);
+  const inTwentyFour = new RefResolver("2024", collections);
+
+  // Deduping the index by name and source could have silently emptied one
+  // edition; each must still answer for its own.
+  assert.ok(inFourteen.resolve("subclass", "school-of-evocation").ok);
+  assert.ok(inTwentyFour.resolve("subclass", "evoker").ok);
+  assert.ok(inFourteen.resolve("subclass", "college-of-lore").ok);
+  assert.ok(inTwentyFour.resolve("subclass", "college-of-lore").ok);
 });
