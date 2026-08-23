@@ -1,0 +1,12 @@
+name = "bertinis-vault"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# Builds stored by code. Create with:
+#   wrangler kv namespace create BUILDS
+[[kv_namespaces]]
+binding = "BUILDS"
+id = "REPLACE_ME"
+
+[vars]
+ALLOWED_ORIGINS = "*"
