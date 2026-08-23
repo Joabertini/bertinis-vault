@@ -5,14 +5,18 @@
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist", "data"],
+  "files": [
+    "dist",
+    "data"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --test ./test/*.test.mjs"
   },
   "dependencies": {
-    "@bertinis-vault/vetools-ref": "workspace:*"
+    "@bertinis-vault/vetools-ref": "workspace:*",
+    "@bertinis-vault/contracts": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

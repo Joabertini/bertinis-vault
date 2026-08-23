@@ -1,5 +1,14 @@
 import { buildFoundryExportResult } from "@bertinis-vault/foundry-exporter";
 import {
+  RefResolver,
+  buildToPayload,
+  collections,
+  describeFailure,
+  rulesVersionOfBuild,
+  type ResolutionFailure,
+} from "@bertinis-vault/vetools-index";
+import { VaultRequestError, publishBuild } from "./vault-client";
+import {
   getBackgroundGrantedProficiencies,
   getClassArmorOptionIds,
   getClassFallbackMeta,
@@ -188,8 +197,26 @@ export function App() {
   const [saveState, setSaveState] = useState("Borrador local activo");
   const [copyState, setCopyState] = useState("Listo para exportar");
   const [activeSpellInfo, setActiveSpellInfo] = useState<SpellInfo | null>(null);
+  const [publishState, setPublishState] = useState<
+    { status: "idle" | "publishing" } | { status: "done"; code: string } | { status: "error"; message: string }
+  >({ status: "idle" });
 
   const canonicalSnapshot = buildCanonicalSnapshot(state);
+
+  // One resolver per ruleset, rebuilt only when the ruleset changes: indexing
+  // 4336 rows on every keystroke would be wasteful.
+  const rulesVersion = rulesVersionOfBuild(canonicalSnapshot);
+  const refResolver = useMemo(
+    () =>
+      new RefResolver(rulesVersion, collections),
+    [rulesVersion],
+  );
+
+  const conversion = useMemo(
+    () => buildToPayload(canonicalSnapshot, refResolver),
+    [canonicalSnapshot, refResolver],
+  );
+
   const foundryExport = buildFoundryExportResult(canonicalSnapshot);
   const foundryPreview = foundryExport.payload;
   const foundryPreflight = foundryExport.preflight;
@@ -411,6 +438,34 @@ export function App() {
     if (!foundryPreview || typeof window === "undefined" || !window.navigator?.clipboard) return;
     await window.navigator.clipboard.writeText(JSON.stringify(foundryPreview, null, 2));
     setCopyState("Actor Foundry copiado");
+  }
+
+  async function publishForFoundry() {
+    if (!conversion.payload) {
+      setPublishState({
+        status: "error",
+        message: "Faltan datos obligatorios: raza, clase o trasfondo no se pudieron resolver.",
+      });
+      return;
+    }
+
+    setPublishState({ status: "publishing" });
+    try {
+      const result = await publishBuild(conversion.payload);
+      setPublishState({ status: "done", code: result.code });
+    } catch (error) {
+      const message =
+        error instanceof VaultRequestError
+          ? error.message
+          : "No se pudo conectar con el servidor de builds.";
+      setPublishState({ status: "error", message });
+    }
+  }
+
+  async function copyPublishedCode(code: string) {
+    if (typeof window === "undefined" || !window.navigator?.clipboard) return;
+    await window.navigator.clipboard.writeText(code);
+    setCopyState(`Codigo ${code} copiado`);
   }
 
   function downloadActorJson() {
@@ -907,9 +962,49 @@ export function App() {
               Spells: {[...selectedCantrips, ...selectedSpells].join(", ") || "Ninguno"}
             </div>
             <div className="nav">
+              <button
+                className="btn btn-next"
+                onClick={publishForFoundry}
+                disabled={publishState.status === "publishing" || !conversion.payload}
+                type="button"
+              >
+                {publishState.status === "publishing" ? "GENERANDO..." : "GENERAR CODIGO"}
+              </button>
               <button className="btn btn-next" onClick={copyActorJson} type="button">COPIAR ACTOR</button>
               <button className="btn btn-next" onClick={downloadActorJson} type="button">DESCARGAR JSON</button>
             </div>
+            {publishState.status === "done" && (
+              <div className="result-box">
+                <strong>Tu codigo</strong>
+                <div className="vault-code">{publishState.code}</div>
+                Pegalo en el modulo de Foundry para importar el personaje.
+                <br />
+                <button
+                  className="btn btn-next"
+                  onClick={() => copyPublishedCode(publishState.code)}
+                  type="button"
+                >
+                  COPIAR CODIGO
+                </button>
+              </div>
+            )}
+            {publishState.status === "error" && (
+              <div className="result-box">
+                <strong>No se pudo generar el codigo</strong>
+                {publishState.message}
+              </div>
+            )}
+            {conversion.failures.length > 0 && (
+              <div className="result-box">
+                <strong>Elecciones sin resolver ({conversion.failures.length})</strong>
+                Estas no se van a importar. El resto del personaje si.
+                <ul>
+                  {conversion.failures.map((failure: ResolutionFailure, index: number) => (
+                    <li key={`${failure.prop}-${failure.query}-${index}`}>{describeFailure(failure)}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="result-box">
               <strong>Estado</strong>
               {copyState} | Dataset: {datasetState} | Preflight: {foundryPreflight.summary.blockers > 0 ? "Blocked" : "Clean/Warning"}

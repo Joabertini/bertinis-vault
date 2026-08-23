@@ -5,13 +5,32 @@
     "jsx": "react-jsx",
     "rootDir": "src",
     "outDir": "dist",
-    "types": ["vite/client"],
+    "types": [
+      "vite/client"
+    ],
     "paths": {
-      "@bertinis-vault/contracts": ["../../packages/contracts/dist/index.d.ts"],
-      "@bertinis-vault/data-engine": ["../../packages/data-engine/dist/index.d.ts"],
-      "@bertinis-vault/domain": ["../../packages/domain/dist/index.d.ts"],
-      "@bertinis-vault/foundry-exporter": ["../../packages/foundry-exporter/dist/index.d.ts"]
+      "@bertinis-vault/contracts": [
+        "../../packages/contracts/dist/index.d.ts"
+      ],
+      "@bertinis-vault/data-engine": [
+        "../../packages/data-engine/dist/index.d.ts"
+      ],
+      "@bertinis-vault/domain": [
+        "../../packages/domain/dist/index.d.ts"
+      ],
+      "@bertinis-vault/foundry-exporter": [
+        "../../packages/foundry-exporter/dist/index.d.ts"
+      ],
+      "@bertinis-vault/vetools-index": [
+        "../../packages/vetools-index/dist/index.d.ts"
+      ],
+      "@bertinis-vault/vetools-ref": [
+        "../../packages/vetools-ref/dist/index.d.ts"
+      ]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx"
+  ]
 }

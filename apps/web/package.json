@@ -16,7 +16,9 @@
     "@bertinis-vault/domain": "workspace:*",
     "@bertinis-vault/foundry-exporter": "workspace:*",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "@bertinis-vault/vetools-index": "workspace:*",
+    "@bertinis-vault/vetools-ref": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.0.10",
