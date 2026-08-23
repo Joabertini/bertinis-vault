@@ -14,9 +14,37 @@ import {
   resolveWeaponId,
   slugifyId,
 } from "@bertinis-vault/data-engine";
-import { deriveCharacterBuild } from "@bertinis-vault/domain";
+import {
+  abilityImprovementPointsForLevel,
+  applyAbilityBonuses,
+  deriveCharacterBuild,
+  savingThrowsForClass,
+  suggestedAbilityBonuses,
+  type AbilityBonusMap,
+} from "@bertinis-vault/domain";
 
 export type BuilderRulesVersion = "5e-2014" | "5e-2024";
+
+/** How the player generated their raw scores. */
+export type StatMethod = "manual" | "array" | "pointbuy" | "roll";
+
+/** The schema's name for each generation method. */
+const generationMethodByStatMethod = {
+  manual: "manual",
+  array: "standard-array",
+  pointbuy: "point-buy",
+  roll: "roll",
+} as const;
+
+/** Spanish labels for the six abilities, for anything the sheet displays. */
+export const abilityLabels: Record<string, string> = {
+  str: "Fuerza",
+  dex: "Destreza",
+  con: "Constitucion",
+  int: "Inteligencia",
+  wis: "Sabiduria",
+  cha: "Carisma",
+};
 
 export type BuilderState = {
   createdAt: string;
@@ -56,6 +84,18 @@ export type BuilderState = {
   bond: string;
   flaw: string;
   notes: string;
+  /** How the raw scores were generated. Recorded, not just used by the UI. */
+  statMethod: StatMethod;
+  /**
+   * The species or background bonus.
+   *
+   * Editable rather than derived: Monsters of the Multiverse made the bonus
+   * floating for most species, and 2024 moved it to the background, so for
+   * most of the index there is no fixed answer to look up.
+   */
+  abilityBonuses: AbilityBonusMap;
+  /** Ability score improvement points the player has spent. */
+  asiPoints: AbilityBonusMap;
   /**
    * Which book each pick came from, keyed by `"<prop>:<id>"`.
    *
@@ -250,6 +290,9 @@ function optionalLabel(value: string): string | undefined {
 export const initialState: BuilderState = {
   createdAt: new Date().toISOString(),
   rulesVersion: "5e-2014",
+  statMethod: "manual",
+  abilityBonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
+  asiPoints: {},
   characterName: "Seraphina Vale",
   playerName: "Martin",
   alignment: "Neutral Bueno",
@@ -333,8 +376,28 @@ export function coerceBuilderState(value: unknown): BuilderState {
     flaw: typeof candidate.flaw === "string" ? candidate.flaw : initialState.flaw,
     notes: typeof candidate.notes === "string" ? candidate.notes : initialState.notes,
     rulesVersion: candidate.rulesVersion === "5e-2024" ? "5e-2024" : "5e-2014",
+    statMethod: coerceStatMethod(candidate.statMethod),
+    abilityBonuses: coerceAbilityBonuses(candidate.abilityBonuses),
+    asiPoints: coerceAbilityBonuses(candidate.asiPoints),
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
   };
+}
+
+function coerceStatMethod(value: unknown): StatMethod {
+  return value === "array" || value === "pointbuy" || value === "roll" ? value : "manual";
+}
+
+/** Drafts saved before the builder tracked bonuses simply have none. */
+function coerceAbilityBonuses(value: unknown): AbilityBonusMap {
+  if (!value || typeof value !== "object") return {};
+
+  const result: AbilityBonusMap = {};
+  for (const ability of ["str", "dex", "con", "int", "wis", "cha"] as const) {
+    const amount = (value as Record<string, unknown>)[ability];
+    if (typeof amount === "number" && Number.isFinite(amount)) result[ability] = Math.trunc(amount);
+  }
+
+  return result;
 }
 
 /** Drafts saved before the builder recorded books have none. That is fine. */
@@ -399,6 +462,15 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const chosenFeatIds =
     state.featId && !backgroundGrantedFeatIds.includes(state.featId) ? [state.featId] : [];
 
+  const baseScores = {
+    str: state.str,
+    dex: state.dex,
+    con: state.con,
+    int: state.int,
+    wis: state.wis,
+    cha: state.cha,
+  };
+
   const buildInput: CharacterBuildInput = {
     meta: {
       rulesVersion: state.rulesVersion,
@@ -436,23 +508,12 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       grantedFeatIds: backgroundGrantedFeatIds,
     },
     abilities: {
-      generationMethod: "manual",
-      base: {
-        str: state.str,
-        dex: state.dex,
-        con: state.con,
-        int: state.int,
-        wis: state.wis,
-        cha: state.cha,
-      },
-      final: {
-        str: state.str,
-        dex: state.dex,
-        con: state.con,
-        int: state.int,
-        wis: state.wis,
-        cha: state.cha,
-      },
+      generationMethod: generationMethodByStatMethod[state.statMethod],
+      base: baseScores,
+      // Everything downstream reads `final`: hit points, armour class, the
+      // spell save DC, the attack bonus. Species bonuses and improvements have
+      // to land here or the exported character is wrong.
+      final: applyAbilityBonuses(baseScores, state.abilityBonuses, state.asiPoints),
     },
     choices: {
       feats: chosenFeatIds,
@@ -474,6 +535,14 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
             ...languageEntries.map((entry) => ({
               kind: "language" as const,
               label: entry,
+            })),
+            // Every class grants two of these at level one. Nothing was ever
+            // filling the payload's `savingThrows`, so every character
+            // exported before this reached Foundry proficient in none.
+            ...savingThrowsForClass(state.classId).map((ability) => ({
+              kind: "savingThrow" as const,
+              id: ability,
+              label: abilityLabels[ability] ?? ability,
             })),
           ],
         spells: spellEntries,

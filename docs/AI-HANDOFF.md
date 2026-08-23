@@ -10,6 +10,10 @@ Fast start for the next agent working on this repo.
    read from Plutonium's own bundle.
 3. [`DEPLOY.md`](./DEPLOY.md) — the three pieces and what shipping them needs.
 
+4. [`CHARACTER-MODEL-GAPS.md`](./CHARACTER-MODEL-GAPS.md) — what the builder
+   models of a 5e character, what it does not, and in what order that is worth
+   fixing.
+
 Those are current. Treat anything else in this directory as a record of how the
 project got here, not as instructions.
 
