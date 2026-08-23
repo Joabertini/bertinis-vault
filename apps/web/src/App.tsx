@@ -18,11 +18,14 @@ import {
   getSubracesForRace,
 } from "@bertinis-vault/data-engine";
 import {
+  abilityImprovementPointsForLevel,
+  abilityScoreCap,
   buildSpellPickerState,
   formatSpellChoiceLabel,
   getSpellProgressionForClass,
   getSpellSelectionProfileForClassLevel,
   sanitizeSpellSelections,
+  suggestedAbilityBonuses,
 } from "@bertinis-vault/domain";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -34,6 +37,7 @@ import {
   initialState,
   isCharacterNameMissing,
   removeLine,
+  type StatMethod,
 } from "./builder";
 import { fallbackBuilderOptions, type BuilderOptionsPayload } from "./builder-options";
 import { getFeatureSuggestions } from "./feature-suggestions";
@@ -42,7 +46,6 @@ import { optionById, spellInfoFor, type IndexOption } from "./index-options";
 
 const numericDraftKeys = ["str", "dex", "con", "int", "wis", "cha"] as const;
 type NumericDraftKey = (typeof numericDraftKeys)[number];
-type StatMethod = "manual" | "array" | "pointbuy" | "roll";
 
 const steps = [
   { id: "basic", title: "Datos Basicos", desc: "Lo primero es lo primero: identifica a tu aventurero." },
@@ -168,7 +171,8 @@ export function App() {
     }
   });
   const [numericDrafts, setNumericDrafts] = useState(() => createNumericDrafts(state));
-  const [statMethod, setStatMethod] = useState<StatMethod>("manual");
+  const statMethod = state.statMethod;
+  const setStatMethod = (next: StatMethod) => updateField("statMethod", next);
   const [arrayPool, setArrayPool] = useState(standardArray);
   const [selectedArrayValue, setSelectedArrayValue] = useState<number | null>(null);
   const [pointBuy, setPointBuy] = useState<Record<NumericDraftKey, number>>({
@@ -190,6 +194,11 @@ export function App() {
 
   const canonicalSnapshot = buildCanonicalSnapshot(state);
   const nameMissing = isCharacterNameMissing(state);
+  // What the sheet uses: base scores plus the species bonus plus whatever
+  // improvement points have been spent.
+  const finalScores = canonicalSnapshot.abilities.final;
+  const improvementPoints = abilityImprovementPointsForLevel(state.level);
+  const spentImprovementPoints = Object.values(state.asiPoints).reduce((total, amount) => total + (amount ?? 0), 0);
 
   // One resolver per ruleset, rebuilt only when the ruleset changes: indexing
   // 4336 rows on every keystroke would be wasteful.
@@ -409,6 +418,36 @@ export function App() {
           : null,
       ),
     );
+  }
+
+  function adjustAbilityBonus(key: NumericDraftKey, delta: number) {
+    setState((current) => ({
+      ...current,
+      abilityBonuses: {
+        ...current.abilityBonuses,
+        [key]: Math.max(0, Math.min(4, (current.abilityBonuses[key] ?? 0) + delta)),
+      },
+    }));
+  }
+
+  function applySuggestedBonuses() {
+    updateField("abilityBonuses", suggestedAbilityBonuses(state.raceId, state.subraceId));
+  }
+
+  function adjustImprovement(key: NumericDraftKey, delta: number) {
+    setState((current) => {
+      const spent = Object.values(current.asiPoints).reduce((total, amount) => total + (amount ?? 0), 0);
+      const budget = abilityImprovementPointsForLevel(current.level);
+      if (delta > 0 && spent >= budget) return current;
+
+      return {
+        ...current,
+        asiPoints: {
+          ...current.asiPoints,
+          [key]: Math.max(0, (current.asiPoints[key] ?? 0) + delta),
+        },
+      };
+    });
   }
 
   function handleNumericChange(key: NumericDraftKey, rawValue: string) {
@@ -807,6 +846,50 @@ export function App() {
                 </div>
               </div>
             ) : null}
+            <div className="bg-feat-auto" style={{ display: "block" }}>
+              <b>Bonus de especie / trasfondo</b>: en 2014 lo da la especie, y desde Monsters of
+              the Multiverse casi todas lo dejan a eleccion; en 2024 lo da el trasfondo. Por eso
+              se edita a mano. El boton lo completa con la tabla del PHB 2014 cuando la especie
+              elegida esta en ella.
+            </div>
+            <div className="stats-grid">
+              {numericDraftKeys.map((key) => (
+                <div className="stat-field" key={`bonus-${key}`}>
+                  <label>{key.toUpperCase()} bonus</label>
+                  <div className="pb-controls">
+                    <button className="pb-btn" onClick={() => adjustAbilityBonus(key, -1)} type="button">-</button>
+                    <div className="pb-val">{state.abilityBonuses[key] ?? 0}</div>
+                    <button className="pb-btn" onClick={() => adjustAbilityBonus(key, 1)} type="button">+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="btn btn-next" onClick={applySuggestedBonuses} type="button">
+              SUGERIR SEGUN ESPECIE
+            </button>
+            <div className="bg-feat-auto" style={{ display: "block" }}>
+              <b>Mejoras de atributo</b>: {spentImprovementPoints} / {improvementPoints} puntos usados.
+              Un personaje gana dos puntos en los niveles 4, 8, 12, 16 y 19. Dejarlos sin usar es
+              lo que representa haber tomado un feat en su lugar, hasta que el builder pueda
+              ofrecer feats por nivel. El tope de una mejora es {abilityScoreCap}.
+            </div>
+            <div className="stats-grid">
+              {numericDraftKeys.map((key) => (
+                <div className="stat-field" key={`asi-${key}`}>
+                  <label>{key.toUpperCase()} mejora</label>
+                  <div className="pb-controls">
+                    <button className="pb-btn" onClick={() => adjustImprovement(key, -1)} type="button">-</button>
+                    <div className="pb-val">{state.asiPoints[key] ?? 0}</div>
+                    <button
+                      className="pb-btn"
+                      disabled={spentImprovementPoints >= improvementPoints}
+                      onClick={() => adjustImprovement(key, 1)}
+                      type="button"
+                    >+</button>
+                  </div>
+                </div>
+              ))}
+            </div>
             <div className="stats-grid">
               {numericDraftKeys.map((key) => (
                 <div className="stat-field" key={key}>
@@ -831,7 +914,7 @@ export function App() {
                       value={numericDrafts[key]}
                     />
                   )}
-                  <div className="stat-mod">{`${abilityModifier(state[key]) >= 0 ? "+" : ""}${abilityModifier(state[key])}`}</div>
+                  <div className="stat-mod">{`${finalScores[key]} (${abilityModifier(finalScores[key]) >= 0 ? "+" : ""}${abilityModifier(finalScores[key])})`}</div>
                 </div>
               ))}
             </div>

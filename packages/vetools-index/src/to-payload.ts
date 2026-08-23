@@ -166,9 +166,18 @@ function partitionProficiencies(
     if (entry.kind === "skill") result.skills.push(value);
     else if (entry.kind === "language") result.languages.push(value);
     else if (entry.kind === "tool") result.tools.push(value);
+    // A saving throw travels as the ability id, which is what the payload
+    // schema and the module both expect.
+    else if (entry.kind === "savingThrow" && isAbilityId(value)) result.savingThrows.push(value);
   }
 
   return result;
+}
+
+const abilityIds = new Set(["str", "dex", "con", "int", "wis", "cha"]);
+
+function isAbilityId(value: string): value is ImportPayload["proficiencies"]["savingThrows"][number] {
+  return abilityIds.has(value);
 }
 
 /** A short, human-readable account of what failed, for the builder to show. */

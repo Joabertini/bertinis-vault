@@ -85,6 +85,7 @@ export const normalizedProficiencyKindSchema = z.enum([
   "skill",
   "language",
   "tool",
+  "savingThrow",
   "weapon",
   "armor",
   "other",
