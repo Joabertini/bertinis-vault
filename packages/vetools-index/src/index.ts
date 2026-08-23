@@ -12,6 +12,7 @@
 
 import {
   buildRef,
+  buildSubclassRef,
   isSourceAllowed,
   rulesVersionOf,
   type RulesVersion,
@@ -120,8 +121,39 @@ export type RowFor = {
   subclass: SubclassRow;
 };
 
-/** The reference for a row, ready to hand to Plutonium. */
+/**
+ * Whether a row carries the class a subclass hangs off.
+ *
+ * Rows from the index always do; the check exists because callers reach this
+ * through the widened `IndexRow`, where the fields are not visible.
+ */
+export function isSubclassRow(row: IndexRow): row is IndexRow & SubclassRow {
+  const candidate = row as Partial<SubclassRow>;
+  return typeof candidate.className === "string" && typeof candidate.classSource === "string";
+}
+
+/**
+ * The reference for a row, ready to hand to Plutonium.
+ *
+ * A subclass hashes as state on its class's page rather than as an entity of
+ * its own, so it takes a different builder. A subclass row missing its class
+ * would hash to something Plutonium cannot resolve, so it fails rather than
+ * falling through to the generic builder.
+ */
 export function refOf<P extends IndexedProp>(prop: P, row: RowFor[P]): VetoolsRef {
+  if (prop === "subclass") {
+    if (!isSubclassRow(row)) {
+      throw new Error(`Subclass "${row.name}" has no class, so it cannot be referenced.`);
+    }
+    return buildSubclassRef({
+      name: row.name,
+      source: row.source,
+      className: row.className as string,
+      classSource: row.classSource as string,
+      shortName: row.shortName ?? undefined,
+    });
+  }
+
   return buildRef(prop as VetoolsProp, row.name, row.source);
 }
 

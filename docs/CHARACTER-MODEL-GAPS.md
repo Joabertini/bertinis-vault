@@ -159,10 +159,46 @@ It now records, at a cost of 15KB gzip:
 | subclass | 203 rows, which did not exist |
 | subrace | 98 rows, which did not exist |
 
-A subclass appears once per edition of its class under the same source, so the
-generator keeps the original and drops the copy: two rows with the same name
-and source are indistinguishable to the resolver, and every subclass would
-report as ambiguous.
+#### The subclass copies, and why dropping them loses nothing
+
+A 2014 subclass is attached to both editions of its class: School of Abjuration
+hangs off the 2014 Wizard and again off the 2024 Wizard, the second marked
+`_copy`, both carrying source `PHB`. Two rows with the same name and source are
+indistinguishable to the resolver, so every subclass reported as ambiguous. The
+generator keeps the original and drops the copy.
+
+That does not cost an edition. The 2024 subclasses are separate entities with
+their own names and their own source — the 2024 Wizard has Abjurer, Diviner,
+Evoker and Illusionist under `XPHB`, not a second School of Abjuration — and
+where a 2024 book does reuse a name, as College of Lore does, the two rows
+differ by source and both survive. Verified in
+`packages/vetools-index/test/resolve.test.mjs`.
+
+What the copy encodes is that a 2024 character may take a legacy subclass. The
+builder does not offer that, because a build declares one ruleset and the
+picker filters by it. That is a ruleset decision, not a consequence of the
+dedupe.
+
+#### A subclass does not hash like anything else
+
+Every other entity hashes as `encodeArrayForHash(name, source)`. A subclass has
+no page of its own — it is a piece of state on its class's page — so from
+`UrlUtil.URL_TO_HASH_BUILDER["subclass"]` in the Plutonium bundle its hash is:
+
+```
+wizard_phb,state:sub_abjuration_phb=b1
+```
+
+the class's hash, then the subclass as a state part keyed by `shortName` and
+its own source, with `b1` being `UrlUtil.mini.compress(true)`, all lowercased.
+The class part uses the subclass's `classSource`, not its own: the same
+document attached to the two editions of the Wizard is two different hashes.
+
+The repo built subclass references with the generic builder until this was
+read, so no subclass reference would have resolved. `buildSubclassRef` in
+`packages/vetools-ref` now produces the real form, and `refOf` and the resolver
+route subclasses through it. Plutonium writes the same hash onto the actor item
+it creates for a subclass, which is what confirms the form.
 
 What the index still does not carry, on purpose: entity text. Spell
 descriptions, class features, species traits. Plutonium supplies all of it from

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   buildRef,
+  buildSubclassRef,
   dedupeRefs,
   encodeArrayForHash,
   encodeForHash,
@@ -131,4 +132,46 @@ test("dedupeRefs leaves unquantified entries alone", () => {
   assert.equal(result.length, 1);
   assert.equal(result[0].quantity, undefined);
   assert.equal(result[0].prepared, true);
+});
+
+test("a subclass hashes as state on its class's page, not as an entity", () => {
+  // Read from `UrlUtil.URL_TO_HASH_BUILDER["subclass"]` in the Plutonium
+  // bundle: the class hash, then the subclass as a state part.
+  const ref = buildSubclassRef({
+    name: "School of Abjuration",
+    source: "PHB",
+    className: "Wizard",
+    classSource: "PHB",
+    shortName: "Abjuration",
+  });
+
+  assert.equal(ref.hash, "wizard_phb,state:sub_abjuration_phb=b1");
+  assert.equal(ref.page, "classes.html");
+  assert.equal(ref.source, "PHB");
+  assert.equal(ref.prop, "subclass");
+});
+
+test("a subclass falls back to its full name when it has no short name", () => {
+  const ref = buildSubclassRef({
+    name: "Bladesinging",
+    source: "TCE",
+    className: "Wizard",
+    classSource: "PHB",
+  });
+
+  assert.equal(ref.hash, "wizard_phb,state:sub_bladesinging_tce=b1");
+});
+
+test("a subclass hangs off the class edition it was attached to", () => {
+  // The 2024 Wizard's own subclasses live under XPHB, and their class part
+  // differs from the 2014 ones even where the subclass name would not.
+  const ref = buildSubclassRef({
+    name: "Abjurer",
+    source: "XPHB",
+    className: "Wizard",
+    classSource: "XPHB",
+    shortName: "Abjurer",
+  });
+
+  assert.equal(ref.hash, "wizard_xphb,state:sub_abjurer_xphb=b1");
 });

@@ -13,6 +13,12 @@
 /** 5etools joins hash components with this separator. */
 export const HASH_LIST_SEP = "_";
 
+/** 5etools separates the parts of a multi-part hash with this. */
+export const HASH_PART_SEP = ",";
+
+/** 5etools separates a sub-hash key from its values with this. */
+export const HASH_SUB_KV_SEP = ":";
+
 /**
  * `String.prototype.toUrlified` in 5etools.
  *
@@ -87,9 +93,10 @@ export class MissingSourceError extends Error {
 /**
  * Build a reference from a name and source directly.
  *
- * Every prop a character build touches uses 5etools' generic hash builder,
- * `encodeArrayForHash(name, source)`. Pages with their own builders — deities,
- * adventures, books — are deliberately absent from `PROP_TO_PAGE`.
+ * Almost every prop a character build touches uses 5etools' generic hash
+ * builder, `encodeArrayForHash(name, source)`. Subclasses are the exception —
+ * see `buildSubclassRef`. Pages with their own builders — deities, adventures,
+ * books — are deliberately absent from `PROP_TO_PAGE`.
  */
 export function buildRef(prop: VetoolsProp, name: string, source: string): VetoolsRef {
   return {
@@ -97,6 +104,47 @@ export function buildRef(prop: VetoolsProp, name: string, source: string): Vetoo
     source,
     hash: encodeArrayForHash(name, source),
     prop,
+  };
+}
+
+/** What identifies a subclass: itself, plus the class it hangs off. */
+export type SubclassRefInput = {
+  name: string;
+  source: string;
+  className: string;
+  classSource: string;
+  /** `shortName` in the data, e.g. "Abjuration" for "School of Abjuration". */
+  shortName?: string | undefined;
+};
+
+/**
+ * Build a subclass reference.
+ *
+ * A subclass is the one thing a build references that has no page of its own:
+ * it is a piece of state on its class's page. So its hash is the class's hash
+ * followed by a state part naming the subclass, rather than the generic
+ * `name_source`. From `UrlUtil.URL_TO_HASH_BUILDER["subclass"]` in the
+ * Plutonium bundle:
+ *
+ *     `${classHash},state:${encodeArrayForHash("sub", shortName, source)}=b1`
+ *
+ * where `b1` is `UrlUtil.mini.compress(true)` and the whole hash is lowercased
+ * by `Hist.util.getCleanHash`.
+ *
+ * The class part uses the subclass's `classSource`, not its own source: the
+ * 2014 School of Abjuration is attached to both the 2014 and the 2024 Wizard,
+ * and those are two different hashes for the same document.
+ */
+export function buildSubclassRef(subclass: SubclassRefInput): VetoolsRef {
+  const classHash = encodeArrayForHash(subclass.className, subclass.classSource);
+  const stateKey = encodeArrayForHash("sub", subclass.shortName || subclass.name, subclass.source);
+  const hash = `${classHash}${HASH_PART_SEP}state${HASH_SUB_KV_SEP}${stateKey}=b1`;
+
+  return {
+    page: PROP_TO_PAGE.subclass,
+    source: subclass.source,
+    hash,
+    prop: "subclass",
   };
 }
 
