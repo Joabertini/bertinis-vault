@@ -3,7 +3,7 @@
   "label": "Martial with armor and shield",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-04-03T08:11:04.789Z",
+    "generatedAt": "2026-08-23T19:05:07.171Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -435,125 +435,29 @@
       },
       "tools": {
         "game": {
+          "value": 1,
           "ability": "int",
-          "bonus": "",
-          "value": 1,
-          "prof": 1,
-          "roll": {
-            "min": null,
-            "max": null,
-            "mode": 0
-          },
-          "custom": "Gaming Set"
-        },
-        "land": {
-          "ability": "dex",
-          "bonus": "",
-          "value": 1,
-          "prof": 1,
-          "roll": {
-            "min": null,
-            "max": null,
-            "mode": 0
-          },
-          "custom": "Land Vehicles"
-        }
-      },
-      "attributes": {
-        "ac": {
-          "calc": "default",
-          "flat": null
-        },
-        "hp": {
-          "max": null,
-          "temp": null,
-          "tempmax": 0,
-          "value": 44,
-          "bonuses": {}
-        },
-        "spellcasting": "",
-        "init": {
-          "ability": "",
-          "roll": {
-            "min": 10,
-            "max": null,
-            "mode": 0
-          },
-          "bonus": ""
-        },
-        "movement": {
-          "units": null,
-          "hover": false,
-          "ignoredDifficultTerrain": []
-        },
-        "attunement": {
-          "max": 3
-        },
-        "senses": {
-          "darkvision": null,
-          "blindsight": null,
-          "tremorsense": null,
-          "truesight": null,
-          "units": null,
-          "special": ""
-        },
-        "exhaustion": 0,
-        "concentration": {
-          "ability": "",
           "roll": {
             "min": null,
             "max": null,
             "mode": 0
           },
           "bonuses": {
-            "save": ""
-          },
-          "limit": 1
-        },
-        "loyalty": {},
-        "death": {
-          "roll": {
-            "min": null,
-            "max": null,
-            "mode": 0
-          },
-          "success": 0,
-          "failure": 0,
-          "bonuses": {
-            "save": ""
+            "check": ""
           }
         },
-        "inspiration": false
-      },
-      "bastion": {
-        "name": "",
-        "description": ""
-      },
-      "details": {
-        "alignment": "Neutral Good",
-        "biography": {
-          "value": "<p><em>Trait:</em> Always writes everything down.</p><p><em>Ideal:</em> Knowledge before fear.</p>",
-          "public": ""
-        },
-        "race": "dwarf",
-        "background": "soldier",
-        "originalClass": "fighter",
-        "xp": {
-          "value": 0
-        },
-        "trait": "Always writes everything down.",
-        "appearance": "",
-        "ideal": "Knowledge before fear.",
-        "bond": "",
-        "flaw": "",
-        "eyes": "",
-        "height": "",
-        "faith": "",
-        "hair": "",
-        "weight": "",
-        "gender": "",
-        "skin": "",
-        "age": ""
+        "land": {
+          "value": 1,
+          "ability": "dex",
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "bonuses": {
+            "check": ""
+          }
+        }
       },
       "spells": {
         "spell1": {
@@ -586,6 +490,109 @@
         "pact": {
           "value": 0
         }
+      },
+      "attributes": {
+        "ac": {
+          "calc": "default",
+          "flat": null
+        },
+        "init": {
+          "ability": "",
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "bonus": ""
+        },
+        "movement": {
+          "units": null,
+          "hover": false,
+          "ignoredDifficultTerrain": [],
+          "walk": "",
+          "burrow": "",
+          "climb": "",
+          "fly": "",
+          "swim": "",
+          "bonus": "",
+          "special": ""
+        },
+        "attunement": {
+          "max": 3
+        },
+        "senses": {
+          "darkvision": null,
+          "blindsight": null,
+          "tremorsense": null,
+          "truesight": null,
+          "units": null,
+          "special": ""
+        },
+        "spellcasting": "",
+        "exhaustion": 0,
+        "concentration": {
+          "ability": "",
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "bonuses": {
+            "save": ""
+          },
+          "limit": 1
+        },
+        "loyalty": {},
+        "hp": {
+          "max": null,
+          "temp": null,
+          "tempmax": 0,
+          "value": 44,
+          "bonuses": {}
+        },
+        "death": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "success": 0,
+          "failure": 0,
+          "bonuses": {
+            "save": ""
+          }
+        },
+        "inspiration": false
+      },
+      "bastion": {
+        "name": "",
+        "description": ""
+      },
+      "details": {
+        "biography": {
+          "value": "<p><em>Trait:</em> Always writes everything down.</p><p><em>Ideal:</em> Knowledge before fear.</p>",
+          "public": ""
+        },
+        "alignment": "Neutral Good",
+        "ideal": "Knowledge before fear.",
+        "bond": "",
+        "flaw": "",
+        "race": "dwarf",
+        "background": "soldier",
+        "originalClass": "fighter",
+        "xp": {
+          "value": 0
+        },
+        "appearance": "",
+        "trait": "Always writes everything down.",
+        "eyes": "",
+        "height": "",
+        "faith": "",
+        "hair": "",
+        "weight": "",
+        "gender": "",
+        "skin": "",
+        "age": ""
       },
       "traits": {
         "size": "med",
@@ -661,7 +668,7 @@
     },
     "items": [
       {
-        "_id": "HoxAVDjnKCZCBgFu",
+        "_id": "mqCYH2mHX4QMVU4f",
         "name": "fighter",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -721,7 +728,7 @@
         }
       },
       {
-        "_id": "Hc8AaWiHQBcPw0LG",
+        "_id": "xozG1ZE8je10cxWc",
         "name": "Tough",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -779,7 +786,7 @@
         }
       },
       {
-        "_id": "jIKrAtw7ZHZqiiYI",
+        "_id": "wfYVgA2lbOMJgYdc",
         "name": "Second Wind",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -837,7 +844,7 @@
         }
       },
       {
-        "_id": "q2qZ2289eyOQH0V3",
+        "_id": "k57k3x7qakwMMmjZ",
         "name": "Action Surge",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -895,7 +902,7 @@
         }
       },
       {
-        "_id": "9snAHYyyjhYAzI7h",
+        "_id": "dY62LUp8G2wE3JwQ",
         "name": "longsword",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1094,7 +1101,7 @@
         }
       },
       {
-        "_id": "FwxEyCauOLO7O3Fa",
+        "_id": "qlLzoeaxkNtdEo7E",
         "name": "Shield",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1160,7 +1167,7 @@
         }
       },
       {
-        "_id": "9YNWKRR07c7B0VBh",
+        "_id": "ZN3yFs8kFRw1poMz",
         "name": "Chain Mail",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1226,7 +1233,7 @@
         }
       },
       {
-        "_id": "HxuBtp3ViBU45sRb",
+        "_id": "2J9xk5CglKQSOf7D",
         "name": "Explorer's Pack",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",
@@ -1391,7 +1398,13 @@
     "_stats": {
       "compendiumSource": null,
       "duplicateSource": null,
-      "exportSource": null,
+      "exportSource": {
+        "worldId": "vault-character",
+        "uuid": "",
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.2.5"
+      },
       "coreVersion": "13.351",
       "systemId": "dnd5e",
       "systemVersion": "5.2.5",

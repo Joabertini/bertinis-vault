@@ -3,7 +3,7 @@
   "label": "Pact caster warlock",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-04-03T08:11:04.801Z",
+    "generatedAt": "2026-08-23T19:05:07.192Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -435,125 +435,29 @@
       },
       "tools": {
         "disg": {
+          "value": 1,
           "ability": "cha",
-          "bonus": "",
-          "value": 1,
-          "prof": 1,
-          "roll": {
-            "min": null,
-            "max": null,
-            "mode": 0
-          },
-          "custom": "Disguise Kit"
-        },
-        "forg": {
-          "ability": "dex",
-          "bonus": "",
-          "value": 1,
-          "prof": 1,
-          "roll": {
-            "min": null,
-            "max": null,
-            "mode": 0
-          },
-          "custom": "Forgery Kit"
-        }
-      },
-      "attributes": {
-        "ac": {
-          "calc": "default",
-          "flat": null
-        },
-        "hp": {
-          "max": null,
-          "temp": null,
-          "tempmax": 0,
-          "value": 38,
-          "bonuses": {}
-        },
-        "spellcasting": "cha",
-        "init": {
-          "ability": "",
-          "roll": {
-            "min": 10,
-            "max": null,
-            "mode": 0
-          },
-          "bonus": ""
-        },
-        "movement": {
-          "units": null,
-          "hover": false,
-          "ignoredDifficultTerrain": []
-        },
-        "attunement": {
-          "max": 3
-        },
-        "senses": {
-          "darkvision": null,
-          "blindsight": null,
-          "tremorsense": null,
-          "truesight": null,
-          "units": null,
-          "special": ""
-        },
-        "exhaustion": 0,
-        "concentration": {
-          "ability": "",
           "roll": {
             "min": null,
             "max": null,
             "mode": 0
           },
           "bonuses": {
-            "save": ""
-          },
-          "limit": 1
-        },
-        "loyalty": {},
-        "death": {
-          "roll": {
-            "min": null,
-            "max": null,
-            "mode": 0
-          },
-          "success": 0,
-          "failure": 0,
-          "bonuses": {
-            "save": ""
+            "check": ""
           }
         },
-        "inspiration": false
-      },
-      "bastion": {
-        "name": "",
-        "description": ""
-      },
-      "details": {
-        "alignment": "Neutral Good",
-        "biography": {
-          "value": "<p><em>Trait:</em> Always writes everything down.</p><p><em>Ideal:</em> Knowledge before fear.</p>",
-          "public": ""
-        },
-        "race": "human",
-        "background": "charlatan",
-        "originalClass": "warlock",
-        "xp": {
-          "value": 0
-        },
-        "trait": "Always writes everything down.",
-        "appearance": "",
-        "ideal": "Knowledge before fear.",
-        "bond": "",
-        "flaw": "",
-        "eyes": "",
-        "height": "",
-        "faith": "",
-        "hair": "",
-        "weight": "",
-        "gender": "",
-        "skin": "",
-        "age": ""
+        "forg": {
+          "value": 1,
+          "ability": "dex",
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "bonuses": {
+            "check": ""
+          }
+        }
       },
       "spells": {
         "spell1": {
@@ -586,6 +490,109 @@
         "pact": {
           "value": 2
         }
+      },
+      "attributes": {
+        "ac": {
+          "calc": "default",
+          "flat": null
+        },
+        "init": {
+          "ability": "",
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "bonus": ""
+        },
+        "movement": {
+          "units": null,
+          "hover": false,
+          "ignoredDifficultTerrain": [],
+          "walk": "",
+          "burrow": "",
+          "climb": "",
+          "fly": "",
+          "swim": "",
+          "bonus": "",
+          "special": ""
+        },
+        "attunement": {
+          "max": 3
+        },
+        "senses": {
+          "darkvision": null,
+          "blindsight": null,
+          "tremorsense": null,
+          "truesight": null,
+          "units": null,
+          "special": ""
+        },
+        "spellcasting": "cha",
+        "exhaustion": 0,
+        "concentration": {
+          "ability": "",
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "bonuses": {
+            "save": ""
+          },
+          "limit": 1
+        },
+        "loyalty": {},
+        "hp": {
+          "max": null,
+          "temp": null,
+          "tempmax": 0,
+          "value": 38,
+          "bonuses": {}
+        },
+        "death": {
+          "roll": {
+            "min": null,
+            "max": null,
+            "mode": 0
+          },
+          "success": 0,
+          "failure": 0,
+          "bonuses": {
+            "save": ""
+          }
+        },
+        "inspiration": false
+      },
+      "bastion": {
+        "name": "",
+        "description": ""
+      },
+      "details": {
+        "biography": {
+          "value": "<p><em>Trait:</em> Always writes everything down.</p><p><em>Ideal:</em> Knowledge before fear.</p>",
+          "public": ""
+        },
+        "alignment": "Neutral Good",
+        "ideal": "Knowledge before fear.",
+        "bond": "",
+        "flaw": "",
+        "race": "human",
+        "background": "charlatan",
+        "originalClass": "warlock",
+        "xp": {
+          "value": 0
+        },
+        "appearance": "",
+        "trait": "Always writes everything down.",
+        "eyes": "",
+        "height": "",
+        "faith": "",
+        "hair": "",
+        "weight": "",
+        "gender": "",
+        "skin": "",
+        "age": ""
       },
       "traits": {
         "size": "med",
@@ -659,7 +666,7 @@
     },
     "items": [
       {
-        "_id": "DgO79PSgJGy4uaJm",
+        "_id": "CrT59IlSNFn5L7q6",
         "name": "warlock",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -719,7 +726,7 @@
         }
       },
       {
-        "_id": "zWX8sWk1CUXoz9oY",
+        "_id": "CFahQ58bb1gayjts",
         "name": "Pact Magic",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -777,7 +784,7 @@
         }
       },
       {
-        "_id": "7FMbRAX2qa4js9Rh",
+        "_id": "iFGD4PP5XepMSXRn",
         "name": "Eldritch Blast",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -933,7 +940,7 @@
         }
       },
       {
-        "_id": "2rRBBk37jKtsIoes",
+        "_id": "K455owPgt8KcpEhi",
         "name": "Hunger of Hadar",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1089,7 +1096,7 @@
         }
       },
       {
-        "_id": "VWEeGJvv11G00sQz",
+        "_id": "z62d39QZ9Diw3awq",
         "name": "dagger",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1288,7 +1295,7 @@
         }
       },
       {
-        "_id": "Xj55DCdzxUUI16tg",
+        "_id": "A6iJy5wNhq5U3wZ7",
         "name": "Leather Armor",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1354,7 +1361,7 @@
         }
       },
       {
-        "_id": "6DyR7BMHYKMZUOJ0",
+        "_id": "uDpxkIt3J5aYsnnP",
         "name": "Arcane Focus",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",
@@ -1519,7 +1526,13 @@
     "_stats": {
       "compendiumSource": null,
       "duplicateSource": null,
-      "exportSource": null,
+      "exportSource": {
+        "worldId": "vault-character",
+        "uuid": "",
+        "coreVersion": "13.351",
+        "systemId": "dnd5e",
+        "systemVersion": "5.2.5"
+      },
       "coreVersion": "13.351",
       "systemId": "dnd5e",
       "systemVersion": "5.2.5",

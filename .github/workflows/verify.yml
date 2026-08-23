@@ -44,5 +44,11 @@ jobs:
       - name: Verify Domain Rules
         run: corepack pnpm --filter @bertinis-vault/domain test
 
+      - name: Verify 5etools References
+        run: corepack pnpm --filter @bertinis-vault/vetools-ref test
+
+      - name: Verify 5etools Index
+        run: corepack pnpm --filter @bertinis-vault/vetools-index test
+
       - name: Verify Foundry Baseline
         run: corepack pnpm foundry:verify

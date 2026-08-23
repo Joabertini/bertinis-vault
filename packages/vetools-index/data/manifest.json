@@ -1,0 +1,32 @@
+{
+  "spell": {
+    "count": 1050,
+    "bytes": 151656,
+    "gzip": 13175
+  },
+  "item": {
+    "count": 2658,
+    "bytes": 314558,
+    "gzip": 29933
+  },
+  "feat": {
+    "count": 276,
+    "bytes": 11733,
+    "gzip": 2228
+  },
+  "race": {
+    "count": 160,
+    "bytes": 7407,
+    "gzip": 1145
+  },
+  "background": {
+    "count": 161,
+    "bytes": 6809,
+    "gzip": 1549
+  },
+  "class": {
+    "count": 31,
+    "bytes": 1135,
+    "gzip": 274
+  }
+}

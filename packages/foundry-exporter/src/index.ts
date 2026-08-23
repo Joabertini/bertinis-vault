@@ -28,7 +28,7 @@ import {
   resolveToolEntry as resolveToolEntryShared,
 } from "@bertinis-vault/domain";
 
-import blankTemplate from "./blank-actor-template.json";
+import blankTemplate from "./blank-actor-template.json" with { type: "json" };
 
 type FoundryItem = Record<string, unknown>;
 type DerivedSpellEntry = {
