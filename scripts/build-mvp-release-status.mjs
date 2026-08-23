@@ -50,7 +50,6 @@ const lines = [
   "- [ ] Confirm no valid fixture imports with unexpected blockers.",
   "- [ ] Confirm the warning-only fixture still creates an actor with understandable warnings.",
   "- [ ] Confirm the blocked fixture stops actor creation cleanly.",
-  "- [ ] Refresh `docs/BETA-SIGNOFF.md` before announcing MVP/beta.",
   "",
   "## Current Recommendation",
   "",
