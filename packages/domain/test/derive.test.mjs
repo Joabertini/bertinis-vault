@@ -50,8 +50,11 @@ test("deriveCharacterBuild computes hp, ac, proficiency bonus and spellcasting",
   assert.equal(build.derived.spellcasting?.ability, "int");
   assert.equal(build.derived.spellcasting?.attackBonus, 5);
   assert.equal(build.derived.spellcasting?.saveDC, 13);
-  assert.equal(build.derived.spellcasting?.slots.spell1, 4);
-  assert.equal(build.derived.spellcasting?.slots.spell2, 2);
+  // Keyed by the level the slot is, which is the payload's shape. Foundry's
+  // own `spell1` field names belong to the direct actor exporter.
+  assert.equal(build.derived.spellcasting?.slots["1"], 4);
+  assert.equal(build.derived.spellcasting?.slots["2"], 2);
+  assert.equal(build.derived.spellcasting?.slots.spell1, undefined);
 });
 
 test("deriveCharacterBuild omits spellcasting for non-casters", () => {
@@ -96,6 +99,8 @@ test("deriveCharacterBuild uses pact slot progression for warlocks", () => {
   );
 
   assert.equal(build.derived.spellcasting?.ability, "cha");
-  assert.equal(build.derived.spellcasting?.slots.spell3, 2);
-  assert.equal(build.derived.spellcasting?.slots.spell5, 0);
+  // A warlock's are pact slots, a separate resource, cast at their own level.
+  assert.equal(build.derived.spellcasting?.slots.pact, 2);
+  assert.equal(build.derived.spellcasting?.pactLevel, 3);
+  assert.equal(build.derived.spellcasting?.slots["3"], undefined);
 });

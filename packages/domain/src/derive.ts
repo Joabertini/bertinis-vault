@@ -10,9 +10,9 @@ import { calculateArmorClass, calculateEstimatedHitPoints } from "./combat.js";
 import {
   getHitDieForClass,
   getSpellAbilityForClass,
-  getSpellSlotsForClassLevel,
   normalizeClassId,
 } from "./dnd5e-2014.js";
+import { spellSlotsForPayload } from "./spell-slots-payload.js";
 import { getCharacterLevel, getProficiencyBonus } from "./progression.js";
 
 export function deriveCharacterBuild(
@@ -52,12 +52,19 @@ export function deriveCharacterBuild(
     hasShield,
   });
 
+  // Keyed by the level the slot is, which is the payload's shape rather than
+  // Foundry's field names. The two were confused, and the result was a path
+  // that did not exist.
+  const slotRules = parsedInput.meta.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const payloadSlots = spellSlotsForPayload(primaryClassId, primaryClassLevel, slotRules);
+
   const spellcasting = spellAbility
       ? {
           ability: spellAbility,
           attackBonus: proficiencyBonus + modifiers[spellAbility],
           saveDC: 8 + proficiencyBonus + modifiers[spellAbility],
-          slots: getSpellSlotsForClassLevel(primaryClassId, primaryClassLevel),
+          slots: payloadSlots.slots,
+          ...(payloadSlots.pactLevel ? { pactLevel: payloadSlots.pactLevel } : {}),
         }
       : undefined;
 

@@ -164,7 +164,16 @@ export const spellcastingSchema = z.object({
   ability: abilityIdSchema,
   attackBonus: z.number().int(),
   saveDC: z.number().int(),
+  /**
+   * Slots by the level they are, e.g. `{"1": 4, "2": 3}`.
+   *
+   * Not Foundry's field names: the module turns a level into a field on
+   * arrival, and sending it a field name made it build one twice.
+   * A warlock's are under `pact`, which is a separate resource on the sheet.
+   */
   slots: z.record(z.string(), z.number().int().min(0)),
+  /** The level a warlock's pact slots are cast at. Absent for everyone else. */
+  pactLevel: z.number().int().min(1).max(9).optional(),
 });
 
 export const derivedSchema = z.object({

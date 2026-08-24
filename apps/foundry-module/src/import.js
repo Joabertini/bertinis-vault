@@ -97,11 +97,47 @@ export function proficiencyUpdates(payload) {
   for (const ability of payload.proficiencies.savingThrows ?? []) {
     updates[`system.abilities.${ability}.proficient`] = 1;
   }
-  if (payload.proficiencies.languages?.length) {
-    updates["system.traits.languages.value"] = payload.proficiencies.languages;
-  }
+
+  // A language the system has a key for goes in the list it validates; one it
+  // does not — a setting's own, or a secret like Thieves' Cant — goes in the
+  // free-text field beside it rather than being dropped.
+  const { known, custom } = partitionLanguages(payload.proficiencies.languages ?? []);
+  if (known.length) updates["system.traits.languages.value"] = known;
+  if (custom.length) updates["system.traits.languages.custom"] = custom.join(", ");
 
   return updates;
+}
+
+/**
+ * The language keys `dnd5e` accepts.
+ *
+ * Duplicated from the contract rather than imported: this module ships into
+ * Foundry as plain files with no bundler and no dependencies. The conformance
+ * test asserts the two agree, which is what keeps the copy honest.
+ */
+const LANGUAGE_IDS = {
+  common: "common", dwarvish: "dwarvish", elvish: "elvish", giant: "giant",
+  gnomish: "gnomish", goblin: "goblin", halfling: "halfling", orc: "orc",
+  abyssal: "abyssal", celestial: "celestial", draconic: "draconic",
+  "deep speech": "deep", infernal: "infernal", primordial: "primordial",
+  sylvan: "sylvan", undercommon: "undercommon", druidic: "druidic",
+  "thieves' cant": "cant", "common sign language": "communal",
+};
+
+export function partitionLanguages(names) {
+  const known = [];
+  const custom = [];
+
+  for (const name of names) {
+    const id = LANGUAGE_IDS[name.trim().toLowerCase().replace(/\s+/g, " ")];
+    if (id) {
+      if (!known.includes(id)) known.push(id);
+    } else if (name.trim() && !custom.includes(name.trim())) {
+      custom.push(name.trim());
+    }
+  }
+
+  return { known, custom };
 }
 
 /**
@@ -117,6 +153,10 @@ export function derivedUpdates(payload) {
     "system.attributes.hp.max": payload.derived.hp,
   };
 
+  // The payload keys slots by the level they are — `{"1": 4}` — and the field
+  // name is built here. It was once given field names and prefixed them again,
+  // producing `system.spells.spellspell1`, so every character imported with no
+  // slots at all. The conformance test is what proves the two agree now.
   if (payload.derived.spellcasting?.slots) {
     for (const [level, count] of Object.entries(payload.derived.spellcasting.slots)) {
       const key = level === "pact" ? "pact" : `spell${level}`;
@@ -125,7 +165,28 @@ export function derivedUpdates(payload) {
     }
   }
 
+  // A warlock's slots are cast at a level the count alone does not say.
+  if (payload.derived.spellcasting?.pactLevel) {
+    updates["system.spells.pact.level"] = payload.derived.spellcasting.pactLevel;
+  }
+
   return updates;
+}
+
+/**
+ * The per-character state of one imported item.
+ *
+ * Separate from the loop that applies it so it can be checked without a live
+ * actor: whether armour arrives worn decides the armour class Foundry
+ * computes, and that is worth a test rather than a reading.
+ */
+export function equipmentUpdates(entry) {
+  const update = {};
+  if (entry.quantity != null) update["system.quantity"] = entry.quantity;
+  if (entry.equipped != null) update["system.equipped"] = entry.equipped;
+  if (entry.attuned != null) update["system.attuned"] = entry.attuned;
+
+  return update;
 }
 
 /**
@@ -184,10 +245,7 @@ async function applyItemState(actor, payload) {
     const item = findByRef(byName, entry.ref);
     if (!item) continue;
 
-    const update = { _id: item.id };
-    if (entry.quantity != null) update["system.quantity"] = entry.quantity;
-    if (entry.equipped != null) update["system.equipped"] = entry.equipped;
-    if (entry.attuned != null) update["system.attuned"] = entry.attuned;
+    const update = { _id: item.id, ...equipmentUpdates(entry) };
     if (Object.keys(update).length > 1) updates.push(update);
   }
 

@@ -21,7 +21,17 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
-  apps/foundry-module: {}
+  apps/foundry-module:
+    devDependencies:
+      '@bertinis-vault/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@bertinis-vault/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      '@bertinis-vault/vetools-index':
+        specifier: workspace:*
+        version: link:../../packages/vetools-index
 
   apps/web:
     dependencies:

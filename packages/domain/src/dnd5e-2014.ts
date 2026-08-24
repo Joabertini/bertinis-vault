@@ -112,7 +112,7 @@ export const spellSlotsFullCasterTable: Record<number, number[]> = {
   20: [4, 3, 3, 3, 3, 2, 2, 1, 1],
 };
 
-const warlockPactSlotCountByLevel: Record<number, number> = {
+export const warlockPactSlotCountByLevel: Record<number, number> = {
   1: 1,
   2: 2,
   3: 2,
@@ -135,7 +135,7 @@ const warlockPactSlotCountByLevel: Record<number, number> = {
   20: 4,
 };
 
-const warlockPactSlotLevelByClassLevel: Record<number, number> = {
+export const warlockPactSlotLevelByClassLevel: Record<number, number> = {
   1: 1,
   2: 1,
   3: 2,
