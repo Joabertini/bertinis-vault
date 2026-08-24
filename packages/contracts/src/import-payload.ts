@@ -100,8 +100,12 @@ export const payloadDerivedSchema = z.object({
       ability: abilityIdSchema,
       attackBonus: z.number().int(),
       saveDC: z.number().int(),
-      /** Slots by level, e.g. `{"1": 4, "2": 3}`. Pact slots included. */
+      /**
+       * Slots by the level they are, e.g. `{"1": 4, "2": 3}`. A warlock's are
+       * under `pact` instead, and `pactLevel` says what level they cast at.
+       */
       slots: z.record(z.string(), z.number().int().min(0)),
+      pactLevel: z.number().int().min(1).max(9).optional(),
     })
     .optional(),
 });

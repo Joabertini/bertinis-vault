@@ -3,7 +3,7 @@
   "label": "Warning-only validation case",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-24T00:36:50.337Z",
+    "generatedAt": "2026-08-24T01:09:37.528Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -695,7 +695,7 @@
     },
     "items": [
       {
-        "_id": "bD4eFlWxHfgtg1lU",
+        "_id": "Jt4gotJ6CRo73Gso",
         "name": "wizard",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -755,7 +755,7 @@
         }
       },
       {
-        "_id": "H1yl4CMs3yLVmouV",
+        "_id": "rjfT8458zwhIQQyH",
         "name": "Magic Initiate",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -813,7 +813,7 @@
         }
       },
       {
-        "_id": "AuGG2cBMmEBryeRK",
+        "_id": "WWmjAY87wVGddGN2",
         "name": "Alert",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -871,7 +871,7 @@
         }
       },
       {
-        "_id": "3QvrOuT89fZHpn7M",
+        "_id": "6LP0eHTxh1zZ0aav",
         "name": "Arcane Recovery",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -929,7 +929,7 @@
         }
       },
       {
-        "_id": "EnlpTbgdlOIzvoeN",
+        "_id": "6aP4ubYfwKJT0w3p",
         "name": "Fireball",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1086,7 +1086,7 @@
         }
       },
       {
-        "_id": "bLAGwCtUlwQY7rdj",
+        "_id": "vtkFEmJay5JZiRlw",
         "name": "Shield",
         "type": "equipment",
         "img": "icons/svg/shield.svg",

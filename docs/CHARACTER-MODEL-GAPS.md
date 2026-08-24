@@ -183,10 +183,25 @@ work — the index formulas, the generalized parser — stops at the payload.
 Verifying the exact dnd5e key forms needs a live world. The double prefix does
 not: it is wrong on its own terms.
 
-**What to build, not just what to fix:** a conformance test that derives a real
-build, converts it, and asserts on what the module produces. Every fault above
-would have been caught by one, and the class of fault it catches is the class
-this audit exists to stop finding one at a time.
+**Fixed.** `apps/foundry-module/test/conformance.test.mjs` derives a real
+build, converts it exactly as the web app does, and asserts on what the
+module's own functions produce from it. It writes no fixture, so nothing in it
+can drift away from the builder.
+
+Slots now travel keyed by the level they are, which is what the contract always
+said; a warlock's go under `pact` with a `pactLevel` beside them. Skills travel
+as `dnd5e` keys, and a skill with no key is dropped rather than written to a
+path that does nothing. Languages the system knows become keys and the rest
+become the free-text field beside them.
+
+Armour class is still not written, and that is now a decision rather than an
+oversight: Foundry recomputes it live from what the character has equipped, and
+a flat value would freeze it against everything the player does afterwards. So
+the payload marks worn items worn — `equipment[].equipped`, which nothing had
+ever set — and lets Foundry compute. The builder's `derived.ac` remains what
+the player saw, and the two being comparable is now the point. If the intent is
+that the builder's number wins the way its hit points do, that is a one-line
+change and a deliberate one.
 
 ### B. Class skill choices are wrong for eight of thirteen classes
 
@@ -245,15 +260,28 @@ repository passes it. The barbarian's Constitution and the monk's Wisdom never
 reach armour class — and the barbarian, per B, does not really exist in the
 builder anyway.
 
-### F. Half-casters get spells one level early in 2014
+### F. Half-caster slots were wrong at half their levels
 
-`getSpellSlotsForClassLevel` gives a level 1 paladin and a level 1 ranger two
-first-level slots. That is the 2024 rule. In 2014 both classes start casting at
-level 2, and the data says so: the 2014 rows are `casterProgression: "1/2"`
-where the 2024 rows are `"artificer"`.
+What the audit first spotted was a level 1 paladin holding two spell slots it
+does not have until level 2 — the 2024 rule applied to a 2014 character.
 
-Hit dice, spellcasting abilities and every other slot count check out against
-the data — those were verified, not assumed.
+Writing the fix found the larger fault. The code halved the class level
+*rounding down* and read the full-caster table with the result. That is not the
+half-caster table. It matches at even levels and undershoots at every odd level
+from 3 up: a level 5 ranger was given three first-level slots where the table
+gives four first and two second.
+
+A half-caster reads the full-caster table at `ceil(level / 2)`, and the two
+editions differ in exactly one row — whether level 1 casts at all. The
+artificer is the class the 2024 rule was named after and casts from 1 in both.
+
+**Fixed**, and checked against the 5etools tables for all 20 levels of every
+casting class in both editions: 300 class-levels, no mismatches. The published
+half-caster table is written out in `packages/domain/test/spell-slots-payload.test.mjs`,
+because deriving it is what went wrong.
+
+Hit dice, spellcasting abilities and every full-caster and pact slot count
+check out against the data — those were verified, not assumed.
 
 ### G. Payload fields nothing has ever filled
 
@@ -262,7 +290,7 @@ the data — those were verified, not assumed.
 | `proficiencies.expertise` | always `[]`; rogues and bards lose their defining feature |
 | `spells[].prepared` | never set, so nothing distinguishes prepared from known |
 | `spells[].grantedBy` | never set |
-| `equipment[].equipped` | never set, so nothing is worn and Foundry computes AC from an empty body |
+| `equipment[].equipped` | ~~never set~~ **fixed** — armour, shields and weapons now arrive worn |
 | `equipment[].attuned` | never set |
 | `derived.speed` | never set, though race rows now carry speed |
 | `derived.initiative` | never set — arguably right, Foundry derives it |
@@ -275,6 +303,21 @@ armour class, and does not say the armour is worn either.
 `calculateEstimatedHitPoints` takes a hit die, a level and a Constitution
 modifier. It has no room for the hill dwarf's extra point per level, the Tough
 feat's two, or a player who rolled. Nor for the 2024 rule change.
+
+### I. A third of the equipment catalog resolves to nothing
+
+Seven of the 21 hand-written equipment ids do not resolve to any item in the
+index. Two of them should not — `unarmored` and `mage-armor` are states rather
+than things. The other five are names the catalog and the data spell
+differently:
+
+`leather`, `arcane-focus`, `holy-symbol`, `rope-hempen`, `rations`
+
+Each one silently drops the item from the exported character. `leather` is the
+one that shows: it is the leather armour every light-armour class starts with.
+
+Recorded rather than fixed, because it belongs with D — the catalog is the
+wrong place for this list at all.
 
 ### What this run did not cover
 
@@ -290,9 +333,11 @@ tells the player it happened. They come first, and A comes before all of them,
 because until the two ends of the pipe agree, fixing anything upstream of the
 payload changes nothing the player sees.
 
-### 0. Make the payload and the module agree, and test that they do
+### ~~0. Make the payload and the module agree, and test that they do~~
 
-Finding A. The conformance test is the deliverable, not the three fixes.
+Done. Findings A and F, and the conformance test that catches their kind.
+Still open from A: whether the builder's armour class should overwrite
+Foundry's, which is a decision rather than a bug.
 
 ### 1. Multiclassing
 

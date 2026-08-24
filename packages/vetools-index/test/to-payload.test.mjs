@@ -90,7 +90,9 @@ test("references carry the sources of the build's own edition", () => {
 test("proficiencies are split by kind, and weapons are left to the class document", () => {
   const { payload } = buildToPayload(makeBuild(), resolver);
 
-  assert.deepEqual(payload.proficiencies.skills, ["arcana"]);
+  // Skills travel as the keys dnd5e uses, not as the names a player reads:
+  // `system.skills.Arcana` is a path that does not exist.
+  assert.deepEqual(payload.proficiencies.skills, ["arc"]);
   assert.deepEqual(payload.proficiencies.languages, ["elvish"]);
   assert.deepEqual(payload.proficiencies.tools, ["thieves-tools"]);
   // The weapon proficiency is deliberately absent: it comes from the class.

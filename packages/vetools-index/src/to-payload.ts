@@ -16,7 +16,7 @@ import type {
   SourceBooks,
   VetoolsRefPayload,
 } from "@bertinis-vault/contracts";
-import { IMPORT_PAYLOAD_VERSION } from "@bertinis-vault/contracts";
+import { IMPORT_PAYLOAD_VERSION, skillIdFor } from "@bertinis-vault/contracts";
 import type { RulesVersion, VetoolsProp } from "@bertinis-vault/vetools-ref";
 
 import type { RefResolver, ResolutionFailure } from "./resolve.js";
@@ -101,9 +101,15 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
   const equipment = (normalized?.equipment ?? [])
     .map((entry) => {
       const ref = tryResolve(resolver, "item", entry.itemId ?? entry.label, failures, books);
-      return ref ? { ref, quantity: entry.quantity } : null;
+      if (!ref) return null;
+
+      // Foundry computes armour class from what is worn. An imported suit of
+      // armour that is not equipped leaves the character at AC 10 whatever the
+      // builder showed them, so what a character carries to fight with says so.
+      const worn = isWorn(entry.category);
+      return { ref, quantity: entry.quantity, ...(worn ? { equipped: true } : {}) };
     })
-    .filter((entry): entry is { ref: VetoolsRefPayload; quantity: number } => entry !== null);
+    .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 
   const resolvedClasses = classes.filter(
     (entry): entry is NonNullable<(typeof classes)[number]> => entry !== null,
@@ -163,8 +169,15 @@ function partitionProficiencies(
 
   for (const entry of entries) {
     const value = entry.id ?? entry.label;
-    if (entry.kind === "skill") result.skills.push(value);
-    else if (entry.kind === "language") result.languages.push(value);
+    if (entry.kind === "skill") {
+      // A skill is a field on the actor keyed `arc`, `slt`, `prc` — not a
+      // name. Sending the name wrote to a path that does not exist, so a
+      // skill with no key is dropped rather than written somewhere harmless
+      // looking. `describeFailure` is not the channel for it: this is a
+      // proficiency, not a reference.
+      const skillId = skillIdFor(value);
+      if (skillId) result.skills.push(skillId);
+    } else if (entry.kind === "language") result.languages.push(value);
     else if (entry.kind === "tool") result.tools.push(value);
     // A saving throw travels as the ability id, which is what the payload
     // schema and the module both expect.
@@ -172,6 +185,13 @@ function partitionProficiencies(
   }
 
   return result;
+}
+
+/** Categories a character has on their body rather than in their pack. */
+const wornCategories = new Set(["weapon", "armor", "shield"]);
+
+function isWorn(category: string | undefined): boolean {
+  return category !== undefined && wornCategories.has(category);
 }
 
 const abilityIds = new Set(["str", "dex", "con", "int", "wis", "cha"]);

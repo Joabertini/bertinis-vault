@@ -193,3 +193,51 @@ describe("the feat a background grants", () => {
     expect(featOptionLabel(choice?.options[0] ?? { name: "" })).toBe("Magic Initiate (Cleric)");
   });
 });
+
+describe("what the web builder actually sends", () => {
+  test("its skill picks reach the payload as dnd5e keys", async () => {
+    const { buildCanonicalSnapshot, initialState } = await import("../src/builder");
+    const { buildToPayload, RefResolver, collections } = await import("@bertinis-vault/vetools-index");
+
+    const snapshot = buildCanonicalSnapshot({
+      ...initialState,
+      proficienciesText: "Arcana\nSleight of Hand\nHistory",
+    });
+    const { payload } = buildToPayload(snapshot, new RefResolver("2014", collections));
+
+    expect(payload?.proficiencies.skills).toEqual(["arc", "slt", "his"]);
+  });
+
+  test("its armour and weapon reach the payload marked worn", async () => {
+    const { buildCanonicalSnapshot, initialState } = await import("../src/builder");
+    const { buildToPayload, RefResolver, collections } = await import("@bertinis-vault/vetools-index");
+
+    // The ids a pick from the index produces. The hand-written catalog's own
+    // `leather` does not resolve to anything — see the audit's finding I.
+    const snapshot = buildCanonicalSnapshot({
+      ...initialState,
+      armorId: "leather-armor",
+      weaponId: "dagger",
+    });
+    const { payload } = buildToPayload(snapshot, new RefResolver("2014", collections));
+
+    const worn = payload?.equipment.filter((entry) => entry.equipped).map((entry) => entry.ref.hash);
+    expect(worn).toContain("leather%20armor_phb");
+    expect(worn).toContain("dagger_phb");
+  });
+
+  test("five of the hand-written equipment ids resolve to nothing", async () => {
+    const { RefResolver, collections } = await import("@bertinis-vault/vetools-index");
+    const resolver = new RefResolver("2014", collections);
+
+    // Recorded rather than fixed here: it belongs with the equipment work.
+    // `unarmored` and `mage-armor` are states rather than items and are
+    // expected to miss; the rest are names the catalog and the index spell
+    // differently, and each one silently drops the item from the character.
+    const unresolved = ["leather", "arcane-focus", "holy-symbol", "rope-hempen", "rations"];
+
+    for (const id of unresolved) {
+      expect(resolver.resolve("item", id).ok, id).toBe(false);
+    }
+  });
+});
