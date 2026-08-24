@@ -3,6 +3,8 @@ import { describe, expect, test } from "vitest";
 
 import {
   armorFormulaOf,
+  featChoiceForBackground,
+  featOptionLabel,
   itemInfoFor,
   levellingFor,
   optionsFor,
@@ -138,5 +140,56 @@ describe("when a class asks its questions", () => {
 
   test("an unknown class falls back rather than losing the improvements", () => {
     expect(levellingFor("", "2014").improvementLevels.length).toBeGreaterThan(0);
+  });
+});
+
+describe("the feat a background grants", () => {
+  test("a background offering a choice offers all of it, not the first one", () => {
+    // Ruined reads "the Alert, Skilled, or Tough feat (your choice)". The data
+    // lists those as three entries, and reading them as three grants would
+    // hand out all three.
+    const choice = featChoiceForBackground("ruined", "2014");
+
+    expect(choice?.options.map((option) => option.name)).toEqual(["Alert", "Skilled", "Tough"]);
+    expect(choice?.isOpen).toBeUndefined();
+  });
+
+  test("a background naming one feat needs no answer", () => {
+    const choice = featChoiceForBackground("farmer", "2024");
+
+    expect(choice?.options).toHaveLength(1);
+    expect(choice?.options[0]?.name).toBe("Tough");
+  });
+
+  test("a background allowing an unnamed feat is marked open", () => {
+    // Haunted One: "Survivor or a Dark Gift feat of your choice". The Ravenloft
+    // reprint is a 2024 book; the 2014 Van Richten's version grants no feat.
+    const choice = featChoiceForBackground("haunted-one", "2024", "RHW");
+
+    expect(choice?.options.map((option) => option.name)).toEqual(["Survivor"]);
+    expect(choice?.isOpen).toBe(true);
+  });
+
+  test("the 2014 core backgrounds grant nothing, and say so", () => {
+    expect(featChoiceForBackground("acolyte", "2014")).toBeNull();
+    expect(featChoiceForBackground("sage", "2014")).toBeNull();
+  });
+
+  test("every 2024 background grants an origin feat", () => {
+    const twentyFourCore = ["acolyte", "artisan", "charlatan", "criminal", "entertainer",
+      "farmer", "guard", "guide", "hermit", "merchant", "noble", "sage", "sailor", "scribe",
+      "soldier", "wayfarer"];
+
+    for (const backgroundId of twentyFourCore) {
+      expect(featChoiceForBackground(backgroundId, "2024")?.options.length ?? 0).toBeGreaterThan(0);
+    }
+  });
+
+  test("a sub-choice the background already made shows in the label", () => {
+    // The 2024 Acolyte grants Magic Initiate with the cleric list, not a bare
+    // Magic Initiate the player still has to aim.
+    const choice = featChoiceForBackground("acolyte", "2024");
+
+    expect(featOptionLabel(choice?.options[0] ?? { name: "" })).toBe("Magic Initiate (Cleric)");
   });
 });

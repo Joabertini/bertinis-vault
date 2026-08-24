@@ -136,6 +136,70 @@ function levelsOf(entity) {
   return { improvements: [...new Set(improvements)].sort((a, b) => a - b), subclassLevel };
 }
 
+/**
+ * The feats a background grants, as one choice.
+ *
+ * 5etools records these as an array under `feats`, and every background in the
+ * data that lists more than one entry reads as an *alternative* rather than a
+ * second grant: Ruined is "the Alert, Skilled, or Tough feat (your choice)",
+ * Haunted One is "Survivor or a Dark Gift feat of your choice". So the whole
+ * array flattens into one list of options — reading it as several grants would
+ * hand Ruined all three feats.
+ *
+ * Four backgrounds carry more than one entry and all four are worded "or",
+ * which is the whole evidence for that reading. A background that genuinely
+ * grants two feats would be misread, and none exists in this data.
+ *
+ * A key is `"<name>|<source>"`, and the name can carry a qualifier after a
+ * semicolon: `"magic initiate; cleric|xphb"` is Magic Initiate with its spell
+ * list already chosen. The qualifier is kept for the label and dropped from
+ * the name, which is what a reference resolves on.
+ *
+ * `anyFromCategory` names a kind of feat rather than a feat. It has no list to
+ * enumerate, so the choice is marked open and the builder offers the whole
+ * feat picker.
+ */
+function featChoiceOf(background) {
+  const options = [];
+  let isOpen = false;
+
+  for (const grant of background.feats ?? []) {
+    if (!grant || typeof grant !== "object") continue;
+
+    for (const [key, value] of Object.entries(grant)) {
+      if (value === false) continue;
+      if (key === "any" || key === "anyFromCategory") {
+        isOpen = true;
+        continue;
+      }
+
+      const [nameWithQualifier, source] = key.split("|");
+      const [name, qualifier] = (nameWithQualifier ?? "").split(";").map((part) => part.trim());
+      if (!name || !source) continue;
+
+      options.push({
+        name: titleCase(name),
+        source: source.toUpperCase(),
+        ...(qualifier ? { qualifier: titleCase(qualifier) } : {}),
+      });
+    }
+  }
+
+  if (options.length === 0 && !isOpen) return null;
+
+  return { options, ...(isOpen ? { isOpen } : {}) };
+}
+
+/**
+ * Restore a name the data lowercased for its key.
+ *
+ * The resolver matches names case-insensitively, so this is for the label the
+ * player reads rather than for lookup.
+ */
+function titleCase(value) {
+  return value.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+}
+
 /** A distance the picker can print, e.g. "120 feet", "Self", "Touch". */
 function rangeOf(spell) {
   const range = spell.range;
@@ -230,7 +294,12 @@ const BUILDERS = {
       ability: abilityOf(r),
     })),
 
-  background: (entities) => entities.map((b) => ({ name: b.name, source: sourceOf(b) })),
+  background: (entities) =>
+    entities.map((b) => ({
+      name: b.name,
+      source: sourceOf(b),
+      featChoice: featChoiceOf(b),
+    })),
 
   class: (entities) =>
     entities.map((c) => {

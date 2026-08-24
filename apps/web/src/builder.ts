@@ -24,7 +24,12 @@ import {
   type AbilityBonusMap,
   type LevelChoice,
 } from "@bertinis-vault/domain";
-import { armorFormulaOf, itemInfoFor, slugOf } from "./index-options";
+import {
+  armorFormulaOf,
+  featChoiceForBackground,
+  itemInfoFor,
+  slugOf,
+} from "./index-options";
 
 export type BuilderRulesVersion = "5e-2014" | "5e-2024";
 
@@ -66,6 +71,14 @@ export type BuilderState = {
   classId: string;
   subclassId: string;
   backgroundId: string;
+  /**
+   * The feat chosen from the ones the background offers.
+   *
+   * Only meaningful when the background offers a choice: Ruined gives Alert,
+   * Skilled or Tough, and until this existed it gave none of them. A
+   * background that names one feat needs no answer here.
+   */
+  backgroundFeatId: string;
   featId: string;
   weaponId: string;
   armorId: string;
@@ -335,6 +348,7 @@ export const initialState: BuilderState = {
   classId: "wizard",
   subclassId: "school-of-evocation",
   backgroundId: "sage",
+  backgroundFeatId: "",
   featId: "magic-initiate",
   weaponId: "quarterstaff",
   armorId: "mage-armor",
@@ -379,6 +393,10 @@ export function coerceBuilderState(value: unknown): BuilderState {
     subclassId: typeof candidate.subclassId === "string" ? candidate.subclassId : initialState.subclassId,
     backgroundId:
       typeof candidate.backgroundId === "string" ? candidate.backgroundId : initialState.backgroundId,
+    backgroundFeatId:
+      typeof candidate.backgroundFeatId === "string"
+        ? candidate.backgroundFeatId
+        : initialState.backgroundFeatId,
     featId: typeof candidate.featId === "string" ? candidate.featId : initialState.featId,
     weaponId: typeof candidate.weaponId === "string" ? candidate.weaponId : initialState.weaponId,
     armorId: typeof candidate.armorId === "string" ? candidate.armorId : initialState.armorId,
@@ -496,6 +514,39 @@ export function proficiencyBonus(level: number) {
   return 2;
 }
 
+/**
+ * The feats the chosen background grants.
+ *
+ * The index is asked first: it knows all 161 backgrounds where the catalog
+ * knew 27, and it is the only place the 2024 origin feats exist. A background
+ * that names exactly one feat grants it without asking; one that offers
+ * several — or allows an unnamed one — waits for the player's answer, and
+ * grants nothing until it arrives rather than guessing.
+ */
+export function backgroundFeatIdsFor(state: BuilderState): string[] {
+  if (!state.backgroundId) return [];
+
+  const rulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const choice = featChoiceForBackground(
+    state.backgroundId,
+    rulesVersion,
+    state.sourceBooks[`background:${state.backgroundId}`],
+  );
+
+  if (choice) {
+    if (choice.options.length === 1 && !choice.isOpen) {
+      return [slugOf((choice.options[0] as { name: string }).name)];
+    }
+
+    return state.backgroundFeatId ? [state.backgroundFeatId] : [];
+  }
+
+  // Backgrounds the index does not cover fall back to the hand-written
+  // catalog, which is still the source for everything but the feat.
+  const entry = getBackgroundCatalogEntry(state.backgroundId);
+  return uniqueEntries(entry?.grantedFeatIds ?? []);
+}
+
 export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const cantrips = parseLineList(state.cantripsText).map((entry) => `Nv0: ${entry}`);
   const leveledSpells = parseLineList(state.spellsText);
@@ -529,8 +580,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       level: entry.level,
     };
   });
-  const backgroundEntry = state.backgroundId ? getBackgroundCatalogEntry(state.backgroundId) : undefined;
-  const backgroundGrantedFeatIds = uniqueEntries(backgroundEntry?.grantedFeatIds ?? []);
+  const backgroundGrantedFeatIds = backgroundFeatIdsFor(state);
   // A feat can arrive two ways: chosen at a level in place of an improvement,
   // or granted outside the levels entirely — the variant human's, and in 2024
   // the background's. Both land in the same list, and a feat the background

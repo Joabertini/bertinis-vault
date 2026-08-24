@@ -94,6 +94,41 @@ Still standing in for something: a feat's ability bonus is recorded by the
 player rather than derived. The index has no machine-readable statement of what
 a feat grants, and inventing one would be worse than asking.
 
+### Backgrounds granted no feat
+
+The feat a background gives came from the hand-written catalog, which listed 27
+backgrounds and knew the feat for 13 of them. The index carries 161, of which
+74 grant a feat. Everything outside that list of 13 granted nothing —
+including every 2024 background, all of which grant an origin feat, so a 2024
+character exported without the feat their origin gives them.
+
+The grant is now on the background row, and it is a *choice* rather than a
+list. 5etools records it as an array under `feats`, and every background in the
+data with more than one entry reads as an alternative: Ruined is "the Alert,
+Skilled, or Tough feat (your choice)", Haunted One is "Survivor or a Dark Gift
+feat of your choice". Reading that array as several grants would have handed
+Ruined all three.
+
+Four backgrounds carry more than one entry and all four are worded "or", which
+is the whole evidence for that reading. A background that genuinely granted two
+feats would be misread; none exists in this data.
+
+Three shapes follow from it:
+
+| | Example | What the builder does |
+| --- | --- | --- |
+| one named feat | 2024 Farmer grants Tough | grants it, asks nothing |
+| several named | Ruined: Alert, Skilled or Tough | asks, grants nothing until answered |
+| open | Haunted One: Survivor or any Dark Gift | asks, with the whole feat list available |
+
+A background that offers a choice and has not been answered says so and exports
+without the feat, rather than picking the first option. Changing background
+clears the answer: Alert answers Ruined and not Rewarded.
+
+A sub-choice the background already made travels in the label — the 2024
+Acolyte grants Magic Initiate (Cleric), not a bare Magic Initiate the player
+still has to aim.
+
 ### The generation method was a lie
 
 `generationMethod` was the literal `"manual"`. The builder has had point buy,
@@ -177,6 +212,7 @@ It now records, at a cost of 15KB gzip:
 | race | the fixed part of the species bonus, size, speed |
 | class | hit die, saving throws, spellcasting ability, caster progression, prepared-spell formula, improvement levels, subclass level |
 | subclass | 203 rows, which did not exist |
+| background | the feat it grants, as a choice |
 | subrace | 98 rows, which did not exist |
 
 #### The subclass copies, and why dropping them loses nothing
