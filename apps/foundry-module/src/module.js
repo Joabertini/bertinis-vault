@@ -9,7 +9,7 @@ import { importPayload } from "./import.js";
 import { PlutoniumUnavailableError, isPlutoniumReady } from "./plutonium.js";
 
 const MODULE_ID = "bertinis-vault";
-const DEFAULT_VAULT_URL = "https://bertinis-vault.workers.dev";
+const DEFAULT_VAULT_URL = "https://bertinis-vault.bertinisdnd.workers.dev";
 
 /** The payload format this module understands. */
 const SUPPORTED_PAYLOAD_VERSION = 1;
