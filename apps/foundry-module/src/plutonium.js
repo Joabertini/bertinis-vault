@@ -73,7 +73,12 @@ export async function loadEntity(ref) {
 }
 
 /**
- * Import one reference onto an actor.
+ * Import one reference onto an actor, letting Plutonium apply it.
+ *
+ * This is the interactive path: the importer prompts for any choice the entity
+ * carries and writes its own actor updates. It is kept as a fallback behind the
+ * `importMode` setting — see `documentForRef` for the one we use by default and
+ * for why.
  *
  * Returns what happened rather than throwing, so one unavailable spell does not
  * abandon a character halfway through being built.
@@ -93,6 +98,55 @@ export async function importRefOntoActor({ ref, actor, api, helper }) {
     );
 
     return { ref, ok: true, name: entity.name };
+  } catch (error) {
+    return { ref, ok: false, reason: error?.message ?? String(error) };
+  }
+}
+
+/**
+ * The `dnd5e` document for a reference, without applying anything.
+ *
+ * `isDataOnly` is honoured by Plutonium's base importer immediately after
+ * `_pImportEntry_preImport` and before `_pImportEntry_pImportToActor`, where it
+ * returns `DataConverter.pGetDocumentJson(...)` and stops. Everything we do not
+ * want lives in the part it skips:
+ *
+ * - `Charactermancer_FeatureOptionsSelect.pGetUserInput`, which opens a picker
+ *   for every choice the entity carries — choices the builder already asked.
+ * - `_pImportEntry_pFillAbilities`, which *adds* a species ability bonus to
+ *   whatever the actor already has. The builder bakes that bonus into
+ *   `abilities.final` before sending it, so letting this run applies it twice.
+ *
+ * What comes back is still a real document, with activities, damage and icons,
+ * which is the whole reason this project resolves references instead of
+ * fabricating items. We create it ourselves, so what reaches the sheet is ours
+ * to decide.
+ *
+ * The actor is passed through because the converters use it for context —
+ * naming an actor item differently from a world one, resolving consumption
+ * targets — and not as something to write to. Read from the Plutonium 2.17.2
+ * bundle; see docs/PLUTONIUM-INTEGRATION.md.
+ */
+export async function documentForRef({ ref, actor, api }) {
+  try {
+    const importer = await api.importer.pGetImporter({ prop: ref.prop, page: ref.page });
+    if (!importer) {
+      return { ref, ok: false, reason: `Plutonium has no importer for "${ref.prop}".` };
+    }
+
+    const entity = await loadEntity(ref);
+
+    const summary = await importer.pImportEntry(
+      entity,
+      new api.importer.ImportOpts({ actor, isDataOnly: true }),
+    );
+
+    const document = summary?.imported?.[0]?.document;
+    if (!document) {
+      return { ref, ok: false, reason: `Plutonium returned no document for "${entity.name}".` };
+    }
+
+    return { ref, ok: true, name: entity.name, document };
   } catch (error) {
     return { ref, ok: false, reason: error?.message ?? String(error) };
   }
