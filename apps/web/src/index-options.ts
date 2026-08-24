@@ -14,7 +14,9 @@ import {
   forRulesVersion,
   normalizeForSearch,
   searchByName,
+  type BackgroundRow,
   type ClassRow,
+  type FeatChoice,
   type IndexRow,
   type ItemRow,
   type RaceRow,
@@ -287,4 +289,29 @@ export function armorFormulaOf(row: ItemRow): { formula?: string; shield?: boole
   if (type === "HA") return { formula: `${row.ac}` };
 
   return {};
+}
+
+/**
+ * The feat a background grants, if it grants one.
+ *
+ * The hand-written catalog knew this for 13 backgrounds out of the 27 it
+ * listed, against 161 in the index and 74 that grant a feat. Every 2024
+ * background grants an origin feat and none of them were in the catalog, so a
+ * 2024 character exported without the feat their background gives them.
+ */
+export function featChoiceForBackground(
+  backgroundId: string,
+  rulesVersion: RulesVersion,
+  sourceBook?: string,
+): FeatChoice | null {
+  const legal = forRulesVersion(collections.background ?? [], rulesVersion) as BackgroundRow[];
+  const matches = legal.filter((row) => slugOf(row.name) === backgroundId);
+  const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
+
+  return row?.featChoice ?? null;
+}
+
+/** The label a feat option shows, with the sub-choice the background made. */
+export function featOptionLabel(option: { name: string; qualifier?: string }): string {
+  return option.qualifier ? `${option.name} (${option.qualifier})` : option.name;
 }

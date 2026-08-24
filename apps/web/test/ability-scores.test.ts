@@ -1,7 +1,7 @@
 import { RefResolver, buildToPayload, collections } from "@bertinis-vault/vetools-index";
 import { describe, expect, test } from "vitest";
 
-import { buildCanonicalSnapshot, initialState } from "../src/builder";
+import { backgroundFeatIdsFor, buildCanonicalSnapshot, initialState } from "../src/builder";
 
 const resolver = new RefResolver("2014", collections);
 
@@ -84,5 +84,49 @@ describe("saving throws", () => {
     const { payload } = buildToPayload(snapshot, resolver);
 
     expect(payload?.proficiencies.savingThrows).toEqual(["str", "con"]);
+  });
+});
+
+describe("the feat a background grants", () => {
+  const base = { ...initialState, featId: "", levelChoices: {} };
+
+  test("reaches the payload when the background names it", () => {
+    const snapshot = buildCanonicalSnapshot({ ...base, backgroundId: "farmer", rulesVersion: "5e-2024" });
+
+    expect(snapshot.background.grantedFeatIds).toEqual(["tough"]);
+  });
+
+  test("waits for an answer when the background offers a choice", () => {
+    const undecided = { ...base, backgroundId: "ruined", backgroundFeatId: "" };
+    expect(backgroundFeatIdsFor(undecided)).toEqual([]);
+
+    const decided = { ...undecided, backgroundFeatId: "skilled" };
+    expect(buildCanonicalSnapshot(decided).background.grantedFeatIds).toEqual(["skilled"]);
+  });
+
+  test("the granted feat resolves to a real reference, not just an id", () => {
+    const snapshot = buildCanonicalSnapshot({ ...base, backgroundId: "ruined", backgroundFeatId: "tough" });
+    const { payload, failures } = buildToPayload(snapshot, resolver);
+
+    expect(failures.filter((failure) => failure.prop === "feat")).toEqual([]);
+    expect(payload?.feats.map((entry) => entry.ref.hash)).toContain("tough_phb");
+  });
+
+  test("a background that grants nothing grants nothing", () => {
+    const snapshot = buildCanonicalSnapshot({ ...base, backgroundId: "sage" });
+
+    expect(snapshot.background.grantedFeatIds).toEqual([]);
+  });
+
+  test("the granted feat is not counted again as a chosen one", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      backgroundId: "farmer",
+      rulesVersion: "5e-2024",
+      featId: "tough",
+    });
+
+    expect(snapshot.choices.feats).not.toContain("tough");
+    expect(snapshot.background.grantedFeatIds).toEqual(["tough"]);
   });
 });

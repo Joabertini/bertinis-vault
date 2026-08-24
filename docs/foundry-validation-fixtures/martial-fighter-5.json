@@ -3,7 +3,7 @@
   "label": "Martial with armor and shield",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-24T00:11:09.303Z",
+    "generatedAt": "2026-08-24T00:36:50.305Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -668,7 +668,7 @@
     },
     "items": [
       {
-        "_id": "eNVjOZS1DGxiReBZ",
+        "_id": "IIOhpJcVNrsKY1Jt",
         "name": "fighter",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -728,7 +728,7 @@
         }
       },
       {
-        "_id": "WEyIygwjrTpdqYOu",
+        "_id": "uYGzZKe4MdgGQ3m1",
         "name": "Tough",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -786,7 +786,7 @@
         }
       },
       {
-        "_id": "czrLeQN9nwUGyrpM",
+        "_id": "YU63I77sXdp01RDz",
         "name": "Second Wind",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -844,7 +844,7 @@
         }
       },
       {
-        "_id": "gY1vyntWjVLATpAt",
+        "_id": "ltRO74nchofXvHi3",
         "name": "Action Surge",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -902,7 +902,7 @@
         }
       },
       {
-        "_id": "5xnA6oMC3KYmmywW",
+        "_id": "mYtbS9B0ZJjhebpB",
         "name": "longsword",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1101,7 +1101,7 @@
         }
       },
       {
-        "_id": "QSwczQB3rLjpNrmo",
+        "_id": "mEWwmTScKbJDDqzg",
         "name": "Shield",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1167,7 +1167,7 @@
         }
       },
       {
-        "_id": "rlDUnW8mT4rOVRlt",
+        "_id": "03jbWBd7ITtY5wua",
         "name": "Chain Mail",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1233,7 +1233,7 @@
         }
       },
       {
-        "_id": "h1Am8osAPiPtDUkp",
+        "_id": "ReQA3R89ZVpTOjoN",
         "name": "Explorer's Pack",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",

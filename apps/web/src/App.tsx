@@ -37,6 +37,7 @@ import {
   type BuilderState,
   appendUniqueLine,
   builderDraftStorageKey,
+  backgroundFeatIdsFor,
   buildCanonicalSnapshot,
   coerceBuilderState,
   initialState,
@@ -48,6 +49,8 @@ import { fallbackBuilderOptions, type BuilderOptionsPayload } from "./builder-op
 import { getFeatureSuggestions } from "./feature-suggestions";
 import { IndexPicker } from "./components/IndexPicker";
 import {
+  featChoiceForBackground,
+  featOptionLabel,
   itemInfoFor,
   levellingFor,
   optionById,
@@ -312,7 +315,17 @@ export function App() {
         : selectedClassMetaFallback.primaryAbilities ?? [],
   };
   const selectedBackgroundMeta = builderOptions.backgrounds.find((entry) => entry.id === state.backgroundId);
-  const selectedBackgroundGrantedFeats = selectedBackgroundMeta?.grantedFeatIds ?? [];
+  // From the index rather than the catalog: every 2024 background grants an
+  // origin feat, and none of them were in the catalog's 27 rows.
+  const backgroundFeatChoice = featChoiceForBackground(
+    state.backgroundId,
+    rulesVersion,
+    state.sourceBooks[`background:${state.backgroundId}`],
+  );
+  const backgroundOffersAChoice =
+    backgroundFeatChoice !== null &&
+    (backgroundFeatChoice.options.length > 1 || backgroundFeatChoice.isOpen === true);
+  const selectedBackgroundGrantedFeats = backgroundFeatIdsFor(state);
   // The class list the spells come from. 5etools records it on the class's
   // say-so, with the class's own source, which is what keeps the 2014 and 2024
   // lists apart.
@@ -447,8 +460,30 @@ export function App() {
       delete sourceBooks[`${prop}:${current[key]}`];
       sourceBooks[`${prop}:${option.id}`] = option.source;
 
-      return { ...current, [key]: option.id, sourceBooks };
+      return {
+        ...current,
+        [key]: option.id,
+        sourceBooks,
+        // A new background asks its own question. Alert is a valid answer for
+        // Ruined and not for Rewarded, so the old answer does not carry over.
+        ...(prop === "background" ? { backgroundFeatId: "" } : {}),
+      };
     });
+  }
+
+  /**
+   * Record the feat the background's choice was answered with.
+   *
+   * The book travels alongside the slug for the same reason every other pick
+   * carries one: the same feat name can exist in more than one book, and the
+   * background names which.
+   */
+  function chooseBackgroundFeat(featId: string, source: string) {
+    setState((current) => ({
+      ...current,
+      backgroundFeatId: featId,
+      sourceBooks: { ...current.sourceBooks, [`feat:${featId}`]: source },
+    }));
   }
 
   function clearFeat() {
@@ -906,13 +941,61 @@ export function App() {
               <br />
               <b>Origen</b>: {selectedBackgroundMeta?.source ?? "PHB"}
               <br />
-              <b>Feat del trasfondo</b>: {selectedBackgroundGrantedFeats.length ? featOptions.find((option) => option.id === selectedBackgroundGrantedFeats[0])?.label ?? selectedBackgroundGrantedFeats[0] : "No otorga feat automatica"}
+              <b>Feat del trasfondo</b>: {backgroundFeatChoice === null
+                ? "No otorga feat"
+                : backgroundOffersAChoice
+                  ? `A eleccion: ${[
+                      ...backgroundFeatChoice.options.map(featOptionLabel),
+                      ...(backgroundFeatChoice.isOpen ? ["u otra"] : []),
+                    ].join(", ")}`
+                  : featOptionLabel(backgroundFeatChoice.options[0] ?? { name: "" })}
               <br />
               <b>Skills de trasfondo</b>: {(getBackgroundGrantedProficiencies(state.backgroundId).length ? getBackgroundGrantedProficiencies(state.backgroundId) : ["Flexible"]).join(", ")}
             </div>
+            {backgroundOffersAChoice ? (
+              <div className="field">
+                <label htmlFor="background-feat">Feat del trasfondo *</label>
+                {backgroundFeatChoice.options.length > 0 ? (
+                  <div className="options-grid" id="background-feat">
+                    {backgroundFeatChoice.options.map((option) => {
+                      const id = slugOf(option.name);
+                      return (
+                        <label className={`opt${state.backgroundFeatId === id ? " selected" : ""}`} key={`${id}-${option.source}`}>
+                          <input
+                            checked={state.backgroundFeatId === id}
+                            name="background-feat"
+                            onChange={() => chooseBackgroundFeat(id, option.source)}
+                            type="radio"
+                          />
+                          {featOptionLabel(option)}
+                          <span className="opt-source">{option.source}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                ) : null}
+                {backgroundFeatChoice.isOpen ? (
+                  <IndexPicker
+                    inputId="background-feat-search"
+                    label="O cualquier otra"
+                    onPick={(option) => chooseBackgroundFeat(option.id, option.source)}
+                    prop="feat"
+                    rulesVersion={rulesVersion}
+                    selectedId={state.backgroundFeatId}
+                    selectedSource={state.sourceBooks[`feat:${state.backgroundFeatId}`] ?? ""}
+                  />
+                ) : null}
+                {state.backgroundFeatId ? null : (
+                  <p className="field-warning">
+                    Este trasfondo otorga una feat y todavia no elegiste cual, asi que el personaje
+                    se exporta sin ella.
+                  </p>
+                )}
+              </div>
+            ) : null}
             <IndexPicker
               inputId="feat-search"
-              label="Feat"
+              label="Feat adicional"
               onPick={(option) => pickFromIndex("feat", "featId", option)}
               prop="feat"
               rulesVersion={rulesVersion}

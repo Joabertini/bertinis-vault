@@ -82,7 +82,34 @@ export type SubraceRow = IndexRow & {
 };
 
 export type FeatRow = IndexRow;
-export type BackgroundRow = IndexRow;
+
+/** One feat a background offers, already scoped to the book it comes from. */
+export type FeatOption = {
+  name: string;
+  source: string;
+  /**
+   * A sub-choice the background already made, e.g. Magic Initiate's spell
+   * list. Part of the label, not of the reference.
+   */
+  qualifier?: string;
+};
+
+/**
+ * The feat a background grants, as a single choice.
+ *
+ * One option is a feat the background simply gives. Several are alternatives —
+ * Ruined offers Alert, Skilled or Tough. `isOpen` means the background also
+ * allows a feat it does not name, so the whole feat list is fair game.
+ */
+export type FeatChoice = {
+  options: FeatOption[];
+  isOpen?: boolean;
+};
+
+export type BackgroundRow = IndexRow & {
+  /** Null for the 2014 backgrounds, none of which grant a feat. */
+  featChoice: FeatChoice | null;
+};
 
 export type ClassRow = IndexRow & {
   hitDie: number | null;
