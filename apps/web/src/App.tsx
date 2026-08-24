@@ -9,7 +9,6 @@ import {
 } from "@bertinis-vault/vetools-index";
 import { VaultRequestError, publishBuild } from "./vault-client";
 import {
-  getClassArmorOptionIds,
   getClassFallbackMeta,
   getRaceLanguageRule,
   getSubracesForRace,
@@ -43,7 +42,6 @@ import {
   type StatMethod,
 } from "./builder";
 import { fallbackBuilderOptions, type BuilderOptionsPayload } from "./builder-options";
-import { getFeatureSuggestions } from "./feature-suggestions";
 import { IndexPicker } from "./components/IndexPicker";
 import {
   featChoiceForBackground,
@@ -286,7 +284,6 @@ export function App() {
   const raceOptions = builderOptions.races;
   const backgroundOptions = builderOptions.backgrounds;
   const featOptions = builderOptions.feats;
-  const armorOptions = builderOptions.equipment.armor;
 
   const selectedClassMetaRemote = builderOptions.classes.find((entry) => entry.id === state.classId);
   const selectedClassMetaFallback = getClassFallbackMeta(state.classId) ?? {
@@ -400,7 +397,6 @@ export function App() {
       ),
     [builderOptions.equipment.gear, selectedClassMeta?.startingEquipment],
   );
-  const featureSuggestions = getFeatureSuggestions(state);
 
   const selectedProficiencies = uniqueLines(state.proficienciesText);
   const selectedLanguages = uniqueLines(state.languagesText);
@@ -410,17 +406,7 @@ export function App() {
   );
   const selectedCantrips = uniqueLines(state.cantripsText);
   const selectedSpells = uniqueLines(state.spellsText);
-  const selectedFeatures = uniqueLines(state.featuresText);
   const selectedEquipment = uniqueLines(state.extraEquipmentText);
-  // Memoised because it is an effect dependency: a fresh array on every render
-  // makes that effect run on every render, and an effect that writes state is
-  // then one self-assignment away from a render loop.
-  const filteredArmorOptions = useMemo(() => {
-    const allowed = getClassArmorOptionIds(state.classId);
-    const allowedIds = allowed.length ? allowed : armorOptions.map((entry) => entry.id);
-
-    return armorOptions.filter((entry) => allowedIds.includes(entry.id));
-  }, [armorOptions, state.classId]);
   const isSpellcaster = Boolean(selectedClassMeta?.spellcastingAbility);
   const derivedSpellcasting = canonicalSnapshot.derived.spellcasting;
   const spellProgression = derivedSpellcasting ? getSpellProgressionForClass(state.classId) : "none";
@@ -751,14 +737,8 @@ export function App() {
     }
   }, [classSkillChoices, classSkillSelectionLimit, lockedProficiencies, selectedClassSkills, state.proficienciesText]);
 
-  // The weapon comes from the index now, so there is no list of a handful of
-  // allowed ids to snap it back to.
-  useEffect(() => {
-    if (filteredArmorOptions.length === 0) return;
-    if (filteredArmorOptions.some((entry) => entry.id === state.armorId)) return;
-
-    updateField("armorId", filteredArmorOptions[0]?.id ?? state.armorId);
-  }, [filteredArmorOptions, state.armorId]);
+  // Weapon and armour both come from the index now, so neither has a
+  // hand-picked list of allowed ids to snap a fresh pick back to.
 
   useEffect(() => {
     const allowedGearLabels = new Set(gearChoices);
@@ -1365,16 +1345,22 @@ export function App() {
                 })}
               </div>
             </div> : null}
-            <div className="field"><label>Features sugeridas</label>
-              <div className="options-grid">
-                {[...new Set(featureSuggestions)].slice(0, 12).map((entry) => (
-                  <label className={`opt${selectedFeatures.includes(entry) ? " selected" : ""}`} key={entry}>
-                    <input checked={selectedFeatures.includes(entry)} onChange={() => toggleLineField("featuresText", entry)} type="checkbox" />
-                    {entry}
-                  </label>
-                ))}
-              </div>
-            </div>
+            {/*
+              "Features sugeridas" used to be a checkbox list here. It was a
+              hand-written table that mixed features a class simply gets on
+              level-up (Rage, Second Wind, Sneak Attack) with ones that are a
+              required *choice* (Fighting Style, Metamagic), and offered both
+              as if they were optional extras to tick.
+
+              It also did nothing: `choices.features` is not read by
+              `buildToPayload`, is not a field on `ImportPayload`, and is not
+              read by the exporter. Nothing the player ticked reached Foundry.
+
+              Automatic features arrive with the class document Plutonium
+              imports, so they were never the builder's to send. The real
+              choices are `optionalfeature` entities in 5etools and are not
+              modelled yet — see docs/CHARACTER-MODEL-GAPS.md finding J.
+            */}
             <div className="field"><label>Rasgo</label><input type="text" value={state.trait} onChange={(event) => updateField("trait", event.target.value)} /></div>
             <div className="field"><label>Ideal</label><input type="text" value={state.ideal} onChange={(event) => updateField("ideal", event.target.value)} /></div>
             <div className="field"><label>Vinculo</label><input type="text" value={state.bond} onChange={(event) => updateField("bond", event.target.value)} /></div>

@@ -286,6 +286,27 @@ The proficiencies themselves are fine — the payload deliberately does not send
 weapon and armour proficiency, because the class document Plutonium imports
 carries them. It is only the *choice list* that is fiction.
 
+**Fixed (2026-08-24), after it turned out to be a live bug and not just a bad
+list.** The weapon picker had already moved to the index; the armour picker
+had not, and its leftover restriction was not merely narrow — it was actively
+undoing the player's choice. `filteredArmorOptions` fed a `useEffect` that
+snapped `armorId` back to the shortlist's first entry whenever the current
+pick was outside it, so picking any armour that was not one of the class's
+three hand-written ids silently reverted. From the outside this reads as "the
+builder will not let me choose armour", which is how it was reported.
+
+Both tables and their accessors are gone from `data-engine`. Both pickers now
+search the full item index, unfiltered by class, exactly as every other picker
+does — Plutonium's class document grants the real proficiency regardless of
+what was picked, so the builder restricting the list bought nothing.
+
+Two things fell out of it: the comment saying the weapon no longer needed a
+snap-back effect was sitting directly above the armour effect that still had
+one, and `initialState.armorId` was `"mage-armor"` — not an item, a spell, and
+a slug that resolves to nothing in the index (finding I lists it). The default
+is now empty, meaning unarmoured, and an empty `armorId` is filtered out of
+the equipment list rather than exported as an unresolvable pick.
+
 ### E. Unarmored Defense is modelled and never used
 
 `calculateArmorClass` takes an `unarmoredAbilityModifier`. Nothing in the
@@ -351,6 +372,76 @@ one that shows: it is the leather armour every light-armour class starts with.
 
 Recorded rather than fixed, because it belongs with D — the catalog is the
 wrong place for this list at all.
+
+### J. Features were a decorative list, and the real choices are not modelled
+
+Found 2026-08-24, during the first live Foundry run.
+
+The builder had a "Features sugeridas" checkbox list built from a hand-written
+table in `apps/web/src/feature-suggestions.ts`. Two things were wrong with it,
+and the second is the one that matters.
+
+**It did nothing.** `choices.features` is not read by `buildToPayload`, is not
+a field on `ImportPayload`, and is not read by `foundry-exporter`. Every box a
+player ticked stopped at the build object. Nothing reached Foundry.
+
+That part is arguably correct by design — automatic features arrive with the
+class document Plutonium imports, so they were never the builder's to send.
+Checking `Rage` on a barbarian should be a no-op, because the barbarian gets
+Rage whether or not anyone ticks a box.
+
+**It conflated two different things.** Checked against the data, of the 35
+features the table listed, exactly two are choices — `Fighting Style` and
+`Metamagic` — and the rest are automatic grants. The list offered all of them
+identically, as optional extras to tick. A player reading it would think
+Fighting Style was optional (it is not: a fighter must pick one) and that
+ticking Second Wind was doing something (it was not).
+
+The list is now gone. What replaces it is not another list: it is the missing
+half of the model. A 5e character's *choices* at level-up — which Fighting
+Style, which Metamagic, which Eldritch Invocations, which Maneuvers — are
+`optionalfeature` entities in 5etools, with a `featureType` code (`FS:F` for a
+fighter's fighting styles, `MM` for metamagic, `EI` for invocations) saying
+which choice they answer. The builder models none of them, the payload has
+nowhere to put them, and the module therefore cannot answer them.
+
+That is the same gap as the Charactermancer problem below: Plutonium prompts
+for these because we never told it the answers.
+
+### K. The module re-asks every question the builder already asked
+
+Found 2026-08-24, on the first live Foundry run. The import works — the actor
+is created and the documents arrive — but Plutonium's importers prompt the
+player for choices the builder already collected, and apply grants the builder
+already applied.
+
+Read from the Plutonium 2.17.2 bundle, the two mechanisms are:
+
+- `Charactermancer_FeatureOptionsSelect.pGetUserInput(...)`, called by the
+  feature importer for every feature carrying an `options` entry. This is what
+  opens a picker mid-import.
+- `Charactermancer_AbilityScoreSelect.pFillActorAbilityData(...)`, called by
+  the race importer's `_pImportEntry_pFillAbilities`, which *adds* the racial
+  bonus to whatever the actor already has. The builder bakes that same bonus
+  into `abilities.final` before it sends them, so it lands twice. The same
+  shape applies to `pPromptAndFill` for skills, tools and languages.
+
+`ImportOpts` has an `isCharactermancer` flag, but it does not mean "suppress
+the UI" — it marks where the call came from, and the prompts fire either way.
+
+The levers that look right, all read from the bundle and none yet tried:
+
+| `ImportOpts` field | What the bundle says |
+| --- | --- |
+| `isLeaf` | "If this feature should be loaded directly, without any sub-loading applied" — the option prompts live in the sub-loading |
+| `isDataOnly` | "If this import should simply return the data, rather than import anything" |
+| `existingFeatureChecker` | `Charactermancer_Class_ExistingFeatureChecker`, which the importer consults before adding a feature |
+| `levels` | "Pre-defined list of levels to import" |
+
+The shape of the fix follows from J: model the choices, put them on the
+payload, and either pre-answer the prompts or bypass the prompting importers
+by importing the resolved leaf features directly. Verified working state
+before any of this is tagged `checkpoint-module-works-in-foundry`.
 
 ### What this run did not cover
 

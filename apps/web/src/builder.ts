@@ -351,7 +351,9 @@ export const initialState: BuilderState = {
   backgroundFeatId: "",
   featId: "magic-initiate",
   weaponId: "quarterstaff",
-  armorId: "mage-armor",
+  // Unarmoured, not the spell — "mage-armor" slugified to nothing pickable
+  // and nothing that reads it treated it as "none" either.
+  armorId: "",
   extraEquipmentText: "spellbook\ncomponent-pouch",
   proficienciesText: "Arcana\nInvestigation\nThieves' Tools",
   languagesText: "Common\nElvish\nDraconic",
@@ -652,7 +654,9 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       feats: chosenFeatIds,
       proficiencies: [...proficiencies, ...languages],
       spells: [...cantrips, ...leveledSpells],
-      equipment: [state.weaponId, state.armorId, ...extraEquipment],
+      // armorId is blank for an unarmoured build (a wizard who never picked
+      // one, say) — filtered here rather than treated as an item to resolve.
+      equipment: [state.weaponId, state.armorId, ...extraEquipment].filter(Boolean),
       features,
         normalized: {
           feats: chosenFeatIds,
@@ -681,7 +685,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         spells: spellEntries,
         equipment: [
             normalizedWeapon,
-            normalizedArmor,
+            ...(state.armorId ? [normalizedArmor] : []),
             ...extraEquipment.map((entry) => normalizeEquipmentEntry(entry)),
         ],
           features: features.map((entry) => normalizeFeatureEntry(entry, state)),
