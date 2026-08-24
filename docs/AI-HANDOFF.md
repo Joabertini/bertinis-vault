@@ -13,6 +13,9 @@ Fast start for the next agent working on this repo.
 4. [`CHARACTER-MODEL-GAPS.md`](./CHARACTER-MODEL-GAPS.md) — what the builder
    models of a 5e character, what it does not, and in what order that is worth
    fixing.
+5. [`CHARACTER-SHEET-FIELDS.md`](./CHARACTER-SHEET-FIELDS.md) — every field a
+   gap fix has to land on, read from the `dnd5e` actor data model itself, with
+   which ones `import.js` actually writes today.
 
 Those are current. Treat anything else in this directory as a record of how the
 project got here, not as instructions.
