@@ -106,9 +106,39 @@ export type FeatChoice = {
   isOpen?: boolean;
 };
 
+/**
+ * A bounded skill pick: choose `count` from `options`.
+ *
+ * `isOpen` means the source names no shortlist — "any 3 skills" — in which
+ * case `options` is already every skill rather than an empty list a caller
+ * would have to special-case. It is kept only so the UI can say "any skill"
+ * instead of naming all eighteen.
+ */
+export type SkillChoice = {
+  options: string[];
+  count: number;
+  isOpen?: boolean;
+};
+
 export type BackgroundRow = IndexRow & {
   /** Null for the 2014 backgrounds, none of which grant a feat. */
   featChoice: FeatChoice | null;
+  /** Skills the background grants outright, with no choice involved. */
+  skillsGranted: string[];
+  /**
+   * A bounded skill choice stacked on top of `skillsGranted`, if the
+   * background offers one (a handful of SCAG backgrounds grant one skill
+   * outright and a choice of a second).
+   */
+  skillChoice: SkillChoice | null;
+  /**
+   * Tools the background grants outright.
+   *
+   * Category-scoped grants ("any gaming set", "any musical instrument") are
+   * not included: they are already a player choice with no single name to
+   * pre-fill, and the free-text proficiency field takes whatever is typed.
+   */
+  toolsGranted: string[];
 };
 
 export type ClassRow = IndexRow & {
@@ -134,6 +164,8 @@ export type ClassRow = IndexRow & {
    * to 3; 2024 moved every class to 3.
    */
   subclassLevel: number | null;
+  /** The skills this class picks from at level 1. Null for the handful with none. */
+  skillChoice: SkillChoice | null;
 };
 
 export type SubclassRow = IndexRow & {

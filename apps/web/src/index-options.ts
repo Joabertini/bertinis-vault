@@ -20,6 +20,7 @@ import {
   type IndexRow,
   type ItemRow,
   type RaceRow,
+  type SkillChoice,
   type SpellRow,
   type SubclassRow,
   type SubraceRow,
@@ -291,6 +292,17 @@ export function armorFormulaOf(row: ItemRow): { formula?: string; shield?: boole
   return {};
 }
 
+/** The background row for an id, picking the given book when the name is shared. */
+function backgroundRowFor(
+  backgroundId: string,
+  rulesVersion: RulesVersion,
+  sourceBook?: string,
+): BackgroundRow | null {
+  const legal = forRulesVersion(collections.background ?? [], rulesVersion) as BackgroundRow[];
+  const matches = legal.filter((row) => slugOf(row.name) === backgroundId);
+  return (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0] || null;
+}
+
 /**
  * The feat a background grants, if it grants one.
  *
@@ -304,14 +316,36 @@ export function featChoiceForBackground(
   rulesVersion: RulesVersion,
   sourceBook?: string,
 ): FeatChoice | null {
-  const legal = forRulesVersion(collections.background ?? [], rulesVersion) as BackgroundRow[];
-  const matches = legal.filter((row) => slugOf(row.name) === backgroundId);
-  const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
-
-  return row?.featChoice ?? null;
+  return backgroundRowFor(backgroundId, rulesVersion, sourceBook)?.featChoice ?? null;
 }
 
 /** The label a feat option shows, with the sub-choice the background made. */
 export function featOptionLabel(option: { name: string; qualifier?: string }): string {
   return option.qualifier ? `${option.name} (${option.qualifier})` : option.name;
+}
+
+/**
+ * The skills and tools a background grants, fixed and chosen.
+ *
+ * The hand-written catalog knew 13 backgrounds out of 161, mixed skills and
+ * tools into one flat list, and was wrong about four of the 13 — the tools
+ * were listed as skills, and two backgrounds carried the wrong edition's
+ * grant. This reads the same data the feat choice above does.
+ */
+export function proficiencyGrantForBackground(
+  backgroundId: string,
+  rulesVersion: RulesVersion,
+  sourceBook?: string,
+): { skillsGranted: string[]; skillChoice: SkillChoice | null; toolsGranted: string[] } {
+  const row = backgroundRowFor(backgroundId, rulesVersion, sourceBook);
+  return {
+    skillsGranted: row?.skillsGranted ?? [],
+    skillChoice: row?.skillChoice ?? null,
+    toolsGranted: row?.toolsGranted ?? [],
+  };
+}
+
+/** The skills a class picks from at level 1, if it offers a choice. */
+export function skillChoiceForClass(classId: string, rulesVersion: RulesVersion): SkillChoice | null {
+  return classInfoFor(classId, rulesVersion)?.skillChoice ?? null;
 }

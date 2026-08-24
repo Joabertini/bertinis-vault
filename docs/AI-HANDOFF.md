@@ -80,18 +80,26 @@ In order, and stated as what blocks each:
    rather than by observation. Two more now wait on it: whether the `dnd5e`
    skill and language keys the payload carries are the right ones, and whether
    the subclass hash resolves.
-3. **Findings B and C in `CHARACTER-MODEL-GAPS.md`.** Class skill options and
-   background proficiencies, both still read from the hand-written catalog and
-   both wrong. The fix is the one the background feat grant already got: put it
-   on the index row and delete the table. Same shape, same file, done twice
-   already — this is the cheapest real work left.
-4. **Move `domain` off `data-engine`.** It imports it only for
+3. ~~**Findings B and C in `CHARACTER-MODEL-GAPS.md`.**~~ Done. Class skill
+   options and background proficiencies now read from the index
+   (`ClassRow.skillChoice`, `BackgroundRow.skillsGranted`/`skillChoice`/
+   `toolsGranted`), and the hand-written tables are deleted. What it opened:
+   `toolsGranted` now reaches the payload correctly and still goes nowhere once
+   it gets there — `import.js` never reads `payload.proficiencies.tools`. See
+   `CHARACTER-SHEET-FIELDS.md` and the note at the end of finding C.
+4. **Write tool proficiencies onto the actor.** `payload.proficiencies.tools`
+   has had nowhere to land since the payload was written; finding C's fix
+   makes it start arriving with real data instead of none. Needs `dnd5e`'s
+   real tool ids, which `packages/domain`'s `TOOL_ALIAS_TO_ID` only has right
+   for six of them — the rest (gaming sets, instruments, artisan's tools) are
+   generic placeholders, not the specific per-item ids the system uses.
+5. **Move `domain` off `data-engine`.** It imports it only for
    `get*CatalogEntry` lookups, which `vetools-index` supersedes. This touches 24
    passing tests, so it is the highest-risk change left. Finding I — five
    catalog ids that resolve to no item — disappears with it.
-5. **Delete `data-engine` and the item fabrication in `foundry-exporter`.** Only
-   after 4.
-6. **Retire `apps/api`.** The index is bundled; nothing fetches datasets.
+6. **Delete `data-engine` and the item fabrication in `foundry-exporter`.** Only
+   after 5.
+7. **Retire `apps/api`.** The index is bundled; nothing fetches datasets.
 
 The wizard interface is its own track. The design is ours, not a reproduction of
 Charactermancer — Plutonium's rules coverage, our interface.
@@ -102,20 +110,24 @@ Charactermancer — Plutonium's rules coverage, our interface.
 agent knows which half of the problem they are in:
 
 **Answered wrong** — worse than missing, because nothing on the sheet says it
-happened. B (class skills, eight of thirteen classes), C (background
-proficiencies, 13 of 161 covered and four of those wrong), D (weapon and armour
-lists that correspond to nothing in the rules), E (Unarmored Defense
-implemented and never called), I (five equipment ids resolving to nothing).
+happened. D (weapon and armour lists that correspond to nothing in the rules),
+E (Unarmored Defense implemented and never called), I (five equipment ids
+resolving to nothing).
 
 **Not answered at all** — multiclassing, expertise, prepared versus known,
 2024 rules beyond source selection, equipment as A-or-B choices, anything
-serving optimisation.
+serving optimisation. Tool proficiencies never reaching the actor joins this
+list now that C supplies real ones for `import.js` to ignore.
 
 **Closed this run** — A (the payload and the module disagreed about slot keys,
 skill keys and language keys, and nothing marked equipment worn), F (half-caster
 slots undershot at every odd level from 3 up), plus levelling as per-level
 decisions, background feat grants, subclass references, and the index carrying
 what a character actually needs.
+
+**Closed 2026-08-24** — B (class skills, eight of thirteen classes) and C
+(background proficiencies, 13 of 161 covered and four of those wrong), both
+moved from the hand-written catalog onto the index.
 
 The thing that changed the working method: `apps/foundry-module/test/conformance.test.mjs`
 derives a real build and asserts on what the module produces from it, with no

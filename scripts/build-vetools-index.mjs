@@ -200,6 +200,112 @@ function titleCase(value) {
   return value.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
 }
 
+/**
+ * Every skill 5e has, in the casing the sheet and this generator both use.
+ *
+ * Duplicated from `packages/domain/src/proficiencies.ts` rather than
+ * imported: that package resolves a *typed* label back to a `dnd5e` skill id,
+ * this script only ever needs the eighteen canonical names, and importing a
+ * built package into a plain data-generation script would tie regeneration to
+ * a build order it does not otherwise need. Eighteen skills have not changed
+ * since 2014 and are not expected to.
+ */
+const SKILL_NAMES = {
+  acrobatics: "Acrobatics",
+  "animal handling": "Animal Handling",
+  arcana: "Arcana",
+  athletics: "Athletics",
+  deception: "Deception",
+  history: "History",
+  insight: "Insight",
+  intimidation: "Intimidation",
+  investigation: "Investigation",
+  medicine: "Medicine",
+  nature: "Nature",
+  perception: "Perception",
+  performance: "Performance",
+  persuasion: "Persuasion",
+  religion: "Religion",
+  "sleight of hand": "Sleight of Hand",
+  stealth: "Stealth",
+  survival: "Survival",
+};
+
+const ALL_SKILL_NAMES = Object.values(SKILL_NAMES);
+
+function skillNameOf(key) {
+  return SKILL_NAMES[key.toLowerCase()] ?? titleCase(key);
+}
+
+/**
+ * A class's skill choice, read from `startingProficiencies.skills`.
+ *
+ * 5etools writes this as `{choose: {from, count}}` when the class names a
+ * shortlist, or `{any: N}` when it does not (the bard and, in the 2024 rules,
+ * nobody else). `any` resolves to every skill rather than an empty list with
+ * a flag: "choose 3 of these 18" and "choose 3, no shortlist" are the same
+ * instruction, and a picker should not have to special-case the second one.
+ */
+function skillChoiceOf(entity) {
+  const entry = entity.startingProficiencies?.skills?.[0];
+  if (!entry) return null;
+
+  if (entry.choose) {
+    const options = entry.choose.from.map(skillNameOf);
+    return { options, count: entry.choose.count ?? options.length };
+  }
+  if (typeof entry.any === "number") {
+    return { options: ALL_SKILL_NAMES, count: entry.any, isOpen: true };
+  }
+
+  return null;
+}
+
+/**
+ * The skills and tools a background grants outright, plus any bounded skill
+ * choice stacked on top (a handful of Sword Coast Adventurer's Guide
+ * backgrounds grant one fixed skill and a choice of a second).
+ *
+ * Tool grants that are themselves category-scoped ("any gaming set", "any
+ * musical instrument") are left out of `toolsGranted`: they are already a
+ * choice with no single name to pre-fill, and the free-text proficiency field
+ * a player types into already accepts whatever name they choose.
+ *
+ * A background whose grant is an array of more than one element is not a
+ * second grant added to the first — the one background this happens to
+ * (House Agent, ERLW) is worded as several alternative *pairs* to choose one
+ * of, a shape this does not attempt to model. Skipped rather than merged into
+ * a single fixed list, which would hand the player tools they do not
+ * actually get.
+ */
+function proficiencyGrantOf(background) {
+  const skillEntries = background.skillProficiencies ?? [];
+  const toolEntries = background.toolProficiencies ?? [];
+
+  const skillsGranted = [];
+  let skillChoice = null;
+  if (skillEntries.length === 1) {
+    for (const [key, value] of Object.entries(skillEntries[0])) {
+      if (value === true) skillsGranted.push(skillNameOf(key));
+    }
+    if (skillEntries[0].choose) {
+      const options = skillEntries[0].choose.from.map(skillNameOf);
+      skillChoice = { options, count: skillEntries[0].choose.count ?? 1 };
+    } else if (typeof skillEntries[0].any === "number") {
+      skillChoice = { options: ALL_SKILL_NAMES, count: skillEntries[0].any, isOpen: true };
+    }
+  }
+
+  const toolsGranted = [];
+  if (toolEntries.length === 1) {
+    for (const [key, value] of Object.entries(toolEntries[0])) {
+      if (value === true) toolsGranted.push(titleCase(key));
+    }
+  }
+
+  return { skillsGranted, skillChoice, toolsGranted };
+}
+
 /** A distance the picker can print, e.g. "120 feet", "Self", "Touch". */
 function rangeOf(spell) {
   const range = spell.range;
@@ -295,11 +401,17 @@ const BUILDERS = {
     })),
 
   background: (entities) =>
-    entities.map((b) => ({
-      name: b.name,
-      source: sourceOf(b),
-      featChoice: featChoiceOf(b),
-    })),
+    entities.map((b) => {
+      const grant = proficiencyGrantOf(b);
+      return {
+        name: b.name,
+        source: sourceOf(b),
+        featChoice: featChoiceOf(b),
+        skillsGranted: grant.skillsGranted,
+        skillChoice: grant.skillChoice,
+        toolsGranted: grant.toolsGranted,
+      };
+    }),
 
   class: (entities) =>
     entities.map((c) => {
@@ -314,6 +426,7 @@ const BUILDERS = {
         preparedSpells: c.preparedSpells ?? null,
         improvementLevels: levels.improvements,
         subclassLevel: levels.subclassLevel,
+        skillChoice: skillChoiceOf(c),
       };
     }),
 
