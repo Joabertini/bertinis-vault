@@ -2,7 +2,7 @@
   "id": "bertinis-vault",
   "title": "Bertini's Vault — Character Import",
   "description": "Import a character built at Bertini's Vault using a short code. Resolves every spell, item and feature through Plutonium, so they arrive as real dnd5e documents.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "authors": [{ "name": "Bertini's Vault" }],
   "compatibility": {
     "minimum": "14",
