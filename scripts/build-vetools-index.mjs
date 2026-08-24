@@ -105,6 +105,37 @@ function readSubclasses(dataDir) {
   return [...byKey.values()];
 }
 
+/**
+ * The level a class's features are earned at, from its feature list.
+ *
+ * A class feature is referenced as `"Name|Class|Source|Level"`, and a feature
+ * that unlocks the subclass is wrapped in an object with `gainSubclassFeature`.
+ * Reading both out of the data is the only way to get these right per edition:
+ * the fighter and the rogue take extra ability score improvements, the 2024
+ * classes all choose a subclass at 3 where the 2014 ones range from 1 to 3,
+ * and 2024 replaced the level 19 improvement with an epic boon.
+ */
+function levelsOf(entity) {
+  const improvements = [];
+  let subclassLevel = null;
+
+  for (const feature of entity.classFeatures ?? []) {
+    const reference = typeof feature === "string" ? feature : feature.classFeature;
+    if (typeof reference !== "string") continue;
+
+    const [name, , , levelText] = reference.split("|");
+    const level = Number.parseInt(levelText ?? "", 10);
+    if (!Number.isInteger(level)) continue;
+
+    if (name?.startsWith("Ability Score Improvement")) improvements.push(level);
+    if (typeof feature !== "string" && feature.gainSubclassFeature && subclassLevel === null) {
+      subclassLevel = level;
+    }
+  }
+
+  return { improvements: [...new Set(improvements)].sort((a, b) => a - b), subclassLevel };
+}
+
 /** A distance the picker can print, e.g. "120 feet", "Self", "Touch". */
 function rangeOf(spell) {
   const range = spell.range;
@@ -202,15 +233,20 @@ const BUILDERS = {
   background: (entities) => entities.map((b) => ({ name: b.name, source: sourceOf(b) })),
 
   class: (entities) =>
-    entities.map((c) => ({
-      name: c.name,
-      source: sourceOf(c),
-      hitDie: c.hd?.faces ?? null,
-      savingThrows: c.proficiency ?? [],
-      spellcastingAbility: c.spellcastingAbility ?? null,
-      casterProgression: c.casterProgression ?? null,
-      preparedSpells: c.preparedSpells ?? null,
-    })),
+    entities.map((c) => {
+      const levels = levelsOf(c);
+      return {
+        name: c.name,
+        source: sourceOf(c),
+        hitDie: c.hd?.faces ?? null,
+        savingThrows: c.proficiency ?? [],
+        spellcastingAbility: c.spellcastingAbility ?? null,
+        casterProgression: c.casterProgression ?? null,
+        preparedSpells: c.preparedSpells ?? null,
+        improvementLevels: levels.improvements,
+        subclassLevel: levels.subclassLevel,
+      };
+    }),
 
   subclass: (entities) =>
     entities.map((c) => ({

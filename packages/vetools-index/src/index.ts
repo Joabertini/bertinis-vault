@@ -91,6 +91,22 @@ export type ClassRow = IndexRow & {
   spellcastingAbility: string | null;
   casterProgression: string | null;
   preparedSpells: string | null;
+  /**
+   * The levels this class grants an ability score improvement at.
+   *
+   * Read from the class's own feature list rather than assumed, because the
+   * common [4, 8, 12, 16, 19] is wrong for three of the classes in every
+   * edition: the fighter also improves at 6 and 14, the rogue at 10, and 2024
+   * dropped the level 19 improvement in favour of an epic boon.
+   */
+  improvementLevels: number[];
+  /**
+   * The level this class chooses a subclass at.
+   *
+   * 2014 ranges from 1 (cleric, sorcerer, warlock) through 2 (druid, wizard)
+   * to 3; 2024 moved every class to 3.
+   */
+  subclassLevel: number | null;
 };
 
 export type SubclassRow = IndexRow & {

@@ -44,10 +44,8 @@ no entry in any table the repo could hold. A button fills in the 2014 PHB
 species whose bonus is fixed; the rest start at zero and are the player's to
 set.
 
-Improvement points are a pool — two per improvement level — rather than a
-decision made at each level. Leaving points unspent is what represents having
-taken a feat instead, until feats can be chosen per level. See **Levelling** in
-the path below.
+Improvements are now a decision per level rather than a pool. See **Levels
+asked no questions** below.
 
 ### Saving throws were never exported
 
@@ -62,6 +60,40 @@ ability ids, and the contract has the kind.
 
 Only the first class grants saves, which will matter when multiclassing lands.
 
+### Levels asked no questions
+
+The builder took a level and derived everything from it in one shot. Ability
+score improvements were a single pool of points — two per improvement level —
+with no record of which level they came from, and no way to take a feat instead
+of one. The count of improvements came from a hardcoded [4, 8, 12, 16, 19],
+which is wrong for three cases in every edition.
+
+Now each level that asks a question is a row: raise two scores, split however
+the rules allow, or take a feat in its place. `packages/domain/src/levelling.ts`
+holds the model; `improvementProblems` reports an over-spent or over-cap
+improvement rather than quietly clamping it.
+
+The levels are read off the class rather than assumed. `improvementLevels` and
+`subclassLevel` are now on the class row, extracted from each class's own
+feature list at index build time:
+
+| | 2014 | 2024 |
+| --- | --- | --- |
+| improvements | fighter also 6 and 14, rogue also 10, everyone 19 | same extras, no 19 — it is an epic boon |
+| subclass | cleric, sorcerer, warlock at 1; druid, wizard at 2; rest at 3 | every class at 3 |
+
+Two of those the builder had wrong. The subclass gate was hardcoded to "1 for
+cleric, sorcerer and warlock, 3 for everyone else", so a 2014 wizard or druid
+was told to wait until 3 for a subclass they get at 2. And a level 20 fighter
+was offered five improvements where the rules give seven.
+
+Drafts saved under the old pool are not lost: the points fold into the level 4
+improvement, which is where a player spending a pool of two would have put them.
+
+Still standing in for something: a feat's ability bonus is recorded by the
+player rather than derived. The index has no machine-readable statement of what
+a feat grants, and inventing one would be worse than asking.
+
 ### The generation method was a lie
 
 `generationMethod` was the literal `"manual"`. The builder has had point buy,
@@ -72,19 +104,7 @@ Now the method is part of the build state and is recorded.
 
 ## Still missing, in the order worth doing
 
-### 1. Levelling with decisions
-
-The builder takes a level and derives everything from it in one shot. A real
-character makes a decision at most levels: improvement or feat, a subclass at
-its own level, a fighting style, an expertise pick.
-
-This is the change that alters the shape of the app — from a flat form to
-something that walks the levels — and most of what follows depends on it.
-
-Blocks: feats per level, subclass timing, and turning the improvement pool back
-into the choices it stands in for.
-
-### 2. Multiclassing
+### 1. Multiclassing
 
 `classing.classes` is an array and has always been one. The builder writes a
 single entry, and the UI offers one class.
@@ -93,7 +113,7 @@ Needs the 13-in-the-ability requirement, per-class levels, the multiclass
 spell slot table (which is not the single-class one), and the rule that only
 the first class grants saving throws and starting equipment.
 
-### 3. Expertise
+### 2. Expertise
 
 Absent everywhere. Rogues and bards double proficiency on chosen skills at
 level 1 and again later, and the payload has no way to say so.
@@ -101,7 +121,7 @@ level 1 and again later, and the payload has no way to say so.
 Needs `ImportPayload.proficiencies.expertise` filled — the field is already
 there — plus the per-class rules for how many picks and when.
 
-### 4. Spell text, and prepared versus known
+### 3. Spell text, and prepared versus known
 
 The picker offers the class's whole list now. Two things are still missing: the
 index carries no spell description, because the full text of every spell is
@@ -112,7 +132,7 @@ rather than the number of spells they prepare.
 The class rows now carry `preparedSpells` (`"<$level$> + <$int_mod$>"`), which
 is the formula that answers the second half.
 
-### 5. 2024 rules, beyond which books are legal
+### 4. 2024 rules, beyond which books are legal
 
 The ruleset switch chooses sources. The rules themselves are still 2014:
 backgrounds do not grant the 2024 ability bonus or origin feat, and the derived
@@ -122,13 +142,13 @@ numbers come from the 2014 tables.
 real work here. The data for it is in place — weapon mastery is on the item
 rows, and the class rows carry each edition's progression.
 
-### 6. Equipment as choices
+### 5. Equipment as choices
 
 Starting equipment is a fixed list per class. The PHB offers an A-or-B choice
 and a gold alternative, and neither exists. Quantities are always one.
 Attunement and carrying capacity are not modelled.
 
-### 7. Nothing serves optimisation
+### 6. Nothing serves optimisation
 
 No prerequisite is checked — not feat prerequisites, not the 13-in-the-ability
 requirement for multiclassing. Nothing compares options, estimates damage, or
@@ -155,7 +175,7 @@ It now records, at a cost of 15KB gzip:
 | spell | the class lists it is on, each with the class's own source; range as a distance |
 | item | damage, damage type, versatile damage, properties, 2024 mastery, armour class, minimum Strength, stealth disadvantage |
 | race | the fixed part of the species bonus, size, speed |
-| class | hit die, saving throws, spellcasting ability, caster progression, prepared-spell formula |
+| class | hit die, saving throws, spellcasting ability, caster progression, prepared-spell formula, improvement levels, subclass level |
 | subclass | 203 rows, which did not exist |
 | subrace | 98 rows, which did not exist |
 

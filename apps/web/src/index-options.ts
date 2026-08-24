@@ -14,6 +14,7 @@ import {
   forRulesVersion,
   normalizeForSearch,
   searchByName,
+  type ClassRow,
   type IndexRow,
   type ItemRow,
   type RaceRow,
@@ -21,6 +22,7 @@ import {
   type SubclassRow,
   type SubraceRow,
 } from "@bertinis-vault/vetools-index";
+import type { LevellingClass } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 export type IndexOption = {
@@ -249,9 +251,23 @@ export function itemInfoFor(
 }
 
 /** The class row for a class id, which carries its saves and hit die. */
-export function classInfoFor(classId: string, rulesVersion: RulesVersion) {
-  const legal = forRulesVersion(collections.class ?? [], rulesVersion);
+export function classInfoFor(classId: string, rulesVersion: RulesVersion): ClassRow | null {
+  const legal = forRulesVersion(collections.class ?? [], rulesVersion) as ClassRow[];
   return legal.find((row) => slugOf(row.name) === classId) ?? null;
+}
+
+/**
+ * When this class asks its questions, in the shape the rules layer wants.
+ *
+ * A class the index does not know falls back to the common case rather than to
+ * nothing: a build in progress should not lose its improvements because the
+ * class field is momentarily empty.
+ */
+export function levellingFor(classId: string, rulesVersion: RulesVersion): LevellingClass {
+  const row = classInfoFor(classId, rulesVersion);
+  if (!row) return { improvementLevels: [4, 8, 12, 16, 19], subclassLevel: 3 };
+
+  return { improvementLevels: row.improvementLevels, subclassLevel: row.subclassLevel };
 }
 
 /**

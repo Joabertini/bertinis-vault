@@ -4,6 +4,7 @@ import { describe, expect, test } from "vitest";
 import {
   armorFormulaOf,
   itemInfoFor,
+  levellingFor,
   optionsFor,
   slugOf,
   speciesBonusFromIndex,
@@ -105,5 +106,37 @@ describe("species bonuses", () => {
     const legal = forRulesVersion(collections.race ?? [], "2024");
 
     expect(legal.every((row) => (row as { ability?: unknown }).ability == null)).toBe(true);
+  });
+});
+
+describe("when a class asks its questions", () => {
+  test("the subclass level follows the class, not a rule of thumb", () => {
+    // The three shapes 2014 has. Assuming 3 across the board hid the choice
+    // from every wizard and druid below level 3, and showed it two levels
+    // late to every cleric.
+    expect(levellingFor("cleric", "2014").subclassLevel).toBe(1);
+    expect(levellingFor("wizard", "2014").subclassLevel).toBe(2);
+    expect(levellingFor("fighter", "2014").subclassLevel).toBe(3);
+  });
+
+  test("2024 moved every class to level 3", () => {
+    for (const classId of ["cleric", "wizard", "fighter", "sorcerer", "druid", "warlock"]) {
+      expect(levellingFor(classId, "2024").subclassLevel).toBe(3);
+    }
+  });
+
+  test("the fighter and the rogue improve at levels the others do not", () => {
+    expect(levellingFor("fighter", "2014").improvementLevels).toEqual([4, 6, 8, 12, 14, 16, 19]);
+    expect(levellingFor("rogue", "2014").improvementLevels).toEqual([4, 8, 10, 12, 16, 19]);
+    expect(levellingFor("wizard", "2014").improvementLevels).toEqual([4, 8, 12, 16, 19]);
+  });
+
+  test("2024 traded the level 19 improvement for an epic boon", () => {
+    expect(levellingFor("fighter", "2024").improvementLevels).toEqual([4, 6, 8, 12, 14, 16]);
+    expect(levellingFor("wizard", "2024").improvementLevels).not.toContain(19);
+  });
+
+  test("an unknown class falls back rather than losing the improvements", () => {
+    expect(levellingFor("", "2014").improvementLevels.length).toBeGreaterThan(0);
   });
 });

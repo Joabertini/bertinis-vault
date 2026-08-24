@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { buildCanonicalSnapshot, initialState, isCharacterNameMissing } from "../src/builder";
+import {
+  buildCanonicalSnapshot,
+  coerceBuilderState,
+  initialState,
+  isCharacterNameMissing,
+} from "../src/builder";
 
 /**
  * A draft is not a finished character. The canonical schema requires a name,
@@ -51,5 +56,42 @@ describe("cleared optional fields", () => {
     const emptied = optionalFields.reduce((state, field) => ({ ...state, [field]: "" }), initialState);
 
     expect(() => buildCanonicalSnapshot(emptied)).not.toThrow();
+  });
+});
+
+describe("a draft written before levels were choices", () => {
+  // Such a draft has no `levelChoices` at all, and a single pool of spent
+  // points with no record of which level they came from.
+  const legacyDraft = (asiPoints: unknown) => {
+    const { levelChoices, ...rest } = initialState;
+    return { ...rest, asiPoints };
+  };
+
+  test("keeps the points it had spent rather than silently losing them", () => {
+    const restored = coerceBuilderState(legacyDraft({ int: 2 }));
+
+    expect(restored.levelChoices).toEqual({ 4: { kind: "improvement", bonuses: { int: 2 } } });
+  });
+
+  test("with nothing spent starts with nothing chosen", () => {
+    expect(coerceBuilderState(legacyDraft({})).levelChoices).toEqual({});
+  });
+
+  test("a draft with level choices keeps them as written", () => {
+    const restored = coerceBuilderState({
+      ...initialState,
+      levelChoices: { 8: { kind: "feat", featId: "alert" } },
+    });
+
+    expect(restored.levelChoices[8]).toEqual({ kind: "feat", featId: "alert" });
+  });
+
+  test("a malformed level choice is dropped rather than crashing the restore", () => {
+    const restored = coerceBuilderState({
+      ...initialState,
+      levelChoices: { notALevel: { kind: "feat" }, 4: null },
+    });
+
+    expect(restored.levelChoices).toEqual({});
   });
 });

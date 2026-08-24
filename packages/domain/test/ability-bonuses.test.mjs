@@ -2,7 +2,6 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
-  abilityImprovementPointsForLevel,
   applyAbilityBonuses,
   savingThrowsForClass,
   suggestedAbilityBonuses,
@@ -38,16 +37,6 @@ test("the base scores are left alone", () => {
 
 /* --------------------------------------------------------- improvements -- */
 
-test("improvement points are earned at 4, 8, 12, 16 and 19", () => {
-  assert.equal(abilityImprovementPointsForLevel(1), 0);
-  assert.equal(abilityImprovementPointsForLevel(3), 0);
-  assert.equal(abilityImprovementPointsForLevel(4), 2);
-  assert.equal(abilityImprovementPointsForLevel(8), 4);
-  assert.equal(abilityImprovementPointsForLevel(12), 6);
-  assert.equal(abilityImprovementPointsForLevel(16), 8);
-  assert.equal(abilityImprovementPointsForLevel(19), 10);
-  assert.equal(abilityImprovementPointsForLevel(20), 10);
-});
 
 test("an improvement stops at twenty", () => {
   const final = applyAbilityBonuses({ ...base, str: 19 }, { str: 2 }, { str: 4 });
