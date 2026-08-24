@@ -5,7 +5,7 @@ import { buildCanonicalSnapshot, initialState } from "../src/builder";
 
 const resolver = new RefResolver("2014", collections);
 
-const noBonuses = { ...initialState, abilityBonuses: {}, asiPoints: {} };
+const noBonuses = { ...initialState, abilityBonuses: {}, levelChoices: {} };
 
 describe("the scores the sheet uses", () => {
   test("carry the species bonus, which used to be dropped", () => {
@@ -20,10 +20,26 @@ describe("the scores the sheet uses", () => {
     expect(snapshot.abilities.final.con).toBe(noBonuses.con + 1);
   });
 
-  test("carry ability score improvements", () => {
-    const snapshot = buildCanonicalSnapshot({ ...noBonuses, int: 16, asiPoints: { int: 2 } });
+  test("carry the improvement taken at a level", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...noBonuses,
+      int: 16,
+      levelChoices: { 4: { kind: "improvement", bonuses: { int: 2 } } },
+    });
 
     expect(snapshot.abilities.final.int).toBe(18);
+  });
+
+  test("carry a half-feat's bonus, and the feat itself", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...noBonuses,
+      featId: "",
+      con: 13,
+      levelChoices: { 4: { kind: "feat", featId: "resilient", bonuses: { con: 1 } } },
+    });
+
+    expect(snapshot.abilities.final.con).toBe(14);
+    expect(snapshot.choices.feats).toContain("resilient");
   });
 
   test("change the numbers the payload carries", () => {
@@ -39,7 +55,7 @@ describe("the scores the sheet uses", () => {
       ...noBonuses,
       classId: "wizard",
       int: 16,
-      asiPoints: { int: 2 },
+      levelChoices: { 4: { kind: "improvement", bonuses: { int: 2 } } },
     });
 
     expect(sharper.derived.spellcasting?.saveDC).toBe((plain.derived.spellcasting?.saveDC ?? 0) + 1);

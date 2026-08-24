@@ -7,35 +7,17 @@
  * has to land here or the exported character is wrong.
  *
  * Two things raise scores at build time: the species (2014) or background
- * (2024) bonus, and ability score improvements earned with levels.
+ * (2024) bonus, and the choices made on the way up. The second lives in
+ * `levelling.ts`, because which levels ask for one is a fact about the class
+ * rather than about ability scores.
  */
 
 import type { AbilityId, AbilityScoreMap } from "@bertinis-vault/contracts";
 
 export type AbilityBonusMap = Partial<Record<AbilityId, number>>;
 
-/** The levels a single class grants an ability score improvement at. */
-export const abilityScoreImprovementLevels = [4, 8, 12, 16, 19];
-
-/** Each improvement is worth two points: +2 to one score or +1 to two. */
-export const pointsPerAbilityScoreImprovement = 2;
-
 /** The ceiling an improvement can raise a score to. Magic items go past it. */
 export const abilityScoreCap = 20;
-
-/**
- * How many improvement points a character of this level has earned.
- *
- * Spending them is the player's choice, and so is not spending them: taking a
- * feat instead of an improvement is exactly what an unspent pair of points
- * represents until the builder can offer feats per level.
- */
-export function abilityImprovementPointsForLevel(level: number): number {
-  return (
-    abilityScoreImprovementLevels.filter((threshold) => level >= threshold).length *
-    pointsPerAbilityScoreImprovement
-  );
-}
 
 /**
  * The 2014 species bonuses, for the species whose bonus is fixed.

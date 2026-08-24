@@ -3,7 +3,7 @@
   "label": "Background feat plus chosen feat",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-23T23:57:14.497Z",
+    "generatedAt": "2026-08-24T00:11:09.329Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -654,7 +654,7 @@
     },
     "items": [
       {
-        "_id": "76tmpPyIRKFHxZmu",
+        "_id": "0Go83XHD8pXJnvp6",
         "name": "wizard",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -714,7 +714,7 @@
         }
       },
       {
-        "_id": "vv8xZQvorHE558LH",
+        "_id": "jsjV2f7oS6VwfIVg",
         "name": "Tough",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -772,7 +772,7 @@
         }
       },
       {
-        "_id": "g8jNCOX6gLaqzpFq",
+        "_id": "q6reQ6ThZ7dcLthR",
         "name": "Alert",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -830,7 +830,7 @@
         }
       },
       {
-        "_id": "YrWohkIJB7pSOthT",
+        "_id": "cUuL3mDfh3KhPKb8",
         "name": "Arcane Recovery",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -888,7 +888,7 @@
         }
       },
       {
-        "_id": "36MXJKLr2lmdkojs",
+        "_id": "R0BzJTsVE7oLianh",
         "name": "Mage Hand",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1044,7 +1044,7 @@
         }
       },
       {
-        "_id": "WNitXUsv9z6xWKmv",
+        "_id": "wMqtpXMi9MfvJbgC",
         "name": "Shield",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1200,7 +1200,7 @@
         }
       },
       {
-        "_id": "m0tmrjV2iHpAU5eT",
+        "_id": "XhLh5ba17OX4AMcQ",
         "name": "quarterstaff",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1399,7 +1399,7 @@
         }
       },
       {
-        "_id": "iDGIsd61oZQUeGib",
+        "_id": "Go5AOq0xyxRpjXm3",
         "name": "Mage Armor",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1465,7 +1465,7 @@
         }
       },
       {
-        "_id": "6wh4LO4kkaMufRNv",
+        "_id": "ABmTYMM4cfFxHnKW",
         "name": "Spellbook",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",
@@ -1516,7 +1516,7 @@
         }
       },
       {
-        "_id": "txnndhj8yqKadvGg",
+        "_id": "bFj6y48f2slJeiVW",
         "name": "Component Pouch",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",

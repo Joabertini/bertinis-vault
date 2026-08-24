@@ -18,14 +18,19 @@ import {
   getSubracesForRace,
 } from "@bertinis-vault/data-engine";
 import {
-  abilityImprovementPointsForLevel,
   abilityScoreCap,
   buildSpellPickerState,
   formatSpellChoiceLabel,
   getSpellProgressionForClass,
   getSpellSelectionProfileForClassLevel,
+  improvementLevels,
+  improvementProblems,
+  pointsPerImprovement,
   sanitizeSpellSelections,
   suggestedAbilityBonuses,
+  unansweredImprovementLevels,
+  type AbilityBonusMap,
+  type LevelChoice,
 } from "@bertinis-vault/domain";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -44,6 +49,7 @@ import { getFeatureSuggestions } from "./feature-suggestions";
 import { IndexPicker } from "./components/IndexPicker";
 import {
   itemInfoFor,
+  levellingFor,
   optionById,
   slugOf,
   spellInfoFor,
@@ -54,6 +60,34 @@ import {
 
 const numericDraftKeys = ["str", "dex", "con", "int", "wis", "cha"] as const;
 type NumericDraftKey = (typeof numericDraftKeys)[number];
+
+/**
+ * The two raises an improvement is made of, as a pair of ability ids.
+ *
+ * Stored as a bonus map, because that is what the rules layer adds up, but
+ * edited as two picks: `{ str: 2 }` is the same decision as picking Strength
+ * twice, and shows that way.
+ */
+function improvementPicks(bonuses: AbilityBonusMap): [string, string] {
+  const flattened: string[] = [];
+  for (const [ability, amount] of Object.entries(bonuses)) {
+    for (let index = 0; index < (amount ?? 0); index += 1) flattened.push(ability);
+  }
+
+  return [flattened[0] ?? "", flattened[1] ?? ""];
+}
+
+/** The inverse: two picks back into the map the rules layer reads. */
+function bonusesFromPicks(picks: string[]): AbilityBonusMap {
+  const bonuses: AbilityBonusMap = {};
+  for (const ability of picks.slice(0, pointsPerImprovement)) {
+    if (!ability) continue;
+    const key = ability as NumericDraftKey;
+    bonuses[key] = (bonuses[key] ?? 0) + 1;
+  }
+
+  return bonuses;
+}
 
 const steps = [
   { id: "basic", title: "Datos Basicos", desc: "Lo primero es lo primero: identifica a tu aventurero." },
@@ -205,8 +239,6 @@ export function App() {
   // What the sheet uses: base scores plus the species bonus plus whatever
   // improvement points have been spent.
   const finalScores = canonicalSnapshot.abilities.final;
-  const improvementPoints = abilityImprovementPointsForLevel(state.level);
-  const spentImprovementPoints = Object.values(state.asiPoints).reduce((total, amount) => total + (amount ?? 0), 0);
 
   // One resolver per ruleset, rebuilt only when the ruleset changes: indexing
   // 4336 rows on every keystroke would be wasteful.
@@ -222,9 +254,17 @@ export function App() {
   const selectedWeaponOption = optionById("item", rulesVersion, state.weaponId, state.sourceBooks[`item:${state.weaponId}`]);
   const selectedClassOption = optionById("class", rulesVersion, state.classId);
   const selectedSubclassOption = optionById("subclass", rulesVersion, state.subclassId, state.sourceBooks[`subclass:${state.subclassId}`]);
-  // Most classes choose at 3. The three that choose at 1 are the ones whose
-  // whole identity is the subclass.
-  const subclassLevel = ["cleric", "sorcerer", "warlock"].includes(state.classId) ? 1 : 3;
+  // Read off the class rather than assumed. The 2014 cleric, sorcerer and
+  // warlock choose at 1 and the wizard and druid at 2; 2024 moved every class
+  // to 3.
+  const levelling = levellingFor(state.classId, rulesVersion);
+  const subclassLevel = levelling.subclassLevel ?? 3;
+  const characterImprovementLevels = improvementLevels(levelling, state.level);
+  const pendingImprovementLevels = unansweredImprovementLevels(
+    levelling,
+    state.level,
+    state.levelChoices,
+  );
   const selectedArmorOption = optionById("item", rulesVersion, state.armorId, state.sourceBooks[`item:${state.armorId}`]);
   const weaponInfo = itemInfoFor(state.weaponId, rulesVersion, state.sourceBooks[`item:${state.weaponId}`]);
   const armorInfo = itemInfoFor(state.armorId, rulesVersion, state.sourceBooks[`item:${state.armorId}`]);
@@ -488,17 +528,34 @@ export function App() {
     );
   }
 
-  function adjustImprovement(key: NumericDraftKey, delta: number) {
+  function setLevelChoice(level: number, choice: LevelChoice) {
+    setState((current) => ({
+      ...current,
+      levelChoices: { ...current.levelChoices, [level]: choice },
+    }));
+  }
+
+  /**
+   * Set one of an improvement's two raises.
+   *
+   * An improvement is two points, and the rules let them go to one ability or
+   * to two different ones. Two selects say exactly that: choosing the same
+   * ability in both is the +2, choosing two is the +1/+1. No third control is
+   * needed to switch between the cases.
+   */
+  function setImprovementPick(level: number, slot: 0 | 1, ability: string) {
     setState((current) => {
-      const spent = Object.values(current.asiPoints).reduce((total, amount) => total + (amount ?? 0), 0);
-      const budget = abilityImprovementPointsForLevel(current.level);
-      if (delta > 0 && spent >= budget) return current;
+      const existing = current.levelChoices[level];
+      const picks = improvementPicks(
+        existing?.kind === "improvement" ? existing.bonuses : {},
+      );
+      picks[slot] = ability;
 
       return {
         ...current,
-        asiPoints: {
-          ...current.asiPoints,
-          [key]: Math.max(0, (current.asiPoints[key] ?? 0) + delta),
+        levelChoices: {
+          ...current.levelChoices,
+          [level]: { kind: "improvement", bonuses: bonusesFromPicks(picks) },
         },
       };
     });
@@ -933,28 +990,102 @@ export function App() {
               SUGERIR SEGUN ESPECIE
             </button>
             <div className="bg-feat-auto" style={{ display: "block" }}>
-              <b>Mejoras de atributo</b>: {spentImprovementPoints} / {improvementPoints} puntos usados.
-              Un personaje gana dos puntos en los niveles 4, 8, 12, 16 y 19. Dejarlos sin usar es
-              lo que representa haber tomado un feat en su lugar, hasta que el builder pueda
-              ofrecer feats por nivel. El tope de una mejora es {abilityScoreCap}.
+              <b>Niveles con decision</b>: {characterImprovementLevels.length === 0
+                ? `un ${selectedClassOption?.label ?? state.classId} de nivel ${state.level} todavia no eligio ninguna.`
+                : `nivel ${characterImprovementLevels.join(", ")}.`}
+              {" "}En cada uno se sube dos puntos de atributo &mdash; los dos al mismo o uno a cada
+              uno de dos &mdash; o se toma una dote en su lugar. El tope de un atributo por mejora
+              es {abilityScoreCap}.
+              {pendingImprovementLevels.length > 0 ? (
+                <> Sin resolver: nivel {pendingImprovementLevels.join(", ")}.</>
+              ) : null}
             </div>
-            <div className="stats-grid">
-              {numericDraftKeys.map((key) => (
-                <div className="stat-field" key={`asi-${key}`}>
-                  <label>{key.toUpperCase()} mejora</label>
-                  <div className="pb-controls">
-                    <button className="pb-btn" onClick={() => adjustImprovement(key, -1)} type="button">-</button>
-                    <div className="pb-val">{state.asiPoints[key] ?? 0}</div>
+            {characterImprovementLevels.map((improvementLevel) => {
+              const choice = state.levelChoices[improvementLevel];
+              const isFeat = choice?.kind === "feat";
+              const picks = improvementPicks(
+                choice?.kind === "improvement" ? choice.bonuses : {},
+              );
+              const problems = improvementProblems(
+                choice?.kind === "improvement" ? choice.bonuses : {},
+                finalScores,
+              );
+
+              return (
+                <div className="field" key={`level-${improvementLevel}`}>
+                  <label htmlFor={`level-${improvementLevel}-kind`}>Nivel {improvementLevel}</label>
+                  <div className="dice-method-tabs">
                     <button
-                      className="pb-btn"
-                      disabled={spentImprovementPoints >= improvementPoints}
-                      onClick={() => adjustImprovement(key, 1)}
+                      className={`tab-btn${isFeat ? "" : " active"}`}
+                      id={`level-${improvementLevel}-kind`}
+                      onClick={() =>
+                        setLevelChoice(improvementLevel, {
+                          kind: "improvement",
+                          bonuses: bonusesFromPicks(picks),
+                        })
+                      }
                       type="button"
-                    >+</button>
+                    >
+                      MEJORA
+                    </button>
+                    <button
+                      className={`tab-btn${isFeat ? " active" : ""}`}
+                      onClick={() =>
+                        setLevelChoice(improvementLevel, {
+                          kind: "feat",
+                          featId: isFeat ? choice.featId : "",
+                        })
+                      }
+                      type="button"
+                    >
+                      DOTE
+                    </button>
                   </div>
+
+                  {isFeat ? (
+                    <IndexPicker
+                      inputId={`level-${improvementLevel}-feat`}
+                      label={`Dote de nivel ${improvementLevel}`}
+                      onPick={(option) =>
+                        setLevelChoice(improvementLevel, { kind: "feat", featId: option.id })
+                      }
+                      prop="feat"
+                      rulesVersion={rulesVersion}
+                      selectedId={choice.featId}
+                    />
+                  ) : (
+                    <div className="array-row">
+                      {[0, 1].map((slot) => (
+                        <select
+                          key={`level-${improvementLevel}-slot-${slot}`}
+                          onChange={(event) =>
+                            setImprovementPick(improvementLevel, slot as 0 | 1, event.target.value)
+                          }
+                          value={picks[slot] ?? ""}
+                        >
+                          <option value="">+1 a &mdash;</option>
+                          {numericDraftKeys.map((key) => (
+                            <option key={key} value={key}>
+                              +1 a {key.toUpperCase()}
+                            </option>
+                          ))}
+                        </select>
+                      ))}
+                    </div>
+                  )}
+
+                  {problems.length > 0 ? (
+                    <p className="field-warning">
+                      {problems.map((problem) =>
+                        problem.reason === "over-cap"
+                          ? `${problem.ability.toUpperCase()} llegaria a ${problem.total}, y el tope es ${abilityScoreCap}.`
+                          : "Una mejora vale dos puntos.",
+                      ).join(" ")}
+                    </p>
+                  ) : null}
                 </div>
-              ))}
-            </div>
+              );
+            })}
             <div className="stats-grid">
               {numericDraftKeys.map((key) => (
                 <div className="stat-field" key={key}>

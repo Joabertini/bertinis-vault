@@ -15,12 +15,14 @@ import {
   slugifyId,
 } from "@bertinis-vault/data-engine";
 import {
-  abilityImprovementPointsForLevel,
   applyAbilityBonuses,
+  bonusesFromChoices,
   deriveCharacterBuild,
+  featsFromChoices,
   savingThrowsForClass,
   suggestedAbilityBonuses,
   type AbilityBonusMap,
+  type LevelChoice,
 } from "@bertinis-vault/domain";
 import { armorFormulaOf, itemInfoFor, slugOf } from "./index-options";
 
@@ -95,8 +97,14 @@ export type BuilderState = {
    * most of the index there is no fixed answer to look up.
    */
   abilityBonuses: AbilityBonusMap;
-  /** Ability score improvement points the player has spent. */
-  asiPoints: AbilityBonusMap;
+  /**
+   * What the character chose at each level that asked, keyed by that level.
+   *
+   * Keyed by level rather than held as a list because the question belongs to
+   * the level: a fighter who drops from 14 to 12 should lose the answers they
+   * gave at 14, and find them again if they go back up.
+   */
+  levelChoices: Record<number, LevelChoice>;
   /**
    * Which book each pick came from, keyed by `"<prop>:<id>"`.
    *
@@ -318,7 +326,7 @@ export const initialState: BuilderState = {
   rulesVersion: "5e-2014",
   statMethod: "manual",
   abilityBonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
-  asiPoints: {},
+  levelChoices: {},
   characterName: "Seraphina Vale",
   playerName: "Martin",
   alignment: "Neutral Bueno",
@@ -357,6 +365,8 @@ export function coerceBuilderState(value: unknown): BuilderState {
   }
 
   const candidate = value as Partial<BuilderState>;
+  // Fields older drafts carried and this one no longer declares.
+  const legacy = value as { asiPoints?: unknown };
 
   return {
     createdAt: typeof candidate.createdAt === "string" ? candidate.createdAt : initialState.createdAt,
@@ -404,7 +414,7 @@ export function coerceBuilderState(value: unknown): BuilderState {
     rulesVersion: candidate.rulesVersion === "5e-2024" ? "5e-2024" : "5e-2014",
     statMethod: coerceStatMethod(candidate.statMethod),
     abilityBonuses: coerceAbilityBonuses(candidate.abilityBonuses),
-    asiPoints: coerceAbilityBonuses(candidate.asiPoints),
+    levelChoices: coerceLevelChoices(candidate.levelChoices, legacy.asiPoints),
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
   };
 }
@@ -421,6 +431,42 @@ function coerceAbilityBonuses(value: unknown): AbilityBonusMap {
   for (const ability of ["str", "dex", "con", "int", "wis", "cha"] as const) {
     const amount = (value as Record<string, unknown>)[ability];
     if (typeof amount === "number" && Number.isFinite(amount)) result[ability] = Math.trunc(amount);
+  }
+
+  return result;
+}
+
+/**
+ * Read the per-level choices back out of a draft.
+ *
+ * Drafts written before levels were choices carried a single pool of spent
+ * improvement points with no record of which level they came from. Those are
+ * folded into the first improvement, which is where a player spending a pool
+ * of two would have put them anyway, and is the only reading that does not
+ * silently throw their scores away.
+ */
+function coerceLevelChoices(value: unknown, legacyPool: unknown): Record<number, LevelChoice> {
+  if (!value || typeof value !== "object") {
+    const pool = coerceAbilityBonuses(legacyPool);
+    return Object.keys(pool).length > 0 ? { 4: { kind: "improvement", bonuses: pool } } : {};
+  }
+
+  const result: Record<number, LevelChoice> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    const level = Number.parseInt(key, 10);
+    if (!Number.isInteger(level) || !raw || typeof raw !== "object") continue;
+
+    const candidate = raw as { kind?: unknown; featId?: unknown; bonuses?: unknown };
+    if (candidate.kind === "feat") {
+      const bonuses = coerceAbilityBonuses(candidate.bonuses);
+      result[level] = {
+        kind: "feat",
+        featId: typeof candidate.featId === "string" ? candidate.featId : "",
+        ...(Object.keys(bonuses).length > 0 ? { bonuses } : {}),
+      };
+    } else {
+      result[level] = { kind: "improvement", bonuses: coerceAbilityBonuses(candidate.bonuses) };
+    }
   }
 
   return result;
@@ -485,8 +531,15 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   });
   const backgroundEntry = state.backgroundId ? getBackgroundCatalogEntry(state.backgroundId) : undefined;
   const backgroundGrantedFeatIds = uniqueEntries(backgroundEntry?.grantedFeatIds ?? []);
-  const chosenFeatIds =
-    state.featId && !backgroundGrantedFeatIds.includes(state.featId) ? [state.featId] : [];
+  // A feat can arrive two ways: chosen at a level in place of an improvement,
+  // or granted outside the levels entirely — the variant human's, and in 2024
+  // the background's. Both land in the same list, and a feat the background
+  // already granted is not counted twice.
+  const chosenFeatIds = uniqueEntries(
+    [state.featId, ...featsFromChoices(state.levelChoices)].filter(
+      (featId) => featId && !backgroundGrantedFeatIds.includes(featId),
+    ),
+  );
 
   const baseScores = {
     str: state.str,
@@ -539,7 +592,11 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       // Everything downstream reads `final`: hit points, armour class, the
       // spell save DC, the attack bonus. Species bonuses and improvements have
       // to land here or the exported character is wrong.
-      final: applyAbilityBonuses(baseScores, state.abilityBonuses, state.asiPoints),
+      final: applyAbilityBonuses(
+        baseScores,
+        state.abilityBonuses,
+        bonusesFromChoices(state.levelChoices),
+      ),
     },
     choices: {
       feats: chosenFeatIds,
