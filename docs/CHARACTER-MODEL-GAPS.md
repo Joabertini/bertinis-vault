@@ -137,7 +137,162 @@ claimed the scores were typed by hand.
 
 Now the method is part of the build state and is recorded.
 
+## Second audit run
+
+The first pass read the code. This one ran it: every hardcoded table in
+`data-engine` and `domain` was compared against the 5etools data field by
+field, and a real payload was built and fed to the Foundry module's own
+functions. The scripts are throwaway; the findings are not.
+
+What it changed about the picture: the worst problems are not missing features.
+They are two ends of the pipe that were built against different assumptions and
+never tested against each other.
+
+### A. The payload the builder emits is not the payload the module reads
+
+The module's tests pass against a hand-written fixture. The builder emits
+something else, and nothing anywhere compares the two. Building a level 5
+wizard and handing it to `proficiencyUpdates` and `derivedUpdates` produces:
+
+```
+system.spells.spellspell1.value   4     <- no such path
+system.skills.Arcana.value        1     <- dnd5e keys are "arc", not "Arcana"
+system.traits.languages.value     ["Common"]
+```
+
+Three separate faults:
+
+**Spell slots reach nothing.** The builder keys slots `spell1`…`spell9`; the
+module prefixes what it receives, producing `spellspell1`. The contract's own
+comment says the keys are `{"1": 4}`, and the module's fixture uses that, so
+the module and the contract agree and the builder is the odd one out. Every
+character imported through the module has zero spell slots.
+
+Warlocks are wrong twice over: `getSpellSlotsForClassLevel` folds pact slots
+into `spell3`, and the module has a `pact` branch that nothing ever reaches.
+
+**Skill proficiencies reach nothing.** They travel as display labels —
+"Arcana", "Sleight of Hand" — because `classifyProficiencyKind` recognises a
+skill by name and then stores the name. dnd5e keys skills as `arc`, `slt`. The
+module writes the label straight into the path.
+
+**Armour class is computed, carried, and dropped.** `derivedUpdates` writes hit
+points and slots. It never writes `system.attributes.ac`. All of the armour
+work — the index formulas, the generalized parser — stops at the payload.
+
+Verifying the exact dnd5e key forms needs a live world. The double prefix does
+not: it is wrong on its own terms.
+
+**What to build, not just what to fix:** a conformance test that derives a real
+build, converts it, and asserts on what the module produces. Every fault above
+would have been caught by one, and the class of fault it catches is the class
+this audit exists to stop finding one at a time.
+
+### B. Class skill choices are wrong for eight of thirteen classes
+
+`classSkillOptionsByClassId` was written by hand and drifted:
+
+| Class | Against the data |
+| --- | --- |
+| Barbarian | **absent entirely** — no options, and `getClassSkillPickCount` returns 0 |
+| Bard | listed as 6 fixed skills; the rules say *any* 3 |
+| Artificer | missing Sleight of Hand |
+| Druid | missing Arcana |
+| Rogue | missing Performance and Persuasion |
+| Fighter (2024) | missing Persuasion |
+| Rogue (2024) | missing Persuasion |
+| Wizard (2024) | missing Nature |
+
+The barbarian is the worst of these: it is offered in the class list and gets
+no skill choice at all.
+
+The 2024 rows also show the general shape of the problem — the table has one
+entry per class where the data has one per class *per edition*.
+
+### C. Background proficiencies cover 13 of 161
+
+Same catalog, same 13 backgrounds as the feat grant did. 112 backgrounds grant
+skills the builder knows nothing about. Four of the 13 it does know are wrong:
+
+| | Builder | Data |
+| --- | --- | --- |
+| Criminal (2014) | Deception, Stealth, Thieves' Tools | Deception, Stealth — the tools are a *tool* proficiency, not a skill |
+| Criminal (2024) | Deception, Stealth | Sleight of Hand, Stealth |
+| Sailor (2024) | Athletics, Perception | Acrobatics, Perception |
+| Urchin | Sleight of Hand, Stealth, Thieves' Tools | Sleight of Hand, Stealth |
+
+The fix is the one the feat grant already got: put it on the index row.
+
+### D. The weapon and armour lists are invention
+
+`classWeaponOptionIdsByClassId` gives a fighter six weapons. A fighter is
+proficient with every simple and martial weapon — 37 of them in the 2014 PHB.
+The lists are a shortlist someone typed, and they correspond to nothing in the
+rules: not starting equipment, not proficiency.
+
+Same for armour. A cleric is offered chain mail, scale mail and a shield; the
+class grants light, medium and shields, which is a different and much larger
+set, and chain mail is heavy armour a cleric is not proficient with at all.
+
+The proficiencies themselves are fine — the payload deliberately does not send
+weapon and armour proficiency, because the class document Plutonium imports
+carries them. It is only the *choice list* that is fiction.
+
+### E. Unarmored Defense is modelled and never used
+
+`calculateArmorClass` takes an `unarmoredAbilityModifier`. Nothing in the
+repository passes it. The barbarian's Constitution and the monk's Wisdom never
+reach armour class — and the barbarian, per B, does not really exist in the
+builder anyway.
+
+### F. Half-casters get spells one level early in 2014
+
+`getSpellSlotsForClassLevel` gives a level 1 paladin and a level 1 ranger two
+first-level slots. That is the 2024 rule. In 2014 both classes start casting at
+level 2, and the data says so: the 2014 rows are `casterProgression: "1/2"`
+where the 2024 rows are `"artificer"`.
+
+Hit dice, spellcasting abilities and every other slot count check out against
+the data — those were verified, not assumed.
+
+### G. Payload fields nothing has ever filled
+
+| Field | Consequence |
+| --- | --- |
+| `proficiencies.expertise` | always `[]`; rogues and bards lose their defining feature |
+| `spells[].prepared` | never set, so nothing distinguishes prepared from known |
+| `spells[].grantedBy` | never set |
+| `equipment[].equipped` | never set, so nothing is worn and Foundry computes AC from an empty body |
+| `equipment[].attuned` | never set |
+| `derived.speed` | never set, though race rows now carry speed |
+| `derived.initiative` | never set — arguably right, Foundry derives it |
+
+`equipment[].equipped` compounds the AC fault in A: the builder does not send
+armour class, and does not say the armour is worn either.
+
+### H. Hit points ignore everything but class and Constitution
+
+`calculateEstimatedHitPoints` takes a hit die, a level and a Constitution
+modifier. It has no room for the hill dwarf's extra point per level, the Tough
+feat's two, or a player who rolled. Nor for the 2024 rule change.
+
+### What this run did not cover
+
+Whether the dnd5e key forms in A are exactly right, and whether the subclass
+hash resolves — both need a live Foundry world, which is the repo's standing
+open question and belongs to the user's machine.
+
 ## Still missing, in the order worth doing
+
+The audit above reorders this. A, B, C and F are wrong answers rather than
+absent ones, and a wrong answer is worse than a gap: nothing about the sheet
+tells the player it happened. They come first, and A comes before all of them,
+because until the two ends of the pipe agree, fixing anything upstream of the
+payload changes nothing the player sees.
+
+### 0. Make the payload and the module agree, and test that they do
+
+Finding A. The conformance test is the deliverable, not the three fixes.
 
 ### 1. Multiclassing
 
