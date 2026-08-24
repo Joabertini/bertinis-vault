@@ -20,6 +20,7 @@ const load = (prop) => JSON.parse(fs.readFileSync(path.join(DATA, `${prop}.json`
 const spells = load("spell");
 const items = load("item");
 const classes = load("class");
+const backgrounds = load("background");
 const manifest = JSON.parse(fs.readFileSync(path.join(DATA, "manifest.json"), "utf8"));
 
 test("the shipped index matches its manifest", () => {
@@ -86,6 +87,69 @@ test("the 2014 and 2024 class lists are both complete", () => {
     assert.ok(classic.includes(name), `2014 is missing ${name}`);
     assert.ok(modern.includes(name), `2024 is missing ${name}`);
   }
+});
+
+// docs/CHARACTER-MODEL-GAPS.md finding B: the hand-written catalog knew skill
+// options for 5 of 13 classes. These pin the classes it got wrong or missed
+// entirely against the real starting-proficiencies data.
+test("every core class carries its real skill choice", () => {
+  const classSkills = (name, source) =>
+    forRulesVersion(classes, source === "PHB" ? "2014" : "2024").find((c) => c.name === name)?.skillChoice;
+
+  // The catalog had no entry at all for the barbarian.
+  assert.deepEqual(classSkills("Barbarian", "PHB").options.sort(), [
+    "Animal Handling",
+    "Athletics",
+    "Intimidation",
+    "Nature",
+    "Perception",
+    "Survival",
+  ]);
+  assert.equal(classSkills("Barbarian", "PHB").count, 2);
+
+  // The catalog listed six fixed skills; the bard picks any three.
+  const bard = classSkills("Bard", "PHB");
+  assert.equal(bard.isOpen, true);
+  assert.equal(bard.count, 3);
+  assert.equal(bard.options.length, 18);
+
+  // The catalog was missing Performance and Persuasion for the 2014 rogue,
+  // and Persuasion again for the 2024 one.
+  assert.ok(classSkills("Rogue", "PHB").options.includes("Performance"));
+  assert.ok(classSkills("Rogue", "PHB").options.includes("Persuasion"));
+  assert.ok(!classSkills("Rogue", "XPHB").options.includes("Performance"));
+  assert.ok(classSkills("Rogue", "XPHB").options.includes("Persuasion"));
+});
+
+// docs/CHARACTER-MODEL-GAPS.md finding C: the catalog covered 13 of 161
+// backgrounds and was wrong about four of those thirteen.
+test("background proficiency grants match the real data, tools kept separate from skills", () => {
+  const backgroundRow = (name, source) => backgrounds.find((b) => b.name === name && b.source === source);
+
+  // The catalog listed Thieves' Tools as a skill Criminal grants.
+  const criminal2014 = backgroundRow("Criminal", "PHB");
+  assert.deepEqual(criminal2014.skillsGranted.sort(), ["Deception", "Stealth"]);
+  assert.deepEqual(criminal2014.toolsGranted, ["Thieves' Tools"]);
+
+  // The catalog had one entry for "criminal" and used it for both editions;
+  // the 2024 background grants different skills.
+  const criminal2024 = backgroundRow("Criminal", "XPHB");
+  assert.deepEqual(criminal2024.skillsGranted.sort(), ["Sleight of Hand", "Stealth"]);
+
+  // The catalog's "sailor" entry was the 2014 grant, reused for 2024 too.
+  const sailor2024 = backgroundRow("Sailor", "XPHB");
+  assert.deepEqual(sailor2024.skillsGranted.sort(), ["Acrobatics", "Perception"]);
+
+  // The catalog missed the Disguise Kit entirely.
+  const urchin = backgroundRow("Urchin", "PHB");
+  assert.deepEqual(urchin.skillsGranted.sort(), ["Sleight of Hand", "Stealth"]);
+  assert.deepEqual(urchin.toolsGranted.sort(), ["Disguise Kit", "Thieves' Tools"]);
+
+  // A background the catalog never listed at all: one fixed skill, one chosen.
+  const cloisteredScholar = backgroundRow("Cloistered Scholar", "SCAG");
+  assert.deepEqual(cloisteredScholar.skillsGranted, ["History"]);
+  assert.deepEqual(cloisteredScholar.skillChoice.options.sort(), ["Arcana", "Nature", "Religion"]);
+  assert.equal(cloisteredScholar.skillChoice.count, 1);
 });
 
 test("search ranks prefix matches above substring matches", () => {

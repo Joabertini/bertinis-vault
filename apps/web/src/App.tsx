@@ -9,11 +9,8 @@ import {
 } from "@bertinis-vault/vetools-index";
 import { VaultRequestError, publishBuild } from "./vault-client";
 import {
-  getBackgroundGrantedProficiencies,
   getClassArmorOptionIds,
   getClassFallbackMeta,
-  getClassSkillOptions,
-  getClassSkillPickCount,
   getRaceLanguageRule,
   getSubracesForRace,
 } from "@bertinis-vault/data-engine";
@@ -54,6 +51,8 @@ import {
   itemInfoFor,
   levellingFor,
   optionById,
+  proficiencyGrantForBackground,
+  skillChoiceForClass,
   slugOf,
   spellInfoFor,
   spellOptionsForClass,
@@ -359,9 +358,32 @@ export function App() {
   const lockedLanguages = raceLanguageRule.fixed;
   const optionalLanguageChoices = raceLanguageRule.choiceOptions ?? [];
   const optionalLanguageCount = raceLanguageRule.choiceCount ?? 0;
-  const classSkillChoices = getClassSkillOptions(state.classId);
-  const lockedProficiencies = getBackgroundGrantedProficiencies(state.backgroundId);
-  const classSkillSelectionLimit = getClassSkillPickCount(state.classId);
+  // From the index rather than the catalog: the catalog knew skill options for
+  // 5 of 13 classes and proficiencies for 13 of 161 backgrounds. See
+  // docs/CHARACTER-MODEL-GAPS.md findings B and C.
+  const backgroundProficiencyGrant = proficiencyGrantForBackground(
+    state.backgroundId,
+    rulesVersion,
+    state.sourceBooks[`background:${state.backgroundId}`],
+  );
+  const classSkillChoice = skillChoiceForClass(state.classId, rulesVersion);
+  const lockedProficiencies = useMemo(
+    () => [...backgroundProficiencyGrant.skillsGranted, ...backgroundProficiencyGrant.toolsGranted],
+    [backgroundProficiencyGrant.skillsGranted, backgroundProficiencyGrant.toolsGranted],
+  );
+  // A background's own bonus skill choice (a handful of SCAG backgrounds grant
+  // one skill outright and a choice of a second) is folded into the same
+  // selectable pool and limit as the class's — the player is picking skills
+  // either way, and a second picker for one extra skill would be its own bug.
+  const classSkillChoices = useMemo(
+    () =>
+      Array.from(
+        new Set([...(classSkillChoice?.options ?? []), ...(backgroundProficiencyGrant.skillChoice?.options ?? [])]),
+      ),
+    [classSkillChoice?.options, backgroundProficiencyGrant.skillChoice?.options],
+  );
+  const classSkillSelectionLimit =
+    (classSkillChoice?.count ?? 0) + (backgroundProficiencyGrant.skillChoice?.count ?? 0);
   const skillChoices = useMemo(
     () => Array.from(new Set([...lockedProficiencies, ...classSkillChoices])),
     [classSkillChoices, lockedProficiencies],
@@ -950,7 +972,7 @@ export function App() {
                     ].join(", ")}`
                   : featOptionLabel(backgroundFeatChoice.options[0] ?? { name: "" })}
               <br />
-              <b>Skills de trasfondo</b>: {(getBackgroundGrantedProficiencies(state.backgroundId).length ? getBackgroundGrantedProficiencies(state.backgroundId) : ["Flexible"]).join(", ")}
+              <b>Competencias de trasfondo</b>: {(lockedProficiencies.length ? lockedProficiencies : ["Flexible"]).join(", ")}
             </div>
             {backgroundOffersAChoice ? (
               <div className="field">

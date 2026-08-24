@@ -224,6 +224,15 @@ no skill choice at all.
 The 2024 rows also show the general shape of the problem — the table has one
 entry per class where the data has one per class *per edition*.
 
+**Fixed (2026-08-24).** `classSkillOptionsByClassId` and
+`classSkillPickCountByClassId` are gone from `data-engine`. The index carries
+`ClassRow.skillChoice` instead — `{options, count}`, read straight from
+`startingProficiencies.skills` for all 31 class rows across both editions.
+`{any: N}` (the bard, and only the bard) resolves to all eighteen skills at
+generation time rather than an empty list with a flag to special-case, so a
+consumer never has to know the difference between "any 3" and "these 3 of
+18." `apps/web/src/index-options.ts` exposes it as `skillChoiceForClass`.
+
 ### C. Background proficiencies cover 13 of 161
 
 Same catalog, same 13 backgrounds as the feat grant did. 112 backgrounds grant
@@ -237,6 +246,30 @@ skills the builder knows nothing about. Four of the 13 it does know are wrong:
 | Urchin | Sleight of Hand, Stealth, Thieves' Tools | Sleight of Hand, Stealth |
 
 The fix is the one the feat grant already got: put it on the index row.
+
+**Fixed (2026-08-24).** `backgroundGrantedProficienciesById` is gone from
+`data-engine`. `BackgroundRow` now carries `skillsGranted` (fixed, no choice),
+`skillChoice` (a bounded choice a handful of SCAG backgrounds stack on top —
+one fixed skill and a choice of a second — folded into the same picker and
+limit as the class's own skill choice, rather than a second one), and
+`toolsGranted` (fixed tools, kept separate from skills this time). Read from
+`skillProficiencies` and `toolProficiencies` for all 161 backgrounds.
+Category-scoped tool grants ("any gaming set", "any musical instrument") are
+deliberately left out — they are already a player choice with no single name
+to pre-fill — and the one background whose grant is several alternative
+*pairs* rather than one set (House Agent, ERLW) is skipped rather than merged
+into a fixed list that would hand the player tools they do not get.
+`apps/web/src/index-options.ts` exposes it as `proficiencyGrantForBackground`.
+
+**What this does not close:** `toolsGranted` now reaches the payload
+correctly, but `apps/foundry-module/src/import.js` never reads
+`payload.proficiencies.tools` — no tool proficiency has ever reached the
+actor, background-granted or otherwise. See
+[`CHARACTER-SHEET-FIELDS.md`](./CHARACTER-SHEET-FIELDS.md)'s skills-and-tools
+section. Closing it needs `dnd5e`'s real tool ids (`thief`, `disg`, `calligrapher`,
+…), not the generic ones `packages/domain`'s `TOOL_ALIAS_TO_ID` currently
+invents for gaming sets and instruments — worth its own pass rather than
+folding into this one.
 
 ### D. The weapon and armour lists are invention
 
