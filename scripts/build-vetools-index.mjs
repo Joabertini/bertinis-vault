@@ -346,6 +346,64 @@ function masteryOf(item) {
 const MAX_LEVEL = 20;
 
 /**
+ * The ability increase a feat carries, if any.
+ *
+ * 160 of the 276 feats raise something, and the raise is half of why they are
+ * worth taking: on an odd score a half-feat buys its effect *and* the modifier
+ * point a plain improvement would have bought, which no flat improvement can
+ * match in the same slot. Losing it silently — which is what happened until
+ * now, because nothing recorded that a feat raised anything — makes the sheet
+ * quietly wrong rather than visibly incomplete.
+ *
+ * Two forms. A fixed key names the ability outright (`{"con": 1}`). A `choose`
+ * offers a list: `count` different abilities from `from`, each by `amount`,
+ * both defaulting to one.
+ *
+ * `hidden` entries are dropped, and every one of them belongs to the same
+ * entity: the 2024 rules model the plain ability score improvement *as a feat*
+ * called "Ability Score Improvement", so its `ability` is the improvement
+ * itself rather than a half-feat's bonus. Presenting it as one would ask the
+ * player the same question twice.
+ */
+function featAbilityOf(feat) {
+  const grants = [];
+
+  for (const entry of feat.ability ?? []) {
+    if (entry.hidden) continue;
+
+    if (entry.choose) {
+      grants.push({
+        kind: "choice",
+        from: entry.choose.from ?? [],
+        amount: entry.choose.amount ?? 1,
+        count: entry.choose.count ?? 1,
+      });
+      continue;
+    }
+
+    const bonuses = {};
+    for (const [key, value] of Object.entries(entry)) {
+      if (key === "max" || key === "hidden") continue;
+      if (typeof value === "number") bonuses[key] = value;
+    }
+    if (Object.keys(bonuses).length) grants.push({ kind: "fixed", bonuses });
+  }
+
+  return grants;
+}
+
+/**
+ * Whether this feat *is* the ability score improvement.
+ *
+ * 2024 folded the improvement into the feat list, so "take an improvement" and
+ * "take a feat" stopped being alternatives. A builder that offers both as a
+ * choice needs to know which feat is the one that means the former.
+ */
+function isAbilityScoreImprovementFeat(feat) {
+  return (feat.ability ?? []).some((entry) => entry.hidden === true);
+}
+
+/**
  * How many options a class knows at each level, from level 1 to 20.
  *
  * 5etools states this two ways and both are cumulative totals rather than
@@ -468,7 +526,13 @@ const BUILDERS = {
       stealthDisadvantage: i.stealth ? 1 : 0,
     })),
 
-  feat: (entities) => entities.map((f) => ({ name: f.name, source: sourceOf(f) })),
+  feat: (entities) =>
+    entities.map((f) => ({
+      name: f.name,
+      source: sourceOf(f),
+      ability: featAbilityOf(f),
+      isAbilityScoreImprovement: isAbilityScoreImprovementFeat(f) ? 1 : 0,
+    })),
 
   race: (entities) =>
     entities.map((r) => ({

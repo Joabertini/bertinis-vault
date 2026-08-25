@@ -83,17 +83,22 @@ test("a legal improvement has no problems", () => {
   assert.deepEqual(improvementProblems({ wis: 1, cha: 1 }, { wis: 12, cha: 8 }), []);
 });
 
-test("every level's raises add up, feats included", () => {
+test("every improvement's raises add up", () => {
   const choices = {
     4: { kind: "improvement", bonuses: { int: 2 } },
-    8: { kind: "feat", featId: "resilient", bonuses: { con: 1 } },
+    8: { kind: "feat", featId: "resilient" },
     12: { kind: "improvement", bonuses: { int: 1, con: 1 } },
   };
 
-  assert.deepEqual(bonusesFromChoices(choices), { int: 3, con: 2 });
+  assert.deepEqual(bonusesFromChoices(choices), { int: 3, con: 1 });
 });
 
-test("a feat with no half-feat bonus adds nothing", () => {
+test("a feat's own raise is not counted here, even when the choice still carries one", () => {
+  // A half-feat's raise belongs to the feat, wherever the feat came from, and
+  // `bonusesFromFeats` is the one path that applies it. An older draft can
+  // still have bonuses sitting on the level choice; ignoring them here is what
+  // makes it impossible for a migrated draft to count the same point twice.
+  assert.deepEqual(bonusesFromChoices({ 4: { kind: "feat", featId: "resilient", bonuses: { con: 1 } } }), {});
   assert.deepEqual(bonusesFromChoices({ 4: { kind: "feat", featId: "alert" } }), {});
 });
 

@@ -18,7 +18,10 @@ import {
   applyAbilityBonuses,
   bonusesFromChoices,
   deriveCharacterBuild,
+  bonusesFromFeats,
   featsFromChoices,
+  unansweredFeatAbilities,
+  type TakenFeat,
   savingThrowsForClass,
   suggestedAbilityBonuses,
   type AbilityBonusMap,
@@ -26,6 +29,7 @@ import {
 } from "@bertinis-vault/domain";
 import {
   armorFormulaOf,
+  featAbilityGrantsFor,
   featChoiceForBackground,
   itemInfoFor,
   slugOf,
@@ -127,6 +131,15 @@ export type BuilderState = {
    * would be a second place for the same fact to be wrong.
    */
   optionalFeatureIds: string[];
+  /**
+   * The ability a half-feat raises, keyed by the feat it belongs to.
+   *
+   * One home for all three ways a feat arrives — chosen at a level, granted by
+   * a background, granted by the variant human — because only the first has a
+   * level slot to keep it in, and a point kept in two places is a point counted
+   * twice.
+   */
+  featAbilityChoices: Record<string, AbilityBonusMap>;
   /**
    * Which book each pick came from, keyed by `"<prop>:<id>"`.
    *
@@ -350,6 +363,7 @@ export const initialState: BuilderState = {
   abilityBonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
   levelChoices: {},
   optionalFeatureIds: [],
+  featAbilityChoices: {},
   characterName: "Seraphina Vale",
   playerName: "Martin",
   alignment: "Neutral Bueno",
@@ -449,6 +463,7 @@ export function coerceBuilderState(value: unknown): BuilderState {
     optionalFeatureIds: Array.isArray(candidate.optionalFeatureIds)
       ? candidate.optionalFeatureIds.filter((id): id is string => typeof id === "string" && id !== "")
       : [],
+    featAbilityChoices: coerceFeatAbilityChoices(candidate.featAbilityChoices, candidate.levelChoices),
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
   };
 }
@@ -479,6 +494,44 @@ function coerceAbilityBonuses(value: unknown): AbilityBonusMap {
  * of two would have put them anyway, and is the only reading that does not
  * silently throw their scores away.
  */
+/**
+ * The half-feat raises a draft carries, with older drafts brought forward.
+ *
+ * Feat raises used to live on the level choice that took the feat. They now
+ * live under the feat itself, because a background's feat and the variant
+ * human's have no level slot at all. A draft written under the old shape is
+ * migrated here rather than losing its picks, and `bonusesFromChoices` ignores
+ * feat bonuses outright, so a draft that is read twice cannot count a point
+ * twice.
+ */
+function coerceFeatAbilityChoices(
+  value: unknown,
+  legacyLevelChoices: unknown,
+): Record<string, AbilityBonusMap> {
+  const result: Record<string, AbilityBonusMap> = {};
+
+  if (value && typeof value === "object") {
+    for (const [featId, bonuses] of Object.entries(value as Record<string, unknown>)) {
+      const coerced = coerceAbilityBonuses(bonuses);
+      if (featId && Object.keys(coerced).length > 0) result[featId] = coerced;
+    }
+  }
+
+  if (legacyLevelChoices && typeof legacyLevelChoices === "object") {
+    for (const raw of Object.values(legacyLevelChoices as Record<string, unknown>)) {
+      if (!raw || typeof raw !== "object") continue;
+      const choice = raw as { kind?: unknown; featId?: unknown; bonuses?: unknown };
+      if (choice.kind !== "feat" || typeof choice.featId !== "string" || !choice.featId) continue;
+      if (result[choice.featId]) continue;
+
+      const coerced = coerceAbilityBonuses(choice.bonuses);
+      if (Object.keys(coerced).length > 0) result[choice.featId] = coerced;
+    }
+  }
+
+  return result;
+}
+
 function coerceLevelChoices(value: unknown, legacyPool: unknown): Record<number, LevelChoice> {
   if (!value || typeof value !== "object") {
     const pool = coerceAbilityBonuses(legacyPool);
@@ -539,6 +592,40 @@ export function proficiencyBonus(level: number) {
  * several — or allows an unnamed one — waits for the player's answer, and
  * grants nothing until it arrives rather than guessing.
  */
+/**
+ * Every feat the character has, with what it raises and what was chosen.
+ *
+ * The three sources are folded into one list because the rules do not care
+ * where a feat came from: Resilient owes its +1 whether a level bought it, a
+ * background granted it, or the variant human did.
+ */
+export function takenFeatsFor(state: BuilderState): TakenFeat[] {
+  const featIds = uniqueEntries(
+    [
+      ...backgroundFeatIdsFor(state),
+      state.featId,
+      ...featsFromChoices(state.levelChoices),
+    ].filter(Boolean),
+  );
+
+  return featIds.map((featId) => ({
+    featId,
+    grants: featAbilityGrantsFor(featId, state.rulesVersion === "5e-2024" ? "2024" : "2014"),
+    bonuses: state.featAbilityChoices[featId] ?? {},
+  }));
+}
+
+/**
+ * The feats whose ability increase is still unanswered, or does not fit.
+ *
+ * This is what stops a half-feat being lost in silence, which is the whole
+ * reason any of this exists: the sheet used to show a Charisma one point lower
+ * than the player had earned, and nothing said why.
+ */
+export function pendingFeatAbilitiesFor(state: BuilderState) {
+  return unansweredFeatAbilities(takenFeatsFor(state));
+}
+
 export function backgroundFeatIdsFor(state: BuilderState): string[] {
   if (!state.backgroundId) return [];
 
@@ -662,6 +749,9 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         baseScores,
         state.abilityBonuses,
         bonusesFromChoices(state.levelChoices),
+        // Half-feats. Until this line existed, Resilient, Fey Touched and
+        // Telekinetic raised nothing and the sheet did not say so.
+        bonusesFromFeats(takenFeatsFor(state)),
       ),
     },
     choices: {
