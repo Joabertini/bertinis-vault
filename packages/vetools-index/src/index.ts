@@ -81,7 +81,38 @@ export type SubraceRow = IndexRow & {
   ability: AbilityBonuses | null;
 };
 
-export type FeatRow = IndexRow;
+/**
+ * The ability increase a feat carries.
+ *
+ * A fixed grant names the ability outright. A choice offers a pool: `count`
+ * different abilities from `from`, each raised by `amount`. Both default to
+ * one, which covers the ordinary half-feat — "+1 to Intelligence, Wisdom or
+ * Charisma".
+ */
+export type FeatAbilityGrant =
+  | { kind: "fixed"; bonuses: AbilityBonuses }
+  | { kind: "choice"; from: string[]; amount: number; count: number };
+
+export type FeatRow = IndexRow & {
+  /**
+   * What taking this feat raises. Empty for the 116 that raise nothing.
+   *
+   * This is half of why a half-feat is worth taking: on an odd score it buys
+   * the effect *and* the modifier point a plain improvement would have bought.
+   * Nothing recorded it until now, so it was being lost in silence.
+   */
+  ability: FeatAbilityGrant[];
+  /**
+   * Whether this feat *is* the ability score improvement.
+   *
+   * 2024 folded the improvement into the feat list, so "raise two scores" and
+   * "take a feat" stopped being alternatives — the former is a feat named
+   * "Ability Score Improvement". Its own increase is not a half-feat's bonus
+   * and is not in `ability`, because asking for it would ask the same question
+   * twice.
+   */
+  isAbilityScoreImprovement: 0 | 1;
+};
 
 /** One feat a background offers, already scoped to the book it comes from. */
 export type FeatOption = {

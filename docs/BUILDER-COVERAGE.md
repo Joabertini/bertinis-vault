@@ -105,13 +105,39 @@ nothing tells the player.
 | --- | --- |
 | Four generation methods — roll, standard array, point buy, manual | done |
 | ASI versus feat at every eligible level | done — `levelChoices` holds `{kind: "improvement"}` or `{kind: "feat"}` |
-| **The +1 a half-feat grants** | missing — a `feat` choice stores `featId` and nothing else, so Resilient, Fey Touched and Telekinetic raise nothing |
+| **The +1 a half-feat grants** | done, 2026-08-25 — see below |
 | Feat prerequisites | missing |
 | The 13-in-the-ability requirement for multiclassing | missing |
 
 The half-feat is precisely the most efficient purchase in the game on an odd
 primary score: it buys the effect *and* the modifier point a flat ASI would
-have bought. Today it is lost silently.
+have bought.
+
+**Fixed, 2026-08-25.** The state it was in is worth stating precisely, because
+it was subtler than "missing": a feat taken *at a level* could carry a raise, on
+the level choice that took it — but nothing ever asked for one, and a feat
+granted by a background or by the variant human had nowhere to put it at all.
+So Resilient raised nothing, and the sheet showed a score one point lower than
+the player had earned without saying why.
+
+What changed:
+
+- The index carries `FeatRow.ability` — 159 of the 276 feats raise something,
+  as either a fixed grant or a pool to choose `count` abilities from by
+  `amount`. Read from 5etools, not written down.
+- The raise now lives under **the feat**, keyed by its id, not under the level
+  that took it. That is the only shape that fits all three ways a feat arrives,
+  and `bonusesFromChoices` ignores feat bonuses outright so a migrated draft
+  cannot count the same point twice. Older drafts are migrated rather than
+  dropped.
+- `FeatAbilityPicker` asks the question wherever a feat is chosen, and renders
+  nothing for the 117 feats that raise nothing.
+- An unanswered half-feat is named on the review step instead of vanishing.
+
+One thing fell out that matters for 2024: the improvement itself is a *feat*
+there, named "Ability Score Improvement". 5etools marks its own increase
+`hidden` for exactly that reason, and it is the only entity in the data that
+carries the mark.
 
 ## 5. Class structure
 
@@ -160,8 +186,7 @@ and deity are not. Cosmetic, and last.
 
 1. ~~**Level choices (`optionalfeature`)**~~ — modelled end to end. The picker
    is the remaining half, and it belongs with the interface work.
-2. **The half-feat `+1`** — small fix, silent loss, and the most efficient
-   choice in the game.
+2. ~~**The half-feat `+1`**~~ — done, picker included.
 3. **Expertise** — the field already exists, the rule is simple, and two whole
    classes depend on it.
 4. **Tools that land**, with `dnd5e`'s real ids.
@@ -172,7 +197,7 @@ and deity are not. Cosmetic, and last.
 8. **The 2024 rules**, properly.
 9. **Prerequisites and legality checking.**
 
-One through five are cheap and change the character that comes out the most.
+Three through five are cheap and change the character that comes out the most.
 Six is what will demand a redesign of the wizard, which is where the interface
 work belongs.
 

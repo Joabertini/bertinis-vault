@@ -134,11 +134,20 @@ export function improvementProblems(
  * records alongside the feat: the index has no machine-readable statement of
  * what a feat grants, and inventing one would be worse than asking.
  */
+/**
+ * The raises the improvements contribute — improvements only.
+ *
+ * A feat's own increase is deliberately **not** counted here, even though a
+ * feat choice can still carry one from an older draft. A feat's raise belongs
+ * to the feat, wherever it was taken from: at a level, from a background, or
+ * from the variant human, and only the first of those has a level slot to live
+ * in. `bonusesFromFeats` is the single path, and excluding feats here is what
+ * makes it impossible to count the same point twice — which is the failure this
+ * codebase has hit more than once.
+ */
 export function bonusesFromChoices(choices: Record<number, LevelChoice>): AbilityBonusMap {
   return mergeBonuses(
-    ...Object.values(choices).map((choice) =>
-      choice.kind === "improvement" ? choice.bonuses : choice.bonuses ?? {},
-    ),
+    ...Object.values(choices).map((choice) => (choice.kind === "improvement" ? choice.bonuses : {})),
   );
 }
 

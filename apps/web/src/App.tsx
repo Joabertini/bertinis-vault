@@ -38,12 +38,15 @@ import {
   coerceBuilderState,
   initialState,
   isCharacterNameMissing,
+  pendingFeatAbilitiesFor,
   removeLine,
   type StatMethod,
 } from "./builder";
 import { fallbackBuilderOptions, type BuilderOptionsPayload } from "./builder-options";
+import { FeatAbilityPicker } from "./components/FeatAbilityPicker";
 import { IndexPicker } from "./components/IndexPicker";
 import {
+  featAbilityGrantsFor,
   featChoiceForBackground,
   featOptionLabel,
   itemInfoFor,
@@ -260,6 +263,9 @@ export function App() {
   const levelling = levellingFor(state.classId, rulesVersion);
   const subclassLevel = levelling.subclassLevel ?? 3;
   const characterImprovementLevels = improvementLevels(levelling, state.level);
+  // Half-feats whose +1 has not been placed. Losing it silently is the whole
+  // reason any of this exists.
+  const pendingFeatAbilities = pendingFeatAbilitiesFor(state);
   const pendingImprovementLevels = unansweredImprovementLevels(
     levelling,
     state.level,
@@ -576,6 +582,23 @@ export function App() {
       ...current,
       levelChoices: { ...current.levelChoices, [level]: choice },
     }));
+  }
+
+  /**
+   * Record the ability a half-feat raises.
+   *
+   * Keyed by the feat rather than by where it was taken, because a background's
+   * feat and the variant human's have no level slot to keep it in. Clearing the
+   * last pick removes the entry rather than leaving an empty map behind.
+   */
+  function setFeatAbility(featId: string, bonuses: AbilityBonusMap) {
+    setState((current) => {
+      const featAbilityChoices = { ...current.featAbilityChoices };
+      if (Object.keys(bonuses).length === 0) delete featAbilityChoices[featId];
+      else featAbilityChoices[featId] = bonuses;
+
+      return { ...current, featAbilityChoices };
+    });
   }
 
   /**
@@ -987,6 +1010,14 @@ export function App() {
                     selectedSource={state.sourceBooks[`feat:${state.backgroundFeatId}`] ?? ""}
                   />
                 ) : null}
+                {state.backgroundFeatId ? (
+                  <FeatAbilityPicker
+                    bonuses={state.featAbilityChoices[state.backgroundFeatId] ?? {}}
+                    grants={featAbilityGrantsFor(state.backgroundFeatId, rulesVersion)}
+                    idPrefix="background-feat"
+                    onChange={(bonuses) => setFeatAbility(state.backgroundFeatId, bonuses)}
+                  />
+                ) : null}
                 {state.backgroundFeatId ? null : (
                   <p className="field-warning">
                     Este trasfondo otorga una feat y todavia no elegiste cual, asi que el personaje
@@ -1006,7 +1037,15 @@ export function App() {
               selectedSource={state.sourceBooks[`feat:${state.featId}`] ?? ""}
             />
             {state.featId ? (
-              <button className="btn btn-next" onClick={() => clearFeat()} type="button">QUITAR FEAT</button>
+              <>
+                <FeatAbilityPicker
+                  bonuses={state.featAbilityChoices[state.featId] ?? {}}
+                  grants={featAbilityGrantsFor(state.featId, rulesVersion)}
+                  idPrefix="feat"
+                  onChange={(bonuses) => setFeatAbility(state.featId, bonuses)}
+                />
+                <button className="btn btn-next" onClick={() => clearFeat()} type="button">QUITAR FEAT</button>
+              </>
             ) : null}
           </>
         );
@@ -1128,16 +1167,24 @@ export function App() {
                   </div>
 
                   {isFeat ? (
-                    <IndexPicker
-                      inputId={`level-${improvementLevel}-feat`}
-                      label={`Dote de nivel ${improvementLevel}`}
-                      onPick={(option) =>
-                        setLevelChoice(improvementLevel, { kind: "feat", featId: option.id })
-                      }
-                      prop="feat"
-                      rulesVersion={rulesVersion}
-                      selectedId={choice.featId}
-                    />
+                    <>
+                      <IndexPicker
+                        inputId={`level-${improvementLevel}-feat`}
+                        label={`Dote de nivel ${improvementLevel}`}
+                        onPick={(option) =>
+                          setLevelChoice(improvementLevel, { kind: "feat", featId: option.id })
+                        }
+                        prop="feat"
+                        rulesVersion={rulesVersion}
+                        selectedId={choice.featId}
+                      />
+                      <FeatAbilityPicker
+                        bonuses={state.featAbilityChoices[choice.featId] ?? {}}
+                        grants={featAbilityGrantsFor(choice.featId, rulesVersion)}
+                        idPrefix={`level-${improvementLevel}-feat`}
+                        onChange={(bonuses) => setFeatAbility(choice.featId, bonuses)}
+                      />
+                    </>
                   ) : (
                     <div className="array-row">
                       {[0, 1].map((slot) => (
@@ -1385,6 +1432,12 @@ export function App() {
               <br />
               Spells: {[...selectedCantrips, ...selectedSpells].join(", ") || "Ninguno"}
             </div>
+            {pendingFeatAbilities.length > 0 ? (
+              <div className="field-warning">
+                Estas dotes suben un atributo y todavia no elegiste cual, asi que ese punto se
+                pierde: {pendingFeatAbilities.map((entry) => entry.featId).join(", ")}.
+              </div>
+            ) : null}
             <div className="nav">
               <button
                 className="btn btn-next"

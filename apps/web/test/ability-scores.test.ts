@@ -1,7 +1,12 @@
 import { RefResolver, buildToPayload, collections } from "@bertinis-vault/vetools-index";
 import { describe, expect, test } from "vitest";
 
-import { backgroundFeatIdsFor, buildCanonicalSnapshot, initialState } from "../src/builder";
+import {
+  backgroundFeatIdsFor,
+  buildCanonicalSnapshot,
+  coerceBuilderState,
+  initialState,
+} from "../src/builder";
 
 const resolver = new RefResolver("2014", collections);
 
@@ -31,15 +36,54 @@ describe("the scores the sheet uses", () => {
   });
 
   test("carry a half-feat's bonus, and the feat itself", () => {
+    // The raise lives under the feat, not under the level that took it: a
+    // background's feat and the variant human's have no level slot to keep it
+    // in, and one home is what makes it impossible to count a point twice.
     const snapshot = buildCanonicalSnapshot({
+      ...noBonuses,
+      featId: "",
+      con: 13,
+      levelChoices: { 4: { kind: "feat", featId: "resilient" } },
+      featAbilityChoices: { resilient: { con: 1 } },
+    });
+
+    expect(snapshot.abilities.final.con).toBe(14);
+    expect(snapshot.choices.feats).toContain("resilient");
+  });
+
+  test("carry a half-feat granted by a background, which has no level to hang on", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...noBonuses,
+      featId: "resilient",
+      con: 13,
+      featAbilityChoices: { resilient: { con: 1 } },
+    });
+
+    expect(snapshot.abilities.final.con).toBe(14);
+  });
+
+  test("a half-feat whose raise was never chosen does not invent one", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...noBonuses,
+      featId: "resilient",
+      con: 13,
+    });
+
+    expect(snapshot.abilities.final.con).toBe(13);
+  });
+
+  test("a draft written when the raise lived on the level keeps it", () => {
+    // Migrated by `coerceBuilderState` rather than dropped. Losing a player's
+    // pick because the shape moved would be the same silent loss in reverse.
+    const migrated = coerceBuilderState({
       ...noBonuses,
       featId: "",
       con: 13,
       levelChoices: { 4: { kind: "feat", featId: "resilient", bonuses: { con: 1 } } },
     });
 
-    expect(snapshot.abilities.final.con).toBe(14);
-    expect(snapshot.choices.feats).toContain("resilient");
+    expect(migrated.featAbilityChoices.resilient).toEqual({ con: 1 });
+    expect(buildCanonicalSnapshot(migrated).abilities.final.con).toBe(14);
   });
 
   test("change the numbers the payload carries", () => {

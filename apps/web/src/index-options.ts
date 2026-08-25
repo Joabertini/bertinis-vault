@@ -18,6 +18,8 @@ import {
   type ClassRow,
   type FeatChoice,
   type IndexRow,
+  type FeatAbilityGrant,
+  type FeatRow,
   type ItemRow,
   type RaceRow,
   type SkillChoice,
@@ -348,4 +350,19 @@ export function proficiencyGrantForBackground(
 /** The skills a class picks from at level 1, if it offers a choice. */
 export function skillChoiceForClass(classId: string, rulesVersion: RulesVersion): SkillChoice | null {
   return classInfoFor(classId, rulesVersion)?.skillChoice ?? null;
+}
+
+/**
+ * What a feat raises, if anything.
+ *
+ * A feat the index does not know grants nothing rather than throwing: a build
+ * in progress carries a half-typed id often enough that failing here would be
+ * the more surprising behaviour.
+ */
+export function featAbilityGrantsFor(
+  featId: string,
+  rulesVersion: RulesVersion,
+): FeatAbilityGrant[] {
+  const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
+  return legal.find((row) => slugOf(row.name) === featId)?.ability ?? [];
 }
