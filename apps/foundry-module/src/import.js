@@ -1,13 +1,19 @@
 /**
  * Turning a payload into an actor.
  *
- * The order matters. Race, class and background are imported first because
- * Plutonium's importers attach proficiencies, features and spell progression as
- * a side effect of importing those documents; adding spells and gear before
- * them would mean writing onto an actor that is still changing shape.
+ * Each reference resolves to a document via Plutonium's `isDataOnly` path
+ * (`documentForRef`), which we then write onto the actor ourselves with
+ * `createEmbeddedDocuments`. This is deliberate, not incidental: Plutonium's
+ * normal import path opens the Charactermancer's picker for every choice the
+ * entity carries — choices the builder already made — and adds a species
+ * ability bonus on top of what the builder already baked into
+ * `payload.abilities`. `isDataOnly` skips both. See `documentForRef` in
+ * `plutonium.js` for what that skips and why it is still safe: class-level
+ * features arrive as data on the class item's own `system.advancement`
+ * rather than as separate items Plutonium would otherwise create.
  */
 
-import { getPlutoniumApi, importRefOntoActor } from "./plutonium.js";
+import { getPlutoniumApi, documentForRef } from "./plutonium.js";
 
 /** Everything a payload asks to be imported, in the order it must happen. */
 export function orderedRefs(payload) {
@@ -206,15 +212,18 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
   if (!actor) throw new Error("Foundry refused to create the actor.");
 
   const refs = orderedRefs(payload);
-  const helper = new api.importer.ActorMultiImportHelper({ actor });
   const results = [];
 
   for (const [index, ref] of refs.entries()) {
     onProgress({ index, total: refs.length, ref });
-    results.push(await importRefOntoActor({ ref, actor, api, helper }));
-  }
+    const result = await documentForRef({ ref, actor, api });
+    results.push(result);
 
-  await helper.pDoFinalize();
+    if (result.ok) {
+      const { _id, ...document } = result.document;
+      await actor.createEmbeddedDocuments("Item", [document]);
+    }
+  }
 
   await actor.update({ ...proficiencyUpdates(payload), ...derivedUpdates(payload) });
   await applyItemState(actor, payload);
