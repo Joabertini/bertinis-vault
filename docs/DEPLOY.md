@@ -76,23 +76,50 @@ in the module settings to match.
 
 ### Releasing it
 
-`module.json` points its download at a GitHub release asset. To cut one, zip the
-module directory and attach it:
+Pushing a `v*` tag runs `.github/workflows/release.yml`, which runs the gate,
+checks `pnpm release:ready`, builds the zip and publishes the release.
+
+Two things have to be true before the tag, and both have caught releases out:
+
+1. **Bump the version in the committed `module.json`.** The workflow writes the
+   tag's version into its own copy before zipping, but Foundry's update check
+   reads the manifest URL above, which serves `main`'s copy. A release whose
+   committed manifest still says the old version is a release nobody is offered.
+   Bump `apps/foundry-module/package.json` alongside it.
+2. **Sign [`FOUNDRY-MANUAL-VALIDATION-REPORT.md`](./FOUNDRY-MANUAL-VALIDATION-REPORT.md).**
+   `release:ready` refuses while anything in it is `pending`. The automated gate
+   proves the pipeline is internally consistent; only a live run proves it
+   produces a character, and every fault this module has had was one the gate
+   could not see.
+
+If a release has to go out before the report is signed — as v0.2.2 did, the day
+the import first came out clean — build and publish it by hand, and say in the
+notes that it was:
 
 ```bash
 cd apps/foundry-module
 zip -r bertinis-vault.zip module.json src lang styles
-gh release create v0.2.0 bertinis-vault.zip
+gh release create v0.2.2 bertinis-vault.zip
 ```
+
+That is a deliberate bypass of a gate, not a shortcut around a broken one. Reach
+for it knowingly.
 
 ## What is verified, and what is not
 
 The worker, the payload contract, the reference resolution and the module's
-import logic all have tests: 164 across seven suites, run by `corepack pnpm
-mvp:verify`.
+import logic all have tests — 245 of them, run by `corepack pnpm mvp:verify`,
+plus 80 in the web builder.
 
-What has never run is the module inside Foundry. Everything it does with
-Plutonium was read from Plutonium's own bundle, not observed. The open questions
-are at the end of [PLUTONIUM-INTEGRATION.md](./PLUTONIUM-INTEGRATION.md), and
-answering them needs a live world with Foundry v14, dnd5e 5.3.x and Plutonium
-active.
+Set `PLUTONIUM_DIR` when running the gate. Without it,
+`apps/foundry-module/test/plutonium-bundle.test.mjs` skips, and that suite is
+the one that checks this module's assumptions about Plutonium against
+Plutonium's own bundle rather than against a fixture. Three wrong fixes shipped
+green because no such test existed.
+
+The module has now run in a live world and imported a character with no prompts.
+What that run did not cover is scenarios 1 through 4 of
+[`FOUNDRY-MANUAL-VALIDATION-REPORT.md`](./FOUNDRY-MANUAL-VALIDATION-REPORT.md),
+and the remaining open questions are at the end of
+[PLUTONIUM-INTEGRATION.md](./PLUTONIUM-INTEGRATION.md). Both need a live world
+with Foundry v14, dnd5e 5.3.x and Plutonium active.
