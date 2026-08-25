@@ -1,0 +1,161 @@
+# What a character is, and what the builder offers
+
+Written 2026-08-25, the day the import came out clean: 14 entries, no
+Charactermancer, no prompts. With the pipe finally working end to end, the
+question stops being "does it arrive" and becomes "is what arrives a whole
+character".
+
+This is the answer to that, and the ordered list of what to build next. It is
+the builder-facing companion to
+[`CHARACTER-MODEL-GAPS.md`](./CHARACTER-MODEL-GAPS.md), which is the live
+account of individual findings; this page is the shape of the whole.
+
+## The principle that decides what belongs here
+
+**The builder models only what the rules make the player choose.**
+
+Everything else arrives inside the document Plutonium resolves — class features,
+species traits, senses, resources, rules text, icons. Modelling those would mean
+maintaining the same data twice and drifting out of sync, which is the mistake
+this project already made once and spent months undoing.
+
+So a gap is only a gap if it is a *decision a player makes* that the builder
+cannot record.
+
+The ordering below follows what actually decides whether a character works:
+action economy first, cosmetics last.
+
+## 1. Action economy — the large hole
+
+What a character can *do on a turn* is barely modelled at all.
+
+| Choice | Who gets it | State |
+| --- | --- | --- |
+| Fighting Style | Fighter, Paladin, Ranger, some subclasses | missing |
+| Eldritch Invocations | Warlock — 2 at level 2, up to 8 | missing |
+| Pact Boon | Warlock, level 3 | missing |
+| Metamagic | Sorcerer — 2 at level 3 | missing |
+| Maneuvers | Battle Master — 3 at level 3 | missing |
+| Artificer Infusions | Artificer | missing |
+| Totem / Circle / Domain picks | several subclasses | missing |
+
+All of these are `optionalfeature` entities in 5etools, carrying a
+`featureType` code — `FS:F` for a fighter's fighting styles, `EI` for
+invocations, `MM` for metamagic — that says which choice they answer. This is
+finding J.
+
+The infrastructure is already there: `DataConverterOptionalfeature` exists and
+`ImporterOptionalfeature` registers the same `preCreateItem` interception every
+other prop does, so a chosen invocation would import exactly like a feat. What
+is missing is the model and the interface.
+
+This is not flavour. A Warlock without invocations and a Battle Master without
+maneuvers are not characters missing decoration — they are characters missing
+their core loop.
+
+## 2. Resources and concentration
+
+| Thing | State |
+| --- | --- |
+| Slots by level, pact slots separate | done |
+| Spell save DC, spell attack bonus | done |
+| Cantrips and spells from the class list | done |
+| **Prepared versus known** | missing — the count label does not distinguish, so a wizard sees the size of their spellbook rather than how many they prepare. The class rows already carry `preparedSpells` (`"<$level$> + <$int_mod$>"`) |
+| Always-prepared spells (Domain, Circle, Oath) | missing |
+| Spells granted by species or feat | missing |
+| Spell text in the picker | missing — the full text of every spell is roughly twenty times the size of the index |
+
+## 3. Defenses
+
+| Thing | State |
+| --- | --- |
+| Hit points | done, but from hit die and Constitution only (finding H) — Tough, Dwarven Toughness and Hill Dwarf are ignored |
+| AC from armour and shield | done |
+| **Unarmored Defense** (Barbarian, Monk, Draconic Sorcerer) | missing — it is implemented in `domain` and never called (finding E) |
+| Saving throw proficiencies | done, first class only, which is the rule |
+| Resistances and immunities from species | arrive with the document |
+
+Unarmored Defense is in the "answers wrong" half rather than the "does not
+answer" half: the sheet shows an armour class, it is simply the wrong one, and
+nothing tells the player.
+
+## 4. Ability scores and breakpoints
+
+| Thing | State |
+| --- | --- |
+| Four generation methods — roll, standard array, point buy, manual | done |
+| ASI versus feat at every eligible level | done — `levelChoices` holds `{kind: "improvement"}` or `{kind: "feat"}` |
+| **The +1 a half-feat grants** | missing — a `feat` choice stores `featId` and nothing else, so Resilient, Fey Touched and Telekinetic raise nothing |
+| Feat prerequisites | missing |
+| The 13-in-the-ability requirement for multiclassing | missing |
+
+The half-feat is precisely the most efficient purchase in the game on an odd
+primary score: it buys the effect *and* the modifier point a flat ASI would
+have bought. Today it is lost silently.
+
+## 5. Class structure
+
+| Thing | State |
+| --- | --- |
+| One class, its level, its subclass | done |
+| **Multiclassing** | missing — `classing.classes` has been an array from the start and the interface writes a single entry. Needs per-class levels, the multiclass slot table (which is not the single-class one), and the rule that only the first class grants saving throws and starting equipment |
+| Class skill choices | done — read from the index rather than a hand-written table |
+| **Expertise** | missing — the payload field exists and nothing fills it. Rogues and bards double proficiency at level 1 and again later |
+
+## 6. Proficiencies
+
+| Thing | State |
+| --- | --- |
+| Skills, languages, saving throws | done |
+| **Tools** | half done — they reach the payload correctly and the module never writes them. `TOOL_ALIAS_TO_ID` in `domain` has six ids right; gaming sets, instruments and artisan's tools are generic placeholders rather than the per-item ids `dnd5e` uses |
+| Armour and weapons | arrive with the class document |
+
+## 7. Equipment
+
+| Thing | State |
+| --- | --- |
+| A fixed list per class | done |
+| **The PHB's A-or-B choice** | missing |
+| **The gold alternative** | missing |
+| Quantities | missing — always one |
+| Attunement, and its three slots | missing |
+| Carrying capacity, currency | missing |
+
+## 8. The 2024 rules
+
+The ruleset switch chooses **sources**, not rules. Backgrounds do not grant the
+2024 ability increases or the origin feat, and every derived number comes from
+the 2014 tables. `packages/domain/src/dnd5e-2014.ts` is named honestly; a 2024
+sibling is the real work.
+
+The data is already in place — weapon mastery is on the item rows, and the class
+rows carry each edition's progression.
+
+## 9. Identity
+
+Name, player, alignment and biography are done. Appearance, age, height, weight
+and deity are not. Cosmetic, and last.
+
+## The order worth building in
+
+1. **Level choices (`optionalfeature`)** — fighting style, invocations,
+   metamagic, maneuvers, pact boon. The character's loop, and it does not exist.
+2. **The half-feat `+1`** — small fix, silent loss, and the most efficient
+   choice in the game.
+3. **Expertise** — the field already exists, the rule is simple, and two whole
+   classes depend on it.
+4. **Tools that land**, with `dnd5e`'s real ids.
+5. **Unarmored Defense** — written, never called. Answers wrong rather than not
+   at all, which puts it ahead of anything merely absent.
+6. **Multiclassing** — the largest, and the one that reshapes the wizard.
+7. **Equipment as choices**, with the gold alternative.
+8. **The 2024 rules**, properly.
+9. **Prerequisites and legality checking.**
+
+One through five are cheap and change the character that comes out the most.
+Six is what will demand a redesign of the wizard, which is where the interface
+work belongs.
+
+Nothing here is about how the builder should *look*. That is its own track, and
+deliberately not mixed in: the design work happens against a model that is
+complete, not alongside one being changed underneath it.
