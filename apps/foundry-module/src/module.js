@@ -142,6 +142,14 @@ async function runImport(payload) {
 
     ui.notifications.remove?.(notification);
 
+    // Nothing should have opened. If something did, name it here rather than
+    // leaving the player to describe a window they did not ask for.
+    if (result.windows?.length) {
+      console.warn(`${MODULE_ID} | windows opened during the import:`, result.windows);
+      const names = [...new Set(result.windows.map((w) => w.app))].join(", ");
+      ui.notifications.warn(t("notifications.unexpectedWindows", { names }));
+    }
+
     if (result.failures.length) {
       // Naming what failed lets the player fix it in the builder and re-import.
       console.warn(`${MODULE_ID} | unresolved:`, result.failures);
