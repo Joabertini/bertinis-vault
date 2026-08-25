@@ -4,6 +4,7 @@ export * from "./choices.js";
 export * from "./combat.js";
 export * from "./dnd5e-2014.js";
 export * from "./levelling.js";
+export * from "./optional-features.js";
 export * from "./spell-slots-payload.js";
 export * from "./derive.js";
 export * from "./preflight.js";

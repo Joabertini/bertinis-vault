@@ -141,6 +141,57 @@ export type BackgroundRow = IndexRow & {
   toolsGranted: string[];
 };
 
+/**
+ * A choice a class makes the player answer as it levels.
+ *
+ * Fighting styles, eldritch invocations, metamagic, maneuvers, runes, arcane
+ * shots, elemental disciplines, artificer infusions and the pact boon are all
+ * this shape: a pool named by `featureType`, and a count that grows with level.
+ *
+ * It comes from the class's own `optionalfeatureProgression`, which is why the
+ * editions need no rule to keep apart — the 2024 sorcerer's metamagic
+ * progression differs from the 2014 one, and the 2024 paladin has no fighting
+ * style because fighting styles became feats, which appears here as the entry
+ * simply not existing.
+ */
+export type OptionalFeatureProgression = {
+  /** What the class calls it, e.g. "Eldritch Invocations". */
+  name: string;
+  /** The pools it draws from, e.g. `["EI"]`. */
+  featureType: string[];
+  /**
+   * How many are known at each level, from 1 to 20, as a running total.
+   *
+   * 5etools states this as a sparse object for most classes and a dense array
+   * for the warlock and the artificer. Both arrive here as the same 20 numbers.
+   */
+  countByLevel: number[];
+};
+
+/** A prerequisite that can be checked against a build rather than read. */
+export type OptionalFeaturePrerequisite =
+  | { kind: "level"; level: number; className: string | null; classSource: string | null }
+  | { kind: "pact"; pact: string }
+  /** A spell that must already be known, e.g. `"eldritch blast#c"`. */
+  | { kind: "spell"; spell: string }
+  /** Another optional feature that must already be taken. */
+  | { kind: "optionalfeature"; name: string; source: string | null };
+
+export type OptionalFeatureRow = IndexRow & {
+  /** The pools this belongs to. A class offering that pool can pick it. */
+  featureType: string[];
+  prerequisites: OptionalFeaturePrerequisite[];
+  /**
+   * The prerequisites that are prose rather than data.
+   *
+   * 5etools writes two kinds for a person rather than a machine — a required
+   * item ("A suit of armor (requires attunement)") and an `otherSummary`
+   * ("Dragonmarked House Renown 25+"). Checking them would mean guessing, so
+   * they are shown and the player judges.
+   */
+  prerequisiteText: string[];
+};
+
 export type ClassRow = IndexRow & {
   hitDie: number | null;
   /** The two abilities the class grants saving throw proficiency in. */
@@ -166,12 +217,16 @@ export type ClassRow = IndexRow & {
   subclassLevel: number | null;
   /** The skills this class picks from at level 1. Null for the handful with none. */
   skillChoice: SkillChoice | null;
+  /** The choices this class makes the player answer as it levels. */
+  optionalFeatureProgression: OptionalFeatureProgression[];
 };
 
 export type SubclassRow = IndexRow & {
   shortName: string | null;
   className: string | null;
   classSource: string | null;
+  /** Choices the subclass grants on top of its class's. */
+  optionalFeatureProgression: OptionalFeatureProgression[];
 };
 
 /** The props this index covers, and the row type each yields. */
@@ -183,7 +238,8 @@ export type IndexedProp =
   | "subrace"
   | "background"
   | "class"
-  | "subclass";
+  | "subclass"
+  | "optionalfeature";
 
 export type RowFor = {
   spell: SpellRow;
@@ -194,6 +250,7 @@ export type RowFor = {
   background: BackgroundRow;
   class: ClassRow;
   subclass: SubclassRow;
+  optionalfeature: OptionalFeatureRow;
 };
 
 /**

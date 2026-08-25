@@ -119,6 +119,15 @@ export type BuilderState = {
    */
   levelChoices: Record<number, LevelChoice>;
   /**
+   * Level-up picks, by the id the index resolves: fighting styles, eldritch
+   * invocations, the pact boon, metamagic, maneuvers.
+   *
+   * A flat list rather than one keyed by pool. Which pool a pick answers is a
+   * property of the option itself — its `featureType` — so keying by pool here
+   * would be a second place for the same fact to be wrong.
+   */
+  optionalFeatureIds: string[];
+  /**
    * Which book each pick came from, keyed by `"<prop>:<id>"`.
    *
    * Only the picks whose name is not unique within the ruleset need it, but
@@ -340,6 +349,7 @@ export const initialState: BuilderState = {
   statMethod: "manual",
   abilityBonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
   levelChoices: {},
+  optionalFeatureIds: [],
   characterName: "Seraphina Vale",
   playerName: "Martin",
   alignment: "Neutral Bueno",
@@ -435,6 +445,10 @@ export function coerceBuilderState(value: unknown): BuilderState {
     statMethod: coerceStatMethod(candidate.statMethod),
     abilityBonuses: coerceAbilityBonuses(candidate.abilityBonuses),
     levelChoices: coerceLevelChoices(candidate.levelChoices, legacy.asiPoints),
+    // A draft saved before level-up picks existed simply has none.
+    optionalFeatureIds: Array.isArray(candidate.optionalFeatureIds)
+      ? candidate.optionalFeatureIds.filter((id): id is string => typeof id === "string" && id !== "")
+      : [],
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
   };
 }
@@ -652,6 +666,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
     },
     choices: {
       feats: chosenFeatIds,
+      optionalFeatures: state.optionalFeatureIds,
       proficiencies: [...proficiencies, ...languages],
       spells: [...cantrips, ...leveledSpells],
       // armorId is blank for an unarmoured build (a wizard who never picked

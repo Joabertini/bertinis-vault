@@ -10,6 +10,7 @@ import backgroundRows from "./data/background.json" with { type: "json" };
 import classRows from "./data/class.json" with { type: "json" };
 import featRows from "./data/feat.json" with { type: "json" };
 import itemRows from "./data/item.json" with { type: "json" };
+import optionalFeatureRows from "./data/optionalfeature.json" with { type: "json" };
 import raceRows from "./data/race.json" with { type: "json" };
 import spellRows from "./data/spell.json" with { type: "json" };
 import subclassRows from "./data/subclass.json" with { type: "json" };
@@ -21,6 +22,7 @@ import type {
   FeatRow,
   IndexRow,
   ItemRow,
+  OptionalFeatureRow,
   RaceRow,
   SpellRow,
   SubclassRow,
@@ -35,6 +37,15 @@ export const backgrounds = backgroundRows as BackgroundRow[];
 export const classes = classRows as ClassRow[];
 export const subclasses = subclassRows as SubclassRow[];
 export const subraces = subraceRows as SubraceRow[];
+
+/**
+ * The level-up choices: invocations, metamagic, maneuvers, fighting styles.
+ *
+ * A class's `optionalFeatureProgression` names the pools it draws from, and a
+ * row belongs to a pool by its own `featureType`. That pairing is the whole
+ * mechanism, and both halves are read from the data rather than written down.
+ */
+export const optionalFeatures = optionalFeatureRows as OptionalFeatureRow[];
 
 /**
  * Every collection, keyed by prop.
@@ -52,4 +63,5 @@ export const collections: Record<string, IndexRow[]> = {
   background: backgrounds,
   class: classes,
   subclass: subclasses,
+  optionalfeature: optionalFeatures,
 };

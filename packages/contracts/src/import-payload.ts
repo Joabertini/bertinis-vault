@@ -138,6 +138,21 @@ export const importPayloadSchema = z.object({
   proficiencies: proficiencyChoicesSchema,
 
   feats: z.array(z.object({ ref: vetoolsRefSchema })).default([]),
+
+  /**
+   * The choices a class made the player answer as it levelled.
+   *
+   * Fighting styles, eldritch invocations, the pact boon, metamagic, maneuvers,
+   * runes, arcane shots, elemental disciplines and artificer infusions are all
+   * `optionalfeature` entities in 5etools, and all import the same way a feat
+   * does. They are separate from `feats` because they are not feats: they are
+   * answers to a question the class asked, and a class asks for a bounded
+   * number of them.
+   *
+   * Defaulted rather than required, so a payload written before this existed
+   * still reads.
+   */
+  optionalFeatures: z.array(z.object({ ref: vetoolsRefSchema })).default([]),
   spells: z.array(spellRefSchema).default([]),
   equipment: z.array(equipmentRefSchema).default([]),
 

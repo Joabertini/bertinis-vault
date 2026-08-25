@@ -50,6 +50,9 @@ export function orderedRefs(payload) {
 
   entries.push({ ref: payload.background.ref, dataOpts: {} });
   for (const feat of payload.feats ?? []) entries.push({ ref: feat.ref, dataOpts: {} });
+  // Fighting styles, invocations, metamagic, maneuvers. They come after the
+  // class that granted them, and before the spells an invocation can grant.
+  for (const option of payload.optionalFeatures ?? []) entries.push({ ref: option.ref, dataOpts: {} });
   for (const spell of payload.spells ?? []) entries.push({ ref: spell.ref, dataOpts: {} });
   for (const item of payload.equipment ?? []) entries.push({ ref: item.ref, dataOpts: {} });
 

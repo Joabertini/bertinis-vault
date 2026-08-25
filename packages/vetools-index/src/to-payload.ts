@@ -91,6 +91,16 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
     .filter((ref): ref is VetoolsRefPayload => ref !== null)
     .map((ref) => ({ ref }));
 
+  // A level-up pick imports exactly the way a feat does; what makes it its own
+  // list is that a class asked for it, and asked for a bounded number.
+  // Defaulted here as well as in the schema: a build handed straight to this
+  // function has not been through `parse`, and one written before the field
+  // existed simply has none.
+  const optionalFeatures = (build.choices.optionalFeatures ?? [])
+    .map((id) => tryResolve(resolver, "optionalfeature", id, failures, books))
+    .filter((ref): ref is VetoolsRefPayload => ref !== null)
+    .map((ref) => ({ ref }));
+
   const spells = (normalized?.spells ?? [])
     .map((entry) => {
       const ref = tryResolve(resolver, "spell", entry.spellId ?? entry.label, failures, books);
@@ -135,6 +145,7 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
     abilities: build.abilities.final,
     proficiencies: partitionProficiencies(normalized?.proficiencies ?? []),
     feats,
+    optionalFeatures,
     spells,
     equipment,
     derived: {

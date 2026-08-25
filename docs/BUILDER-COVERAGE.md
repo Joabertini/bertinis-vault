@@ -44,14 +44,34 @@ All of these are `optionalfeature` entities in 5etools, carrying a
 invocations, `MM` for metamagic — that says which choice they answer. This is
 finding J.
 
-The infrastructure is already there: `DataConverterOptionalfeature` exists and
-`ImporterOptionalfeature` registers the same `preCreateItem` interception every
-other prop does, so a chosen invocation would import exactly like a feat. What
-is missing is the model and the interface.
-
 This is not flavour. A Warlock without invocations and a Battle Master without
 maneuvers are not characters missing decoration — they are characters missing
 their core loop.
+
+**Modelled, 2026-08-25. The interface is what is left.** Nothing about which
+class offers which pool, or how many at what level, is written down in this
+repository, because every table this project has hand-written turned out wrong
+when it was finally compared against the data. Instead:
+
+- A class states its own pools and counts in `optionalfeatureProgression`, and
+  the index carries them as `ClassRow.optionalFeatureProgression` and
+  `SubclassRow.optionalFeatureProgression`, flattened to twenty running totals.
+- An option states the pools it belongs to, and its prerequisites — four kinds
+  checkable (`level`, `pact`, `spell`, `optionalfeature`) and two that are prose
+  for a person to judge.
+- `packages/domain/src/optional-features.ts` turns a build into quotas, matches
+  picks against them, and reports every unmet prerequisite rather than the
+  first.
+- `ImportPayload.optionalFeatures` carries the picks, and the module imports
+  them exactly as it imports a feat.
+
+Two consequences worth noting. The editions keep themselves apart with no rule
+written: the 2024 sorcerer's metamagic progression differs from the 2014 one,
+and the 2024 paladin has no fighting style because fighting styles became
+feats — which shows up as the entry not existing. And a level prerequisite
+counts the class it names rather than the character, so a Warlock 2 / Fighter 10
+still cannot take an invocation that asks for Warlock 5, which is the thing
+multiclassing gets wrong when it is not stated.
 
 ## 2. Resources and concentration
 
@@ -138,8 +158,8 @@ and deity are not. Cosmetic, and last.
 
 ## The order worth building in
 
-1. **Level choices (`optionalfeature`)** — fighting style, invocations,
-   metamagic, maneuvers, pact boon. The character's loop, and it does not exist.
+1. ~~**Level choices (`optionalfeature`)**~~ — modelled end to end. The picker
+   is the remaining half, and it belongs with the interface work.
 2. **The half-feat `+1`** — small fix, silent loss, and the most efficient
    choice in the game.
 3. **Expertise** — the field already exists, the rule is simple, and two whole
