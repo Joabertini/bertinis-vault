@@ -1,36 +1,59 @@
 /**
  * Turning a payload into an actor.
  *
- * Each reference resolves to a document via Plutonium's `isDataOnly` path
- * (`documentForRef`), which we then write onto the actor ourselves with
- * `createEmbeddedDocuments`. This is deliberate, not incidental: Plutonium's
- * normal import path opens the Charactermancer's picker for every choice the
- * entity carries — choices the builder already made — and adds a species
- * ability bonus on top of what the builder already baked into
- * `payload.abilities`. `isDataOnly` skips both. See `documentForRef` in
- * `plutonium.js` for what that skips and why it is still safe: class-level
- * features arrive as data on the class item's own `system.advancement`
- * rather than as separate items Plutonium would otherwise create.
+ * Two halves, and both of them had to be made quiet:
+ *
+ * 1. **Building.** `documentForRef` calls Plutonium's converters, which are
+ *    pure functions, rather than its importers, which are its interactive
+ *    layer. What the Charactermancer would have asked travels in each entry's
+ *    `dataOpts` instead.
+ * 2. **Writing.** `markAsDirectImport` is what stops Plutonium's
+ *    `preCreateItem` hook intercepting the item on its way onto the actor and
+ *    opening the Charactermancer anyway. This is the half that was missed for
+ *    three attempts, all of them spent on the first one.
+ *
+ * Class-level features are safe under this: they arrive as data on the class
+ * item's own `system.advancement` rather than as separate items.
  */
 
-import { getPlutoniumApi, documentForRef } from "./plutonium.js";
+import {
+  getPlutoniumApi,
+  documentForRef,
+  markAsDirectImport,
+  PROFICIENCY_IMPORT_MODE,
+} from "./plutonium.js";
+import { watchWindows } from "./window-watch.js";
 
-/** Everything a payload asks to be imported, in the order it must happen. */
+/**
+ * Everything a payload asks to be imported, in the order it must happen.
+ *
+ * Each entry pairs a reference with the converter options that reference needs.
+ * They travel together because they are the answers to what the interactive
+ * import would otherwise stop and ask: a class arrives at the level the builder
+ * set, and only the first class in a multiclass build contributes its full
+ * starting proficiencies — the rest contribute their multiclass ones, which is
+ * the 5e rule and is also what Plutonium prompts for.
+ */
 export function orderedRefs(payload) {
-  const refs = [payload.race.ref];
-  if (payload.race.subrace) refs.push(payload.race.subrace);
+  const entries = [{ ref: payload.race.ref, dataOpts: {} }];
+  if (payload.race.subrace) entries.push({ ref: payload.race.subrace, dataOpts: {} });
 
-  for (const entry of payload.classes) {
-    refs.push(entry.ref);
-    if (entry.subclass) refs.push(entry.subclass);
+  for (const [index, entry] of payload.classes.entries()) {
+    const level = entry.level;
+    const proficiencyImportMode =
+      index === 0 ? PROFICIENCY_IMPORT_MODE.primary : PROFICIENCY_IMPORT_MODE.multiclass;
+
+    entries.push({ ref: entry.ref, dataOpts: { level, proficiencyImportMode } });
+    // A subclass item carries no level of its own; the class item holds it.
+    if (entry.subclass) entries.push({ ref: entry.subclass, dataOpts: {} });
   }
 
-  refs.push(payload.background.ref);
-  for (const feat of payload.feats ?? []) refs.push(feat.ref);
-  for (const spell of payload.spells ?? []) refs.push(spell.ref);
-  for (const item of payload.equipment ?? []) refs.push(item.ref);
+  entries.push({ ref: payload.background.ref, dataOpts: {} });
+  for (const feat of payload.feats ?? []) entries.push({ ref: feat.ref, dataOpts: {} });
+  for (const spell of payload.spells ?? []) entries.push({ ref: spell.ref, dataOpts: {} });
+  for (const item of payload.equipment ?? []) entries.push({ ref: item.ref, dataOpts: {} });
 
-  return refs;
+  return entries;
 }
 
 /**
@@ -211,18 +234,26 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
   const actor = await Actor.create(actorData);
   if (!actor) throw new Error("Foundry refused to create the actor.");
 
-  const refs = orderedRefs(payload);
+  const entries = orderedRefs(payload);
   const results = [];
 
-  for (const [index, ref] of refs.entries()) {
-    onProgress({ index, total: refs.length, ref });
-    const result = await documentForRef({ ref, actor, api });
-    results.push(result);
+  // The import is meant to be silent. If it is not, the window says so itself.
+  let windows = [];
+  const stopWatching = watchWindows({ label: payload.identity.characterName });
 
-    if (result.ok) {
-      const { _id, ...document } = result.document;
-      await actor.createEmbeddedDocuments("Item", [document]);
+  try {
+    for (const [index, { ref, dataOpts }] of entries.entries()) {
+      onProgress({ index, total: entries.length, ref });
+      const result = await documentForRef({ ref, api, dataOpts });
+      results.push(result);
+
+      if (result.ok) {
+        const { _id, ...document } = markAsDirectImport(result.document);
+        await actor.createEmbeddedDocuments("Item", [document]);
+      }
     }
+  } finally {
+    windows = stopWatching();
   }
 
   await actor.update({ ...proficiencyUpdates(payload), ...derivedUpdates(payload) });
@@ -232,6 +263,7 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
     actor,
     imported: results.filter((r) => r.ok).length,
     failures: results.filter((r) => !r.ok),
+    windows,
   };
 }
 

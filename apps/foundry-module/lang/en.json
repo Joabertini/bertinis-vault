@@ -19,5 +19,6 @@
   "bertinis-vault.errors.server": "The Vault responded with an error ({status}).",
   "bertinis-vault.errors.offline": "Could not reach the Vault at {url}.",
   "bertinis-vault.errors.payloadVersion": "This build was exported in a newer format (version {version}). Update the module.",
-  "bertinis-vault.errors.importFailed": "Import failed: {message}"
+  "bertinis-vault.errors.importFailed": "Import failed: {message}",
+  "bertinis-vault.notifications.unexpectedWindows": "The import opened windows it should not have: {names}. See the console."
 }

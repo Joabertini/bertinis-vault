@@ -13,6 +13,10 @@ Fast start for the next agent working on this repo.
 4. [`CHARACTER-MODEL-GAPS.md`](./CHARACTER-MODEL-GAPS.md) — what the builder
    models of a 5e character, what it does not, and in what order that is worth
    fixing.
+   [`BUILDER-COVERAGE.md`](./BUILDER-COVERAGE.md) is the same ground viewed
+   whole rather than finding by finding: every part of a 5e character, ordered
+   by what decides whether the character works, with the build order that falls
+   out of it.
 5. [`CHARACTER-SHEET-FIELDS.md`](./CHARACTER-SHEET-FIELDS.md) — every field a
    gap fix has to land on, read from the `dnd5e` actor data model itself, with
    which ones `import.js` actually writes today.
@@ -40,7 +44,10 @@ months.
 web builder  →  code  →  worker (KV)  →  Foundry module  →  Plutonium  →  actor
 ```
 
-Working and verified, except the last two arrows, which have never run.
+Working and verified up to the module. The last two arrows have run twice in a
+live world, and both runs found a fault that reading the bundle had missed —
+treat anything about them that is not backed by
+`test/plutonium-bundle.test.mjs` as a reading, not an observation.
 
 A level 5 wizard is 948 bytes as references. The same character as a fabricated
 actor was 37KB, and did not function.
@@ -74,12 +81,45 @@ In order, and stated as what blocks each:
    still `*`; narrow it once the builder has a public address. The naive fix
    breaks the module's cross-origin GET from arbitrary Foundry hosts, so it
    needs per-route CORS: open GET, restricted POST.
-2. **Run the module in a live world.** Needs Foundry v14, dnd5e 5.3.x and
-   Plutonium. This is the only way to close the open questions at the end of
-   `PLUTONIUM-INTEGRATION.md`, all of which were answered by reading source
-   rather than by observation. Two more now wait on it: whether the `dnd5e`
-   skill and language keys the payload carries are the right ones, and whether
-   the subclass hash resolves.
+2. **Run the module in a live world.** Four runs, three wrong fixes, all three
+   of them fixing the same wrong half:
+
+   - `isDataOnly` — read by `ImporterBase` and by no other importer, so
+     `class`, `subclass` and `feat` ignored it in silence.
+   - `isTemp` with no actor — avoids the Charactermancer, windows opened anyway.
+   - the converters instead of the importers — correct, and still not enough.
+
+   All three made *building* a document quiet. **The window came from the
+   write.** Plutonium registers a `preCreateItem` hook per prop and intercepts
+   any item created on an actor that carries its flags — which the converters'
+   own documents do. `markAsDirectImport` sets the flag the hook itself checks
+   to bail out (`flags.plutonium.isDirectImport`), and that is what closes it.
+
+   The converter route stays, and is still right: no `DataConverter*` class in
+   the bundle opens a window, and every importer does. The module reaches
+   `importer.constructor._DataConverter` through `pGetImporter` and never calls
+   `pImportEntry`. What the Charactermancer would have asked travels as
+   converter options (`level`, `proficiencyImportMode`, `isActorItem`).
+
+   Same session: `getPlutoniumApi` now reads `globalThis.plutonium` instead of
+   `game.modules.get("plutonium").api`, which Plutonium assigns at the end of
+   an un-awaited async `handleReady` — after our own ready hook, so an
+   installed Plutonium was being reported as missing at startup.
+
+   `test/plutonium-bundle.test.mjs` asserts all of it against `Bundle.js`
+   rather than a fixture — run the gate with `PLUTONIUM_DIR` set or those tests
+   skip. `src/window-watch.js` covers the runtime: anything that opens during
+   an import is logged with its class, title and stack and reported to the
+   player, so the next surprise names itself on the first run.
+
+   Still unobserved, and the reason this item stays open: a full
+   `importPayload` run with no prompt appearing for any prop, the class item
+   landing at the payload's level, the subclass hash resolving, and whether the
+   `dnd5e` skill and language keys the payload carries are the right ones.
+
+   Testing an unmerged branch needs a local install by hand: the module ships
+   as a release zip built from `main`, so copy `apps/foundry-module` over
+   `Data/modules/bertinis-vault` and reload the world.
 3. ~~**Findings B and C in `CHARACTER-MODEL-GAPS.md`.**~~ Done. Class skill
    options and background proficiencies now read from the index
    (`ClassRow.skillChoice`, `BackgroundRow.skillsGranted`/`skillChoice`/

@@ -429,26 +429,66 @@ Read from the Plutonium 2.17.2 bundle, the two mechanisms are:
 `ImportOpts` has an `isCharactermancer` flag, but it does not mean "suppress
 the UI" — it marks where the call came from, and the prompts fire either way.
 
-The levers that look right, all read from the bundle and none yet tried:
+`ImportOpts` has an `isDataOnly` flag documented as "If this import should
+simply return the data, rather than import anything", and that was the first
+answer. It shipped, and the Charactermancer opened anyway, still asking for
+levels. **`isDataOnly` is honoured by `ImporterBase._pImportEntry` and by
+nothing else.** `ImporterClass` and `ImporterFeature` override that method
+outright and never read the flag; with an actor in hand they go straight to
+their interactive paths. `DataConverterClass` has no `pGetDocumentJson` for the
+flag to call either — it has `pGetDocumentJsonClass`. So `race`, `background`,
+`spell` and `item` obeyed the flag, and `class`, `subclass` and `feat` ignored
+it in silence.
 
-| `ImportOpts` field | What the bundle says |
-| --- | --- |
-| `isLeaf` | "If this feature should be loaded directly, without any sub-loading applied" — the option prompts live in the sub-loading |
-| `isDataOnly` | "If this import should simply return the data, rather than import anything" |
-| `existingFeatureChecker` | `Charactermancer_Class_ExistingFeatureChecker`, which the importer consults before adding a feature |
-| `levels` | "Pre-defined list of levels to import" |
+`isTemp: true` with no actor was the second answer. It does avoid the
+Charactermancer — `_pImportEntryClass` tests `isTemp` before `actor` — and a
+live run still opened windows.
 
-**The way through, found 2026-08-24.** `isDataOnly: true` on `ImportOpts`.
-The base importer honours it immediately after `_pImportEntry_preImport` and
-*before* `_pImportEntry_pImportToActor`, returning
-`DataConverter.pGetDocumentJson(...)` — the finished `dnd5e` document — and
-applying nothing. Both problems above live in the part it skips.
+`isTemp: true` with no actor was the second answer, and a live run still opened
+windows.
 
-Every prop we import has a converter behind that path, `optionalfeature`
-included, which is what makes J tractable at the same time. Details and the
-call sites are in [`PLUTONIUM-INTEGRATION.md`](./PLUTONIUM-INTEGRATION.md).
+**Why both were wrong, found 2026-08-25.** All three attempts were fixing the
+*build*. The window came from the *write*.
 
-What it moves onto us: everything the importer applied as an actor update
+Plutonium registers a `preCreateItem` hook per prop — `class`, `subclass`,
+`race`, `background`, `feat`, `item`, `optionalfeature`, every prop a payload
+carries but `spell`. Any item created on an actor carrying Plutonium's own
+flags is intercepted, the player asked whether to use the importer, and the
+Charactermancer opened. The documents the converters build carry those flags
+because they *are* Plutonium's documents, so it never mattered how quietly they
+had been built.
+
+The fix is two things:
+
+- **`markAsDirectImport`** sets `flags.plutonium.isDirectImport` on every
+  document before `createEmbeddedDocuments`. That is the hook's own escape:
+  `if (flags.isStandardDragDrop || flags.isDirectImport) return;`.
+- **The converters, not the importers.** No `DataConverter*` class in the
+  bundle calls `pGetUserInput`, `InputUiUtil`, `Dialog` or `DialogV2` — they
+  are pure functions, and the importers are the interactive layer wrapped
+  around them. No flag turns an importer quiet because being quiet was never
+  one of its jobs.
+
+Details in [`PLUTONIUM-INTEGRATION.md`](./PLUTONIUM-INTEGRATION.md), including
+why `getPlutoniumApi` reads `globalThis.plutonium` rather than `module.api`
+— the second symptom of the same session, an installed Plutonium reported as
+missing at startup.
+
+What the interactive path would have prompted for now travels as converter
+options instead. `dataOpts` reaches the converter untouched:
+
+| Option | Replaces | Effect |
+| --- | --- | --- |
+| `level` | `Charactermancer_Class_LevelSelect` | the class item's `system.levels` |
+| `proficiencyImportMode` | `Charactermancer_Class_ProficiencyImportModeSelect` | `1` for the first class, `0` for each later one |
+
+`proficiencyImportMode` is not optional. `_getClassAdvancements` matches
+neither branch when it is unset and builds the class with **no proficiency
+advancement at all** — the character arrives without the armour, weapon and
+save proficiencies its own class grants. That is part of D, and it was arriving
+by accident through the interactive prompt.
+
+What this moves onto us: everything the importer applied as an actor update
 rather than as an item — racial ability bonuses, proficiency grants, senses,
 size, speed. That is the point rather than the cost, since those are the
 values arriving twice today.
@@ -460,6 +500,22 @@ ordinary module interop; shipping its code is not.
 
 Verified working state before any of this is tagged
 `checkpoint-module-works-in-foundry`.
+
+### What holds this in place
+
+`apps/foundry-module/test/plutonium-bundle.test.mjs` asserts every claim above
+against `Bundle.js` itself, not against a fixture — including a sweep over
+every converter class in the file checking that none of them asks the user
+anything. It is what the first two attempts lacked: 300 tests were green while
+the live import opened windows, because each of them checked a belief against a
+fixture written by the same hand that held the belief. Run it with
+`PLUTONIUM_DIR` set; without it the suite skips, since a 6MB copy of someone
+else's bundle does not belong in this repository.
+
+`src/window-watch.js` is the other half, and exists because "a window appeared"
+cost three round trips to turn into a call site. It watches every application
+render for the duration of an import and reports the class, title and stack of
+anything that opens.
 
 ### What this run did not cover
 

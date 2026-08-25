@@ -196,11 +196,16 @@ clear of it.
 
 ## Getting a document without the Charactermancer
 
-The interactive path is not the only one. `ImportOpts` takes `isDataOnly`,
-and the base importer honours it *before* it touches the actor:
+The interactive path is not the only one, but the door is not the obvious one.
+
+### The wrong door: `isDataOnly`
+
+`ImportOpts` takes `isDataOnly`, documented as "If this import should simply
+return the data, rather than import anything", and the base importer honours it
+before it touches the actor:
 
 ```js
-// ImporterBase.pImportEntry, ~line 95697 of the 2.17.2 bundle
+// ImporterBase._pImportEntry, ~line 95697 of the 2.17.2 bundle
 await this._pImportEntry_preImport({ent, importOpts, dataOpts});
 
 if (importOpts.isDataOnly) {
@@ -213,15 +218,151 @@ if (importOpts.isDataOnly) {
         ...
 ```
 
-That return happens before `_pImportEntry_pImportToActor`, which is where both
-of the problems live: `Charactermancer_FeatureOptionsSelect.pGetUserInput` (the
-prompts) and `_pImportEntry_pFillAbilities` (the racial bonus applied on top of
-scores the builder had already applied it to).
+This module shipped on that reading, and the Charactermancer opened anyway. The
+flag is read in `ImporterBase._pImportEntry` **and nowhere else in the bundle**,
+and two of the importers a character payload goes through override that method:
 
-So `isDataOnly: true` yields the finished `dnd5e` document JSON — a real one,
-with activities, damage and icons, which is the entire reason for this
-architecture — and applies nothing. We create the items ourselves and decide
-what else lands on the sheet.
+| Importer | Line | With an actor in `ImportOpts` |
+| --- | --- | --- |
+| `ImporterClass` | ~145021 | branches on `isTemp`, then `actor`. Never reads `isDataOnly`. Goes to `_pImportEntryClass_pImportToActor` — the level picker, the proficiency-mode prompt, the HP-mode prompt, the spell modal |
+| `ImporterFeature` (so `ImporterFeat`) | ~129943 | falls back to the base importer only when there is **no** actor, or when `isLeaf` is set. Otherwise runs the advanced flow, which opens `Charactermancer_FeatureOptionsSelect` |
+
+`DataConverterClass` has no `pGetDocumentJson` either — it has
+`pGetDocumentJsonClass` and `pGetDocumentJsonSubclass`, with different
+signatures. The flag would have had nothing to call even if `ImporterClass` had
+read it.
+
+So `race`, `subrace`, `background`, `spell` and `item` obeyed the flag, and
+`class`, `subclass` and `feat` ignored it in silence. Nothing reported an error;
+the import simply became interactive again.
+
+### The second wrong door: `isTemp`
+
+`isTemp` does avoid the Charactermancer. `ImporterClass._pImportEntryClass` and
+`_pImportEntrySubclass` both test it *before* `actor`, so they take
+`_pImportToItems`; `ImporterBase` returns a temporary document before any world
+write; `_getDuplicateMeta_getExisting` bails out under it. All of that is true,
+and a live run still opened windows.
+
+The lesson is not which flag to try next. **The importers are the interactive
+layer.** They are the UI. Every one of them is built around asking, and no
+combination of options turns that off, because turning it off was never a use
+case Plutonium had. Two attempts were spent looking for a quiet way through a
+thing whose job is to not be quiet.
+
+### The door: the converters, directly
+
+Underneath every importer is a `DataConverter`, and the converters are pure
+functions. Entity in, finished `dnd5e` document JSON out — with activities,
+damage parts, side-loaded effects and a real icon, which is the entire reason
+this project resolves references instead of fabricating items.
+
+**No `DataConverter*` class in the bundle calls `pGetUserInput`, `InputUiUtil`,
+`Dialog` or `DialogV2`.** Not one. That is a structural property, not a lucky
+reading, and `test/plutonium-bundle.test.mjs` asserts it over every converter
+class in the file.
+
+So the module skips `pImportEntry` entirely:
+
+```js
+const importer  = await api.importer.pGetImporter({prop, page});
+const converter = importer.constructor._DataConverter;
+
+// every prop but class
+await converter.pGetDocumentJson(entity, {...dataOpts});
+
+// class, which has no pGetDocumentJson at all
+await converter.pGetDocumentJsonClass(cls, {level, proficiencyImportMode});
+
+// subclass, which is built from the pair
+await converter.pGetDocumentJsonSubclass(cls, sc, {isScDereferenced: true});
+```
+
+`pGetImporter` is still the way in — `_DataConverter` is a static on the
+importer class, and the public API exposes no other door — but only `pInit`
+runs, and `pInit` builds a folder-path state manager and shows nothing.
+
+No actor is passed. The converters use it only to name an actor item
+differently from a world one, and passing it turns on `isActorItem` branches we
+have no use for.
+
+A subclass needs its class alongside it: the class supplies the name the
+identifier derives from, the edition it is checked against, and the image
+fallback. `DataLoader` has it under the `class` prop, and the subclass entity
+carries `className` and `classSource`, so `parentClassOf` builds the hash from
+those two fields.
+
+`isActorItem: true` goes on every call. It is not cosmetic: without it the
+converters append the book to the name — "Fireball (PHB)" — and `findByRef`
+matches imported items back to their reference by name, so equipped and
+prepared state would stop landing.
+
+### The half that was actually opening the window
+
+All of the above makes *building* a document silent, and for three attempts
+that was the whole search. The window was never coming from the build.
+
+Plutonium registers a `preCreateItem` hook **per prop** —
+`ImporterBase._initCreateSheetItemHook`, registered by `class`, `subclass`,
+`race`, `background`, `feat`, `item` and `optionalfeature`, which is every prop
+a character payload carries except `spell`. Any item created on an actor
+carrying Plutonium's own flags is intercepted:
+
+```js
+Hooks.on("preCreateItem", (item, itemData, options, itemId) => {
+    if (item.parent?.documentName !== "Actor") return;
+    const flags = itemData.flags?.[SharedConsts.MODULE_ID];
+    if (!flags || flags?.propDroppable !== prop) return;
+    if (flags.isStandardDragDrop || flags.isDirectImport) return;
+    ...
+    this._pGetUseImporterDragDrop(...)   // "use the importer?" — then the Charactermancer
+```
+
+The documents the converters build carry `flags.plutonium.propDroppable`,
+because they *are* Plutonium's documents. So every write triggered the
+interception, no matter how the document had been built.
+
+The hook's own escape is the last of those guards, and `markAsDirectImport`
+sets it on every document before `createEmbeddedDocuments`. Three of the
+converters set it themselves from `isActorItem`; setting it explicitly covers
+the rest and does not depend on which.
+
+### Reading the API without a race
+
+Plutonium assigns its API twice:
+
+- `globalThis.plutonium = game.plutonium = Api._API;` — a top-level statement,
+  evaluated when the bundle loads, before any hook.
+- `game.modules.get("plutonium").api = Api._API;` — inside `Api.init()`, which
+  runs near the end of `handleReady`, an async function Plutonium's `ready`
+  handler launches without awaiting.
+
+Foundry fires module hooks in id order, and `bertinis-vault` sorts before
+`plutonium`, so reading `module.api` at ready finds nothing. That is what
+reported an installed, active Plutonium as missing. `getPlutoniumApi` reads the
+global.
+
+### Answering, instead of being asked
+
+What the interactive path prompts for travels as converter options. The third
+argument to `pImportEntry` is `dataOpts`, and it reaches the converter
+untouched:
+
+| Option | Replaces the prompt from | Effect |
+| --- | --- | --- |
+| `level` | `Charactermancer_Class_LevelSelect` | `system.levels` on the class item (`levels: opts.level ?? 1`) |
+| `proficiencyImportMode` | `Charactermancer_Class_ProficiencyImportModeSelect` | `1` = primary class, `0` = multiclass, `2` = none |
+
+`proficiencyImportMode` is not optional. `_getClassAdvancements` compares it
+against both constants and falls to `{}` when it is unset, building the class
+with no proficiency advancement at all — no armour, weapon or save
+proficiencies from the class.
+
+`DataLoader` is also stricter than it looks: it caches under the **prop**
+always, and under the page only for props in `_PROP_TO_HASH_PAGE`. `subclass`
+is not one of them, which is why Plutonium's own code calls
+`pCacheAndGet("subclass", ...)` and never `pCacheAndGet(UrlUtil.PG_CLASSES, ...)`.
+`loadEntity` tries the prop first for that reason.
 
 Every prop we import has a converter behind that path:
 
@@ -249,21 +390,41 @@ The `DataConverter*` classes are module-scoped and not reachable directly —
 `globalThis` carries the 5etools shared library (`DataLoader`, `Renderer`,
 `Parser`, `UrlUtil`, `DataUtil`, `MiscUtil`) but no Plutonium internals, and
 the public `api` exposes only `pGetImporter`, `ImportOpts` and
-`ActorMultiImportHelper`. Reaching them through `pGetImporter` with
-`isDataOnly` is therefore not a workaround; it is the only supported door, and
-it happens to be the right one.
+`ActorMultiImportHelper`. Going through `pGetImporter` is therefore not a
+workaround; it is the only supported door.
+
+## What holds these readings in place
+
+`apps/foundry-module/test/plutonium-bundle.test.mjs` asserts the claims on this
+page against `Bundle.js` itself: that no converter in the file opens a window
+and that the importers do, that every importer still carries its converter as
+`_DataConverter`, that the class converter reads `opts.level` and
+`opts.proficiencyImportMode`, that `pInit` builds state rather than UI, and that
+the mode constants still have the values this module hard-codes.
+
+`apps/foundry-module/src/window-watch.js` is the runtime half. It patches
+`Application.render` and `ApplicationV2.render` for the duration of an import
+and logs the class, title and stack of anything that opens, so a window that
+should not be there names itself the first time instead of costing a round
+trip.
+
+Run it with `PLUTONIUM_DIR` pointed at an installed Plutonium; without it the
+tests skip, because a 6MB copy of someone else's bundle does not belong in this
+repository. It cannot prove an import works — only a live world does that — but
+it fails the moment a Plutonium upgrade moves the ground the module stands on,
+which is the failure the `isDataOnly` attempt had no way to see coming.
 
 ## Open, needs a live Foundry
 
-Everything above is read from source, not observed at runtime. Before building
-against it, confirm in a live world with Plutonium active:
+Everything on this page is read from source. One live run has happened: it
+found K, and disproved the `isDataOnly` reading above. Still unobserved:
 
-- `game.modules.get("plutonium").api` is populated at the point our module runs;
 - `pGetImporter({prop})` returns importers for `race`, `class`, `background`,
   `feat`, and `item`, not only `spell`;
-- `ActorMultiImportHelper` behaves as expected across a full multi-entity build;
-- the `availableProficiencyManager` default does the right thing when we do not
-  supply one;
-- `isDataOnly: true` returns a usable document for each prop, and in particular
-  that `pGetDocumentJson` does not itself prompt for anything on the class and
-  race importers, which are the two that carry the most sub-loading.
+- a full `importPayload` run start to finish, with no prompt appearing at any
+  point, for `class`, `subclass`, `background` and `feat` alike;
+- the class item lands at the level the payload asked for, and its
+  `system.advancement` covers every level up to it;
+- the subclass hash resolves through `pCacheAndGet("subclass", ...)`;
+- the `dnd5e` skill and language keys the payload carries are the ones the
+  sheet reads.

@@ -9,6 +9,7 @@ import {
   orderedRefs,
   proficiencyUpdates,
 } from "../src/import.js";
+import { markAsDirectImport } from "../src/plutonium.js";
 
 const ref = (prop, page, name, source) => ({
   page,
@@ -54,18 +55,18 @@ function payload(overrides = {}) {
 }
 
 test("documents are imported in an order the importers can build on", () => {
-  const refs = orderedRefs(payload());
+  const entries = orderedRefs(payload());
 
   // Race, class and subclass and background come before anything that attaches
   // to them, because the importers derive proficiencies and progression there.
   assert.deepEqual(
-    refs.map((r) => r.prop),
+    entries.map((e) => e.ref.prop),
     ["race", "class", "subclass", "background", "feat", "spell", "item"],
   );
 });
 
 test("a multiclass build keeps each class next to its own subclass", () => {
-  const refs = orderedRefs(
+  const entries = orderedRefs(
     payload({
       classes: [
         { ref: ref("class", "classes.html", "Warlock", "PHB"), level: 3, subclass: ref("subclass", "classes.html", "The Fiend", "PHB") },
@@ -75,7 +76,7 @@ test("a multiclass build keeps each class next to its own subclass", () => {
   );
 
   assert.deepEqual(
-    refs.map((r) => r.hash),
+    entries.map((e) => e.ref.hash),
     [
       "half-elf_phb",
       "warlock_phb",
@@ -89,6 +90,28 @@ test("a multiclass build keeps each class next to its own subclass", () => {
   );
 });
 
+test("each class carries the level the builder set, so nothing has to ask", () => {
+  const entries = orderedRefs(
+    payload({
+      classes: [
+        { ref: ref("class", "classes.html", "Warlock", "PHB"), level: 3, subclass: ref("subclass", "classes.html", "The Fiend", "PHB") },
+        { ref: ref("class", "classes.html", "Sorcerer", "PHB"), level: 2 },
+      ],
+    }),
+  );
+
+  const classes = entries.filter((e) => e.ref.prop === "class");
+  assert.deepEqual(classes.map((e) => e.dataOpts.level), [3, 2]);
+
+  // The first class grants its full starting proficiencies; a second class
+  // grants only its multiclass ones. Leaving this unset grants neither.
+  assert.deepEqual(classes.map((e) => e.dataOpts.proficiencyImportMode), [1, 0]);
+
+  // A subclass item has no level of its own — the class item holds it.
+  const subclass = entries.find((e) => e.ref.prop === "subclass");
+  assert.deepEqual(subclass.dataOpts, {});
+});
+
 test("a payload with no optional collections still yields the required refs", () => {
   const bare = payload();
   delete bare.feats;
@@ -96,6 +119,35 @@ test("a payload with no optional collections still yields the required refs", ()
   delete bare.equipment;
 
   assert.equal(orderedRefs(bare).length, 4);
+});
+
+test("every document is marked so Plutonium does not intercept it on the way in", () => {
+  // Plutonium hooks `preCreateItem` for class, subclass, race, background,
+  // feat, item and optionalfeature. Without this flag it stops each one, asks
+  // whether to use the importer, and opens the Charactermancer — no matter how
+  // quietly the document was built.
+  const marked = markAsDirectImport({
+    name: "Warlock",
+    type: "class",
+    flags: { plutonium: { propDroppable: "class", source: "PHB" } },
+  });
+
+  assert.equal(marked.flags.plutonium.isDirectImport, true);
+  // The rest of Plutonium's flags are what the hook matches on, and what the
+  // sheet reads afterwards. They survive.
+  assert.equal(marked.flags.plutonium.propDroppable, "class");
+  assert.equal(marked.flags.plutonium.source, "PHB");
+});
+
+test("marking a document leaves other modules' flags alone", () => {
+  const marked = markAsDirectImport({ name: "Hex", flags: { "some-other-module": { keep: 1 } } });
+
+  assert.deepEqual(marked.flags["some-other-module"], { keep: 1 });
+  assert.equal(marked.flags.plutonium.isDirectImport, true);
+});
+
+test("a document with no flags at all still gets marked", () => {
+  assert.equal(markAsDirectImport({ name: "Alert" }).flags.plutonium.isDirectImport, true);
 });
 
 test("the base actor carries only what Plutonium cannot know", () => {

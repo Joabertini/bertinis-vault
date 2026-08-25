@@ -5,8 +5,8 @@
  * unminified. See docs/PLUTONIUM-INTEGRATION.md.
  *
  * Nothing in this file builds a document. Plutonium resolves a reference into
- * the real `dnd5e` item — with its activities, damage and icon — and we hand it
- * an actor to put it on.
+ * the real `dnd5e` item — with its activities, damage and icon — and hands it
+ * back for `import.js` to put on an actor.
  */
 
 export const PLUTONIUM_ID = "plutonium";
@@ -37,11 +37,22 @@ export function getPlutoniumApi() {
 
   if (!module) throw new PlutoniumUnavailableError("Plutonium is not installed.");
   if (!module.active) throw new PlutoniumUnavailableError("Plutonium is installed but not enabled in this world.");
-  if (!module.api?.importer) {
+
+  // `module.api` is assigned by `Api.init()`, which Plutonium runs at the very
+  // end of its own `ready` handler. Foundry fires module hooks in id order and
+  // "bertinis-vault" sorts before "plutonium", so reading `module.api` at ready
+  // finds nothing and reports a module that is plainly installed as missing.
+  //
+  // `globalThis.plutonium` is the same object, assigned as a top-level
+  // statement when the bundle is evaluated — before any hook runs. It is the
+  // one that is always there.
+  const api = globalThis.plutonium ?? game.plutonium ?? module.api;
+
+  if (!api?.importer) {
     throw new PlutoniumUnavailableError("Plutonium is active but has not finished starting up. Try again in a moment.");
   }
 
-  return module.api;
+  return api;
 }
 
 /** Whether Plutonium is present and ready, without throwing. */
@@ -59,6 +70,12 @@ export function isPlutoniumReady() {
  *
  * `DataLoader` is exposed on `globalThis` by Plutonium and is the same path its
  * own drag-and-drop import takes.
+ *
+ * The prop is tried before the page. `DataLoader` keys its cache by prop
+ * always, and by page only for props that appear in its `_PROP_TO_HASH_PAGE`
+ * map — `subclass` does not, which is why Plutonium's own code loads classes
+ * and subclasses by prop and never by `classes.html`. The page is kept as a
+ * fallback so a reference naming a page we have no prop for still resolves.
  */
 export async function loadEntity(ref) {
   const loader = globalThis.DataLoader;
@@ -66,88 +83,170 @@ export async function loadEntity(ref) {
     throw new PlutoniumUnavailableError("Plutonium's data loader is not available.");
   }
 
-  const entity = await loader.pCacheAndGet(ref.page, ref.source, ref.hash);
+  const entity =
+    (ref.prop ? await loader.pCacheAndGet(ref.prop, ref.source, ref.hash, { isSilent: true }) : null) ??
+    (await loader.pCacheAndGet(ref.page, ref.source, ref.hash, { isSilent: true }));
+
   if (!entity) throw new EntityNotFoundError(ref);
 
   return entity;
 }
 
 /**
- * Import one reference onto an actor, letting Plutonium apply it.
+ * The class a subclass hangs off, which its converter needs alongside it.
  *
- * This is the interactive path: the importer prompts for any choice the entity
- * carries and writes its own actor updates. It is kept as a fallback behind the
- * `importMode` setting — see `documentForRef` for the one we use by default and
- * for why.
- *
- * Returns what happened rather than throwing, so one unavailable spell does not
- * abandon a character halfway through being built.
+ * A subclass document is built from the pair: the class supplies the name the
+ * identifier is derived from, the edition it is checked against, and the image
+ * fallback. `DataLoader` keys classes by prop, and the subclass entity already
+ * carries which class and which book it belongs to.
  */
-export async function importRefOntoActor({ ref, actor, api, helper }) {
+async function parentClassOf(subclass) {
+  const hash = globalThis.UrlUtil.URL_TO_HASH_BUILDER["class"]({
+    name: subclass.className,
+    source: subclass.classSource,
+  });
+
+  const cls = await globalThis.DataLoader.pCacheAndGet("class", subclass.classSource, hash);
+  if (!cls) {
+    throw new Error(`Could not load "${subclass.className}" (${subclass.classSource}).`);
+  }
+
+  return cls;
+}
+
+/**
+ * The `dnd5e` document for a reference.
+ *
+ * This calls Plutonium's *converters* and never its importers. That distinction
+ * is the whole of it, and it took three attempts to find:
+ *
+ * - `DataConverter*.pGetDocumentJson*` are pure functions. Entity in, finished
+ *   `dnd5e` document JSON out — with activities, damage parts, side-loaded
+ *   effects and a real icon, which is the entire reason this project resolves
+ *   references instead of fabricating items. They open nothing.
+ * - `Importer*.pImportEntry` is the interactive pipeline wrapped around them.
+ *   Every attempt to drive it quietly failed against a different window:
+ *   `isDataOnly` is read by `ImporterBase` and by no other importer, so class
+ *   and feat ignored it; `isTemp` avoids the Charactermancer but the pipeline
+ *   still has its own prompts. It is not built to be driven headlessly, so it
+ *   is not used.
+ *
+ * `pGetImporter` is still how we reach a converter — `_DataConverter` is a
+ * static on the importer class, and the public API exposes no other door — but
+ * only `pInit` runs, which builds a folder-path state manager and shows
+ * nothing.
+ *
+ * No actor is passed. The converters use it only to name an actor item
+ * differently from a world one, and passing it turns on `isActorItem` branches
+ * we have no use for.
+ *
+ * `dataOpts` reaches the converter untouched. That is how a choice the builder
+ * already made is supplied rather than asked for: `level` becomes the class
+ * item's `system.levels`, `proficiencyImportMode` decides whether the class
+ * contributes its starting or its multiclass proficiencies.
+ */
+export async function documentForRef({ ref, api, dataOpts = {} }) {
   try {
     const importer = await api.importer.pGetImporter({ prop: ref.prop, page: ref.page });
     if (!importer) {
       return { ref, ok: false, reason: `Plutonium has no importer for "${ref.prop}".` };
     }
 
+    const converter = importer.constructor?._DataConverter;
+    if (!converter) {
+      return { ref, ok: false, reason: `Plutonium has no converter for "${ref.prop}".` };
+    }
+
     const entity = await loadEntity(ref);
+    const document = await documentFor({ converter, entity, prop: ref.prop, dataOpts });
 
-    await importer.pImportEntry(
-      entity,
-      new api.importer.ImportOpts({ actor, actorMultiImportHelper: helper }),
-    );
+    if (!document) {
+      return { ref, ok: false, reason: `Plutonium returned no document for "${entity.name}".` };
+    }
 
-    return { ref, ok: true, name: entity.name };
+    // The converters return plain JSON. The guard is for the day one of them
+    // returns a Document instead, which `createEmbeddedDocuments` will not take.
+    const data = typeof document.toObject === "function" ? document.toObject() : document;
+
+    return { ref, ok: true, name: entity.name, document: data };
   } catch (error) {
     return { ref, ok: false, reason: error?.message ?? String(error) };
   }
 }
 
 /**
- * The `dnd5e` document for a reference, without applying anything.
+ * Which converter call a prop takes.
  *
- * `isDataOnly` is honoured by Plutonium's base importer immediately after
- * `_pImportEntry_preImport` and before `_pImportEntry_pImportToActor`, where it
- * returns `DataConverter.pGetDocumentJson(...)` and stops. Everything we do not
- * want lives in the part it skips:
- *
- * - `Charactermancer_FeatureOptionsSelect.pGetUserInput`, which opens a picker
- *   for every choice the entity carries — choices the builder already asked.
- * - `_pImportEntry_pFillAbilities`, which *adds* a species ability bonus to
- *   whatever the actor already has. The builder bakes that bonus into
- *   `abilities.final` before sending it, so letting this run applies it twice.
- *
- * What comes back is still a real document, with activities, damage and icons,
- * which is the whole reason this project resolves references instead of
- * fabricating items. We create it ourselves, so what reaches the sheet is ours
- * to decide.
- *
- * The actor is passed through because the converters use it for context —
- * naming an actor item differently from a world one, resolving consumption
- * targets — and not as something to write to. Read from the Plutonium 2.17.2
- * bundle; see docs/PLUTONIUM-INTEGRATION.md.
+ * Classes are the exception in Plutonium's data model and so they are here:
+ * `DataConverterClass` has no `pGetDocumentJson` at all. It has
+ * `pGetDocumentJsonClass`, and `pGetDocumentJsonSubclass`, which takes the pair.
  */
-export async function documentForRef({ ref, actor, api }) {
-  try {
-    const importer = await api.importer.pGetImporter({ prop: ref.prop, page: ref.page });
-    if (!importer) {
-      return { ref, ok: false, reason: `Plutonium has no importer for "${ref.prop}".` };
-    }
+async function documentFor({ converter, entity, prop, dataOpts }) {
+  // `isActorItem` says this document is destined for a character sheet rather
+  // than the Items directory. It is not cosmetic: without it the converters
+  // append the book to the name — "Fireball (PHB)" — and `findByRef` matches
+  // imported items back to their reference by name, so equipped and prepared
+  // state would stop landing. Three of the converters also key
+  // `flags.plutonium.isDirectImport` off it.
+  const opts = { isActorItem: true, ...dataOpts };
 
-    const entity = await loadEntity(ref);
-
-    const summary = await importer.pImportEntry(
-      entity,
-      new api.importer.ImportOpts({ actor, isDataOnly: true }),
-    );
-
-    const document = summary?.imported?.[0]?.document;
-    if (!document) {
-      return { ref, ok: false, reason: `Plutonium returned no document for "${entity.name}".` };
-    }
-
-    return { ref, ok: true, name: entity.name, document };
-  } catch (error) {
-    return { ref, ok: false, reason: error?.message ?? String(error) };
+  if (prop === "class") {
+    return converter.pGetDocumentJsonClass(entity, opts);
   }
+
+  if (prop === "subclass") {
+    const cls = await parentClassOf(entity);
+    // The entity came from `DataLoader`, which returns subclasses with their
+    // features already dereferenced; saying so stops the converter fetching the
+    // same thing again.
+    return converter.pGetDocumentJsonSubclass(cls, entity, { isScDereferenced: true, ...opts });
+  }
+
+  return converter.pGetDocumentJson(entity, opts);
 }
+
+/**
+ * Mark a document as already imported, so Plutonium leaves it alone.
+ *
+ * This is the one that mattered. Plutonium registers a `preCreateItem` hook per
+ * prop — `class`, `subclass`, `race`, `background`, `feat`, `item`,
+ * `optionalfeature`, which is every prop a character payload carries. Any item
+ * created on an actor carrying Plutonium's own `propDroppable` flag is
+ * intercepted, and the player is asked whether to use the importer, and then
+ * the Charactermancer opens.
+ *
+ * The documents the converters build carry that flag, because they are
+ * Plutonium's documents. So it did not matter how quietly they were built: the
+ * window came from the *write*, not the build, and three attempts at making the
+ * build silent could never have reached it.
+ *
+ * The hook's own escape is `flags.plutonium.isDirectImport`:
+ *
+ * ```js
+ * if (flags.isStandardDragDrop || flags.isDirectImport) return;
+ * ```
+ *
+ * Some converters set it from `isActorItem` already. Setting it here covers the
+ * ones that do not, and does not depend on which.
+ */
+export function markAsDirectImport(document) {
+  const flags = { ...(document.flags ?? {}) };
+  flags[PLUTONIUM_ID] = { ...(flags[PLUTONIUM_ID] ?? {}), isDirectImport: true };
+
+  return { ...document, flags };
+}
+
+/**
+ * How a class contributes proficiencies, as `DataConverterClass` numbers them.
+ *
+ * The interactive import asks this with `Charactermancer_Class_Proficiency
+ * ImportModeSelect`. Leaving it unset is not neutral: `_getClassAdvancements`
+ * matches neither mode and builds the class with no proficiency advancement at
+ * all, so the character arrives without the armour, weapon and save
+ * proficiencies its own class grants.
+ */
+export const PROFICIENCY_IMPORT_MODE = {
+  multiclass: 0,
+  primary: 1,
+  none: 2,
+};
