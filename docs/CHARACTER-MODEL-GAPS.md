@@ -438,10 +438,28 @@ The levers that look right, all read from the bundle and none yet tried:
 | `existingFeatureChecker` | `Charactermancer_Class_ExistingFeatureChecker`, which the importer consults before adding a feature |
 | `levels` | "Pre-defined list of levels to import" |
 
-The shape of the fix follows from J: model the choices, put them on the
-payload, and either pre-answer the prompts or bypass the prompting importers
-by importing the resolved leaf features directly. Verified working state
-before any of this is tagged `checkpoint-module-works-in-foundry`.
+**The way through, found 2026-08-24.** `isDataOnly: true` on `ImportOpts`.
+The base importer honours it immediately after `_pImportEntry_preImport` and
+*before* `_pImportEntry_pImportToActor`, returning
+`DataConverter.pGetDocumentJson(...)` — the finished `dnd5e` document — and
+applying nothing. Both problems above live in the part it skips.
+
+Every prop we import has a converter behind that path, `optionalfeature`
+included, which is what makes J tractable at the same time. Details and the
+call sites are in [`PLUTONIUM-INTEGRATION.md`](./PLUTONIUM-INTEGRATION.md).
+
+What it moves onto us: everything the importer applied as an actor update
+rather than as an item — racial ability bonuses, proficiency grants, senses,
+size, speed. That is the point rather than the cost, since those are the
+values arriving twice today.
+
+Forking Plutonium and adapting it was considered and rejected: its
+`module.json` declares `"license": "UNLICENSED"`, and `data/` is 5etools
+content that is not ours to redistribute either. Calling its runtime API is
+ordinary module interop; shipping its code is not.
+
+Verified working state before any of this is tagged
+`checkpoint-module-works-in-foundry`.
 
 ### What this run did not cover
 

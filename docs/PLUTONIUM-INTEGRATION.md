@@ -175,6 +175,84 @@ The payload crossing the wire becomes a list of `{page, source, hash}`
 references plus character-specific overrides — kilobytes, not megabytes — and no
 item is ever fabricated by us.
 
+## Licensing, and why we do not fork
+
+Plutonium's `module.json` declares `"license": "UNLICENSED"` and points its
+`url` at a Patreon. All rights reserved: no permission is granted to copy,
+modify or redistribute it. `TheGiddyLimit/plutonium-next` is a distribution
+repository — releases, manifest, changelog — not a source release.
+
+So forking it, vendoring it, or adapting its code into this module is not an
+option, however convenient it would be. The separate and larger problem is
+`data/`: 117MB of 5etools content, which is not Plutonium's to relicense and
+not ours to redistribute either. Every user brings their own copy, which is
+also why regenerating the index points at a local Plutonium install rather
+than at anything committed here.
+
+What *is* fine is what we already do: calling a module's runtime API from
+another module, and reading the shipped bundle to learn that API. That is
+ordinary Foundry module interop. The line is redistribution, and we stay well
+clear of it.
+
+## Getting a document without the Charactermancer
+
+The interactive path is not the only one. `ImportOpts` takes `isDataOnly`,
+and the base importer honours it *before* it touches the actor:
+
+```js
+// ImporterBase.pImportEntry, ~line 95697 of the 2.17.2 bundle
+await this._pImportEntry_preImport({ent, importOpts, dataOpts});
+
+if (importOpts.isDataOnly) {
+    return new ImportSummary({
+        status: ConstsTaskRunner.TASK_EXIT_COMPLETE_DATA_ONLY,
+        imported: [new ImportedDocument({
+            document: await this.constructor._DataConverter.pGetDocumentJson(ent, {...}),
+            actor: importOpts.actor,
+        })],
+        ...
+```
+
+That return happens before `_pImportEntry_pImportToActor`, which is where both
+of the problems live: `Charactermancer_FeatureOptionsSelect.pGetUserInput` (the
+prompts) and `_pImportEntry_pFillAbilities` (the racial bonus applied on top of
+scores the builder had already applied it to).
+
+So `isDataOnly: true` yields the finished `dnd5e` document JSON — a real one,
+with activities, damage and icons, which is the entire reason for this
+architecture — and applies nothing. We create the items ourselves and decide
+what else lands on the sheet.
+
+Every prop we import has a converter behind that path:
+
+| Prop | Converter |
+| --- | --- |
+| `race`, `subrace` | `DataConverterRace`, `DataConverterRaceFeature` |
+| `class`, `subclass` | `DataConverterClass`, `DataConverterClassSubclassFeature` |
+| `background` | `DataConverterBackground`, `DataConverterBackgroundFeature` |
+| `feat` | `DataConverterFeat` |
+| `spell` | `DataConverterSpell` |
+| `item` | `DataConverterItem` |
+| `optionalfeature` | `DataConverterOptionalfeature` |
+
+The last row is the one that closes finding J: Fighting Style, Metamagic and
+Eldritch Invocations are `optionalfeature` entities, and there is a converter
+for them. Once the builder asks those questions, the module can convert the
+answers directly instead of letting Plutonium ask again.
+
+Note what this path does *not* give us for free. Everything the importer
+applied as an actor update rather than as an item — racial ability bonuses,
+proficiency grants, senses, size, speed — becomes ours to apply. That is the
+point rather than a cost: those are exactly the values arriving twice today.
+
+The `DataConverter*` classes are module-scoped and not reachable directly —
+`globalThis` carries the 5etools shared library (`DataLoader`, `Renderer`,
+`Parser`, `UrlUtil`, `DataUtil`, `MiscUtil`) but no Plutonium internals, and
+the public `api` exposes only `pGetImporter`, `ImportOpts` and
+`ActorMultiImportHelper`. Reaching them through `pGetImporter` with
+`isDataOnly` is therefore not a workaround; it is the only supported door, and
+it happens to be the right one.
+
 ## Open, needs a live Foundry
 
 Everything above is read from source, not observed at runtime. Before building
@@ -185,4 +263,7 @@ against it, confirm in a live world with Plutonium active:
   `feat`, and `item`, not only `spell`;
 - `ActorMultiImportHelper` behaves as expected across a full multi-entity build;
 - the `availableProficiencyManager` default does the right thing when we do not
-  supply one.
+  supply one;
+- `isDataOnly: true` returns a usable document for each prop, and in particular
+  that `pGetDocumentJson` does not itself prompt for anything on the class and
+  race importers, which are the two that carry the most sub-loading.
