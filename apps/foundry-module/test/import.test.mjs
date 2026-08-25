@@ -42,6 +42,9 @@ function payload(overrides = {}) {
       expertise: [],
     },
     feats: [{ ref: ref("feat", "feats.html", "Alert", "PHB") }],
+    optionalFeatures: [
+      { ref: ref("optionalfeature", "optionalfeatures.html", "Agonizing Blast", "PHB") },
+    ],
     spells: [{ ref: ref("spell", "spells.html", "Hex", "PHB"), prepared: true }],
     equipment: [{ ref: ref("item", "items.html", "Leather Armor", "PHB"), quantity: 1, equipped: true }],
     derived: {
@@ -61,7 +64,7 @@ test("documents are imported in an order the importers can build on", () => {
   // to them, because the importers derive proficiencies and progression there.
   assert.deepEqual(
     entries.map((e) => e.ref.prop),
-    ["race", "class", "subclass", "background", "feat", "spell", "item"],
+    ["race", "class", "subclass", "background", "feat", "optionalfeature", "spell", "item"],
   );
 });
 
@@ -84,6 +87,7 @@ test("a multiclass build keeps each class next to its own subclass", () => {
       "sorcerer_phb",
       "sage_phb",
       "alert_phb",
+      "agonizing%20blast_phb",
       "hex_phb",
       "leather%20armor_phb",
     ],
@@ -115,6 +119,7 @@ test("each class carries the level the builder set, so nothing has to ask", () =
 test("a payload with no optional collections still yields the required refs", () => {
   const bare = payload();
   delete bare.feats;
+  delete bare.optionalFeatures;
   delete bare.spells;
   delete bare.equipment;
 

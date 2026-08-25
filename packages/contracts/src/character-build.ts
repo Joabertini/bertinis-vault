@@ -153,6 +153,14 @@ export const normalizedChoicesSchema = z.object({
 
 export const choicesSchema = z.object({
   feats: z.array(canonicalIdSchema).default([]),
+  /**
+   * Level-up picks: fighting styles, invocations, metamagic, maneuvers.
+   *
+   * Kept apart from `feats` because a class grants a bounded number of them
+   * from a named pool, which is a different question from "spend an ability
+   * score improvement on a feat instead".
+   */
+  optionalFeatures: z.array(canonicalIdSchema).default([]),
   proficiencies: z.array(canonicalLabelSchema).default([]),
   spells: z.array(canonicalLabelSchema).default([]),
   equipment: z.array(canonicalLabelSchema).default([]),

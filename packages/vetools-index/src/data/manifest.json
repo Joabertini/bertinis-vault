@@ -26,17 +26,22 @@
   },
   "class": {
     "count": 31,
-    "bytes": 10153,
-    "gzip": 1025
+    "bytes": 12081,
+    "gzip": 1251
   },
   "subclass": {
     "count": 203,
-    "bytes": 22217,
-    "gzip": 2558
+    "bytes": 29428,
+    "gzip": 2842
   },
   "subrace": {
     "count": 98,
     "bytes": 10729,
     "gzip": 1458
+  },
+  "optionalfeature": {
+    "count": 213,
+    "bytes": 29837,
+    "gzip": 2798
   }
 }

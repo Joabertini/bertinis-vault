@@ -41,6 +41,7 @@ function payload(overrides = {}) {
     abilities: { str: 8, dex: 14, con: 14, int: 12, wis: 10, cha: 17 },
     proficiencies: { skills: [], languages: [], tools: [], savingThrows: [], expertise: [] },
     feats: [],
+    optionalFeatures: [],
     spells: [],
     equipment: [],
     derived: { hp: 38, ac: 13, proficiencyBonus: 3 },
@@ -129,6 +130,20 @@ test("a stored build comes back byte for byte", async () => {
   const stored = await response.json();
   assert.deepEqual(stored.payload, sent);
   assert.ok(Date.parse(stored.createdAt) <= Date.now());
+});
+
+test("a payload written before a field existed comes back with it defaulted", async () => {
+  // The contract grows by adding optional lists, and the worker validates what
+  // it stores. A builder that predates a field must keep working, and what it
+  // gets back must be readable by a module that expects the field.
+  const env = { BUILDS: makeStore() };
+  const older = payload();
+  delete older.optionalFeatures;
+
+  const created = await (await handle(post(older), env)).json();
+  const stored = await (await handle(get(created.code), env)).json();
+
+  assert.deepEqual(stored.payload.optionalFeatures, []);
 });
 
 test("a code round-trips however the player retypes it", async () => {

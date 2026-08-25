@@ -342,6 +342,96 @@ function masteryOf(item) {
   return item.mastery.map((entry) => String(entry).split("|")[0]);
 }
 
+/** A character never exceeds this, and every progression is stated to it. */
+const MAX_LEVEL = 20;
+
+/**
+ * How many options a class knows at each level, from level 1 to 20.
+ *
+ * 5etools states this two ways and both are cumulative totals rather than
+ * per-level gains. An array is indexed by level minus one — the warlock's
+ * invocations. An object is sparse and keyed by the level a new total takes
+ * effect, holding until the next key — the battle master's maneuvers,
+ * `{"3": 3, "7": 5, ...}`. Both become the same 20-long array here, so that
+ * nothing downstream has to know which shape a given class used.
+ */
+function progressionToLevels(progression) {
+  const levels = new Array(MAX_LEVEL).fill(0);
+
+  if (Array.isArray(progression)) {
+    for (let i = 0; i < MAX_LEVEL; i += 1) levels[i] = progression[i] ?? 0;
+    return levels;
+  }
+
+  let running = 0;
+  for (let level = 1; level <= MAX_LEVEL; level += 1) {
+    const at = progression[String(level)];
+    if (at != null) running = at;
+    levels[level - 1] = running;
+  }
+
+  return levels;
+}
+
+/**
+ * The optional-feature choices an entity grants, if any.
+ *
+ * This is what makes the level-up choices data rather than a table: which
+ * choice a class offers, from which pool, and how many by level, all stated by
+ * the class itself. It is also how the editions stay apart without a rule —
+ * the 2024 sorcerer's metamagic progression differs from the 2014 one, and the
+ * 2024 paladin has no fighting style at all because fighting styles became
+ * feats, which shows up here as the entry simply not existing.
+ */
+function optionalFeatureProgressionOf(entity) {
+  return (entity.optionalfeatureProgression ?? []).map((entry) => ({
+    name: entry.name,
+    featureType: entry.featureType ?? [],
+    countByLevel: progressionToLevels(entry.progression ?? {}),
+  }));
+}
+
+/**
+ * An optional feature's prerequisites, split by whether they can be checked.
+ *
+ * Four of the six kinds 5etools uses are machine-checkable and are kept as
+ * data: a class level, a pact boon, a spell already known, another optional
+ * feature already taken. The other two — `item` and `otherSummary` — are
+ * prose written for a person ("A suit of armor (requires attunement)",
+ * "Dragonmarked House Renown 25+"), and pretending to check them would mean
+ * guessing. They travel as text for the player to judge.
+ */
+function prerequisitesOf(entity) {
+  const checkable = [];
+  const text = [];
+
+  for (const entry of entity.prerequisite ?? []) {
+    if (entry.level != null) {
+      const level = typeof entry.level === "number" ? entry.level : entry.level.level;
+      checkable.push({
+        kind: "level",
+        level,
+        className: entry.level?.class?.name ?? null,
+        classSource: entry.level?.class?.source ?? null,
+      });
+    }
+
+    if (entry.pact) checkable.push({ kind: "pact", pact: entry.pact });
+
+    for (const spell of entry.spell ?? []) checkable.push({ kind: "spell", spell });
+
+    for (const uid of entry.optionalfeature ?? []) {
+      const [name, source = null] = String(uid).split("|");
+      checkable.push({ kind: "optionalfeature", name, source });
+    }
+
+    for (const item of entry.item ?? []) text.push(item);
+    if (entry.otherSummary) text.push(entry.otherSummary.entrySummary ?? entry.otherSummary.entry);
+  }
+
+  return { prerequisites: checkable, prerequisiteText: text };
+}
+
 const BUILDERS = {
   spell: (entities, context) =>
     entities.map((s) => ({
@@ -427,6 +517,7 @@ const BUILDERS = {
         improvementLevels: levels.improvements,
         subclassLevel: levels.subclassLevel,
         skillChoice: skillChoiceOf(c),
+        optionalFeatureProgression: optionalFeatureProgressionOf(c),
       };
     }),
 
@@ -437,6 +528,20 @@ const BUILDERS = {
       shortName: c.shortName ?? null,
       className: c.className ?? null,
       classSource: c.classSource ?? null,
+      // A subclass grants its own choices on top of the class's: the battle
+      // master's maneuvers, the arcane archer's shots, the rune knight's runes.
+      optionalFeatureProgression: optionalFeatureProgressionOf(c),
+    })),
+
+  optionalfeature: (entities) =>
+    entities.map((f) => ({
+      name: f.name,
+      source: sourceOf(f),
+      // Which choice this answers. "EI" is an eldritch invocation, "MM"
+      // metamagic, "FS:F" a fighter's fighting style; a class's progression
+      // names the same codes, and that pairing is the whole mechanism.
+      featureType: f.featureType ?? [],
+      ...prerequisitesOf(f),
     })),
 };
 
@@ -463,6 +568,7 @@ function main() {
     class: readCollection(dataDir, "class", "class"),
     subclass: readSubclasses(dataDir),
     subrace: readFileCollection(dataDir, "races.json", "subrace"),
+    optionalfeature: readFileCollection(dataDir, "optionalfeatures.json", "optionalfeature"),
   };
 
   const context = { spellClasses: readSpellClasses(dataDir) };
