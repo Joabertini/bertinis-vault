@@ -35,6 +35,9 @@ import {
   unansweredOriginAbilities,
   masteryIsMeleeOnly,
   masteryProblems,
+  featPrerequisiteProblems,
+  type FeatCandidate,
+  type FeatPrerequisiteProblem,
   weaponMasterySlots,
   type MasteryClassEntry,
   type MasteryProblem,
@@ -59,6 +62,8 @@ import {
   originAbilityChoiceFor,
   masteryWeaponOptions,
   weaponMasteryEntriesFor,
+  featPrerequisitesFor,
+  optionById,
   classInfoFor,
   expertiseGrantsFor,
   featAbilityGrantsFor,
@@ -961,6 +966,79 @@ function masteryEntriesFor(state: BuilderState): MasteryClassEntry[] {
 function coerceWeaponMasteryIds(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value.filter((entry): entry is string => typeof entry === "string" && entry !== "");
+}
+
+/**
+ * The character as a feat prerequisite sees them.
+ *
+ * Built once and handed to every check, because the questions overlap: half a
+ * dozen feats ask after the same score and the same class list.
+ */
+export function featCandidateFor(state: BuilderState): FeatCandidate {
+  const rulesVersion: RulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const proficiencies = uniqueEntries(parseLineList(state.proficienciesText)).map((entry) =>
+    entry.toLowerCase(),
+  );
+
+  return {
+    // The scores a prerequisite reads are the final ones: a feat taken at level
+    // 8 is checked against the character who reaches level 8, raises included.
+    abilities: buildCanonicalSnapshot(state).abilities.final,
+    level: characterLevelFor(state),
+    classes: classesFor(state).map((entry) => ({
+      name: classInfoFor(entry.classId, rulesVersion)?.name ?? entry.classId,
+      level: entry.level,
+    })),
+    raceName: optionById("race", rulesVersion, state.raceId)?.label ?? state.raceId,
+    ...(state.subraceId
+      ? { subraceName: optionById("subrace", rulesVersion, state.subraceId)?.label ?? state.subraceId }
+      : {}),
+    backgroundName:
+      optionById("background", rulesVersion, state.backgroundId)?.label ?? state.backgroundId,
+    featNames: takenFeatsFor(state).map(
+      (entry) => optionById("feat", rulesVersion, entry.featId)?.label ?? entry.featId,
+    ),
+    featureNames: parseLineList(state.featuresText),
+    // Armour and weapon proficiencies are free text in the builder, so the
+    // match is on what the player typed. "medium" is what the books ask for.
+    armorProficiencies: proficiencies,
+    weaponProficiencies: proficiencies,
+    casts: classesFor(state).some(
+      (entry) => classInfoFor(entry.classId, rulesVersion)?.casterProgression !== null,
+    ),
+  };
+}
+
+/**
+ * What stands between this character and a feat.
+ *
+ * Reported, never enforced — the same stance the multiclass prerequisite takes.
+ * A table may allow anything, and a builder that refuses is a builder people
+ * work around.
+ */
+export function featPrerequisiteProblemsFor(
+  state: BuilderState,
+  featId: string,
+): FeatPrerequisiteProblem[] {
+  if (!featId) return [];
+
+  return featPrerequisiteProblems(
+    featPrerequisitesFor(
+      featId,
+      state.rulesVersion === "5e-2024" ? "2024" : "2014",
+      state.sourceBooks[`feat:${featId}`],
+    ),
+    featCandidateFor(state),
+  );
+}
+
+/** Every feat this character has taken that it does not qualify for. */
+export function unmetFeatPrerequisitesFor(
+  state: BuilderState,
+): { featId: string; problems: FeatPrerequisiteProblem[] }[] {
+  return takenFeatsFor(state)
+    .map((entry) => ({ featId: entry.featId, problems: featPrerequisiteProblemsFor(state, entry.featId) }))
+    .filter((entry) => entry.problems.length > 0);
 }
 
 /** The key an expertise answer is stored under. */
