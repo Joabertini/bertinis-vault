@@ -6,6 +6,7 @@ import {
   classesFor,
   coerceBuilderState,
   initialState,
+  unmetMulticlassRequirementsFor,
 } from "../src/builder";
 
 const base = { ...initialState, abilityBonuses: {}, levelChoices: {} };
@@ -112,5 +113,47 @@ describe("a character made of more than one class", () => {
     });
 
     expect(restored.extraClasses).toEqual([{ classId: "wizard", subclassId: "", level: 20 }]);
+  });
+});
+
+describe("the ability scores a multiclass character needs", () => {
+  test("a single class build is never refused for a score", () => {
+    // A Strength 8 wizard is a legal character. The rule binds on
+    // multiclassing and nowhere else.
+    const state = { ...base, classId: "wizard", subclassId: "", level: 5, int: 8, extraClasses: [] };
+
+    expect(unmetMulticlassRequirementsFor(state)).toEqual([]);
+  });
+
+  test("the class being left is checked too, not only the one being entered", () => {
+    const state = {
+      ...base,
+      classId: "wizard",
+      subclassId: "",
+      level: 4,
+      str: 8,
+      dex: 12,
+      int: 16,
+      extraClasses: [{ classId: "fighter", subclassId: "", level: 1 }],
+    };
+
+    expect(unmetMulticlassRequirementsFor(state).map((entry) => entry.classId)).toEqual(["fighter"]);
+  });
+
+  test("a legal multiclass build reports nothing", () => {
+    const state = {
+      ...base,
+      classId: "wizard",
+      subclassId: "",
+      level: 4,
+      str: 8,
+      dex: 14,
+      int: 16,
+      extraClasses: [{ classId: "fighter", subclassId: "", level: 1 }],
+    };
+
+    // Dexterity 14 satisfies the fighter's "Strength or Dexterity", which is
+    // the one requirement in the game that is a choice.
+    expect(unmetMulticlassRequirementsFor(state)).toEqual([]);
   });
 });

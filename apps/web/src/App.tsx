@@ -44,6 +44,7 @@ import {
   pendingExpertiseFor,
   proficiencyPoolsFor,
   characterLevelFor,
+  unmetMulticlassRequirementsFor,
   removeLine,
   type StatMethod,
 } from "./builder";
@@ -113,6 +114,26 @@ const steps = [
 
 const standardArray = [15, 14, 13, 12, 10, 8];
 const pointBuyCost: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+
+const ABILITY_LABELS: Record<string, string> = {
+  str: "FUE",
+  dex: "DES",
+  con: "CON",
+  int: "INT",
+  wis: "SAB",
+  cha: "CAR",
+};
+
+/** "FUE 13" or "DES 13 y SAB 13" or "FUE 13 o DES 13". */
+function describeRequirement(options: Record<string, number>[]) {
+  return options
+    .map((option) =>
+      Object.entries(option)
+        .map(([ability, score]) => `${ABILITY_LABELS[ability] ?? ability.toUpperCase()} ${score}`)
+        .join(" y "),
+    )
+    .join(" o ");
+}
 
 function abilityModifier(score = 10) {
   return Math.floor((score - 10) / 2);
@@ -279,6 +300,10 @@ export function App() {
   // Every class's levels added together. `state.level` is the levels in the
   // first class, which for a single-class character is the same number.
   const characterLevel = characterLevelFor(state);
+  // Only a multiclass character has a requirement to meet, and then every one
+  // of its classes has to be met — the one being left as well as the one being
+  // entered.
+  const unmetMulticlass = unmetMulticlassRequirementsFor(state);
   const pendingImprovementLevels = unansweredImprovementLevels(
     levelling,
     state.level,
@@ -925,6 +950,17 @@ export function App() {
                 Nivel de personaje: <strong>{characterLevel}</strong> — la suma de todas las clases.
                 Los espacios de conjuro salen de un nivel de lanzador combinado, no de la tabla de
                 cada clase por separado.
+              </div>
+            ) : null}
+
+            {unmetMulticlass.length > 0 ? (
+              <div className="field-warning">
+                Para multiclasear hace falta cumplir el requisito de cada clase, la que dejas y la
+                que tomas. Estas no lo cumplen:{" "}
+                {unmetMulticlass
+                  .map((entry) => `${entry.classId} (${describeRequirement(entry.requirements)})`)
+                  .join(", ")}
+                .
               </div>
             ) : null}
           </>

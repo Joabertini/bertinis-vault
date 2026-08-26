@@ -6,6 +6,8 @@ import {
   multiclassCasterLevel,
   multiclassHitPoints,
   multiclassSpellSlots,
+  meetsRequirement,
+  multiclassRequirementProblems,
   pactSlotsOf,
   progressionOf,
 } from "../dist/index.js";
@@ -144,4 +146,57 @@ test("a terrible Constitution still leaves one hit point per level", () => {
     multiclassHitPoints({ entries: [wizard(3)], constitutionModifier: -5 }),
     3,
   );
+});
+
+test("a single class has no requirement to meet", () => {
+  // A Strength 8 wizard is a legal character. The rule binds on multiclassing
+  // and nowhere else, so checking it always would refuse builds the books
+  // allow.
+  const problems = multiclassRequirementProblems({
+    entries: [{ ...wizard(5), multiclassRequirements: [{ int: 13 }] }],
+    scores: { str: 8, dex: 14, con: 14, int: 8, wis: 10, cha: 12 },
+  });
+
+  assert.deepEqual(problems, []);
+});
+
+test("both classes have to qualify, not only the one being entered", () => {
+  // The rule is that you must meet the requirement of the class you are
+  // leaving as well. A Strength 8 wizard 4 / fighter 1 fails on the fighter,
+  // and an Intelligence 8 one would fail on the wizard.
+  const problems = multiclassRequirementProblems({
+    entries: [
+      { ...wizard(4), multiclassRequirements: [{ int: 13 }] },
+      { ...cls("fighter", 1, {}), multiclassRequirements: [{ str: 13 }, { dex: 13 }] },
+    ],
+    scores: { str: 8, dex: 12, con: 14, int: 16, wis: 10, cha: 12 },
+  });
+
+  assert.deepEqual(problems, [{ classId: "fighter", requirements: [{ str: 13 }, { dex: 13 }] }]);
+});
+
+test("alternatives are alternatives: either one is enough", () => {
+  // The fighter is the only class in the data whose requirement is an "or",
+  // and reading it as an "and" would refuse every Dexterity fighter.
+  assert.equal(meetsRequirement([{ str: 13 }, { dex: 13 }], { str: 8, dex: 16 }), true);
+  assert.equal(meetsRequirement([{ str: 13 }, { dex: 13 }], { str: 16, dex: 8 }), true);
+  assert.equal(meetsRequirement([{ str: 13 }, { dex: 13 }], { str: 12, dex: 12 }), false);
+});
+
+test("requirements within one alternative are all required", () => {
+  // The monk needs both. Reading it as an "or" would let a Wisdom 8 monk in.
+  assert.equal(meetsRequirement([{ dex: 13, wis: 13 }], { dex: 16, wis: 8 }), false);
+  assert.equal(meetsRequirement([{ dex: 13, wis: 13 }], { dex: 13, wis: 13 }), true);
+});
+
+test("a class that asks for nothing is met by anything", () => {
+  // Two classes in the data state no requirement. Refusing them would be
+  // inventing a rule the books do not have.
+  assert.equal(meetsRequirement([], { str: 3 }), true);
+});
+
+test("exactly thirteen is enough", () => {
+  // The boundary the rule is written on, and the one an off-by-one would move.
+  assert.equal(meetsRequirement([{ int: 13 }], { int: 13 }), true);
+  assert.equal(meetsRequirement([{ int: 13 }], { int: 12 }), false);
 });

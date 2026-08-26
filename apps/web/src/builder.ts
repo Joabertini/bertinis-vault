@@ -26,6 +26,7 @@ import {
   bonusesFromFeats,
   featsFromChoices,
   unansweredFeatAbilities,
+  multiclassRequirementProblems,
   resolveSkillId,
   resolveToolEntry,
   expertiseFrom,
@@ -697,6 +698,30 @@ export function backgroundFeatIdsFor(state: BuilderState): string[] {
   return uniqueEntries(entry?.grantedFeatIds ?? []);
 }
 
+/**
+ * Classes the character has levels in but does not qualify for.
+ *
+ * The requirement binds only on a multiclass character, and then on every
+ * class including the first: you must qualify for the one you are leaving as
+ * well as the one you are entering. So a Strength 8 wizard is legal and a
+ * Strength 8 wizard 4 / fighter 1 is not.
+ *
+ * Reported rather than refused. A table that ignores this rule exists, and a
+ * warning the player can read beats a build they cannot make.
+ */
+export function unmetMulticlassRequirementsFor(state: BuilderState) {
+  const snapshot = buildCanonicalSnapshot(state);
+
+  return multiclassRequirementProblems({
+    entries: snapshot.classing.classes.map((entry) => ({
+      classId: entry.classId,
+      level: entry.level,
+      multiclassRequirements: entry.multiclassRequirements,
+    })),
+    scores: snapshot.abilities.final,
+  });
+}
+
 /** One class a character has levels in, as the builder holds it. */
 export type BuilderClass = { classId: string; subclassId: string; level: number };
 
@@ -869,6 +894,9 @@ function classEntryFor(entry: BuilderClass, builderRules: BuilderRulesVersion) {
       ? { subclassCasterProgression: subclassRow.casterProgression }
       : {}),
     ...(classRow?.hitDie ? { hitDie: classRow.hitDie } : {}),
+    ...(classRow?.multiclassRequirements?.length
+      ? { multiclassRequirements: classRow.multiclassRequirements }
+      : {}),
     ...(ability ? { spellcastingAbility: ability } : {}),
   };
 }

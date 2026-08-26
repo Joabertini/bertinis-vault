@@ -168,3 +168,62 @@ export function multiclassHitPoints({
   // a level's contribution at 1 rather than letting a total go negative.
   return Math.max(total, entries.reduce((sum, entry) => sum + entry.level, 0));
 }
+
+/**
+ * A score a class asks for, or a set of them.
+ *
+ * A list of these is a list of alternatives: `[{str: 13}, {dex: 13}]` is
+ * "Strength or Dexterity", `[{dex: 13, wis: 13}]` is "Dexterity and Wisdom".
+ */
+export type AbilityRequirement = Record<string, number>;
+
+/** Whether a set of scores satisfies any one of the alternatives on offer. */
+export function meetsRequirement(
+  options: AbilityRequirement[],
+  scores: Record<string, number>,
+): boolean {
+  // A class that asks for nothing is met by anything. Two classes in the data
+  // state no requirement at all, and refusing them would be inventing a rule.
+  if (options.length === 0) return true;
+
+  return options.some((option) =>
+    Object.entries(option).every(([ability, minimum]) => (scores[ability] ?? 0) >= minimum),
+  );
+}
+
+/** A class the character has levels in but does not qualify for. */
+export type MulticlassRequirementProblem = {
+  classId: string;
+  /** What it asks for, so the report can say which score is short. */
+  requirements: AbilityRequirement[];
+};
+
+/**
+ * Every class whose ability-score requirement the character does not meet.
+ *
+ * The requirement binds only on a multiclass character, and then it binds on
+ * *every* class including the first: the rule is that you must qualify for the
+ * class you are leaving as well as the one you are entering. A single-class
+ * character has no requirement to meet, which is why a Strength 8 wizard is
+ * legal and a Strength 8 wizard 4 / fighter 1 is not.
+ *
+ * Reported rather than refused. The builder is a tool for a person who may be
+ * playing with a table that ignores this, and a warning they can read beats a
+ * build they cannot make.
+ */
+export function multiclassRequirementProblems({
+  entries,
+  scores,
+}: {
+  entries: (MulticlassEntry & { multiclassRequirements?: AbilityRequirement[] | undefined })[];
+  scores: Record<string, number>;
+}): MulticlassRequirementProblem[] {
+  if (entries.length < 2) return [];
+
+  return entries
+    .filter((entry) => !meetsRequirement(entry.multiclassRequirements ?? [], scores))
+    .map((entry) => ({
+      classId: entry.classId,
+      requirements: entry.multiclassRequirements ?? [],
+    }));
+}

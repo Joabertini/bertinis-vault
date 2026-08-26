@@ -79,6 +79,14 @@ export const classEntrySchema = z.object({
   subclassCasterProgression: casterProgressionSchema.nullable().optional(),
   hitDie: z.number().int().min(4).max(12).optional(),
   spellcastingAbility: abilityIdSchema.optional(),
+  /**
+   * The scores this class asks for, as alternatives.
+   *
+   * Carried so the rules layer can check a build without a lookup, and because
+   * the requirement is a property of the class as the book prints it rather
+   * than of the character.
+   */
+  multiclassRequirements: z.array(z.record(abilityIdSchema, z.number().int())).optional(),
 });
 
 export const classingSchema = z.object({
