@@ -8,6 +8,7 @@ export * from "./levelling.js";
 export * from "./multiclass.js";
 export * from "./expertise.js";
 export * from "./starting-equipment.js";
+export * from "./origin-abilities.js";
 export * from "./feat-abilities.js";
 export * from "./optional-features.js";
 export * from "./spell-slots-payload.js";

@@ -47,6 +47,8 @@ import {
   unmetMulticlassRequirementsFor,
   equipmentListsFor,
   startingEquipmentFor,
+  originAbilityChoiceForBuild,
+  pendingOriginAbilitiesFor,
   removeLine,
   type StatMethod,
 } from "./builder";
@@ -55,6 +57,7 @@ import { FeatAbilityPicker } from "./components/FeatAbilityPicker";
 import { ExpertisePicker } from "./components/ExpertisePicker";
 import { ExtraClassRows } from "./components/ExtraClassRows";
 import { StartingEquipmentPicker } from "./components/StartingEquipmentPicker";
+import { OriginAbilityPicker } from "./components/OriginAbilityPicker";
 import { multiclassGrantsFor } from "./index-options";
 import { IndexPicker } from "./components/IndexPicker";
 import {
@@ -476,6 +479,10 @@ export function App() {
   );
   // The real lists, with their questions intact. The suggestion list above is
   // a flat array of item ids and cannot carry an "a or b" at all.
+  // 2024 moved the level-one ability increase off the species and onto the
+  // background. Null in 2014, where the question is not asked at all.
+  const originAbilityChoice = useMemo(() => originAbilityChoiceForBuild(state), [state]);
+  const pendingOriginAbilities = useMemo(() => pendingOriginAbilitiesFor(state), [state]);
   const equipmentLists = useMemo(() => equipmentListsFor(state), [state]);
   const resolvedEquipment = useMemo(() => startingEquipmentFor(state), [state]);
 
@@ -1078,6 +1085,12 @@ export function App() {
               selectedId={state.backgroundId}
               selectedLabel={selectedBackgroundOption?.label ?? state.backgroundId}
               selectedSource={state.sourceBooks[`background:${state.backgroundId}`] ?? ""}
+            />
+            <OriginAbilityPicker
+              alternatives={originAbilityChoice}
+              answer={state.originAbilityChoice}
+              onChange={(answer) => setState((current) => ({ ...current, originAbilityChoice: answer }))}
+              pending={pendingOriginAbilities}
             />
             <div className="bg-feat-auto" style={{ display: "block" }}>
               <b>Trasfondo</b>: {selectedBackgroundMeta?.label ?? state.backgroundId}

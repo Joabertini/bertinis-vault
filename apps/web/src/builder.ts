@@ -31,6 +31,10 @@ import {
   resolveToolEntry,
   expertiseFrom,
   unansweredExpertise,
+  originAbilityBonuses,
+  unansweredOriginAbilities,
+  type OriginAbilityAnswer,
+  type OriginAbilityOption,
   averageStartingGold,
   resolveStartingEquipment,
   type ResolvedStartingEquipment,
@@ -47,6 +51,7 @@ import {
   armorFormulaOf,
   armorClassOptionsFor,
   startingEquipmentListsFor,
+  originAbilityChoiceFor,
   classInfoFor,
   expertiseGrantsFor,
   featAbilityGrantsFor,
@@ -119,6 +124,14 @@ export type BuilderState = {
   equipmentChoices: Record<string, string>;
   /** 2014's "or 4d4 × 10 gp instead", which replaces every list at once. */
   takeStartingGold: boolean;
+  /**
+   * Which abilities the background's 2024 increase raises.
+   *
+   * Null in 2014, where the increase belongs to the species and this question
+   * is not asked. `abilityBonuses` stays the manual field it was: it carries
+   * the species bonus, which most species leave to the player.
+   */
+  originAbilityChoice: OriginAbilityAnswer | null;
   proficienciesText: string;
   languagesText: string;
   cantripsText: string;
@@ -444,6 +457,7 @@ export const initialState: BuilderState = {
   extraEquipmentText: "component-pouch",
   equipmentChoices: {},
   takeStartingGold: false,
+  originAbilityChoice: null,
   proficienciesText: "Arcana\nInvestigation\nThieves' Tools",
   languagesText: "Common\nElvish\nDraconic",
   cantripsText: "Mage Hand\nPrestidigitation",
@@ -535,6 +549,8 @@ export function coerceBuilderState(value: unknown): BuilderState {
     // A draft saved before equipment was a choice simply has no answers.
     equipmentChoices: coerceEquipmentChoices(candidate.equipmentChoices),
     takeStartingGold: candidate.takeStartingGold === true,
+    // A draft saved before 2024's origin increase existed simply has none.
+    originAbilityChoice: coerceOriginAbilityChoice(candidate.originAbilityChoice),
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
   };
 }
@@ -839,6 +855,41 @@ function coerceEquipmentChoices(value: unknown): Record<string, string> {
   return answers;
 }
 
+/** The 2024 ability increase this build's background offers, if it does. */
+export function originAbilityChoiceForBuild(state: BuilderState): OriginAbilityOption[] | null {
+  return originAbilityChoiceFor(
+    state.backgroundId,
+    state.rulesVersion === "5e-2024" ? "2024" : "2014",
+    state.sourceBooks.background,
+  );
+}
+
+/** What the background's increase is worth, once answered. */
+export function originAbilityBonusesFor(state: BuilderState): Partial<Record<AbilityId, number>> {
+  return originAbilityBonuses(originAbilityChoiceForBuild(state), state.originAbilityChoice);
+}
+
+/** How many halves of the increase are still unanswered. */
+export function pendingOriginAbilitiesFor(state: BuilderState): number {
+  return unansweredOriginAbilities(originAbilityChoiceForBuild(state), state.originAbilityChoice);
+}
+
+/** An origin answer off a draft, dropping anything that is not one. */
+function coerceOriginAbilityChoice(value: unknown): OriginAbilityAnswer | null {
+  if (!value || typeof value !== "object") return null;
+
+  const candidate = value as Partial<OriginAbilityAnswer>;
+  const optionIndex = Number(candidate.optionIndex);
+  if (!Number.isInteger(optionIndex) || optionIndex < 0) return null;
+
+  return {
+    optionIndex,
+    abilities: Array.isArray(candidate.abilities)
+      ? candidate.abilities.filter((entry): entry is string => typeof entry === "string")
+      : [],
+  };
+}
+
 /** The key an expertise answer is stored under. */
 export function expertiseKeyOf(grant: { name: string; source: string; level: number }): string {
   return `${grant.name}|${grant.source}|${grant.level}`;
@@ -1141,6 +1192,10 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       final: applyAbilityBonuses(
         baseScores,
         state.abilityBonuses,
+        // 2024's increase, which comes off the background rather than the
+        // species. Empty in 2014, where the species carries it and
+        // `abilityBonuses` above is where it lands.
+        originAbilityBonusesFor(state),
         bonusesFromChoices(state.levelChoices),
         // Half-feats. Until this line existed, Resilient, Fey Touched and
         // Telekinetic raised nothing and the sheet did not say so.
