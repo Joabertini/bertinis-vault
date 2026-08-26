@@ -591,6 +591,105 @@ function featPrerequisitesOf(entity) {
   });
 }
 
+/**
+ * The spells a subclass adds, which for two subclasses are the only ones.
+ *
+ * A class's spell list comes off the spell rows themselves, and the fighter and
+ * the rogue have none — so an Eldritch Knight and an Arcane Trickster were
+ * offered *no spells at all*, in a builder that let you pick the subclass.
+ * Their list is the wizard's, and the subclass is the only place that says so.
+ *
+ * The same field carries the domain, circle and oath spells that every prepare
+ * caster gets on top of their own list, which is why 147 subclasses have one.
+ *
+ * Four kinds appear, and they are different rules rather than different
+ * spellings. `prepared` and `expanded` join the list the character prepares
+ * from; `known` is always known without costing a slot on the sheet; `innate`
+ * is cast without preparing it at all, usually once a day.
+ *
+ * A spell is either named outright or described by a filter — "every wizard
+ * cantrip". The filter is kept as a filter rather than expanded here: the
+ * expansion needs the spell list, which lives in another collection, and
+ * baking 300 names into a subclass row would be both large and stale.
+ */
+const SPELL_LIST_KINDS = ["expanded", "known", "prepared", "innate"];
+
+function subclassSpellsOf(entity) {
+  const blocks = entity.additionalSpells;
+  if (!blocks?.length) return [];
+
+  const out = [];
+
+  for (const block of blocks) {
+    for (const kind of SPELL_LIST_KINDS) {
+      for (const [levelKey, raw] of Object.entries(block[kind] ?? {})) {
+        // An innate block nests one more level deep, under how the spell is
+        // regained: "daily", "rest", "resource", "ritual", or "_" for plain.
+        const groups = Array.isArray(raw) ? { _: raw } : raw;
+        const names = [];
+        const filters = [];
+        const choices = [];
+
+        for (const group of Object.values(groups)) {
+          // "daily" nests again, keyed by uses per day. Anything below is a
+          // list of spells however deep it sits.
+          const lists = Array.isArray(group) ? [group] : Object.values(group ?? {});
+
+          for (const list of lists) {
+            for (const entry of Array.isArray(list) ? list : [list]) {
+              if (typeof entry === "string") {
+                names.push(stripTags(entry).split("|")[0]);
+                continue;
+              }
+              if (entry?.all) {
+                filters.push({ filter: entry.all, count: null });
+              } else if (typeof entry?.choose === "string") {
+                filters.push({ filter: entry.choose, count: entry.count ?? 1 });
+              } else if (entry?.choose?.from) {
+                // A choice from a named shortlist rather than from a filter.
+                // One subclass states it this way, and it is a different rule:
+                // there is no filter to evaluate, only a list to pick from.
+                choices.push({
+                  from: entry.choose.from.map((name) => stripTags(String(name)).split("|")[0]),
+                  count: entry.choose.count ?? entry.count ?? 1,
+                });
+              } else {
+                throw new Error(`unmodelled subclass spell: ${JSON.stringify(entry)}`);
+              }
+            }
+          }
+        }
+
+        // The warlock patrons key their expanded list by *spell* level —
+        // "s1" through "s5" — because a warlock gains those spells when their
+        // pact slots reach that level, not at a fixed class level. Reading an
+        // "s3" as class level 3 would hand a level 3 warlock third-level
+        // spells five levels early.
+        const spellLevelKey = /^s(\d+)$/.exec(levelKey);
+        // "_" means the spell arrives with the subclass itself and is gated by
+        // nothing further. Both null is that: no class level, no spell level.
+        const gated = levelKey !== "_";
+        const level = spellLevelKey || !gated ? null : Number(levelKey);
+        const spellLevel = spellLevelKey ? Number(spellLevelKey[1]) : null;
+
+        if (level !== null && !Number.isFinite(level)) {
+          throw new Error(`unreadable spell level: ${levelKey}`);
+        }
+        if (names.length || filters.length || choices.length) {
+          out.push({ kind, level, spellLevel, names, filters, choices });
+        }
+      }
+    }
+  }
+
+  return out.sort(
+    (a, b) =>
+      (a.level ?? 0) - (b.level ?? 0) ||
+      (a.spellLevel ?? 0) - (b.spellLevel ?? 0) ||
+      a.kind.localeCompare(b.kind),
+  );
+}
+
 /** A character never exceeds this, and every progression is stated to it. */
 const MAX_LEVEL = 20;
 
@@ -1478,6 +1577,9 @@ const BUILDERS = {
       shortName: c.shortName ?? null,
       className: c.className ?? null,
       classSource: c.classSource ?? null,
+      // Domain, circle and oath spells — and, for the Eldritch Knight and the
+      // Arcane Trickster, the only spell list they have at all.
+      spells: subclassSpellsOf(c),
       // A third-caster is a subclass, not a class: the eldritch knight and the
       // arcane trickster are the only two, and their progression is the
       // subclass's to state. Without this a fighter 12 / wizard 1 reads as one
