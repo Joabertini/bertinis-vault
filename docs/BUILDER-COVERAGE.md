@@ -91,13 +91,19 @@ multiclassing gets wrong when it is not stated.
 | --- | --- |
 | Hit points | done, but from hit die and Constitution only (finding H) — Tough, Dwarven Toughness and Hill Dwarf are ignored |
 | AC from armour and shield | done |
-| **Unarmored Defense** (Barbarian, Monk, Draconic Sorcerer) | missing — it is implemented in `domain` and never called (finding E) |
+| Unarmored Defense (Barbarian, Monk, 2024 dancing Bard, Draconic Sorcerer) | done — the formula is read from the feature text, and the character uses the best of what they have |
+| Natural armour (Tortle, Lizardfolk, Loxodon, Locathah, Autognome) | done, read from 5etools' Foundry companion formula |
 | Saving throw proficiencies | done, first class only, which is the rule |
 | Resistances and immunities from species | arrive with the document |
 
-Unarmored Defense is in the "answers wrong" half rather than the "does not
-answer" half: the sheet shows an armour class, it is simply the wrong one, and
-nothing tells the player.
+Unarmored Defense was in the "answers wrong" half rather than the "does not
+answer" half — the builder showed an armour class, it was simply the wrong one,
+and nothing told the player. It now computes the best of worn armour and every
+feature the character has.
+
+One deliberate divergence: a monk holding a shield loses Unarmored Defense, and
+the builder says so. Neither Plutonium nor the `dnd5e` system models that
+clause, so the Foundry sheet shows 2 higher for that one build.
 
 ## 4. Ability scores and breakpoints
 
@@ -196,15 +202,23 @@ and deity are not. Cosmetic, and last.
 4. ~~**Tools that land**~~ — done. The table is generated from the game system
    rather than written by hand, so a dnd5e upgrade that renames a key fails a
    test instead of quietly dropping a proficiency.
-5. **Unarmored Defense** — written, never called. Answers wrong rather than not
-   at all, which puts it ahead of anything merely absent.
+5. ~~**Unarmored Defense**~~ — done, along with draconic scales and five
+   species' natural armour. Parsed out of the feature text, because for the
+   barbarian, the monk and the 2024 dancing bard there is nowhere else to read
+   it from.
 6. **Multiclassing** — the largest, and the one that reshapes the wizard.
 7. **Equipment as choices**, with the gold alternative.
 8. **The 2024 rules**, properly.
 9. **Prerequisites and legality checking.**
 
-Five is what is left of the cheap ones, and it is the last of the three that
-change the character that comes out the most.
+The cheap ones are done. What is left is the large work: multiclassing, which
+reshapes the wizard, and everything downstream of it.
+
+One deliberate divergence to know about: a monk holding a shield loses Unarmored
+Defense, and the builder now says so. Neither Plutonium nor the `dnd5e` system
+models that clause, so the Foundry sheet will show 2 higher for that one build.
+The builder is right and the sheet is wrong, which is an uncomfortable place to
+be but the correct one.
 Six is what will demand a redesign of the wizard, which is where the interface
 work belongs.
 

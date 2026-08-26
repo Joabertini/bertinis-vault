@@ -16,8 +16,8 @@
   },
   "race": {
     "count": 160,
-    "bytes": 12563,
-    "gzip": 1582
+    "bytes": 15898,
+    "gzip": 1778
   },
   "background": {
     "count": 161,
@@ -26,13 +26,13 @@
   },
   "class": {
     "count": 31,
-    "bytes": 14716,
-    "gzip": 1482
+    "bytes": 15864,
+    "gzip": 1584
   },
   "subclass": {
     "count": 203,
-    "bytes": 32753,
-    "gzip": 2969
+    "bytes": 36504,
+    "gzip": 3134
   },
   "subrace": {
     "count": 98,

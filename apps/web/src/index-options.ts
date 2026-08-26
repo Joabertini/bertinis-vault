@@ -27,9 +27,11 @@ import {
   type SubclassRow,
   type SubraceRow,
   type ExpertiseGrant,
+  type ArmorClassOption,
 } from "@bertinis-vault/vetools-index";
 import { activeExpertiseGrants, type LevellingClass } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
+import type { AbilityId, ArmorClassOption as BuildArmorClassOption } from "@bertinis-vault/contracts";
 
 export type IndexOption = {
   /** The slug a build stores. Matches how `RefResolver` looks names up. */
@@ -410,4 +412,53 @@ export function expertiseGrantsFor({
     : [];
 
   return activeExpertiseGrants({ grants: [...fromClass, ...fromSubclass], level, variantsTaken });
+}
+
+/**
+ * Every alternative armour class the build has earned.
+ *
+ * Class, subclass and species together, because a character can have more than
+ * one and the rules say to use the best: a lizardfolk barbarian compares 13 +
+ * Dexterity against 10 + Dexterity + Constitution and takes whichever is
+ * higher, which at 14 Constitution is the scales and at 16 is the rage.
+ *
+ * Not filtered by level here — that gate lives in the rules layer with the
+ * rest of them, so the build carries what the character has and the rules
+ * decide what applies.
+ */
+export function armorClassOptionsFor({
+  classId,
+  subclassId,
+  raceId,
+  rulesVersion,
+  sourceBook,
+}: {
+  classId: string;
+  subclassId: string;
+  raceId: string;
+  rulesVersion: RulesVersion;
+  sourceBook?: string | undefined;
+}): BuildArmorClassOption[] {
+  const fromClass = classInfoFor(classId, rulesVersion)?.armorClass ?? [];
+  const fromSubclass = subclassId
+    ? (subclassInfoFor(subclassId, classId, rulesVersion)?.armorClass ?? [])
+    : [];
+
+  const races = forRulesVersion(collections.race ?? [], rulesVersion) as RaceRow[];
+  const matches = races.filter((row) => slugOf(row.name) === raceId);
+  const race = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
+
+  return [...fromClass, ...fromSubclass, ...(race?.armorClass ?? [])].map((option) => ({
+    ...option,
+    // The index carries plain strings; the build carries ability ids. An
+    // entry naming something that is not an ability is dropped rather than
+    // added as zero, which would look like a modifier the character has.
+    abilities: option.abilities.filter(isAbilityId),
+  }));
+}
+
+const ABILITY_IDS: AbilityId[] = ["str", "dex", "con", "int", "wis", "cha"];
+
+function isAbilityId(value: string): value is AbilityId {
+  return (ABILITY_IDS as string[]).includes(value);
 }
