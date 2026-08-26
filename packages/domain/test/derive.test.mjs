@@ -156,3 +156,61 @@ test("a build with no armour class options derives exactly what it did before", 
 
   assert.equal(build.derived.ac, 17);
 });
+
+test("a multiclass caster derives the combined table, not the first class's", () => {
+  // A wizard 3 / cleric 2 is caster level 5. Read as a wizard 3 — which is
+  // what every build derived until now, because `classes[0]` was the only
+  // entry anything looked at — it was two slots short and a whole spell level
+  // missing.
+  const build = deriveCharacterBuild(
+    makeInput({
+      classing: {
+        classes: [
+          { classId: "wizard", level: 3, casterProgression: "full", hitDie: 6 },
+          { classId: "cleric", level: 2, casterProgression: "full", hitDie: 8 },
+        ],
+      },
+    }),
+  );
+
+  assert.equal(build.derived.proficiencyBonus, 3);
+  assert.deepEqual(build.derived.spellcasting?.slots, { 1: 4, 2: 3, 3: 2 });
+});
+
+test("a multiclass character's hit points use each class's own die", () => {
+  // Barbarian 1 / wizard 4 at Constitution +1: 12 + 1, then four levels of
+  // d6 at 4 + 1. Read as five barbarian levels it was fourteen too many.
+  const build = deriveCharacterBuild(
+    makeInput({
+      classing: {
+        classes: [
+          { classId: "barbarian", level: 1, hitDie: 12 },
+          { classId: "wizard", level: 4, casterProgression: "full", hitDie: 6 },
+        ],
+      },
+      abilities: {
+        generationMethod: "manual",
+        base: { str: 14, dex: 14, con: 12, int: 16, wis: 10, cha: 8 },
+        final: { str: 14, dex: 14, con: 12, int: 16, wis: 10, cha: 8 },
+      },
+    }),
+  );
+
+  assert.equal(build.derived.hp, 33);
+});
+
+test("a warlock dip keeps its pact slots apart from the rest", () => {
+  const build = deriveCharacterBuild(
+    makeInput({
+      classing: {
+        classes: [
+          { classId: "sorcerer", level: 3, casterProgression: "full", hitDie: 6 },
+          { classId: "warlock", level: 2, casterProgression: "pact", hitDie: 8 },
+        ],
+      },
+    }),
+  );
+
+  assert.deepEqual(build.derived.spellcasting?.slots, { 1: 4, 2: 2, pact: 2 });
+  assert.equal(build.derived.spellcasting?.pactLevel, 1);
+});

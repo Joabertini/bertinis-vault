@@ -1,4 +1,9 @@
-import type { CharacterBuild, CharacterBuildInput } from "@bertinis-vault/contracts";
+import type {
+  AbilityId,
+  CasterProgression,
+  CharacterBuild,
+  CharacterBuildInput,
+} from "@bertinis-vault/contracts";
 import {
   getArmorCatalogEntry,
   getBackgroundCatalogEntry,
@@ -36,11 +41,13 @@ import {
 import {
   armorFormulaOf,
   armorClassOptionsFor,
+  classInfoFor,
   expertiseGrantsFor,
   featAbilityGrantsFor,
   featChoiceForBackground,
   itemInfoFor,
   slugOf,
+  subclassInfoFor,
 } from "./index-options";
 
 export type BuilderRulesVersion = "5e-2014" | "5e-2024";
@@ -770,6 +777,52 @@ export function proficiencyPoolsFor(state: BuilderState): {
   return { proficientSkills, proficientTools };
 }
 
+/**
+ * One class entry, carrying what the index knows about the class.
+ *
+ * A third-caster's progression is the subclass's rather than the class's: a
+ * fighter casts nothing and an eldritch knight casts a third, and the entry
+ * carries both so the rules layer does not have to know which is which.
+ */
+function classEntryFor(state: BuilderState) {
+  const rulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const classRow = classInfoFor(state.classId, rulesVersion);
+  const subclassRow = state.subclassId
+    ? subclassInfoFor(state.subclassId, state.classId, rulesVersion)
+    : null;
+
+  // The subclass wins where it has one: an eldritch knight casts with
+  // Intelligence and the fighter it is built on casts with nothing.
+  const rawAbility = subclassRow?.spellcastingAbility ?? classRow?.spellcastingAbility;
+  const ability = isAbility(rawAbility) ? rawAbility : null;
+
+  return {
+    classId: state.classId,
+    ...(state.subclassId ? { subclassId: state.subclassId } : {}),
+    level: state.level,
+    ...(isCasterProgression(classRow?.casterProgression)
+      ? { casterProgression: classRow.casterProgression }
+      : {}),
+    ...(isCasterProgression(subclassRow?.casterProgression)
+      ? { subclassCasterProgression: subclassRow.casterProgression }
+      : {}),
+    ...(classRow?.hitDie ? { hitDie: classRow.hitDie } : {}),
+    ...(ability ? { spellcastingAbility: ability } : {}),
+  };
+}
+
+const CASTER_PROGRESSIONS = ["full", "1/2", "1/3", "artificer", "pact"];
+
+function isCasterProgression(value: unknown): value is CasterProgression {
+  return typeof value === "string" && CASTER_PROGRESSIONS.includes(value);
+}
+
+const ABILITY_IDS = ["str", "dex", "con", "int", "wis", "cha"];
+
+function isAbility(value: unknown): value is AbilityId {
+  return typeof value === "string" && ABILITY_IDS.includes(value);
+}
+
 export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const cantrips = parseLineList(state.cantripsText).map((entry) => `Nv0: ${entry}`);
   const leveledSpells = parseLineList(state.spellsText);
@@ -848,13 +901,12 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       ...(state.subraceId ? { subraceId: state.subraceId } : {}),
     },
     classing: {
-      classes: [
-        {
-          classId: state.classId,
-          ...(state.subclassId ? { subclassId: state.subclassId } : {}),
-          level: state.level,
-        },
-      ],
+      // One entry for now — the wizard writes a single class. The numbers the
+      // rules layer needs travel on the entry so a multiclass build does not
+      // have to look them up again, and so the editions stay apart: the 2014
+      // paladin and the 2024 paladin advance spellcasting differently and a
+      // table keyed by class id cannot say both.
+      classes: [classEntryFor(state)],
     },
     background: {
       backgroundId: state.backgroundId,

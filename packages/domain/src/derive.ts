@@ -1,4 +1,5 @@
 import {
+  type CasterProgression,
   type CharacterBuild,
   type CharacterBuildInput,
   characterBuildInputSchema,
@@ -7,10 +8,17 @@ import {
 import { getArmorCatalogEntry } from "@bertinis-vault/data-engine";
 import { abilityModifierMap } from "./abilities.js";
 import { bestArmorClass } from "./armor-class.js";
+import {
+  multiclassHitPoints,
+  multiclassSpellSlots,
+  progressionOf,
+  type MulticlassEntry,
+} from "./multiclass.js";
 import { calculateArmorClass, calculateEstimatedHitPoints } from "./combat.js";
 import {
   getHitDieForClass,
   getSpellAbilityForClass,
+  getSpellProgressionForClass,
   normalizeClassId,
 } from "./dnd5e-2014.js";
 import { spellSlotsForPayload } from "./spell-slots-payload.js";
@@ -28,11 +36,34 @@ export function deriveCharacterBuild(
   const hitDie = getHitDieForClass(primaryClassId);
   const spellAbility = getSpellAbilityForClass(primaryClassId);
 
-  const hp = calculateEstimatedHitPoints({
-    hitDie,
-    level,
-    constitutionModifier: modifiers.con,
+  // Every class, in the order they were taken. Where the index has not
+  // supplied a class's numbers — a draft written before the fields existed, a
+  // fixture — the hand-written tables stand in, which is why a single-class
+  // build derives exactly what it always did.
+  const entries: MulticlassEntry[] = parsedInput.classing.classes.map((entry) => {
+    const id = normalizeClassId(entry.classId);
+    return {
+      classId: id,
+      level: entry.level,
+      casterProgression: entry.casterProgression ?? legacyProgression(id),
+      subclassCasterProgression: entry.subclassCasterProgression ?? null,
+      hitDie: entry.hitDie ?? getHitDieForClass(id),
+      ...(entry.spellcastingAbility ? { spellcastingAbility: entry.spellcastingAbility } : {}),
+    };
   });
+
+  const isMulticlass = entries.length > 1;
+
+  // A single class keeps the old calculation exactly. Only the shape of a
+  // multiclass character changes here, and the hit die it uses per level is
+  // the die of the class that level was taken in.
+  const hp = isMulticlass
+    ? multiclassHitPoints({ entries, constitutionModifier: modifiers.con })
+    : calculateEstimatedHitPoints({
+        hitDie,
+        level,
+        constitutionModifier: modifiers.con,
+      });
 
   // An armour picked from the index brings its own formula; the catalog is the
   // fallback for builds written before the index carried armour class.
@@ -71,13 +102,30 @@ export function deriveCharacterBuild(
   // Foundry's field names. The two were confused, and the result was a path
   // that did not exist.
   const slotRules = parsedInput.meta.rulesVersion === "5e-2024" ? "2024" : "2014";
-  const payloadSlots = spellSlotsForPayload(primaryClassId, primaryClassLevel, slotRules);
 
-  const spellcasting = spellAbility
+  // A multiclass spellcaster's slots are not the sum of what each class would
+  // have alone: they come from one combined caster level read against the
+  // full-caster table, and each class contributes a different fraction of its
+  // levels. A wizard 3 / cleric 2 used to be given a wizard 3's slots.
+  const payloadSlots = isMulticlass
+    ? multiclassSpellSlots(entries)
+    : spellSlotsForPayload(primaryClassId, primaryClassLevel, slotRules);
+
+  // The ability comes from the first class that casts at all. A character
+  // with two casting classes has two save DCs, which this contract has never
+  // carried; naming the first is the honest partial answer rather than
+  // silently picking whichever table was consulted last.
+  const castingEntry = entries.find((entry) => progressionOf(entry) !== null);
+  const spellAbilityForBuild =
+    (isMulticlass ? castingEntry?.spellcastingAbility : undefined) ??
+    (isMulticlass ? getSpellAbilityForClass(castingEntry?.classId ?? "") : undefined) ??
+    spellAbility;
+
+  const spellcasting = spellAbilityForBuild
       ? {
-          ability: spellAbility,
-          attackBonus: proficiencyBonus + modifiers[spellAbility],
-          saveDC: 8 + proficiencyBonus + modifiers[spellAbility],
+          ability: spellAbilityForBuild,
+          attackBonus: proficiencyBonus + modifiers[spellAbilityForBuild],
+          saveDC: 8 + proficiencyBonus + modifiers[spellAbilityForBuild],
           slots: payloadSlots.slots,
           ...(payloadSlots.pactLevel ? { pactLevel: payloadSlots.pactLevel } : {}),
         }
@@ -94,4 +142,25 @@ export function deriveCharacterBuild(
   };
 
   return characterBuildSchema.parse(build);
+}
+
+/**
+ * The progression the hand-written table knows, in the index's vocabulary.
+ *
+ * A stand-in for builds written before the index supplied the field. It knows
+ * only one edition, which is exactly why the index is the authority: the 2014
+ * paladin and the 2024 paladin are `"1/2"` and `"artificer"` respectively, and
+ * a table keyed by class id cannot say both.
+ */
+function legacyProgression(classId: string): CasterProgression | null {
+  switch (getSpellProgressionForClass(classId)) {
+    case "full":
+      return "full";
+    case "pact":
+      return "pact";
+    case "half":
+      return normalizeClassId(classId) === "artificer" ? "artificer" : "1/2";
+    default:
+      return null;
+  }
 }

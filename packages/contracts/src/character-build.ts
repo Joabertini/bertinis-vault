@@ -59,10 +59,26 @@ export const ancestrySchema = z.object({
   subraceId: canonicalIdSchema.optional(),
 });
 
+/** How a class advances spellcasting, in 5etools' own vocabulary. */
+export const casterProgressionSchema = z.enum(["full", "1/2", "1/3", "artificer", "pact"]);
+
 export const classEntrySchema = z.object({
   classId: canonicalIdSchema,
   subclassId: canonicalIdSchema.optional(),
   level: z.number().int().min(1).max(20),
+  /**
+   * What the index knows about this class, carried on the entry.
+   *
+   * The rules layer has hand-written tables for the standard classes and falls
+   * back to them, but the index is the authority: it keeps the editions apart
+   * without a rule, and the 2014 paladin (`"1/2"`) and the 2024 paladin
+   * (`"artificer"`) genuinely differ.
+   */
+  casterProgression: casterProgressionSchema.nullable().optional(),
+  /** A third-caster subclass's, which the class itself has none of. */
+  subclassCasterProgression: casterProgressionSchema.nullable().optional(),
+  hitDie: z.number().int().min(4).max(12).optional(),
+  spellcastingAbility: abilityIdSchema.optional(),
 });
 
 export const classingSchema = z.object({
@@ -271,6 +287,7 @@ export type NormalizedEquipmentEntry = z.infer<typeof normalizedEquipmentEntrySc
 export type NormalizedFeatureEntry = z.infer<typeof normalizedFeatureEntrySchema>;
 export type NormalizedChoices = z.infer<typeof normalizedChoicesSchema>;
 export type ArmorClassOption = z.infer<typeof armorClassOptionSchema>;
+export type CasterProgression = z.infer<typeof casterProgressionSchema>;
 export type Choices = z.infer<typeof choicesSchema>;
 export type SourceBooks = z.infer<typeof sourceBooksSchema>;
 export type Spellcasting = z.infer<typeof spellcastingSchema>;
