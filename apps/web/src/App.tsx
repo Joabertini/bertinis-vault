@@ -43,12 +43,14 @@ import {
   expertiseKeyOf,
   pendingExpertiseFor,
   proficiencyPoolsFor,
+  characterLevelFor,
   removeLine,
   type StatMethod,
 } from "./builder";
 import { fallbackBuilderOptions, type BuilderOptionsPayload } from "./builder-options";
 import { FeatAbilityPicker } from "./components/FeatAbilityPicker";
 import { ExpertisePicker } from "./components/ExpertisePicker";
+import { ExtraClassRows } from "./components/ExtraClassRows";
 import { IndexPicker } from "./components/IndexPicker";
 import {
   featAbilityGrantsFor,
@@ -274,6 +276,9 @@ export function App() {
   const expertiseEntries = expertiseEntriesFor(state);
   const pendingExpertise = pendingExpertiseFor(state);
   const proficiencyPools = proficiencyPoolsFor(state);
+  // Every class's levels added together. `state.level` is the levels in the
+  // first class, which for a single-class character is the same number.
+  const characterLevel = characterLevelFor(state);
   const pendingImprovementLevels = unansweredImprovementLevels(
     levelling,
     state.level,
@@ -908,6 +913,20 @@ export function App() {
             <div className="feat-info">
               Hit Die: <strong>{selectedClassMeta?.hitDie ? `d${selectedClassMeta.hitDie}` : "Pendiente"}</strong> | Spellcaster: <strong>{selectedClassMeta?.spellcastingAbility ? `Si (${selectedClassMeta.spellcastingAbility.toUpperCase()})` : "No"}</strong> | Abilities primarias: <strong>{selectedClassMeta?.primaryAbilities?.join(" / ") || "Flexible"}</strong>
             </div>
+
+            <ExtraClassRows
+              classes={state.extraClasses}
+              onChange={(next) => updateField("extraClasses", next)}
+              rulesVersion={rulesVersion}
+            />
+
+            {state.extraClasses.length > 0 ? (
+              <div className="feat-info">
+                Nivel de personaje: <strong>{characterLevel}</strong> — la suma de todas las clases.
+                Los espacios de conjuro salen de un nivel de lanzador combinado, no de la tabla de
+                cada clase por separado.
+              </div>
+            ) : null}
           </>
         );
       case "race":

@@ -164,6 +164,17 @@ export type BuilderState = {
    */
   expertiseChoices: Record<string, ExpertiseAnswer>;
   /**
+   * Classes beyond the first.
+   *
+   * The first class keeps its own fields rather than becoming entry zero of an
+   * array, because it is not merely the first: it is the class taken at level
+   * 1, and the rules single it out. It alone grants saving throw
+   * proficiencies and starting equipment, and its hit die is the one that
+   * arrives at maximum. `classesFor` is what everything downstream reads, so
+   * the split lives here and nowhere else.
+   */
+  extraClasses: BuilderClass[];
+  /**
    * Which book each pick came from, keyed by `"<prop>:<id>"`.
    *
    * Only the picks whose name is not unique within the ruleset need it, but
@@ -396,6 +407,7 @@ export const initialState: BuilderState = {
   optionalFeatureIds: [],
   featAbilityChoices: {},
   expertiseChoices: {},
+  extraClasses: [],
   characterName: "Seraphina Vale",
   playerName: "Martin",
   alignment: "Neutral Bueno",
@@ -497,6 +509,8 @@ export function coerceBuilderState(value: unknown): BuilderState {
       : [],
     featAbilityChoices: coerceFeatAbilityChoices(candidate.featAbilityChoices, candidate.levelChoices),
     expertiseChoices: coerceExpertiseChoices(candidate.expertiseChoices),
+    // A draft saved before multiclassing existed simply has one class.
+    extraClasses: coerceExtraClasses(candidate.extraClasses),
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
   };
 }
@@ -683,6 +697,49 @@ export function backgroundFeatIdsFor(state: BuilderState): string[] {
   return uniqueEntries(entry?.grantedFeatIds ?? []);
 }
 
+/** One class a character has levels in, as the builder holds it. */
+export type BuilderClass = { classId: string; subclassId: string; level: number };
+
+/**
+ * Every class the character has, first one included.
+ *
+ * The single place the primary-plus-extras split is turned back into a list,
+ * so nothing downstream has to know the state is shaped that way. An entry
+ * with no class or no levels is dropped rather than carried: a half-filled row
+ * in the interface is not a class the character has.
+ */
+export function classesFor(state: BuilderState): BuilderClass[] {
+  return [
+    { classId: state.classId, subclassId: state.subclassId, level: state.level },
+    ...state.extraClasses,
+  ].filter((entry) => entry.classId !== "" && entry.level > 0);
+}
+
+/** The character's level, which is every class's levels added together. */
+export function characterLevelFor(state: BuilderState): number {
+  return classesFor(state).reduce((total, entry) => total + entry.level, 0);
+}
+
+/** Class entries off a draft, dropping anything that is not one. */
+function coerceExtraClasses(value: unknown): BuilderClass[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((raw) => {
+    if (!raw || typeof raw !== "object") return [];
+    const candidate = raw as Partial<BuilderClass>;
+    if (typeof candidate.classId !== "string" || candidate.classId === "") return [];
+
+    const level = Number(candidate.level);
+    return [
+      {
+        classId: candidate.classId,
+        subclassId: typeof candidate.subclassId === "string" ? candidate.subclassId : "",
+        level: Number.isInteger(level) ? Math.min(Math.max(level, 1), 20) : 1,
+      },
+    ];
+  });
+}
+
 /** The key an expertise answer is stored under. */
 export function expertiseKeyOf(grant: { name: string; source: string; level: number }): string {
   return `${grant.name}|${grant.source}|${grant.level}`;
@@ -728,13 +785,18 @@ function isNonEmptyString(value: unknown): value is string {
 export function expertiseEntriesFor(state: BuilderState): ExpertiseEntry[] {
   const written = parseLineList(state.featuresText).map((entry) => entry.trim());
 
-  const grants = expertiseGrantsFor({
-    classId: state.classId,
-    subclassId: state.subclassId,
-    level: state.level,
-    rulesVersion: state.rulesVersion === "5e-2024" ? "2024" : "2014",
-    variantsTaken: written,
-  });
+  // Per class, at that class's own level: a rogue 3 / bard 3 doubles two
+  // proficiencies from the rogue and none from the bard, because the bard's
+  // arrives at bard level 3 and this one is a bard 3 only in total.
+  const grants = classesFor(state).flatMap((entry) =>
+    expertiseGrantsFor({
+      classId: entry.classId,
+      subclassId: entry.subclassId,
+      level: entry.level,
+      rulesVersion: state.rulesVersion === "5e-2024" ? "2024" : "2014",
+      variantsTaken: written,
+    }),
+  );
 
   return grants.map((grant) => ({
     grant,
@@ -784,11 +846,11 @@ export function proficiencyPoolsFor(state: BuilderState): {
  * fighter casts nothing and an eldritch knight casts a third, and the entry
  * carries both so the rules layer does not have to know which is which.
  */
-function classEntryFor(state: BuilderState) {
-  const rulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
-  const classRow = classInfoFor(state.classId, rulesVersion);
-  const subclassRow = state.subclassId
-    ? subclassInfoFor(state.subclassId, state.classId, rulesVersion)
+function classEntryFor(entry: BuilderClass, builderRules: BuilderRulesVersion) {
+  const rulesVersion = builderRules === "5e-2024" ? "2024" : "2014";
+  const classRow = classInfoFor(entry.classId, rulesVersion);
+  const subclassRow = entry.subclassId
+    ? subclassInfoFor(entry.subclassId, entry.classId, rulesVersion)
     : null;
 
   // The subclass wins where it has one: an eldritch knight casts with
@@ -797,9 +859,9 @@ function classEntryFor(state: BuilderState) {
   const ability = isAbility(rawAbility) ? rawAbility : null;
 
   return {
-    classId: state.classId,
-    ...(state.subclassId ? { subclassId: state.subclassId } : {}),
-    level: state.level,
+    classId: entry.classId,
+    ...(entry.subclassId ? { subclassId: entry.subclassId } : {}),
+    level: entry.level,
     ...(isCasterProgression(classRow?.casterProgression)
       ? { casterProgression: classRow.casterProgression }
       : {}),
@@ -901,12 +963,11 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       ...(state.subraceId ? { subraceId: state.subraceId } : {}),
     },
     classing: {
-      // One entry for now — the wizard writes a single class. The numbers the
-      // rules layer needs travel on the entry so a multiclass build does not
+      // The numbers the rules layer needs travel on each entry so it does not
       // have to look them up again, and so the editions stay apart: the 2014
       // paladin and the 2024 paladin advance spellcasting differently and a
       // table keyed by class id cannot say both.
-      classes: [classEntryFor(state)],
+      classes: classesFor(state).map((entry) => classEntryFor(entry, state.rulesVersion)),
     },
     background: {
       backgroundId: state.backgroundId,
@@ -981,13 +1042,17 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
           features: features.map((entry) => normalizeFeatureEntry(entry, state)),
         // Unarmored Defense and natural armour. The rules layer decides which
         // one wins; the build only says which the character has.
-        armorClassOptions: armorClassOptionsFor({
-          classId: state.classId,
-          subclassId: state.subclassId,
-          raceId: state.raceId,
-          rulesVersion: state.rulesVersion === "5e-2024" ? "2024" : "2014",
-          sourceBook: state.sourceBooks[`race:${state.raceId}`],
-        }),
+        armorClassOptions: classesFor(state).flatMap((entry, index) =>
+          armorClassOptionsFor({
+            classId: entry.classId,
+            subclassId: entry.subclassId,
+            // The species' natural armour belongs to the character, not to a
+            // class, so it is asked for once rather than once per class.
+            raceId: index === 0 ? state.raceId : "",
+            rulesVersion: state.rulesVersion === "5e-2024" ? "2024" : "2014",
+            sourceBook: state.sourceBooks[`race:${state.raceId}`],
+          }),
+        ),
       },
     },
     ...(Object.keys(state.sourceBooks).length > 0 ? { sourceBooks: state.sourceBooks } : {}),
