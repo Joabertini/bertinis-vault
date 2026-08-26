@@ -8,6 +8,7 @@ import {
   initialState,
   unmetMulticlassRequirementsFor,
 } from "../src/builder";
+import { multiclassGrantsFor } from "../src/index-options";
 
 const base = { ...initialState, abilityBonuses: {}, levelChoices: {} };
 
@@ -155,5 +156,42 @@ describe("the ability scores a multiclass character needs", () => {
     // Dexterity 14 satisfies the fighter's "Strength or Dexterity", which is
     // the one requirement in the game that is a choice.
     expect(unmetMulticlassRequirementsFor(state)).toEqual([]);
+  });
+});
+
+describe("what the classes past the first hand over", () => {
+  test("a rogue dip is one skill and thieves' tools, not four skills", () => {
+    const grants = multiclassGrantsFor({ classIds: ["rogue"], rulesVersion: "2014" });
+
+    expect(grants.skillChoice?.count).toBe(1);
+    expect(grants.skillChoice?.options.length).toBeGreaterThan(10);
+    expect(grants.tools).toEqual(["Thieves' Tools"]);
+    expect(grants.armor).toEqual(["light"]);
+  });
+
+  test("a build with no second class grants nothing", () => {
+    const grants = multiclassGrantsFor({ classIds: [], rulesVersion: "2014" });
+
+    expect(grants).toEqual({ armor: [], weapons: [], skillChoice: null, tools: [], toolChoice: null });
+  });
+
+  test("two extra classes add their skills together and their armour once", () => {
+    // Two classes that both grant light armour grant it once; two classes that
+    // each offer a skill offer two.
+    const grants = multiclassGrantsFor({ classIds: ["rogue", "bard"], rulesVersion: "2014" });
+
+    expect(grants.armor).toEqual(["light"]);
+    expect(grants.skillChoice?.count).toBe(2);
+    expect(grants.toolChoice).toBe("musical instrument");
+  });
+
+  test("a class with no multiclass block contributes nothing rather than throwing", () => {
+    const grants = multiclassGrantsFor({ classIds: ["wizard", "fighter"], rulesVersion: "2014" });
+
+    expect(grants.weapons).toEqual(["simple", "martial"]);
+    // No heavy armour: the fighter's multiclass list stops at medium and
+    // shields, which is exactly the difference from its starting list.
+    expect(grants.armor).toEqual(["light", "medium", "shield"]);
+    expect(grants.skillChoice).toBeNull();
   });
 });

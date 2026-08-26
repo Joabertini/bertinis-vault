@@ -22,12 +22,12 @@
   "background": {
     "count": 161,
     "bytes": 27923,
-    "gzip": 3385
+    "gzip": 3383
   },
   "class": {
     "count": 31,
-    "bytes": 17068,
-    "gzip": 1654
+    "bytes": 21005,
+    "gzip": 1906
   },
   "subclass": {
     "count": 203,
