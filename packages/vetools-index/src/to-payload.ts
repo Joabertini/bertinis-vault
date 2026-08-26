@@ -176,6 +176,7 @@ function partitionProficiencies(
     tools: [],
     savingThrows: [],
     expertise: [],
+    toolExpertise: [],
   };
 
   for (const entry of entries) {
@@ -188,7 +189,14 @@ function partitionProficiencies(
       // proficiency, not a reference.
       const skillId = skillIdFor(value);
       if (skillId) result.skills.push(skillId);
-    } else if (entry.kind === "language") result.languages.push(value);
+    } else if (entry.kind === "expertise") {
+      // Same keying rule as a plain skill proficiency, and the same reason to
+      // drop rather than guess: `system.skills.Arcana.value = 2` writes to a
+      // path that does not exist and reports nothing.
+      const skillId = skillIdFor(value);
+      if (skillId) result.expertise.push(skillId);
+    } else if (entry.kind === "toolExpertise") result.toolExpertise.push(value);
+    else if (entry.kind === "language") result.languages.push(value);
     else if (entry.kind === "tool") result.tools.push(value);
     // A saving throw travels as the ability id, which is what the payload
     // schema and the module both expect.

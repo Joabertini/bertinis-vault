@@ -81,6 +81,16 @@ export const proficiencyChoicesSchema = z.object({
   tools: z.array(z.string()).default([]),
   savingThrows: z.array(abilityIdSchema).default([]),
   expertise: z.array(z.string()).default([]),
+  /**
+   * Tools whose proficiency is doubled.
+   *
+   * Separate from `expertise` because the actor keys them separately —
+   * `system.tools` rather than `system.skills`. Nothing writes these yet, for
+   * the same reason nothing writes `tools`: the identifiers `dnd5e` uses for
+   * tools are not the names, and mapping them is its own piece of work. The
+   * choice travels rather than being dropped at the builder.
+   */
+  toolExpertise: z.array(z.string()).default([]),
 });
 
 /**

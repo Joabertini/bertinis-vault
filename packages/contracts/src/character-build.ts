@@ -86,6 +86,12 @@ export const normalizedProficiencyKindSchema = z.enum([
   "language",
   "tool",
   "savingThrow",
+  // A doubled proficiency, not a second one. It travels beside the
+  // proficiency it doubles rather than replacing it, because the sheet needs
+  // both: a skill written only as expertise is a skill the character is not
+  // recorded as proficient in.
+  "expertise",
+  "toolExpertise",
   "weapon",
   "armor",
   "other",

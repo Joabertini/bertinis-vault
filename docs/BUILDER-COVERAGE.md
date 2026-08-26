@@ -153,6 +153,8 @@ carries the mark.
 | Thing | State |
 | --- | --- |
 | Skills, languages, saving throws | done |
+| Expertise | done — the grants come off 5etools' Foundry companion data, the choice is asked, and skills reach the actor doubled. Tool expertise travels in the payload and lands nowhere, for the same reason tools do not |
+| **Artificer's Tool Expertise** | missing, and not in the data — it doubles *every* tool at once rather than a chosen one, so there is nothing for the companion file to record. Needs the tools to land first |
 | **Tools** | half done — they reach the payload correctly and the module never writes them. `TOOL_ALIAS_TO_ID` in `domain` has six ids right; gaming sets, instruments and artisan's tools are generic placeholders rather than the per-item ids `dnd5e` uses |
 | Armour and weapons | arrive with the class document |
 
@@ -187,8 +189,10 @@ and deity are not. Cosmetic, and last.
 1. ~~**Level choices (`optionalfeature`)**~~ — modelled end to end. The picker
    is the remaining half, and it belongs with the interface work.
 2. ~~**The half-feat `+1`**~~ — done, picker included.
-3. **Expertise** — the field already exists, the rule is simple, and two whole
-   classes depend on it.
+3. ~~**Expertise**~~ — done, picker included. The grants are read from
+   5etools' Foundry companion file rather than a hand-written table, so the
+   editions differ where the books differ and Tasha's optional ranger feature
+   stays optional.
 4. **Tools that land**, with `dnd5e`'s real ids.
 5. **Unarmored Defense** — written, never called. Answers wrong rather than not
    at all, which puts it ahead of anything merely absent.

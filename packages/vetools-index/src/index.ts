@@ -112,6 +112,14 @@ export type FeatRow = IndexRow & {
    * twice.
    */
   isAbilityScoreImprovement: 0 | 1;
+  /**
+   * Proficiencies this feat doubles. Empty for all but seven.
+   *
+   * Skill Expert is the one worth naming: it grants a skill proficiency and
+   * expertise in a skill you are proficient in, and the skill it just granted
+   * counts, so the two halves are read in order.
+   */
+  expertise: ExpertiseSet[];
 };
 
 /** One feat a background offers, already scoped to the book it comes from. */
@@ -199,6 +207,46 @@ export type OptionalFeatureProgression = {
   countByLevel: number[];
 };
 
+/**
+ * One way of taking an expertise grant.
+ *
+ * A grant offers a list of these as *alternatives*: the 2014 rogue's is "two
+ * skills" or "one skill and thieves' tools", and the wizard's Scholar is six
+ * sets of one fixed skill, which is how the data says "pick one of six".
+ *
+ * `anySkill` and `anyTool` draw from what the character is *already*
+ * proficient in — expertise doubles a proficiency, it does not grant one — so
+ * the pool cannot be listed here and depends on the build.
+ */
+export type ExpertiseSet = {
+  /** How many already-proficient skills this set lets you double. */
+  anySkill: number;
+  /** How many already-proficient tools this set lets you double. */
+  anyTool: number;
+  /** Skills this set doubles outright, by canonical name. */
+  skills: string[];
+  /** Tools this set doubles outright, by name. */
+  tools: string[];
+};
+
+/** An expertise grant, and the feature that hands it out. */
+export type ExpertiseGrant = {
+  name: string;
+  source: string;
+  level: number;
+  /**
+   * Whether the feature is an optional replacement rather than a given.
+   *
+   * Deft Explorer is Tasha's replacement for the 2014 ranger's Natural
+   * Explorer. A ranger who did not take the option does not get its expertise,
+   * so a builder that applied every grant would hand out a doubled skill the
+   * character never chose.
+   */
+  isVariant: boolean;
+  /** The alternatives on offer. One set with no `any` is not a choice at all. */
+  sets: ExpertiseSet[];
+};
+
 /** A prerequisite that can be checked against a build rather than read. */
 export type OptionalFeaturePrerequisite =
   | { kind: "level"; level: number; className: string | null; classSource: string | null }
@@ -250,6 +298,14 @@ export type ClassRow = IndexRow & {
   skillChoice: SkillChoice | null;
   /** The choices this class makes the player answer as it levels. */
   optionalFeatureProgression: OptionalFeatureProgression[];
+  /**
+   * The expertise this class grants, by level.
+   *
+   * Read from 5etools' Foundry companion data rather than the class text,
+   * where it is only prose. Empty for every class but the bard, the rogue, the
+   * ranger, the 2024 wizard and Tasha's expert sidekick.
+   */
+  expertise: ExpertiseGrant[];
 };
 
 export type SubclassRow = IndexRow & {
@@ -258,6 +314,8 @@ export type SubclassRow = IndexRow & {
   classSource: string | null;
   /** Choices the subclass grants on top of its class's. */
   optionalFeatureProgression: OptionalFeatureProgression[];
+  /** Expertise the subclass grants on top of its class's. */
+  expertise: ExpertiseGrant[];
 };
 
 /** The props this index covers, and the row type each yields. */

@@ -39,11 +39,16 @@ import {
   initialState,
   isCharacterNameMissing,
   pendingFeatAbilitiesFor,
+  expertiseEntriesFor,
+  expertiseKeyOf,
+  pendingExpertiseFor,
+  proficiencyPoolsFor,
   removeLine,
   type StatMethod,
 } from "./builder";
 import { fallbackBuilderOptions, type BuilderOptionsPayload } from "./builder-options";
 import { FeatAbilityPicker } from "./components/FeatAbilityPicker";
+import { ExpertisePicker } from "./components/ExpertisePicker";
 import { IndexPicker } from "./components/IndexPicker";
 import {
   featAbilityGrantsFor,
@@ -266,6 +271,9 @@ export function App() {
   // Half-feats whose +1 has not been placed. Losing it silently is the whole
   // reason any of this exists.
   const pendingFeatAbilities = pendingFeatAbilitiesFor(state);
+  const expertiseEntries = expertiseEntriesFor(state);
+  const pendingExpertise = pendingExpertiseFor(state);
+  const proficiencyPools = proficiencyPoolsFor(state);
   const pendingImprovementLevels = unansweredImprovementLevels(
     levelling,
     state.level,
@@ -1268,6 +1276,36 @@ export function App() {
                 );})}
               </div>
             </div>
+            {expertiseEntries.length > 0 ? (
+              <div className="field">
+                <label>Expertise</label>
+                <div className="feat-info">
+                  Dobla el bono de competencia. Solo ofrece lo que ya sos competente, porque eso es
+                  lo que dobla.
+                </div>
+                {expertiseEntries.map((entry, index) => (
+                  <ExpertisePicker
+                    alreadyExpert={expertiseEntries
+                      .slice(0, index)
+                      .flatMap((earlier) => [
+                        ...(earlier.answer?.skills ?? []),
+                        ...(earlier.answer?.tools ?? []),
+                      ])}
+                    answer={entry.answer ?? null}
+                    grant={entry.grant}
+                    key={expertiseKeyOf(entry.grant)}
+                    onChange={(answer) =>
+                      updateField("expertiseChoices", {
+                        ...state.expertiseChoices,
+                        [expertiseKeyOf(entry.grant)]: answer,
+                      })
+                    }
+                    proficientSkills={proficiencyPools.proficientSkills}
+                    proficientTools={proficiencyPools.proficientTools}
+                  />
+                ))}
+              </div>
+            ) : null}
             <div className="field"><label>Idiomas resultantes</label>
               <div className="options-grid">
                 {languageChoices.map((entry) => (
@@ -1432,6 +1470,12 @@ export function App() {
               <br />
               Spells: {[...selectedCantrips, ...selectedSpells].join(", ") || "Ninguno"}
             </div>
+            {pendingExpertise.length > 0 ? (
+              <div className="field-warning">
+                Expertise sin resolver, asi que el bono no se dobla:{" "}
+                {pendingExpertise.map((entry) => entry.grant.name).join(", ")}.
+              </div>
+            ) : null}
             {pendingFeatAbilities.length > 0 ? (
               <div className="field-warning">
                 Estas dotes suben un atributo y todavia no elegiste cual, asi que ese punto se

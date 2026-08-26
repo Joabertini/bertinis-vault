@@ -450,6 +450,130 @@ function optionalFeatureProgressionOf(entity) {
 }
 
 /**
+ * The expertise a feature grants, as the alternative sets it offers.
+ *
+ * A grant is a list of *alternatives*, not a list of grants. The 2014 rogue's
+ * `[{anyProficientSkill: 2}, {anyProficientSkill: 1, "thieves' tools": true}]`
+ * is "two skills, or one skill and thieves' tools"; reading it as two grants
+ * would hand out three expertises. The wizard's Scholar is six sets of one
+ * fixed skill each, which is the same shape saying "pick one of six". A single
+ * set with nothing to choose — the scout's `{nature, survival}` — is not a
+ * question at all, and the builder should apply it rather than ask.
+ *
+ * A key whose value is not `true` is a shape this does not model, and the
+ * build stops rather than dropping it. `choose` is the one 5etools has a slot
+ * for and does not currently use anywhere in expertise; if it appears, the
+ * expertise would silently go missing, which is the failure this project keeps
+ * finding and the reason for the throw.
+ */
+function expertiseSetOf(raw, where) {
+  const set = { anySkill: 0, anyTool: 0, skills: [], tools: [] };
+
+  for (const [key, value] of Object.entries(raw)) {
+    if (key === "anyProficientSkill") {
+      set.anySkill += Number(value) || 1;
+      continue;
+    }
+    if (key === "anyProficientTool") {
+      set.anyTool += Number(value) || 1;
+      continue;
+    }
+    if (value !== true) {
+      throw new Error(
+        `${where}: expertise names "${key}" as ${JSON.stringify(value)}, a shape this does not model`,
+      );
+    }
+
+    // Anything that is not one of the eighteen skills is a tool. That is the
+    // same reading Plutonium's own picker makes, and the data gives no other
+    // marker to go by.
+    if (SKILL_NAMES[key.toLowerCase()]) set.skills.push(skillNameOf(key));
+    else set.tools.push(titleCase(key));
+  }
+
+  return set;
+}
+
+function expertiseSetsOf(sets, where) {
+  return sets.map((raw) => expertiseSetOf(raw, where));
+}
+
+const classFeatureKey = (f) => [f.name, f.source, f.className, f.classSource, f.level].join("|");
+
+const subclassFeatureKey = (f) =>
+  [f.name, f.source, f.className, f.classSource, f.subclassShortName, f.subclassSource, f.level].join("|");
+
+/**
+ * Which features grant expertise, read out of `class/foundry.json`.
+ *
+ * Expertise is not structured anywhere in the class text — the rogue's is two
+ * sentences of prose. It is structured in the companion file 5etools maintains
+ * for the Foundry integration, which is otherwise skipped here because it
+ * repeats entities. The alternative would be a hand-written table of who
+ * doubles what and when, which is the thing this index exists to avoid.
+ *
+ * The join runs through the real feature rather than straight off the
+ * companion file, because only the real feature says whether it is a variant.
+ * Deft Explorer is a Tasha's *replacement* for Natural Explorer: attaching its
+ * expertise unconditionally would hand every 2014 ranger a doubled skill it
+ * never took.
+ */
+function readExpertise(dataDir) {
+  const companion = path.join(dataDir, "class", "foundry.json");
+  const parsed = fs.existsSync(companion) ? JSON.parse(fs.readFileSync(companion, "utf8")) : {};
+
+  const byClassFeature = new Map((parsed.classFeature ?? []).map((r) => [classFeatureKey(r), r]));
+  const bySubclassFeature = new Map(
+    (parsed.subclassFeature ?? []).map((r) => [subclassFeatureKey(r), r]),
+  );
+
+  const collect = (features, companionByKey, keyOf, groupOf) => {
+    const grouped = new Map();
+    const seen = new Set();
+
+    for (const feature of features) {
+      const key = keyOf(feature);
+      if (seen.has(key)) continue;
+
+      const sets = companionByKey.get(key)?.entryData?.expertise;
+      if (!sets?.length) continue;
+      seen.add(key);
+
+      const where = `${feature.className} ${feature.name} (${feature.source}) level ${feature.level}`;
+      const entry = {
+        name: feature.name,
+        source: feature.source,
+        level: feature.level,
+        isVariant: feature.isClassFeatureVariant === true || feature.isSubclassFeatureVariant === true,
+        sets: expertiseSetsOf(sets, where),
+      };
+
+      const group = groupOf(feature);
+      if (!grouped.has(group)) grouped.set(group, []);
+      grouped.get(group).push(entry);
+    }
+
+    for (const entries of grouped.values()) entries.sort((a, b) => a.level - b.level);
+    return grouped;
+  };
+
+  return {
+    forClass: collect(
+      readCollection(dataDir, "class", "classFeature"),
+      byClassFeature,
+      classFeatureKey,
+      (f) => `${f.className}|${f.classSource}`,
+    ),
+    forSubclass: collect(
+      readCollection(dataDir, "class", "subclassFeature"),
+      bySubclassFeature,
+      subclassFeatureKey,
+      (f) => `${f.className}|${f.classSource}|${f.subclassShortName}|${f.subclassSource}`,
+    ),
+  };
+}
+
+/**
  * An optional feature's prerequisites, split by whether they can be checked.
  *
  * Four of the six kinds 5etools uses are machine-checkable and are kept as
@@ -531,6 +655,10 @@ const BUILDERS = {
       name: f.name,
       source: sourceOf(f),
       ability: featAbilityOf(f),
+      // Seven feats double a proficiency. Skill Expert is the one that makes
+      // the shape matter: it grants a skill *and* expertise in a skill you are
+      // proficient in, which can be the one it just granted.
+      expertise: expertiseSetsOf(f.expertise ?? [], `${f.name} (${sourceOf(f)})`),
       isAbilityScoreImprovement: isAbilityScoreImprovementFeat(f) ? 1 : 0,
     })),
 
@@ -567,7 +695,7 @@ const BUILDERS = {
       };
     }),
 
-  class: (entities) =>
+  class: (entities, context) =>
     entities.map((c) => {
       const levels = levelsOf(c);
       return {
@@ -582,10 +710,11 @@ const BUILDERS = {
         subclassLevel: levels.subclassLevel,
         skillChoice: skillChoiceOf(c),
         optionalFeatureProgression: optionalFeatureProgressionOf(c),
+        expertise: context.expertise.forClass.get(`${c.name}|${sourceOf(c)}`) ?? [],
       };
     }),
 
-  subclass: (entities) =>
+  subclass: (entities, context) =>
     entities.map((c) => ({
       name: c.name,
       source: sourceOf(c),
@@ -595,6 +724,10 @@ const BUILDERS = {
       // A subclass grants its own choices on top of the class's: the battle
       // master's maneuvers, the arcane archer's shots, the rune knight's runes.
       optionalFeatureProgression: optionalFeatureProgressionOf(c),
+      expertise:
+        context.expertise.forSubclass.get(
+          `${c.className}|${c.classSource}|${c.shortName}|${sourceOf(c)}`,
+        ) ?? [],
     })),
 
   optionalfeature: (entities) =>
@@ -635,7 +768,7 @@ function main() {
     optionalfeature: readFileCollection(dataDir, "optionalfeatures.json", "optionalfeature"),
   };
 
-  const context = { spellClasses: readSpellClasses(dataDir) };
+  const context = { spellClasses: readSpellClasses(dataDir), expertise: readExpertise(dataDir) };
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
 
