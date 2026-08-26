@@ -36,6 +36,8 @@ import {
   type StartingEquipmentList,
   type OriginAbilityOption,
   type MasteryClassEntry,
+  cantripsKnownAt,
+  spellsAvailableAt,
 } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 import type { AbilityId, ArmorClassOption as BuildArmorClassOption } from "@bertinis-vault/contracts";
@@ -431,6 +433,32 @@ export function masteryWeaponOptions({
  */
 function isMeleeWeapon(row: ItemRow): boolean {
   return String(row.type ?? "").split("|")[0] === "M";
+}
+
+/**
+ * How many cantrips and spells a class has at a level, from its own table.
+ *
+ * Returns null when the index has no row for the class, so a caller can fall
+ * back rather than treat a missing row as "this caster knows nothing".
+ */
+export function spellCountsFor({
+  classId,
+  level,
+  rulesVersion,
+  abilityModifier,
+}: {
+  classId: string;
+  level: number;
+  rulesVersion: RulesVersion;
+  abilityModifier: number;
+}): { cantrips: number; spells: number } | null {
+  const row = classInfoFor(classId, rulesVersion);
+  if (!row) return null;
+
+  return {
+    cantrips: cantripsKnownAt(row, level),
+    spells: spellsAvailableAt(row, level, abilityModifier),
+  };
 }
 
 /** The skills a class picks from at level 1, if it offers a choice. */
