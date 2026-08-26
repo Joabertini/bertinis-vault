@@ -366,10 +366,84 @@ function abilityChoiceOf(entity) {
   });
 }
 
-/** Mastery properties, 2024's weapon system. Stored as bare names. */
+/**
+ * Mastery properties, 2024's weapon system. Stored as bare names.
+ *
+ * Nearly every entry is the string "Topple|XPHB". One is not: the Psychic
+ * Blade carries an object with a note saying its Vex does not count against
+ * the number of properties a character may use. `String(entry)` turned that
+ * one into the literal text "[object Object]", which shipped in the index —
+ * a name no weapon has, on the only weapon whose rule differs.
+ *
+ * The note is a rule rather than prose, so it is kept as one: a property that
+ * costs no slot is listed separately instead of being described.
+ */
 function masteryOf(item) {
   if (!item.mastery?.length) return null;
-  return item.mastery.map((entry) => String(entry).split("|")[0]);
+
+  const names = [];
+  const free = [];
+
+  for (const entry of item.mastery) {
+    if (typeof entry === "string") {
+      names.push(entry.split("|")[0]);
+      continue;
+    }
+    if (!entry.uid) throw new Error(`unmodelled mastery entry: ${JSON.stringify(entry)}`);
+
+    const name = String(entry.uid).split("|")[0];
+    names.push(name);
+    if (/does\s*n[o']?t count against/i.test(entry.note ?? "")) free.push(name);
+  }
+
+  return { names, free };
+}
+
+/**
+ * How many mastery properties a class lets a character use, by level.
+ *
+ * Five 2024 classes grant the feature and they state the number two different
+ * ways. The fighter and the barbarian put it in a column of their own level
+ * table, because it grows; the paladin, the ranger and the rogue say "two
+ * kinds" in the feature text and never change it. Reading only the table would
+ * lose three classes, and reading only the prose would freeze the fighter at
+ * three when the rules take them to six.
+ *
+ * The barbarian's is also narrower — Simple or Martial *Melee* — which is in
+ * the filter tag rather than in a field.
+ */
+const NUMBER_WORDS = { one: 1, two: 2, three: 3, four: 4, five: 5, six: 6 };
+
+function weaponMasteryOf(entity, features) {
+  const feature = features.find(
+    (row) =>
+      row.name === "Weapon Mastery" &&
+      row.className === entity.name &&
+      row.classSource === sourceOf(entity),
+  );
+  if (!feature) return null;
+
+  const text = JSON.stringify(feature.entries ?? []);
+  const countByLevel = masteryCountsFromTable(entity);
+
+  if (!countByLevel) {
+    const match = /of\s+(one|two|three|four|five|six)\s+kinds/i.exec(stripTags(text));
+    if (!match) throw new Error(`no mastery count for ${entity.name}`);
+    const flat = NUMBER_WORDS[match[1].toLowerCase()];
+    return { countByLevel: Array(MAX_LEVEL).fill(flat), meleeOnly: /melee weapon/i.test(text) };
+  }
+
+  return { countByLevel, meleeOnly: /melee weapon/i.test(text) };
+}
+
+/** The Weapon Mastery column of a class's own level table, if it has one. */
+function masteryCountsFromTable(entity) {
+  for (const group of entity.classTableGroups ?? []) {
+    const column = (group.colLabels ?? []).findIndex((label) => /weapon mastery/i.test(label));
+    if (column < 0) continue;
+    return (group.rows ?? []).map((row) => Number(row[column]));
+  }
+  return null;
 }
 
 /** A character never exceeds this, and every progression is stated to it. */
@@ -1151,7 +1225,10 @@ const BUILDERS = {
       damageType: i.dmgType ?? null,
       versatileDamage: i.dmg2 ?? null,
       properties: (i.property ?? []).map((entry) => String(entry).split("|")[0]),
-      mastery: masteryOf(i),
+      mastery: masteryOf(i)?.names ?? null,
+      // The one property that costs no slot. Only the Psychic Blade has one,
+      // and it is a rule rather than a footnote.
+      masteryFree: masteryOf(i)?.free.length ? masteryOf(i).free : null,
       ac: i.ac ?? null,
       strength: i.strength ?? null,
       stealthDisadvantage: i.stealth ? 1 : 0,
@@ -1234,6 +1311,9 @@ const BUILDERS = {
         // The A-or-B list, structured. The prose form says the same thing and
         // cannot be offered as a choice.
         startingEquipment: startingEquipmentOf(c),
+        // 2024's weapon mastery. Null for every 2014 class, and for the 2024
+        // classes that never learn it.
+        weaponMastery: weaponMasteryOf(c, context.classFeatures),
       };
     }),
 
@@ -1302,6 +1382,9 @@ function main() {
   };
 
   const context = {
+    // The Weapon Mastery feature lives in the feature list, not on the class,
+    // and three of the five classes state their count only in its text.
+    classFeatures: readCollection(dataDir, "class", "classFeature"),
     spellClasses: readSpellClasses(dataDir),
     expertise: readExpertise(dataDir),
     armorClasses: readArmorClasses(dataDir),

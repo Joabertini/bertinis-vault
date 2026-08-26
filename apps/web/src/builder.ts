@@ -33,6 +33,11 @@ import {
   unansweredExpertise,
   originAbilityBonuses,
   unansweredOriginAbilities,
+  masteryIsMeleeOnly,
+  masteryProblems,
+  weaponMasterySlots,
+  type MasteryClassEntry,
+  type MasteryProblem,
   type OriginAbilityAnswer,
   type OriginAbilityOption,
   averageStartingGold,
@@ -52,6 +57,8 @@ import {
   armorClassOptionsFor,
   startingEquipmentListsFor,
   originAbilityChoiceFor,
+  masteryWeaponOptions,
+  weaponMasteryEntriesFor,
   classInfoFor,
   expertiseGrantsFor,
   featAbilityGrantsFor,
@@ -132,6 +139,13 @@ export type BuilderState = {
    * the species bonus, which most species leave to the player.
    */
   originAbilityChoice: OriginAbilityAnswer | null;
+  /**
+   * The weapons whose mastery properties this character may use.
+   *
+   * Empty in 2014, where the rule does not exist. The list is the player's;
+   * how long it may be is the class's.
+   */
+  weaponMasteryIds: string[];
   proficienciesText: string;
   languagesText: string;
   cantripsText: string;
@@ -458,6 +472,7 @@ export const initialState: BuilderState = {
   equipmentChoices: {},
   takeStartingGold: false,
   originAbilityChoice: null,
+  weaponMasteryIds: [],
   proficienciesText: "Arcana\nInvestigation\nThieves' Tools",
   languagesText: "Common\nElvish\nDraconic",
   cantripsText: "Mage Hand\nPrestidigitation",
@@ -551,6 +566,8 @@ export function coerceBuilderState(value: unknown): BuilderState {
     takeStartingGold: candidate.takeStartingGold === true,
     // A draft saved before 2024's origin increase existed simply has none.
     originAbilityChoice: coerceOriginAbilityChoice(candidate.originAbilityChoice),
+    // A draft saved before weapon mastery was read simply has no picks.
+    weaponMasteryIds: coerceWeaponMasteryIds(candidate.weaponMasteryIds),
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
   };
 }
@@ -888,6 +905,62 @@ function coerceOriginAbilityChoice(value: unknown): OriginAbilityAnswer | null {
       ? candidate.abilities.filter((entry): entry is string => typeof entry === "string")
       : [],
   };
+}
+
+/**
+ * How many kinds of weapon this character may use mastery properties of.
+ *
+ * Zero in 2014, and zero for a 2024 character whose classes never learn the
+ * feature. Each class reads its own table at its own level: a fighter 3 /
+ * rogue 2 reads the fighter's at 3, not at 5.
+ */
+export function weaponMasterySlotsFor(state: BuilderState): number {
+  return weaponMasterySlots(masteryEntriesFor(state));
+}
+
+/** True when every class granting mastery restricts it to melee weapons. */
+export function masteryIsMeleeOnlyFor(state: BuilderState): boolean {
+  return masteryIsMeleeOnly(masteryEntriesFor(state));
+}
+
+/** The weapons this character could master, with the property each brings. */
+export function masteryOptionsFor(state: BuilderState) {
+  if (weaponMasterySlotsFor(state) === 0) return [];
+
+  return masteryWeaponOptions({
+    rulesVersion: state.rulesVersion === "5e-2024" ? "2024" : "2014",
+    meleeOnly: masteryIsMeleeOnlyFor(state),
+  });
+}
+
+/** What is wrong with the picks, reported rather than corrected. */
+export function masteryProblemsFor(state: BuilderState): MasteryProblem[] {
+  const options = masteryOptionsFor(state);
+
+  return masteryProblems(
+    state.weaponMasteryIds.map((itemId) => {
+      const option = options.find((candidate) => candidate.id === itemId);
+      return {
+        itemId,
+        property: option?.property ?? null,
+        ...(option?.free ? { free: true } : {}),
+      };
+    }),
+    weaponMasterySlotsFor(state),
+  );
+}
+
+function masteryEntriesFor(state: BuilderState): MasteryClassEntry[] {
+  return weaponMasteryEntriesFor({
+    classes: classesFor(state),
+    rulesVersion: state.rulesVersion === "5e-2024" ? "2024" : "2014",
+  });
+}
+
+/** Mastery picks off a draft, dropping anything that is not one. */
+function coerceWeaponMasteryIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry): entry is string => typeof entry === "string" && entry !== "");
 }
 
 /** The key an expertise answer is stored under. */

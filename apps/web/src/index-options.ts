@@ -35,6 +35,7 @@ import {
   type LevellingClass,
   type StartingEquipmentList,
   type OriginAbilityOption,
+  type MasteryClassEntry,
 } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 import type { AbilityId, ArmorClassOption as BuildArmorClassOption } from "@bertinis-vault/contracts";
@@ -370,6 +371,66 @@ export function originAbilityChoiceFor(
   sourceBook?: string,
 ): OriginAbilityOption[] | null {
   return backgroundRowFor(backgroundId, rulesVersion, sourceBook)?.abilityChoice ?? null;
+}
+
+/**
+ * What each class contributes to a character's weapon mastery.
+ *
+ * One entry per class, because the count is read per class level: a fighter 3
+ * / rogue 2 reads the fighter's table at 3, not at 5.
+ */
+export function weaponMasteryEntriesFor({
+  classes,
+  rulesVersion,
+}: {
+  classes: { classId: string; level: number }[];
+  rulesVersion: RulesVersion;
+}): MasteryClassEntry[] {
+  return classes.map((entry) => ({
+    classId: entry.classId,
+    level: entry.level,
+    mastery: classInfoFor(entry.classId, rulesVersion)?.weaponMastery ?? null,
+  }));
+}
+
+/**
+ * The weapons a character could master, with the property each would bring.
+ *
+ * A weapon with no mastery property is left out rather than offered and then
+ * refused: in 2014 that is every weapon in the game, and an empty list is the
+ * honest way to say the rule does not apply.
+ */
+export function masteryWeaponOptions({
+  rulesVersion,
+  meleeOnly,
+}: {
+  rulesVersion: RulesVersion;
+  meleeOnly: boolean;
+}): { id: string; label: string; property: string; free: boolean; melee: boolean }[] {
+  const legal = forRulesVersion(collections.item ?? [], rulesVersion) as ItemRow[];
+
+  return legal
+    .filter((row) => row.mastery?.length)
+    .filter((row) => !meleeOnly || isMeleeWeapon(row))
+    .map((row) => ({
+      id: slugOf(row.name),
+      label: row.name,
+      property: row.mastery?.[0] ?? "",
+      free: Boolean(row.masteryFree?.length),
+      melee: isMeleeWeapon(row),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+/**
+ * Melee or not, which the barbarian's restriction turns on.
+ *
+ * The item type says it — "M" for melee, "R" for ranged — and the properties
+ * do not: the antimatter rifle has no Ammunition property and is plainly not
+ * a melee weapon, while a thrown dagger has Thrown and plainly is one.
+ */
+function isMeleeWeapon(row: ItemRow): boolean {
+  return String(row.type ?? "").split("|")[0] === "M";
 }
 
 /** The skills a class picks from at level 1, if it offers a choice. */

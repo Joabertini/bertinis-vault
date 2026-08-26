@@ -45,6 +45,10 @@ import {
   proficiencyPoolsFor,
   characterLevelFor,
   unmetMulticlassRequirementsFor,
+  masteryOptionsFor,
+  masteryProblemsFor,
+  weaponMasterySlotsFor,
+  masteryIsMeleeOnlyFor,
   equipmentListsFor,
   startingEquipmentFor,
   originAbilityChoiceForBuild,
@@ -483,6 +487,11 @@ export function App() {
   // background. Null in 2014, where the question is not asked at all.
   const originAbilityChoice = useMemo(() => originAbilityChoiceForBuild(state), [state]);
   const pendingOriginAbilities = useMemo(() => pendingOriginAbilitiesFor(state), [state]);
+  // 2024's weapon mastery. Empty in 2014, where the rule does not exist.
+  const masterySlots = useMemo(() => weaponMasterySlotsFor(state), [state]);
+  const masteryOptions = useMemo(() => masteryOptionsFor(state), [state]);
+  const masteryIssues = useMemo(() => masteryProblemsFor(state), [state]);
+  const masteryMeleeOnly = useMemo(() => masteryIsMeleeOnlyFor(state), [state]);
   const equipmentLists = useMemo(() => equipmentListsFor(state), [state]);
   const resolvedEquipment = useMemo(() => startingEquipmentFor(state), [state]);
 
@@ -1485,6 +1494,51 @@ export function App() {
                 <b>CA base</b>: {armorInfo.ac ?? "Sin dato"}
                 {armorInfo.strength ? <> | <b>Fuerza minima</b>: {armorInfo.strength}</> : null}
                 {armorInfo.stealthDisadvantage ? " | Desventaja en Sigilo" : ""}
+              </div>
+            ) : null}
+            {masterySlots > 0 ? (
+              <div className="field">
+                <label>
+                  Maestria de armas ({state.weaponMasteryIds.length} / {masterySlots})
+                </label>
+                <div className="feat-info">
+                  Se elige <strong>{masterySlots}</strong>{" "}
+                  {masterySlots === 1 ? "arma" : "armas"}
+                  {masteryMeleeOnly ? " cuerpo a cuerpo" : ""}. El numero lo pone la clase; las
+                  armas las pone el jugador. Cambia en cada descanso largo.
+                </div>
+                <div className="options-grid">
+                  {masteryOptions.map((option) => (
+                    <label
+                      className={`opt${state.weaponMasteryIds.includes(option.id) ? " selected" : ""}`}
+                      key={option.id}
+                    >
+                      <input
+                        checked={state.weaponMasteryIds.includes(option.id)}
+                        onChange={() =>
+                          setState((current) => ({
+                            ...current,
+                            weaponMasteryIds: current.weaponMasteryIds.includes(option.id)
+                              ? current.weaponMasteryIds.filter((entry) => entry !== option.id)
+                              : [...current.weaponMasteryIds, option.id],
+                          }))
+                        }
+                        type="checkbox"
+                      />
+                      {option.label} &mdash; {option.property}
+                      {option.free ? " (no ocupa lugar)" : ""}
+                    </label>
+                  ))}
+                </div>
+                {masteryIssues.map((issue) => (
+                  <div className="feat-info" key={`${issue.kind}-${"itemId" in issue ? issue.itemId : ""}`}>
+                    {issue.kind === "over-limit"
+                      ? `Elegidas ${issue.picked} de ${issue.allowed} permitidas.`
+                      : issue.kind === "no-property"
+                        ? `"${issue.itemId}" no tiene propiedad de maestria.`
+                        : `"${issue.itemId}" esta elegida dos veces.`}
+                  </div>
+                ))}
               </div>
             ) : null}
             <StartingEquipmentPicker
