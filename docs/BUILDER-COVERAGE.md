@@ -150,9 +150,11 @@ carries the mark.
 | Thing | State |
 | --- | --- |
 | One class, its level, its subclass | done |
-| **Multiclassing** | missing — `classing.classes` has been an array from the start and the interface writes a single entry. Needs per-class levels, the multiclass slot table (which is not the single-class one), and the rule that only the first class grants saving throws and starting equipment |
+| **Multiclassing** — the rules | done. One combined caster level from each class's own fraction, pact slots kept apart, and hit points from the die of the class each level was taken in. The contribution is not the class's own table: a ranger 5 reads its own table at 3 and contributes 2 |
+| **Multiclassing** — the interface | missing. `classing.classes` has been an array from the start and the wizard writes a single entry, so a multiclass build is reachable through the payload and not through the builder |
+| **Multiclassing** — what a second class grants | missing. 5etools carries `multiclassing.requirements` and `multiclassing.proficienciesGained` per class, and neither is read. A second class grants a reduced proficiency set, not its full starting one |
 | Class skill choices | done — read from the index rather than a hand-written table |
-| **Expertise** | missing — the payload field exists and nothing fills it. Rogues and bards double proficiency at level 1 and again later |
+| Expertise | done — see Proficiencies |
 
 ## 6. Proficiencies
 
@@ -206,7 +208,10 @@ and deity are not. Cosmetic, and last.
    species' natural armour. Parsed out of the feature text, because for the
    barbarian, the monk and the 2024 dancing bard there is nowhere else to read
    it from.
-6. **Multiclassing** — the largest, and the one that reshapes the wizard.
+6. **Multiclassing** — the rules are done: the combined caster level, the
+   pact slots kept apart, and hit points per class. What is left is the
+   interface (a second class entry) and what a second class actually grants,
+   both of which 5etools already carries as data.
 7. **Equipment as choices**, with the gold alternative.
 8. **The 2024 rules**, properly.
 9. **Prerequisites and legality checking.**

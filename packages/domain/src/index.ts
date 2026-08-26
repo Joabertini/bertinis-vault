@@ -5,6 +5,7 @@ export * from "./choices.js";
 export * from "./combat.js";
 export * from "./dnd5e-2014.js";
 export * from "./levelling.js";
+export * from "./multiclass.js";
 export * from "./expertise.js";
 export * from "./feat-abilities.js";
 export * from "./optional-features.js";

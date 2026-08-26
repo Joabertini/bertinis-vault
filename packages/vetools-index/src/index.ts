@@ -343,6 +343,15 @@ export type SubclassRow = IndexRow & {
   classSource: string | null;
   /** Choices the subclass grants on top of its class's. */
   optionalFeatureProgression: OptionalFeatureProgression[];
+  /**
+   * How the subclass advances spellcasting, when the class does not.
+   *
+   * The eldritch knight and the arcane trickster are the only two, and they
+   * are the reason this cannot be read off the class: a fighter casts nothing
+   * and an eldritch knight casts a third.
+   */
+  casterProgression: string | null;
+  spellcastingAbility: string | null;
   /** Expertise the subclass grants on top of its class's. */
   expertise: ExpertiseGrant[];
   /** The draconic sorcerer's scales, and the 2024 dancing bard's defence. */

@@ -960,6 +960,12 @@ const BUILDERS = {
       shortName: c.shortName ?? null,
       className: c.className ?? null,
       classSource: c.classSource ?? null,
+      // A third-caster is a subclass, not a class: the eldritch knight and the
+      // arcane trickster are the only two, and their progression is the
+      // subclass's to state. Without this a fighter 12 / wizard 1 reads as one
+      // caster level instead of five.
+      casterProgression: c.casterProgression ?? null,
+      spellcastingAbility: c.spellcastingAbility ?? null,
       // A subclass grants its own choices on top of the class's: the battle
       // master's maneuvers, the arcane archer's shots, the rune knight's runes.
       optionalFeatureProgression: optionalFeatureProgressionOf(c),
