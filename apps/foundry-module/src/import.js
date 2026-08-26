@@ -110,12 +110,30 @@ export function biographyHtml(biography) {
 }
 
 /**
+ * Stamp the ability a tool rolls, the way `dnd5e` stamps it itself.
+ *
+ * `system.tools` is a mapping field with no fixed keys and an ability default
+ * of Intelligence, so a tool written without one rolls Intelligence — a lute
+ * would be played with Intelligence and a set of thieves' tools picked with
+ * it. The system's own advancement code reads `CONFIG.DND5E.tools[id].ability`
+ * at this exact moment, so this reads the same thing rather than shipping a
+ * copy of the table that could drift from the system the world is running.
+ *
+ * A key the running system does not know gets no ability, which leaves the
+ * system's default in place rather than writing a guess.
+ */
+function applyToolAbility(updates, tool) {
+  const ability = globalThis.CONFIG?.DND5E?.tools?.[tool]?.ability;
+  if (ability) updates[`system.tools.${tool}.ability`] = ability;
+}
+
+/**
  * Proficiencies the player chose from a list.
  *
- * Skills and saves are flags on the actor rather than documents, so they are
- * written directly. Weapon and armour proficiencies are absent by design: they
- * come from the class and race documents, and writing our own over them would
- * fight with what Plutonium just imported.
+ * Skills, tools and saves are flags on the actor rather than documents, so
+ * they are written directly. Weapon and armour proficiencies are absent by
+ * design: they come from the class and race documents, and writing our own
+ * over them would fight with what Plutonium just imported.
  */
 export function proficiencyUpdates(payload) {
   const updates = {};
@@ -126,6 +144,18 @@ export function proficiencyUpdates(payload) {
   for (const skill of payload.proficiencies.expertise ?? []) {
     updates[`system.skills.${skill}.value`] = 2;
   }
+  // Tools after skills and expertise after tools, so the doubled value is the
+  // one that survives when a character is proficient in and expert with the
+  // same tool.
+  for (const tool of payload.proficiencies.tools ?? []) {
+    updates[`system.tools.${tool}.value`] = 1;
+    applyToolAbility(updates, tool);
+  }
+  for (const tool of payload.proficiencies.toolExpertise ?? []) {
+    updates[`system.tools.${tool}.value`] = 2;
+    applyToolAbility(updates, tool);
+  }
+
   for (const ability of payload.proficiencies.savingThrows ?? []) {
     updates[`system.abilities.${ability}.proficient`] = 1;
   }

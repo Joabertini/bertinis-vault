@@ -1,9 +1,21 @@
 import type { AbilityId } from "@bertinis-vault/contracts";
 
+import { generatedToolsByName, type GeneratedToolEntry } from "@bertinis-vault/contracts";
+
 export type ToolProficiencyEntry = {
+  /** The key on `system.tools`. */
   id: string;
-  ability: AbilityId;
+  /**
+   * What the tool rolls. Absent for a category.
+   *
+   * "Artisan's tools" covers seventeen tools across four different abilities,
+   * so there is no one answer and dnd5e's own default stands. A number
+   * invented here would be one nobody in the rules chose.
+   */
+  ability?: AbilityId;
   label: string;
+  /** Whether this names one tool or a kind of tool. */
+  kind: "tool" | "category";
 };
 
 const SKILL_ALIAS_TO_ID: Record<string, string> = {
@@ -80,28 +92,64 @@ const LANGUAGE_ALIAS_TO_ID: Record<string, string> = {
   "deep speech": "deep",
 };
 
-const TOOL_ALIAS_TO_ID: Record<string, ToolProficiencyEntry> = {
-  "thieves tools": { id: "thief", ability: "dex", label: "Thieves' Tools" },
-  "herramientas de ladron": { id: "thief", ability: "dex", label: "Thieves' Tools" },
-  "herbalism kit": { id: "herb", ability: "wis", label: "Herbalism Kit" },
-  "kit de herboristeria": { id: "herb", ability: "wis", label: "Herbalism Kit" },
-  "disguise kit": { id: "disg", ability: "cha", label: "Disguise Kit" },
-  "kit de disfraz": { id: "disg", ability: "cha", label: "Disguise Kit" },
-  "forgery kit": { id: "forg", ability: "dex", label: "Forgery Kit" },
-  "kit de falsificacion": { id: "forg", ability: "dex", label: "Forgery Kit" },
-  "navigator's tools": { id: "navg", ability: "wis", label: "Navigator's Tools" },
-  "herramientas de navegacion": { id: "navg", ability: "wis", label: "Navigator's Tools" },
-  "gaming set": { id: "game", ability: "int", label: "Gaming Set" },
-  "vehicle land": { id: "land", ability: "dex", label: "Land Vehicles" },
-  "vehiculos terrestres": { id: "land", ability: "dex", label: "Land Vehicles" },
-  "vehicle water": { id: "water", ability: "dex", label: "Water Vehicles" },
-  "vehiculos acuaticos": { id: "water", ability: "dex", label: "Water Vehicles" },
-  "musical instrument": { id: "music", ability: "cha", label: "Musical Instrument" },
-  "instrumento musical": { id: "music", ability: "cha", label: "Musical Instrument" },
-  "artisan's tools": { id: "art", ability: "int", label: "Artisan's Tools" },
-  "artisan tools": { id: "art", ability: "int", label: "Artisan's Tools" },
-  "herramientas de artesano": { id: "art", ability: "int", label: "Artisan's Tools" },
+/**
+ * Names the builder accepts for a tool, beyond its canonical one.
+ *
+ * The canonical names come from the generated table and are English, because
+ * that is what the index and the importer both speak. These are what a player
+ * actually types: Spanish, and the shapes an apostrophe-free keyboard makes.
+ *
+ * The `vehicle land` and `vehicle water` spellings are here because the table
+ * this replaced used them, and a draft saved with one should still resolve.
+ */
+const TOOL_NAME_ALIASES: Record<string, string> = {
+  "herramientas de ladron": "thieves' tools",
+  "kit de herboristeria": "herbalism kit",
+  "kit de disfraz": "disguise kit",
+  "kit de falsificacion": "forgery kit",
+  "kit de veneno": "poisoner's kit",
+  "kit de envenenador": "poisoner's kit",
+  "herramientas de navegacion": "navigator's tools",
+  "herramientas de artesano": "artisan's tools",
+  "artisan tools": "artisan's tools",
+  "instrumento musical": "musical instrument",
+  "set de juego": "gaming set",
+  "juego de mesa": "gaming set",
+  "vehiculos terrestres": "vehicles (land)",
+  "vehiculos acuaticos": "vehicles (water)",
+  "vehiculos aereos": "vehicles (air)",
+  "vehicle land": "vehicles (land)",
+  "vehicle water": "vehicles (water)",
 };
+
+/**
+ * A tool name reduced to something two spellings of it share.
+ *
+ * Apostrophes are dropped rather than turned into spaces, which is the one
+ * thing separating this from `normalizeProficiencyLabel`: "smith's tools" and
+ * "smiths tools" are the same proficiency and a player will type either.
+ */
+export function normalizeToolLabel(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/^tool:\s*/, "")
+    .replace(/['\u2019]/g, "")
+    .replace(/[^a-z0-9()\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const toolsByNormalizedName = new Map<string, GeneratedToolEntry>();
+for (const [name, entry] of Object.entries(generatedToolsByName)) {
+  toolsByNormalizedName.set(normalizeToolLabel(name), entry);
+}
+
+const aliasToCanonical = new Map<string, string>();
+for (const [alias, canonical] of Object.entries(TOOL_NAME_ALIASES)) {
+  aliasToCanonical.set(normalizeToolLabel(alias), normalizeToolLabel(canonical));
+}
 
 export function normalizeSkillLabel(value: string) {
   return value
@@ -132,7 +180,20 @@ export function resolveLanguageId(value: string) {
   return LANGUAGE_ALIAS_TO_ID[normalized];
 }
 
-export function resolveToolEntry(value: string) {
-  const normalized = normalizeProficiencyLabel(value).replace(/^tool:\s*/, "");
-  return TOOL_ALIAS_TO_ID[normalized];
+/**
+ * The `dnd5e` entry for a tool name, or undefined when it has none.
+ *
+ * A tool with no entry is dropped rather than written under its name: the
+ * actor's tool map has no fixed keys, so `system.tools["Smith's Tools"]` is
+ * created happily and then shown nowhere.
+ */
+export function resolveToolEntry(value: string): ToolProficiencyEntry | undefined {
+  const normalized = normalizeToolLabel(value);
+  const canonical = aliasToCanonical.get(normalized) ?? normalized;
+  return toolsByNormalizedName.get(canonical);
+}
+
+/** Every tool proficiency there is, for a picker to list. */
+export function allToolEntries(): ToolProficiencyEntry[] {
+  return Object.values(generatedToolsByName);
 }

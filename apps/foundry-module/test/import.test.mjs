@@ -280,3 +280,50 @@ test("an item that never arrived returns null instead of a wrong match", () => {
 
   assert.equal(findByRef(items, ref("item", "items.html", "Plate Armor", "PHB")), null);
 });
+
+test("tools land on the actor, keyed as the system keys them", () => {
+  // Nothing wrote these before. `payload.proficiencies.tools` travelled the
+  // whole way and was dropped on arrival, so every character exported from
+  // this builder reached the table with no tool proficiency at all.
+  const build = payload();
+  build.proficiencies.tools = ["thief", "lute"];
+
+  const updates = proficiencyUpdates(build);
+
+  assert.equal(updates["system.tools.thief.value"], 1);
+  assert.equal(updates["system.tools.lute.value"], 1);
+});
+
+test("a tool's ability comes from the running system, not from us", () => {
+  // `system.tools` defaults its ability to Intelligence, so a lute written
+  // without one is played with Intelligence. dnd5e's own advancement code
+  // reads `CONFIG.DND5E.tools[id].ability` at this moment; so does this.
+  const previous = globalThis.CONFIG;
+  globalThis.CONFIG = { DND5E: { tools: { thief: { ability: "dex" }, lute: { ability: "cha" } } } };
+
+  try {
+    const build = payload();
+    build.proficiencies.tools = ["thief", "lute", "unknown-to-the-system"];
+
+    const updates = proficiencyUpdates(build);
+
+    assert.equal(updates["system.tools.thief.ability"], "dex");
+    assert.equal(updates["system.tools.lute.ability"], "cha");
+    // A key the running system does not know keeps its proficiency and gets no
+    // ability, which leaves the system's own default rather than a guess.
+    assert.equal(updates["system.tools.unknown-to-the-system.value"], 1);
+    assert.ok(!("system.tools.unknown-to-the-system.ability" in updates));
+  } finally {
+    globalThis.CONFIG = previous;
+  }
+});
+
+test("tool expertise doubles the tool it names", () => {
+  const build = payload();
+  build.proficiencies.tools = ["thief"];
+  build.proficiencies.toolExpertise = ["thief"];
+
+  // Written after the proficiency, so the doubled value is the one that
+  // survives rather than being overwritten by the plain one.
+  assert.equal(proficiencyUpdates(build)["system.tools.thief.value"], 2);
+});
