@@ -104,3 +104,55 @@ test("deriveCharacterBuild uses pact slot progression for warlocks", () => {
   assert.equal(build.derived.spellcasting?.pactLevel, 3);
   assert.equal(build.derived.spellcasting?.slots["3"], undefined);
 });
+
+test("a barbarian's Unarmored Defense reaches the derived armour class", () => {
+  // The end of the wire. `calculateArmorClass` has had a parameter for this
+  // since the beginning and nothing ever passed it, so this build derived 12
+  // and the sheet in Foundry showed 15. The two disagreed and the number the
+  // player planned with was the wrong one.
+  const barbarian = makeInput({
+    classing: { classes: [{ classId: "barbarian", level: 3 }] },
+    abilities: {
+      generationMethod: "manual",
+      base: { str: 16, dex: 14, con: 16, int: 8, wis: 12, cha: 10 },
+      final: { str: 16, dex: 14, con: 16, int: 8, wis: 12, cha: 10 },
+    },
+    choices: {
+      feats: [],
+      proficiencies: [],
+      spells: [],
+      equipment: ["greataxe"],
+      features: [],
+      normalized: {
+        feats: [],
+        proficiencies: [],
+        spells: [],
+        equipment: [],
+        features: [],
+        armorClassOptions: [
+          {
+            name: "Unarmored Defense",
+            source: "PHB",
+            level: 1,
+            isVariant: false,
+            base: 10,
+            abilities: ["dex", "con"],
+            allowsShield: true,
+            requiresNoArmor: true,
+            calc: null,
+          },
+        ],
+      },
+    },
+  });
+
+  assert.equal(deriveCharacterBuild(barbarian).derived.ac, 15);
+});
+
+test("a build with no armour class options derives exactly what it did before", () => {
+  // The guard on the change: a wizard in mage armour and a shield is 17, which
+  // is what this file has asserted since before any of this existed.
+  const build = deriveCharacterBuild(makeInput());
+
+  assert.equal(build.derived.ac, 17);
+});

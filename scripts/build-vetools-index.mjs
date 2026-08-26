@@ -573,6 +573,241 @@ function readExpertise(dataDir) {
   };
 }
 
+/** The features that replace armour class, by the name they all share. */
+const RE_UNARMORED_DEFENSE = /^unarmored defen[sc]e/i;
+
+const ABILITY_BY_WORD = {
+  strength: "str",
+  dexterity: "dex",
+  constitution: "con",
+  intelligence: "int",
+  wisdom: "wis",
+  charisma: "cha",
+};
+
+/** 5etools markup reduced to the words a reader sees. */
+function stripTags(value) {
+  return value.replace(/\{@\w+ ([^}|]+)(?:\|[^}]*)?\}/g, "$1");
+}
+
+/** Every string in a feature's entries, nesting included, as one blob. */
+function proseOf(entries) {
+  const out = [];
+  const walk = (node) => {
+    if (typeof node === "string") out.push(stripTags(node));
+    else if (Array.isArray(node)) node.forEach(walk);
+    else if (node && typeof node === "object") {
+      if (node.name) out.push(node.name);
+      walk(node.entries ?? node.items ?? []);
+    }
+  };
+  walk(entries);
+  return out.join(" ");
+}
+
+/**
+ * An alternative way of computing armour class, read out of the feature text.
+ *
+ * This one is parsed from prose rather than taken from structured data,
+ * because there is no structured data for it: 5etools' Foundry companion file
+ * records an `ac.calc` override for the sorcerer and six species, and nothing
+ * at all for the barbarian, the monk and the 2024 bard, which rely on the game
+ * system's own SRD class items. Plutonium reads the prose for the same reason,
+ * and this reads it the same two ways it does:
+ *
+ *   2014: "10 + your Dexterity modifier + your Constitution modifier"
+ *   2024: "10 plus your Dexterity and Constitution modifiers"
+ *
+ * The base is parsed rather than assumed to be 10, which is the one place this
+ * differs from Plutonium: the 2014 draconic sorcerer's is 13, and Plutonium
+ * gets away with hardcoding 10 only because that feature also carries a named
+ * `ac.calc` for it to fall back on.
+ *
+ * The shield clause is parsed too. A barbarian "can use a shield and still
+ * gain this benefit"; a monk's applies only "while you are wearing no armor
+ * and not wielding a shield". Neither Plutonium nor the game system models
+ * that difference — both add the shield to the monk's total anyway.
+ */
+function armorClassOf(entity) {
+  const text = proseOf(entity.entries ?? []);
+  const isNamedUnarmored = RE_UNARMORED_DEFENSE.test(entity.name ?? "");
+
+  const sentence = text
+    .split(/(?<=[.!?])\s+/)
+    .find((part) => /armor class|\bAC\b/i.test(part) && /modifiers?\b/i.test(part));
+  if (!sentence) return null;
+
+  const classic = sentence.match(/(\d+)\s*\+\s*your\s+([a-z]+)\s+modifier/i);
+  const modern = sentence.match(/(\d+)\s+plus\s+your\s+([a-z]+(?:\s+and\s+[a-z]+)*)\s+modifiers?/i);
+
+  let base = null;
+  const abilities = [];
+
+  if (classic) {
+    base = Number(classic[1]);
+    for (const [, word] of sentence.matchAll(/your\s+([a-z]+)\s+modifier/gi)) {
+      const id = ABILITY_BY_WORD[word.toLowerCase()];
+      if (id && !abilities.includes(id)) abilities.push(id);
+    }
+  } else if (modern) {
+    base = Number(modern[1]);
+    for (const word of modern[2].split(/\s+and\s+/)) {
+      const id = ABILITY_BY_WORD[word.trim().toLowerCase()];
+      if (id && !abilities.includes(id)) abilities.push(id);
+    }
+  }
+
+  if (base === null) return null;
+
+  return {
+    base,
+    abilities,
+    allowsShield: !/wielding[^.]{0,40}shield/i.test(text),
+    // The 2024 bard's College of Dance states the formula and no condition:
+    // "Your base Armor Class equals 10 plus your Dexterity and Charisma
+    // modifiers." The condition is in the feature's name, which is data too,
+    // and a bard who got this in plate would be shown an armour class it does
+    // not have. Read from the prose where the prose says it, and from the name
+    // where it does not.
+    requiresNoArmor:
+      isNamedUnarmored ||
+      /(not wearing|aren't wearing|wearing no|isn't wearing|no armor)/i.test(text),
+  };
+}
+
+/** The Foundry formula a species' natural armour is recorded as. */
+function armorClassFromFormula(formula) {
+  const match = /^(\d+)((?:\s*\+\s*@abilities\.\w+\.mod)*)$/.exec(formula.trim());
+  if (!match) return null;
+
+  const abilities = [...match[2].matchAll(/@abilities\.(\w+)\.mod/g)].map((entry) => entry[1]);
+
+  return {
+    base: Number(match[1]),
+    abilities,
+    // Natural armour never excludes a shield: the tortle's shell and the
+    // lizardfolk's scales both say a shield applies as normal.
+    allowsShield: true,
+    requiresNoArmor: true,
+  };
+}
+
+function isArmorClassFeature(feature, companion) {
+  if (JSON.stringify(companion ?? {}).includes("attributes.ac.calc")) return true;
+  if (RE_UNARMORED_DEFENSE.test(feature.name ?? "")) return true;
+  return (feature.entries ?? []).some(
+    (entry) => entry?.name && RE_UNARMORED_DEFENSE.test(entry.name),
+  );
+}
+
+/** What `dnd5e` calls this calculation, when the companion file names it. */
+function calcOf(companion) {
+  const change = (companion?.effects ?? [])
+    .flatMap((effect) => effect.changes ?? [])
+    .find((entry) => entry.key === "system.attributes.ac.calc");
+  return change?.value ?? null;
+}
+
+function customFormulaOf(companion) {
+  const change = (companion?.effects ?? [])
+    .flatMap((effect) => effect.changes ?? [])
+    .find((entry) => entry.key === "system.attributes.ac.formula");
+  return change?.value ?? null;
+}
+
+/**
+ * Every alternative armour class a class, subclass or species offers.
+ *
+ * Grouped the same way expertise is, and for the same reason: the level and
+ * the variant flag come from the real feature, not the companion file.
+ */
+function readArmorClasses(dataDir) {
+  const companion = fs.existsSync(path.join(dataDir, "class", "foundry.json"))
+    ? JSON.parse(fs.readFileSync(path.join(dataDir, "class", "foundry.json"), "utf8"))
+    : {};
+
+  const byClassFeature = new Map((companion.classFeature ?? []).map((r) => [classFeatureKey(r), r]));
+  const bySubclassFeature = new Map(
+    (companion.subclassFeature ?? []).map((r) => [subclassFeatureKey(r), r]),
+  );
+
+  const collect = (features, companionByKey, keyOf, groupOf) => {
+    const grouped = new Map();
+    const seen = new Set();
+
+    for (const feature of features) {
+      const key = keyOf(feature);
+      if (seen.has(key)) continue;
+
+      const row = companionByKey.get(key);
+      if (!isArmorClassFeature(feature, row)) continue;
+
+      const formula = armorClassOf(feature);
+      if (!formula) continue;
+      seen.add(key);
+
+      const group = groupOf(feature);
+      if (!grouped.has(group)) grouped.set(group, []);
+      grouped.get(group).push({
+        name: feature.name,
+        source: feature.source,
+        level: feature.level,
+        isVariant:
+          feature.isClassFeatureVariant === true || feature.isSubclassFeatureVariant === true,
+        calc: calcOf(row),
+        ...formula,
+      });
+    }
+
+    for (const entries of grouped.values()) entries.sort((a, b) => a.level - b.level);
+    return grouped;
+  };
+
+  // A species' natural armour is recorded as a Foundry formula rather than
+  // left in prose, so it is read from the formula: it is the same fact stated
+  // exactly, and parsing English when a machine-readable form exists would be
+  // choosing the worse source.
+  const forRace = new Map();
+  const racesFile = path.join(dataDir, "foundry-races.json");
+  if (fs.existsSync(racesFile)) {
+    const parsed = JSON.parse(fs.readFileSync(racesFile, "utf8"));
+    for (const feature of parsed.raceFeature ?? []) {
+      const custom = customFormulaOf(feature);
+      if (!custom) continue;
+
+      const formula = armorClassFromFormula(custom);
+      if (!formula) continue;
+
+      const group = `${feature.raceName}|${feature.raceSource}`;
+      if (!forRace.has(group)) forRace.set(group, []);
+      forRace.get(group).push({
+        name: feature.name,
+        source: feature.source,
+        level: 1,
+        isVariant: false,
+        calc: calcOf(feature),
+        ...formula,
+      });
+    }
+  }
+
+  return {
+    forClass: collect(
+      readCollection(dataDir, "class", "classFeature"),
+      byClassFeature,
+      classFeatureKey,
+      (f) => `${f.className}|${f.classSource}`,
+    ),
+    forSubclass: collect(
+      readCollection(dataDir, "class", "subclassFeature"),
+      bySubclassFeature,
+      subclassFeatureKey,
+      (f) => `${f.className}|${f.classSource}|${f.subclassShortName}|${f.subclassSource}`,
+    ),
+    forRace,
+  };
+}
+
 /**
  * An optional feature's prerequisites, split by whether they can be checked.
  *
@@ -662,13 +897,16 @@ const BUILDERS = {
       isAbilityScoreImprovement: isAbilityScoreImprovementFeat(f) ? 1 : 0,
     })),
 
-  race: (entities) =>
+  race: (entities, context) =>
     entities.map((r) => ({
       name: r.name,
       source: sourceOf(r),
       size: r.size?.[0] ?? null,
       ability: abilityOf(r),
       speed: typeof r.speed === "number" ? r.speed : r.speed?.walk ?? null,
+      // Natural armour: the tortle's shell, the lizardfolk's scales. Six
+      // species have it and it beats leather for most of them.
+      armorClass: context.armorClasses.forRace.get(`${r.name}|${sourceOf(r)}`) ?? [],
     })),
 
   subrace: (entities) =>
@@ -711,6 +949,7 @@ const BUILDERS = {
         skillChoice: skillChoiceOf(c),
         optionalFeatureProgression: optionalFeatureProgressionOf(c),
         expertise: context.expertise.forClass.get(`${c.name}|${sourceOf(c)}`) ?? [],
+        armorClass: context.armorClasses.forClass.get(`${c.name}|${sourceOf(c)}`) ?? [],
       };
     }),
 
@@ -726,6 +965,10 @@ const BUILDERS = {
       optionalFeatureProgression: optionalFeatureProgressionOf(c),
       expertise:
         context.expertise.forSubclass.get(
+          `${c.className}|${c.classSource}|${c.shortName}|${sourceOf(c)}`,
+        ) ?? [],
+      armorClass:
+        context.armorClasses.forSubclass.get(
           `${c.className}|${c.classSource}|${c.shortName}|${sourceOf(c)}`,
         ) ?? [],
     })),
@@ -768,7 +1011,11 @@ function main() {
     optionalfeature: readFileCollection(dataDir, "optionalfeatures.json", "optionalfeature"),
   };
 
-  const context = { spellClasses: readSpellClasses(dataDir), expertise: readExpertise(dataDir) };
+  const context = {
+    spellClasses: readSpellClasses(dataDir),
+    expertise: readExpertise(dataDir),
+    armorClasses: readArmorClasses(dataDir),
+  };
 
   fs.mkdirSync(OUT_DIR, { recursive: true });
 

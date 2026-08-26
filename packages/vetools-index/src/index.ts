@@ -73,6 +73,8 @@ export type RaceRow = IndexRow & {
   /** The fixed part of the species bonus. Null when the player chooses it. */
   ability: AbilityBonuses | null;
   speed: number | null;
+  /** Natural armour: a tortle shell, lizardfolk scales, a loxodon hide. */
+  armorClass: ArmorClassOption[];
 };
 
 export type SubraceRow = IndexRow & {
@@ -229,6 +231,31 @@ export type ExpertiseSet = {
   tools: string[];
 };
 
+/**
+ * A way of computing armour class that replaces the default 10 + Dexterity.
+ *
+ * Unarmored Defense, draconic scales, a tortle's shell. Read from the feature
+ * text, because for the barbarian, the monk and the 2024 dancing bard there is
+ * nowhere else: 5etools' Foundry companion file records an `ac.calc` override
+ * for the sorcerer and six species and nothing for those three, which rely on
+ * the game system's own SRD class items.
+ */
+export type ArmorClassOption = {
+  name: string;
+  source: string;
+  level: number;
+  isVariant: boolean;
+  /** 10 for Unarmored Defense, 13 for draconic scales, 17 for a shell. */
+  base: number;
+  /** What is added on top, in the order the feature names them. */
+  abilities: string[];
+  /** A monk loses this while holding a shield; a barbarian does not. */
+  allowsShield: boolean;
+  requiresNoArmor: boolean;
+  /** What `dnd5e` calls the calculation, when it has a name for it. */
+  calc: string | null;
+};
+
 /** An expertise grant, and the feature that hands it out. */
 export type ExpertiseGrant = {
   name: string;
@@ -306,6 +333,8 @@ export type ClassRow = IndexRow & {
    * ranger, the 2024 wizard and Tasha's expert sidekick.
    */
   expertise: ExpertiseGrant[];
+  /** Unarmored Defense, for the two classes that have it in every edition. */
+  armorClass: ArmorClassOption[];
 };
 
 export type SubclassRow = IndexRow & {
@@ -316,6 +345,8 @@ export type SubclassRow = IndexRow & {
   optionalFeatureProgression: OptionalFeatureProgression[];
   /** Expertise the subclass grants on top of its class's. */
   expertise: ExpertiseGrant[];
+  /** The draconic sorcerer's scales, and the 2024 dancing bard's defence. */
+  armorClass: ArmorClassOption[];
 };
 
 /** The props this index covers, and the row type each yields. */

@@ -35,6 +35,7 @@ import {
 } from "@bertinis-vault/domain";
 import {
   armorFormulaOf,
+  armorClassOptionsFor,
   expertiseGrantsFor,
   featAbilityGrantsFor,
   featChoiceForBackground,
@@ -926,6 +927,15 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
             ...extraEquipment.map((entry) => normalizeEquipmentEntry(entry)),
         ],
           features: features.map((entry) => normalizeFeatureEntry(entry, state)),
+        // Unarmored Defense and natural armour. The rules layer decides which
+        // one wins; the build only says which the character has.
+        armorClassOptions: armorClassOptionsFor({
+          classId: state.classId,
+          subclassId: state.subclassId,
+          raceId: state.raceId,
+          rulesVersion: state.rulesVersion === "5e-2024" ? "2024" : "2014",
+          sourceBook: state.sourceBooks[`race:${state.raceId}`],
+        }),
       },
     },
     ...(Object.keys(state.sourceBooks).length > 0 ? { sourceBooks: state.sourceBooks } : {}),

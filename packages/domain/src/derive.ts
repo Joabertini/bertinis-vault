@@ -6,6 +6,7 @@ import {
 } from "@bertinis-vault/contracts";
 import { getArmorCatalogEntry } from "@bertinis-vault/data-engine";
 import { abilityModifierMap } from "./abilities.js";
+import { bestArmorClass } from "./armor-class.js";
 import { calculateArmorClass, calculateEstimatedHitPoints } from "./combat.js";
 import {
   getHitDieForClass,
@@ -46,10 +47,24 @@ export function deriveCharacterBuild(
       .map((entry) => getArmorCatalogEntry(entry))
       .some((entry) => entry?.grantsShieldBonus);
 
-  const ac = calculateArmorClass({
-    armorFormula: indexedArmor?.armorFormula ?? armorEntry?.armorFormula ?? "10+DEX",
-    dexModifier: modifiers.dex,
+  // What the worn armour is worth on its own. The shield is added by
+  // `bestArmorClass`, because a shield applies to whichever calculation wins
+  // rather than only to this one.
+  const armorFormula = indexedArmor?.armorFormula ?? armorEntry?.armorFormula ?? "10+DEX";
+  const wornArmorClass = calculateArmorClass({ armorFormula, dexModifier: modifiers.dex });
+
+  // Unarmored Defense and the rest. This is the line that was missing: the
+  // parameter for it has existed since the beginning and nothing ever passed
+  // it, so a barbarian with 16 Constitution was shown three lower than they
+  // are, with nothing on the sheet to say a number had gone missing.
+  const { ac } = bestArmorClass({
+    options: parsedInput.choices.normalized?.armorClassOptions ?? [],
+    modifiers,
+    wornArmorClass,
+    isWearingArmor: Boolean(indexedArmor ?? armorEntry),
     hasShield,
+    level,
+    variantsTaken: parsedInput.choices.features,
   });
 
   // Keyed by the level the slot is, which is the payload's shape rather than

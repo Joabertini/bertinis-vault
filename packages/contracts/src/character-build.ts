@@ -149,12 +149,41 @@ export const normalizedFeatureEntrySchema = z.object({
   source: normalizedFeatureSourceSchema.default("other"),
 });
 
+/**
+ * A way of computing armour class that replaces the default 10 + Dexterity.
+ *
+ * Unarmored Defense, draconic scales, a tortle's shell. Carried on the build
+ * rather than looked up in the rules layer, for the same reason an armour's
+ * formula is: which features a character has is a fact about the character,
+ * and the rules only say what to do with it.
+ */
+export const armorClassOptionSchema = z.object({
+  name: z.string(),
+  source: z.string(),
+  level: z.number().int().min(1).max(20),
+  isVariant: z.boolean().default(false),
+  /** 10 for Unarmored Defense, 13 for draconic scales, 17 for a shell. */
+  base: z.number().int().min(1),
+  abilities: z.array(abilityIdSchema).default([]),
+  /** A monk loses this while holding a shield; a barbarian does not. */
+  allowsShield: z.boolean().default(true),
+  requiresNoArmor: z.boolean().default(true),
+  /** What `dnd5e` calls the calculation, when it has a name for it. */
+  calc: z.string().nullable().optional(),
+});
+
 export const normalizedChoicesSchema = z.object({
   feats: z.array(canonicalIdSchema).default([]),
   proficiencies: z.array(normalizedProficiencyEntrySchema).default([]),
   spells: z.array(normalizedSpellEntrySchema).default([]),
   equipment: z.array(normalizedEquipmentEntrySchema).default([]),
   features: z.array(normalizedFeatureEntrySchema).default([]),
+  /**
+   * Alternative armour classes the character's class, subclass or species
+   * grants. Empty for everyone but the barbarian, the monk, the 2024 dancing
+   * bard, the draconic sorcerer and five species.
+   */
+  armorClassOptions: z.array(armorClassOptionSchema).default([]),
 });
 
 export const choicesSchema = z.object({
@@ -241,6 +270,7 @@ export type NormalizedSpellEntry = z.infer<typeof normalizedSpellEntrySchema>;
 export type NormalizedEquipmentEntry = z.infer<typeof normalizedEquipmentEntrySchema>;
 export type NormalizedFeatureEntry = z.infer<typeof normalizedFeatureEntrySchema>;
 export type NormalizedChoices = z.infer<typeof normalizedChoicesSchema>;
+export type ArmorClassOption = z.infer<typeof armorClassOptionSchema>;
 export type Choices = z.infer<typeof choicesSchema>;
 export type SourceBooks = z.infer<typeof sourceBooksSchema>;
 export type Spellcasting = z.infer<typeof spellcastingSchema>;
