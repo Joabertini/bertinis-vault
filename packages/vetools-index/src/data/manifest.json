@@ -11,8 +11,8 @@
   },
   "feat": {
     "count": 276,
-    "bytes": 33832,
-    "gzip": 2889
+    "bytes": 38341,
+    "gzip": 2998
   },
   "race": {
     "count": 160,
@@ -26,13 +26,13 @@
   },
   "class": {
     "count": 31,
-    "bytes": 12081,
-    "gzip": 1251
+    "bytes": 14716,
+    "gzip": 1482
   },
   "subclass": {
     "count": 203,
-    "bytes": 29428,
-    "gzip": 2842
+    "bytes": 32753,
+    "gzip": 2969
   },
   "subrace": {
     "count": 98,

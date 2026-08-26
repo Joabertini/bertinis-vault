@@ -21,6 +21,11 @@ import {
   bonusesFromFeats,
   featsFromChoices,
   unansweredFeatAbilities,
+  resolveSkillId,
+  expertiseFrom,
+  unansweredExpertise,
+  type ExpertiseAnswer,
+  type ExpertiseEntry,
   type TakenFeat,
   savingThrowsForClass,
   suggestedAbilityBonuses,
@@ -29,6 +34,7 @@ import {
 } from "@bertinis-vault/domain";
 import {
   armorFormulaOf,
+  expertiseGrantsFor,
   featAbilityGrantsFor,
   featChoiceForBackground,
   itemInfoFor,
@@ -140,6 +146,14 @@ export type BuilderState = {
    * twice.
    */
   featAbilityChoices: Record<string, AbilityBonusMap>;
+  /**
+   * Which proficiencies each expertise grant doubles, keyed by the feature.
+   *
+   * Keyed by feature rather than by level because a class can grant expertise
+   * twice at different levels and a subclass can grant its own at a third, and
+   * the answers must stay apart when the character levels past one of them.
+   */
+  expertiseChoices: Record<string, ExpertiseAnswer>;
   /**
    * Which book each pick came from, keyed by `"<prop>:<id>"`.
    *
@@ -364,6 +378,7 @@ export const initialState: BuilderState = {
   levelChoices: {},
   optionalFeatureIds: [],
   featAbilityChoices: {},
+  expertiseChoices: {},
   characterName: "Seraphina Vale",
   playerName: "Martin",
   alignment: "Neutral Bueno",
@@ -464,6 +479,7 @@ export function coerceBuilderState(value: unknown): BuilderState {
       ? candidate.optionalFeatureIds.filter((id): id is string => typeof id === "string" && id !== "")
       : [],
     featAbilityChoices: coerceFeatAbilityChoices(candidate.featAbilityChoices, candidate.levelChoices),
+    expertiseChoices: coerceExpertiseChoices(candidate.expertiseChoices),
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
   };
 }
@@ -650,6 +666,100 @@ export function backgroundFeatIdsFor(state: BuilderState): string[] {
   return uniqueEntries(entry?.grantedFeatIds ?? []);
 }
 
+/** The key an expertise answer is stored under. */
+export function expertiseKeyOf(grant: { name: string; source: string; level: number }): string {
+  return `${grant.name}|${grant.source}|${grant.level}`;
+}
+
+/**
+ * Expertise answers off a draft, dropping anything that is not one.
+ *
+ * A draft saved before expertise existed simply has none, and a hand-edited
+ * one carrying junk loses the junk rather than the build.
+ */
+function coerceExpertiseChoices(value: unknown): Record<string, ExpertiseAnswer> {
+  if (!value || typeof value !== "object") return {};
+
+  const out: Record<string, ExpertiseAnswer> = {};
+  for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
+    if (!raw || typeof raw !== "object") continue;
+    const candidate = raw as Partial<ExpertiseAnswer>;
+    const setIndex = Number(candidate.setIndex);
+    if (!Number.isInteger(setIndex) || setIndex < 0) continue;
+
+    out[key] = {
+      setIndex,
+      skills: Array.isArray(candidate.skills) ? candidate.skills.filter(isNonEmptyString) : [],
+      tools: Array.isArray(candidate.tools) ? candidate.tools.filter(isNonEmptyString) : [],
+    };
+  }
+
+  return out;
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value !== "";
+}
+
+/**
+ * The expertise questions this build is being asked, with its answers.
+ *
+ * The variant gate is fed from the features the player wrote down: a 2014
+ * ranger only doubles a skill if they took Tasha's Deft Explorer in place of
+ * Natural Explorer, and the builder has no other record of that choice.
+ */
+export function expertiseEntriesFor(state: BuilderState): ExpertiseEntry[] {
+  const written = parseLineList(state.featuresText).map((entry) => entry.trim());
+
+  const grants = expertiseGrantsFor({
+    classId: state.classId,
+    subclassId: state.subclassId,
+    level: state.level,
+    rulesVersion: state.rulesVersion === "5e-2024" ? "2024" : "2014",
+    variantsTaken: written,
+  });
+
+  return grants.map((grant) => ({
+    grant,
+    answer: state.expertiseChoices[expertiseKeyOf(grant)] ?? null,
+  }));
+}
+
+/**
+ * The expertise grants still unanswered, or answered with something the
+ * character cannot double.
+ *
+ * Expertise doubles a proficiency the character already has, so the pool is
+ * whatever they wrote in the proficiencies field — which is why this cannot
+ * be checked in the index and has to be checked here.
+ */
+export function pendingExpertiseFor(state: BuilderState) {
+  return unansweredExpertise(expertiseEntriesFor(state), proficiencyPoolsFor(state));
+}
+
+/**
+ * What the character is proficient in, split into what expertise can double.
+ *
+ * Classified rather than taken from the class's skill list: a skill the
+ * background granted is still a skill, and matching against the class list
+ * would file it as a tool and drop it out of the pool.
+ */
+export function proficiencyPoolsFor(state: BuilderState): {
+  proficientSkills: string[];
+  proficientTools: string[];
+} {
+  const proficientSkills: string[] = [];
+  const proficientTools: string[] = [];
+
+  for (const entry of uniqueEntries(parseLineList(state.proficienciesText))) {
+    const { kind } = classifyProficiencyKind(entry);
+    if (kind === "skill") proficientSkills.push(entry);
+    else if (kind === "tool") proficientTools.push(entry);
+  }
+
+  return { proficientSkills, proficientTools };
+}
+
 export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const cantrips = parseLineList(state.cantripsText).map((entry) => `Nv0: ${entry}`);
   const leveledSpells = parseLineList(state.spellsText);
@@ -683,6 +793,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       level: entry.level,
     };
   });
+  const expertise = expertiseFrom(expertiseEntriesFor(state));
   const backgroundGrantedFeatIds = backgroundFeatIdsFor(state);
   // A feat can arrive two ways: chosen at a level in place of an improvement,
   // or granted outside the levels entirely — the variant human's, and in 2024
@@ -781,6 +892,18 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
             // Every class grants two of these at level one. Nothing was ever
             // filling the payload's `savingThrows`, so every character
             // exported before this reached Foundry proficient in none.
+            // Expertise travels beside the proficiency it doubles rather
+            // than replacing it: a skill written only as expertise would
+            // reach Foundry doubled but not proficient.
+            ...expertise.skills.map((label) => ({
+              kind: "expertise" as const,
+              ...(resolveSkillId(label) ? { id: resolveSkillId(label) } : {}),
+              label,
+            })),
+            ...expertise.tools.map((label) => ({
+              kind: "toolExpertise" as const,
+              label,
+            })),
             ...savingThrowsForClass(state.classId).map((ability) => ({
               kind: "savingThrow" as const,
               id: ability,

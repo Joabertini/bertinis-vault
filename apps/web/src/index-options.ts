@@ -26,8 +26,9 @@ import {
   type SpellRow,
   type SubclassRow,
   type SubraceRow,
+  type ExpertiseGrant,
 } from "@bertinis-vault/vetools-index";
-import type { LevellingClass } from "@bertinis-vault/domain";
+import { activeExpertiseGrants, type LevellingClass } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 export type IndexOption = {
@@ -365,4 +366,48 @@ export function featAbilityGrantsFor(
 ): FeatAbilityGrant[] {
   const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
   return legal.find((row) => slugOf(row.name) === featId)?.ability ?? [];
+}
+
+/** The subclass row for a subclass id, scoped to the class that owns it. */
+export function subclassInfoFor(
+  subclassId: string,
+  classId: string,
+  rulesVersion: RulesVersion,
+): SubclassRow | null {
+  const legal = forRulesVersion(collections.subclass ?? [], rulesVersion) as SubclassRow[];
+  return (
+    legal.find(
+      (row) => slugOf(row.name) === subclassId && slugOf(row.className ?? "") === classId,
+    ) ?? null
+  );
+}
+
+/**
+ * Every expertise the build has earned, class and subclass together.
+ *
+ * The class grants come first and the subclass's after, which is the order
+ * they are earned in and the order that decides what is already doubled.
+ *
+ * A feat that grants expertise is not here: a feat is taken at a level rather
+ * than earned by one, and its grant belongs with the feat's own question.
+ */
+export function expertiseGrantsFor({
+  classId,
+  subclassId,
+  level,
+  rulesVersion,
+  variantsTaken = [],
+}: {
+  classId: string;
+  subclassId: string;
+  level: number;
+  rulesVersion: RulesVersion;
+  variantsTaken?: string[];
+}): ExpertiseGrant[] {
+  const fromClass = classInfoFor(classId, rulesVersion)?.expertise ?? [];
+  const fromSubclass = subclassId
+    ? (subclassInfoFor(subclassId, classId, rulesVersion)?.expertise ?? [])
+    : [];
+
+  return activeExpertiseGrants({ grants: [...fromClass, ...fromSubclass], level, variantsTaken });
 }
