@@ -208,11 +208,41 @@ carries the mark.
 | Thing | State |
 | --- | --- |
 | A fixed list per class | done |
-| **The PHB's A-or-B choice** | missing |
-| **The gold alternative** | missing |
-| Quantities | missing — always one |
+| **The PHB's A-or-B choice** | done, 2026-08-26 — see below |
+| **The gold alternative** | done. 2014's "or 4d4 × 10 gp", which replaces every list at once |
+| Quantities | done. Two daggers is one line of two, and an item granted twice adds up |
+| The background's own list | done. It stacks when the class says it does, which is a flag on the class |
 | Attunement, and its three slots | missing |
-| Carrying capacity, currency | missing |
+| Carrying capacity | missing |
+| **Currency** | computed, not exported. See the gap below |
+
+**Done, 2026-08-26.** The books write the list as a sentence — "(a) a rapier or
+(b) a shortsword" — and a sentence cannot be answered, so the builder granted a
+fixed list and never asked. Every rogue got a rapier. 5etools carries the same
+list a second time in structured form, and that is what is read now: each row
+is a question, each option is an answer, and a row the data grants outright is
+shown but has nothing to pick.
+
+The two editions divide the list differently and are read the same way. 2014
+asks four small questions and offers a flat gold alternative; 2024 asks one big
+one and folds the money into the options, so there the gold is an ordinary
+answer rather than a rule beside the list. The monk's alternative is 5d4 gp
+flat with no × 10, which a regex that assumed the multiplier would have turned
+into ten times the money.
+
+Three shapes needed more than a lookup. A category — "two simple weapons" — is
+a second question with no item to point at, so it is reported as still open
+rather than answered on the player's behalf. A special — the wizard's spellbook,
+a letter from a dead colleague — has no item entry at all and is kept as text.
+And a pouch that contains coins is two things in one entry: reading only the
+item silently loses the starting money, which 69 backgrounds state that way.
+
+**The gap worth naming: currency is computed and not exported.** A character who
+takes the gold, or whose background hands over a pouch of 15 gp, has that money
+counted correctly and shown in the wizard — and the import payload has nowhere
+to put it, so it does not reach Foundry. The sheet will show the items and no
+coins. Nothing about the equipment work fixes that; it needs a field on the
+payload and a line in the module.
 
 ## 8. The 2024 rules
 
@@ -248,12 +278,15 @@ and deity are not. Cosmetic, and last.
 6. ~~**Multiclassing**~~ — done. The rules, the interface, the prerequisite,
    and what a second class grants. The last one is the short list the books
    print separately: a rogue taken second gives one skill, not four.
-7. **Equipment as choices**, with the gold alternative.
+7. ~~**Equipment as choices**~~ — done, with the gold alternative, quantities
+   and the background's own list. Currency is counted but has nowhere to go in
+   the payload yet.
 8. **The 2024 rules**, properly.
 9. **Prerequisites and legality checking.**
 
-The cheap ones are done, and so is multiclassing. What is left is equipment,
-the 2024 rules as rules rather than as a source filter, and legality checking.
+The cheap ones are done, and so are multiclassing and equipment. What is left
+is the 2024 rules as rules rather than as a source filter, and legality
+checking — plus carrying the starting money through to the payload.
 
 One deliberate divergence to know about: a monk holding a shield loses Unarmored
 Defense, and the builder now says so. Neither Plutonium nor the `dnd5e` system

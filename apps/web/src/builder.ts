@@ -31,6 +31,10 @@ import {
   resolveToolEntry,
   expertiseFrom,
   unansweredExpertise,
+  averageStartingGold,
+  resolveStartingEquipment,
+  type ResolvedStartingEquipment,
+  type StartingEquipmentList,
   type ExpertiseAnswer,
   type ExpertiseEntry,
   type TakenFeat,
@@ -42,6 +46,7 @@ import {
 import {
   armorFormulaOf,
   armorClassOptionsFor,
+  startingEquipmentListsFor,
   classInfoFor,
   expertiseGrantsFor,
   featAbilityGrantsFor,
@@ -50,6 +55,8 @@ import {
   slugOf,
   subclassInfoFor,
 } from "./index-options";
+
+import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 export type BuilderRulesVersion = "5e-2014" | "5e-2024";
 
@@ -103,6 +110,15 @@ export type BuilderState = {
   weaponId: string;
   armorId: string;
   extraEquipmentText: string;
+  /**
+   * Which option each starting-equipment row was answered with.
+   *
+   * Keyed "class:0" / "background:0" — the list and the row — because both
+   * lists number their rows from zero and both ask questions.
+   */
+  equipmentChoices: Record<string, string>;
+  /** 2014's "or 4d4 × 10 gp instead", which replaces every list at once. */
+  takeStartingGold: boolean;
   proficienciesText: string;
   languagesText: string;
   cantripsText: string;
@@ -292,13 +308,13 @@ function normalizeArmorEntry(state: BuilderState) {
   };
 }
 
-function normalizeEquipmentEntry(entry: string) {
+function normalizeEquipmentEntry(entry: string, quantity = 1) {
   const weaponEntry = getWeaponCatalogEntry(entry);
   if (weaponEntry) {
     return {
       itemId: weaponEntry.id,
       label: weaponEntry.label,
-      quantity: 1,
+      quantity,
       category: "weapon" as const,
     };
   }
@@ -308,7 +324,7 @@ function normalizeEquipmentEntry(entry: string) {
     return {
       itemId: armorEntry.id,
       label: armorEntry.label,
-      quantity: 1,
+      quantity,
       category: armorEntry.grantsShieldBonus ? ("shield" as const) : ("armor" as const),
     };
   }
@@ -318,7 +334,7 @@ function normalizeEquipmentEntry(entry: string) {
     return {
       itemId: gearEntry.id,
       label: gearEntry.label,
-      quantity: 1,
+      quantity,
       category: "gear" as const,
     };
   }
@@ -326,7 +342,7 @@ function normalizeEquipmentEntry(entry: string) {
   return {
     itemId: resolveGearId(entry),
     label: entry,
-    quantity: 1,
+    quantity,
     category: "other" as const,
   };
 }
@@ -423,7 +439,11 @@ export const initialState: BuilderState = {
   // Unarmoured, not the spell — "mage-armor" slugified to nothing pickable
   // and nothing that reads it treated it as "none" either.
   armorId: "",
-  extraEquipmentText: "spellbook\ncomponent-pouch",
+  // Not the spellbook: the wizard's own equipment list grants one, and this
+  // field is for what a player adds on top.
+  extraEquipmentText: "component-pouch",
+  equipmentChoices: {},
+  takeStartingGold: false,
   proficienciesText: "Arcana\nInvestigation\nThieves' Tools",
   languagesText: "Common\nElvish\nDraconic",
   cantripsText: "Mage Hand\nPrestidigitation",
@@ -512,6 +532,9 @@ export function coerceBuilderState(value: unknown): BuilderState {
     expertiseChoices: coerceExpertiseChoices(candidate.expertiseChoices),
     // A draft saved before multiclassing existed simply has one class.
     extraClasses: coerceExtraClasses(candidate.extraClasses),
+    // A draft saved before equipment was a choice simply has no answers.
+    equipmentChoices: coerceEquipmentChoices(candidate.equipmentChoices),
+    takeStartingGold: candidate.takeStartingGold === true,
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
   };
 }
@@ -765,6 +788,57 @@ function coerceExtraClasses(value: unknown): BuilderClass[] {
   });
 }
 
+/**
+ * The starting-equipment answers a build has, as the rules layer wants them.
+ *
+ * Stored as a flat map rather than per list, because a row id already names
+ * its list: "class:0" and "background:0" are different questions.
+ */
+export function equipmentAnswersFor(state: BuilderState): Record<string, string> {
+  return state.equipmentChoices;
+}
+
+/** The lists this build has to answer, class first then background. */
+export function equipmentListsFor(state: BuilderState): StartingEquipmentList[] {
+  return startingEquipmentListsFor({
+    classId: state.classId,
+    backgroundId: state.backgroundId,
+    rulesVersion: state.rulesVersion === "5e-2024" ? "2024" : "2014",
+    ...(state.sourceBooks.background ? { backgroundSourceBook: state.sourceBooks.background } : {}),
+  });
+}
+
+/**
+ * What the character starts with, once the questions are answered.
+ *
+ * Taking the gold is a 2014 rule and replaces every list at once. The average
+ * of the formula is used rather than a roll: a build has to be reproducible,
+ * and re-rolling starting gold every time the page renders is not that.
+ */
+export function startingEquipmentFor(state: BuilderState): ResolvedStartingEquipment {
+  const lists = equipmentListsFor(state);
+  const formula = lists.find((list) => list.goldAlternative)?.goldAlternative ?? null;
+  const gold = formula ? averageStartingGold(formula) : null;
+
+  return resolveStartingEquipment({
+    lists,
+    answers: state.equipmentChoices,
+    takeGold: state.takeStartingGold,
+    goldCopper: gold === null ? 0 : Math.round(gold * 100),
+  });
+}
+
+/** Equipment answers off a draft, dropping anything that is not one. */
+function coerceEquipmentChoices(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object") return {};
+
+  const answers: Record<string, string> = {};
+  for (const [key, option] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof option === "string" && option !== "") answers[key] = option;
+  }
+  return answers;
+}
+
 /** The key an expertise answer is stored under. */
 export function expertiseKeyOf(grant: { name: string; source: string; level: number }): string {
   return `${grant.name}|${grant.source}|${grant.level}`;
@@ -913,11 +987,68 @@ function isAbility(value: unknown): value is AbilityId {
   return typeof value === "string" && ABILITY_IDS.includes(value);
 }
 
+/**
+ * One line per thing owned, with the count beside it.
+ *
+ * The hand-picked weapon and armour, the free-text extras, and whatever the
+ * starting lists granted all end up in one place, and they overlap: a fighter
+ * who picks a longsword and is granted a longsword owns one. Matching is by
+ * the slug, because that is what both sides are keyed by.
+ */
+function mergeStartingItems(
+  chosen: string[],
+  granted: { name: string; label: string; quantity: number }[],
+  rulesVersion: RulesVersion,
+): { entry: string; label: string | null; quantity: number }[] {
+  const merged: { entry: string; label: string | null; quantity: number }[] = chosen.map(
+    (entry) => ({ entry, label: null, quantity: 1 }),
+  );
+
+  for (const item of granted) {
+    const entry = slugOf(item.label) || slugOf(item.name);
+    const existing = merged.find((candidate) => slugOf(candidate.entry) === entry);
+    if (existing) {
+      existing.quantity += item.quantity;
+      continue;
+    }
+    // The equipment list writes names in lower case ("ink (1-ounce bottle)").
+    // The item index writes the same name properly, and it is the one a sheet
+    // should show, so it wins where the item exists.
+    const indexed = itemInfoFor(entry, rulesVersion);
+    merged.push({ entry, label: indexed?.name ?? item.label, quantity: item.quantity });
+  }
+
+  return merged;
+}
+
+/**
+ * The name a granted item shows when the shared catalog does not know it.
+ *
+ * The catalog covers weapons, armour and common gear; a letter from a dead
+ * colleague or a one-ounce bottle of ink is outside it, and the fallback
+ * label is the slug, which is not a name. The list's own name is.
+ */
+function withGrantedLabel<T extends { label: string; category: string }>(
+  normalized: T,
+  label: string | null,
+): T {
+  return normalized.category === "other" && label ? { ...normalized, label } : normalized;
+}
+
 export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const cantrips = parseLineList(state.cantripsText).map((entry) => `Nv0: ${entry}`);
   const leveledSpells = parseLineList(state.spellsText);
   const features = parseLineList(state.featuresText);
   const extraEquipment = uniqueEntries(parseLineList(state.extraEquipmentText));
+  // What the class and background lists hand over, once their questions are
+  // answered. Merged into the same list the hand-picked weapon and armour
+  // travel in, so a character who is granted the sword they also chose owns
+  // one of it rather than two entries of one.
+  const startingItems = mergeStartingItems(
+    [state.weaponId, state.armorId, ...extraEquipment].filter(Boolean),
+    startingEquipmentFor(state).items,
+    state.rulesVersion === "5e-2024" ? "2024" : "2014",
+  );
   const proficiencies = uniqueEntries(parseLineList(state.proficienciesText));
   const languageEntries = uniqueEntries(parseLineList(state.languagesText));
   const languages = languageEntries.map((entry) => `Language: ${entry}`);
@@ -1023,7 +1154,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       spells: [...cantrips, ...leveledSpells],
       // armorId is blank for an unarmoured build (a wizard who never picked
       // one, say) — filtered here rather than treated as an item to resolve.
-      equipment: [state.weaponId, state.armorId, ...extraEquipment].filter(Boolean),
+      equipment: startingItems.map((item) => item.entry),
       features,
         normalized: {
           feats: chosenFeatIds,
@@ -1062,11 +1193,15 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
             })),
           ],
         spells: spellEntries,
-        equipment: [
-            normalizedWeapon,
-            ...(state.armorId ? [normalizedArmor] : []),
-            ...extraEquipment.map((entry) => normalizeEquipmentEntry(entry)),
-        ],
+        equipment: startingItems.map((item) =>
+          // The weapon and the armour keep their own normalizers: those two
+          // read the build's own fields, which carry more than a name.
+          item.entry === state.weaponId
+            ? { ...normalizedWeapon, quantity: item.quantity }
+            : item.entry === state.armorId && state.armorId
+              ? { ...normalizedArmor, quantity: item.quantity }
+              : withGrantedLabel(normalizeEquipmentEntry(item.entry, item.quantity), item.label),
+        ),
           features: features.map((entry) => normalizeFeatureEntry(entry, state)),
         // Unarmored Defense and natural armour. The rules layer decides which
         // one wins; the build only says which the character has.

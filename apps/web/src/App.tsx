@@ -45,6 +45,8 @@ import {
   proficiencyPoolsFor,
   characterLevelFor,
   unmetMulticlassRequirementsFor,
+  equipmentListsFor,
+  startingEquipmentFor,
   removeLine,
   type StatMethod,
 } from "./builder";
@@ -52,6 +54,7 @@ import { fallbackBuilderOptions, type BuilderOptionsPayload } from "./builder-op
 import { FeatAbilityPicker } from "./components/FeatAbilityPicker";
 import { ExpertisePicker } from "./components/ExpertisePicker";
 import { ExtraClassRows } from "./components/ExtraClassRows";
+import { StartingEquipmentPicker } from "./components/StartingEquipmentPicker";
 import { multiclassGrantsFor } from "./index-options";
 import { IndexPicker } from "./components/IndexPicker";
 import {
@@ -471,6 +474,10 @@ export function App() {
       ),
     [builderOptions.equipment.gear, selectedClassMeta?.startingEquipment],
   );
+  // The real lists, with their questions intact. The suggestion list above is
+  // a flat array of item ids and cannot carry an "a or b" at all.
+  const equipmentLists = useMemo(() => equipmentListsFor(state), [state]);
+  const resolvedEquipment = useMemo(() => startingEquipmentFor(state), [state]);
 
   const selectedProficiencies = uniqueLines(state.proficienciesText);
   const selectedLanguages = uniqueLines(state.languagesText);
@@ -1467,6 +1474,19 @@ export function App() {
                 {armorInfo.stealthDisadvantage ? " | Desventaja en Sigilo" : ""}
               </div>
             ) : null}
+            <StartingEquipmentPicker
+              answers={state.equipmentChoices}
+              lists={equipmentLists}
+              onAnswer={(rowId, option) =>
+                setState((current) => ({
+                  ...current,
+                  equipmentChoices: { ...current.equipmentChoices, [rowId]: option },
+                }))
+              }
+              onTakeGold={(take) => setState((current) => ({ ...current, takeStartingGold: take }))}
+              resolved={resolvedEquipment}
+              takeGold={state.takeStartingGold}
+            />
             <div className="field"><label>Equipo inicial sugerido</label>
               <div className="options-grid">
                 {gearChoices.map((entry) => (
