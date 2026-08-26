@@ -30,7 +30,11 @@ import {
   type ArmorClassOption,
   type MulticlassGrants,
 } from "@bertinis-vault/vetools-index";
-import { activeExpertiseGrants, type LevellingClass } from "@bertinis-vault/domain";
+import {
+  activeExpertiseGrants,
+  type LevellingClass,
+  type StartingEquipmentList,
+} from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 import type { AbilityId, ArmorClassOption as BuildArmorClassOption } from "@bertinis-vault/contracts";
 
@@ -416,6 +420,43 @@ function unique(values: string[]): string[] {
 }
 
 /** The subclass row for a subclass id, scoped to the class that owns it. */
+/**
+ * The equipment lists a character has to answer, class first then background.
+ *
+ * Both are lists of the same shape, and both ask questions, so they are handed
+ * to the rules layer together and told apart by an id. A background whose
+ * equipment the class does not stack on is still returned: the rule that
+ * decides whether it stacks is the class's `additionalFromBackground`, and only
+ * two 2014 classes say no.
+ */
+export function startingEquipmentListsFor({
+  classId,
+  backgroundId,
+  rulesVersion,
+  backgroundSourceBook,
+}: {
+  classId: string;
+  backgroundId: string;
+  rulesVersion: RulesVersion;
+  backgroundSourceBook?: string;
+}): StartingEquipmentList[] {
+  const lists: StartingEquipmentList[] = [];
+
+  const fromClass = classInfoFor(classId, rulesVersion)?.startingEquipment ?? null;
+  if (fromClass) lists.push({ id: "class", ...fromClass });
+
+  // The background's own list only comes along when the class stacks it, which
+  // is what the flag on the class's block says. A class with no block at all
+  // (the sidekicks) stacks nothing, because there is nothing to stack onto.
+  if (fromClass?.additionalFromBackground) {
+    const fromBackground =
+      backgroundRowFor(backgroundId, rulesVersion, backgroundSourceBook)?.startingEquipment ?? null;
+    if (fromBackground) lists.push({ id: "background", ...fromBackground });
+  }
+
+  return lists;
+}
+
 export function subclassInfoFor(
   subclassId: string,
   classId: string,

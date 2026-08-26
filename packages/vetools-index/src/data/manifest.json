@@ -21,13 +21,13 @@
   },
   "background": {
     "count": 161,
-    "bytes": 27923,
-    "gzip": 3383
+    "bytes": 98335,
+    "gzip": 9407
   },
   "class": {
     "count": 31,
-    "bytes": 21005,
-    "gzip": 1906
+    "bytes": 39833,
+    "gzip": 3214
   },
   "subclass": {
     "count": 203,

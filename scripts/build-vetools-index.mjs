@@ -715,6 +715,109 @@ function multiclassGrantsOf(entity) {
   };
 }
 
+/**
+ * What a class or a background hands a character at level one.
+ *
+ * The prose form is a sentence — "(a) a rapier or (b) a shortsword" — and it is
+ * the only form the builder used, which is why equipment was a fixed list: a
+ * sentence cannot be offered as a choice. 5etools carries the same list a
+ * second time in structured form, and that is what is read here.
+ *
+ * A row is an object whose keys are the alternatives. `_` means the row is
+ * granted outright; anything else is a letter, lower case in 2014 and upper
+ * case in 2024, and the character takes exactly one. The two editions divide
+ * the list differently — 2014 asks four small questions and 2024 asks one big
+ * one — but the shape is the same, so both are read the same way.
+ *
+ * Five kinds of thing appear inside an alternative, and all five matter:
+ *
+ * - an item, sometimes more than one of it (two daggers)
+ * - a category to choose from, e.g. "any simple weapon"
+ * - coins, in copper, which is how 2024 states the "or take the money" option
+ * - a special: something with no item entry, like the wizard's spellbook
+ * - a pouch that contains coins, which is both an item and money
+ */
+function startingEquipmentEntry(raw) {
+  // The index ships to the browser, and equipment is the largest thing in it.
+  // A quantity of one and an absent display name are the overwhelming majority,
+  // so they are left out rather than written as `1` and `null` a thousand times.
+  const item = (ref, quantity, displayName) => {
+    const [name, source = null] = String(ref).split("|");
+    return {
+      kind: "item",
+      name,
+      source,
+      ...(quantity && quantity !== 1 ? { quantity } : {}),
+      ...(displayName ? { displayName } : {}),
+    };
+  };
+
+  if (typeof raw === "string") return [item(raw)];
+
+  if (raw.equipmentType || raw.equipmentTypes) {
+    return [
+      {
+        kind: "category",
+        categories: raw.equipmentTypes ?? [raw.equipmentType],
+        ...(raw.quantity && raw.quantity !== 1 ? { quantity: raw.quantity } : {}),
+      },
+    ];
+  }
+
+  if (raw.special) {
+    return [
+      {
+        kind: "special",
+        label: raw.special,
+        ...(raw.quantity && raw.quantity !== 1 ? { quantity: raw.quantity } : {}),
+      },
+    ];
+  }
+
+  if (raw.item) {
+    const entries = [item(raw.item, raw.quantity, raw.displayName)];
+    // "A pouch containing 15 gp" is an item and money in one entry. The pouch
+    // is worth having and so is what is in it.
+    if (raw.containsValue) entries.push({ kind: "coins", copper: raw.containsValue });
+    return entries;
+  }
+
+  if (typeof raw.value === "number") return [{ kind: "coins", copper: raw.value }];
+
+  throw new Error(`unmodelled starting equipment entry: ${JSON.stringify(raw)}`);
+}
+
+function startingEquipmentRows(rows) {
+  return (rows ?? []).map((row) => {
+    const keys = Object.keys(row);
+    const fixed = keys.length === 1 && keys[0] === "_";
+    return {
+      fixed,
+      options: keys.map((key) => ({
+        key,
+        entries: (row[key] ?? []).flatMap(startingEquipmentEntry),
+      })),
+    };
+  });
+}
+
+function startingEquipmentOf(entity) {
+  // A background states its list directly; a class wraps it in an object that
+  // also carries the gold alternative and the prose.
+  const block = entity.startingEquipment;
+  if (!block) return null;
+  const rows = Array.isArray(block) ? block : block.defaultData;
+  if (!rows) return null;
+
+  return {
+    rows: startingEquipmentRows(rows),
+    // "or 4d4 × 10 gp". A 2014 rule only: 2024 folded the money into the
+    // options themselves, which is why it reads as a plain B alternative there.
+    goldAlternative: Array.isArray(block) ? null : (stripTags(block.goldAlternative ?? "") || null),
+    additionalFromBackground: Array.isArray(block) ? false : Boolean(block.additionalFromBackground),
+  };
+}
+
 /** The features that replace armour class, by the name they all share. */
 const RE_UNARMORED_DEFENSE = /^unarmored defen[sc]e/i;
 
@@ -1072,6 +1175,7 @@ const BUILDERS = {
         skillsGranted: grant.skillsGranted,
         skillChoice: grant.skillChoice,
         toolsGranted: grant.toolsGranted,
+        startingEquipment: startingEquipmentOf(b),
       };
     }),
 
@@ -1097,6 +1201,9 @@ const BUILDERS = {
         multiclassRequirements: multiclassRequirementsOf(c),
         // What a second class grants, which is not what a first one does.
         multiclassGrants: multiclassGrantsOf(c),
+        // The A-or-B list, structured. The prose form says the same thing and
+        // cannot be offered as a choice.
+        startingEquipment: startingEquipmentOf(c),
       };
     }),
 

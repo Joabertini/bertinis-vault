@@ -180,6 +180,13 @@ export type BackgroundRow = IndexRow & {
    * pre-fill, and the free-text proficiency field takes whatever is typed.
    */
   toolsGranted: string[];
+  /**
+   * What the background hands over, structured rather than as prose.
+   *
+   * Null for the 2014 backgrounds that state their equipment only in a
+   * sentence, and for the handful that state none at all.
+   */
+  startingEquipment: StartingEquipment | null;
 };
 
 /**
@@ -288,6 +295,53 @@ export type MulticlassGrants = {
   toolChoice: string | null;
 };
 
+/**
+ * One thing a starting-equipment option hands over.
+ *
+ * Five kinds, and the awkward ones are the last three. A category is "any
+ * simple weapon" — a choice inside a choice. Coins are how 2024 states "take
+ * the money instead", counted in copper because that is what the data counts
+ * in. A special is something with no item entry to point at, like the wizard's
+ * spellbook.
+ */
+export type EquipmentEntry =
+  | {
+      kind: "item";
+      /** The item's name as the item index knows it, lower case. */
+      name: string;
+      /** The book it comes from, or null when the data names none. */
+      source: string | null;
+      /** Absent when it is one, which is nearly always. */
+      quantity?: number;
+      /** "Book (Prayers)" for a plain book, when the data renames it. */
+      displayName?: string;
+    }
+  | { kind: "category"; categories: string[]; quantity?: number }
+  | { kind: "coins"; copper: number }
+  | { kind: "special"; label: string; quantity?: number };
+
+/** One row of a starting-equipment list: a grant, or a choice between letters. */
+export type EquipmentRow = {
+  /** True when everything in the row is granted rather than chosen between. */
+  fixed: boolean;
+  /** The alternatives, keyed as the books letter them: a/b/c, or A/B in 2024. */
+  options: { key: string; entries: EquipmentEntry[] }[];
+};
+
+/** What a class or a background hands a character at level one. */
+export type StartingEquipment = {
+  rows: EquipmentRow[];
+  /**
+   * "4d4 × 10" — take this much gold instead of the whole list.
+   *
+   * A 2014 rule only. 2024 folded the money into the options themselves, so
+   * there it reads as a plain B alternative and this is null.
+   */
+  goldAlternative: string | null;
+  /** Whether the background's own equipment stacks on top of the class's. */
+  additionalFromBackground: boolean;
+};
+
 /** A prerequisite that can be checked against a build rather than read. */
 export type OptionalFeaturePrerequisite =
   | { kind: "level"; level: number; className: string | null; classSource: string | null }
@@ -365,6 +419,14 @@ export type ClassRow = IndexRow & {
    * skill and thieves' tools. Null for the classes that state no block.
    */
   multiclassGrants: MulticlassGrants | null;
+  /**
+   * The level-one equipment list, with its choices intact.
+   *
+   * The prose form says the same thing — "(a) a rapier or (b) a shortsword" —
+   * and cannot be offered as a choice, which is why equipment was a fixed list
+   * until this was read.
+   */
+  startingEquipment: StartingEquipment | null;
 };
 
 export type SubclassRow = IndexRow & {
