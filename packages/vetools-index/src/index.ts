@@ -187,6 +187,27 @@ export type BackgroundRow = IndexRow & {
    * sentence, and for the handful that state none at all.
    */
   startingEquipment: StartingEquipment | null;
+  /**
+   * The ability increase this background grants, as alternatives.
+   *
+   * A 2024 rule: 2014 put the increase on the species, and 2024 moved it to
+   * the background — so a 2024 species grants none, and a builder that reads
+   * only the species leaves the character three points short. Null for every
+   * 2014 background.
+   */
+  abilityChoice: AbilityChoice[] | null;
+};
+
+/**
+ * One way to spend a background's ability increase.
+ *
+ * `amounts` is positional: [2, 1] means two abilities out of `options` get
+ * +2 and +1, and [1, 1, 1] means all three get +1. How much is the rule; which
+ * abilities is the player's answer.
+ */
+export type AbilityChoice = {
+  options: string[];
+  amounts: number[];
 };
 
 /**

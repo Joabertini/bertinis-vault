@@ -34,6 +34,7 @@ import {
   activeExpertiseGrants,
   type LevellingClass,
   type StartingEquipmentList,
+  type OriginAbilityOption,
 } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 import type { AbilityId, ArmorClassOption as BuildArmorClassOption } from "@bertinis-vault/contracts";
@@ -353,6 +354,22 @@ export function proficiencyGrantForBackground(
     skillChoice: row?.skillChoice ?? null,
     toolsGranted: row?.toolsGranted ?? [],
   };
+}
+
+/**
+ * The ability increase a background grants, which only 2024 backgrounds do.
+ *
+ * Null in 2014, where the increase belongs to the species. Returning null
+ * rather than an empty list matters: an empty list would read as "this
+ * background grants nothing", and in 2014 the question is not the
+ * background's to answer at all.
+ */
+export function originAbilityChoiceFor(
+  backgroundId: string,
+  rulesVersion: RulesVersion,
+  sourceBook?: string,
+): OriginAbilityOption[] | null {
+  return backgroundRowFor(backgroundId, rulesVersion, sourceBook)?.abilityChoice ?? null;
 }
 
 /** The skills a class picks from at level 1, if it offers a choice. */

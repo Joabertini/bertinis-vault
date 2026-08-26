@@ -246,13 +246,39 @@ payload and a line in the module.
 
 ## 8. The 2024 rules
 
-The ruleset switch chooses **sources**, not rules. Backgrounds do not grant the
-2024 ability increases or the origin feat, and every derived number comes from
-the 2014 tables. `packages/domain/src/dnd5e-2014.ts` is named honestly; a 2024
-sibling is the real work.
+The ruleset switch chooses **sources**, and it is starting to choose rules.
 
-The data is already in place — weapon mastery is on the item rows, and the class
-rows carry each edition's progression.
+| Thing | State |
+| --- | --- |
+| **The origin ability increase** | done, 2026-08-26 — see below |
+| The origin feat | done. Read from the background's own `feats` |
+| Weapon mastery | indexed on the item rows, not applied |
+| Derived numbers — slots, prepared spells, cantrips | 2014 tables for both editions |
+
+`packages/domain/src/dnd5e-2014.ts` is named honestly, and a 2024 sibling for
+the derived numbers is still the larger part of the work.
+
+**The origin ability increase — done, 2026-08-26.** This is the sharpest
+difference between the editions at level one, and the builder got it wrong in
+the quietest way available. 2014 puts the increase on the species: a dwarf is
++2 Constitution whoever they are. 2024 moved it to the background, and all ten
+2024 species grant none at all — so a 2024 character reached the sheet **three
+points short**, showing a 16 where the rules say 18. Nothing reported a
+problem, because a 16 is a perfectly ordinary score.
+
+Sixty backgrounds carry the increase, and the shape is uniform: two
+alternatives over the same three abilities, either +2 and +1 to two of them or
++1 to each of the three. Both are worth three points, which is pinned by a test
+— if one path were worth more the choice would not be a choice. Which abilities
+is the player's answer; how much is not, and neither is which three are on
+offer: the acolyte's are the mental ones and the soldier's are the physical.
+
+Two things it deliberately does not do. It does not apply in 2014, even for a
+character switched back after answering, because there the species carries the
+increase. And it does not touch `abilityBonuses`, which stays the manual
+species field it always was — the two are different rules, and a 2014
+character can legitimately have both a species bonus and none from their
+background.
 
 ## 9. Identity
 

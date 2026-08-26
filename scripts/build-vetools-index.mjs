@@ -339,6 +339,33 @@ function abilityOf(entity) {
   return Object.keys(fixed).length ? fixed : null;
 }
 
+/**
+ * The ability increase a background grants, which is a 2024 rule.
+ *
+ * 2014 put the increase on the species: a mountain dwarf was +2 Strength and
+ * +2 Constitution whoever they were. 2024 moved it to the background, so a
+ * 2024 species grants none at all — every one of the ten carries no ability
+ * field, and a builder that only reads the species leaves a 2024 character
+ * three points short with nothing saying so.
+ *
+ * The shape is uniform across all sixty backgrounds that have one: two
+ * alternatives over the same three abilities, +2 and +1 to two of them, or +1
+ * to each of the three. Which abilities is the player's answer; how much is
+ * not.
+ */
+function abilityChoiceOf(entity) {
+  const alternatives = entity.ability;
+  if (!alternatives?.length) return null;
+
+  return alternatives.map((alternative) => {
+    const weighted = alternative.choose?.weighted;
+    if (!weighted?.from || !weighted.weights) {
+      throw new Error(`unmodelled background ability: ${JSON.stringify(alternative)}`);
+    }
+    return { options: weighted.from, amounts: weighted.weights };
+  });
+}
+
 /** Mastery properties, 2024's weapon system. Stored as bare names. */
 function masteryOf(item) {
   if (!item.mastery?.length) return null;
@@ -1176,6 +1203,9 @@ const BUILDERS = {
         skillChoice: grant.skillChoice,
         toolsGranted: grant.toolsGranted,
         startingEquipment: startingEquipmentOf(b),
+        // 2024 moved the ability increase off the species and onto the
+        // background. Null for every 2014 background, which grants none.
+        abilityChoice: abilityChoiceOf(b),
       };
     }),
 
