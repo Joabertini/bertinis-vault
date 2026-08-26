@@ -197,7 +197,10 @@ function featChoiceOf(background) {
  * player reads rather than for lookup.
  */
 function titleCase(value) {
-  return value.replace(/\b[a-z]/g, (letter) => letter.toUpperCase());
+  // A word boundary is the wrong rule here: an apostrophe is one, so
+  // `\b[a-z]` turns "tinker's tools" into "Tinker'S Tools". Only a space or
+  // an opening bracket starts a word worth capitalising.
+  return value.replace(/(^|[\s(])([a-z])/g, (_, before, letter) => before + letter.toUpperCase());
 }
 
 /**
@@ -655,6 +658,63 @@ function abilityMinimumsOf(raw, where) {
   return Object.keys(out).length ? [out] : [];
 }
 
+/**
+ * What taking a level in this class grants a character who already has one.
+ *
+ * A second class does not hand over its starting proficiencies. It hands over
+ * a shorter list the books print separately: a rogue's first level gives four
+ * skills and thieves' tools, and a rogue level taken second gives one skill
+ * and thieves' tools. Reading the starting list for both would give a dipping
+ * character three skills they never chose.
+ *
+ * Four shapes come out of `proficienciesGained`, and the messy halves are the
+ * tools and the weapons: both are written as 5etools item tags, and one of the
+ * tool entries is a sentence rather than a name ("one musical instrument of
+ * your choice"). A sentence is a choice, and the thing being chosen from is
+ * the tool category the tag names — which the tool table already resolves.
+ */
+function multiclassGrantsOf(entity) {
+  const gained = entity.multiclassing?.proficienciesGained;
+  if (!gained) return null;
+
+  const skills = gained.skills?.[0]?.choose;
+  const tools = [];
+  let toolChoice = null;
+
+  for (const raw of gained.tools ?? []) {
+    const name = stripTags(String(raw)).trim();
+    // "one musical instrument of your choice" and "Choose one Musical
+    // Instrument" are the same instruction in two editions' phrasing. What is
+    // left after the instruction is the category to choose from.
+    if (/choose|of your choice/i.test(name)) {
+      toolChoice = name
+        .replace(/^choose\s+(one|a|an)\s+/i, "")
+        .replace(/^(one|a|an)\s+/i, "")
+        .replace(/\s+of your choice$/i, "")
+        .trim();
+      continue;
+    }
+    tools.push(titleCase(name));
+  }
+
+  return {
+    // "light", "medium", "shield". The object form carries a caveat in prose —
+    // the druid's refusal of metal — which is a table's business, not a
+    // number's, so only the proficiency itself is kept.
+    armor: (gained.armor ?? []).map((entry) =>
+      typeof entry === "string" ? entry : (entry.proficiency ?? ""),
+    ).filter(Boolean),
+    // "simple", "martial", or a named weapon: the 2014 monk's second level
+    // grants simple weapons and shortswords specifically.
+    weapons: (gained.weapons ?? []).map((entry) => stripTags(String(entry))),
+    skillChoice: skills
+      ? { options: (skills.from ?? []).map(skillNameOf), count: skills.count ?? 1 }
+      : null,
+    tools,
+    toolChoice,
+  };
+}
+
 /** The features that replace armour class, by the name they all share. */
 const RE_UNARMORED_DEFENSE = /^unarmored defen[sc]e/i;
 
@@ -1035,6 +1095,8 @@ const BUILDERS = {
         // What a character needs before they may take a level in this class.
         // Empty for the handful of classes that state none.
         multiclassRequirements: multiclassRequirementsOf(c),
+        // What a second class grants, which is not what a first one does.
+        multiclassGrants: multiclassGrantsOf(c),
       };
     }),
 

@@ -52,6 +52,7 @@ import { fallbackBuilderOptions, type BuilderOptionsPayload } from "./builder-op
 import { FeatAbilityPicker } from "./components/FeatAbilityPicker";
 import { ExpertisePicker } from "./components/ExpertisePicker";
 import { ExtraClassRows } from "./components/ExtraClassRows";
+import { multiclassGrantsFor } from "./index-options";
 import { IndexPicker } from "./components/IndexPicker";
 import {
   featAbilityGrantsFor,
@@ -304,6 +305,16 @@ export function App() {
   // of its classes has to be met — the one being left as well as the one being
   // entered.
   const unmetMulticlass = unmetMulticlassRequirementsFor(state);
+  // What the classes past the first hand over. The first class grants its
+  // starting proficiencies instead, which the training step already asks for.
+  const multiclassGrants = useMemo(
+    () =>
+      multiclassGrantsFor({
+        classIds: state.extraClasses.map((entry) => entry.classId).filter(Boolean),
+        rulesVersion,
+      }),
+    [state.extraClasses, rulesVersion],
+  );
   const pendingImprovementLevels = unansweredImprovementLevels(
     levelling,
     state.level,
@@ -409,8 +420,18 @@ export function App() {
   );
   const classSkillChoice = skillChoiceForClass(state.classId, rulesVersion);
   const lockedProficiencies = useMemo(
-    () => [...backgroundProficiencyGrant.skillsGranted, ...backgroundProficiencyGrant.toolsGranted],
-    [backgroundProficiencyGrant.skillsGranted, backgroundProficiencyGrant.toolsGranted],
+    () => [
+      ...backgroundProficiencyGrant.skillsGranted,
+      ...backgroundProficiencyGrant.toolsGranted,
+      // Tools a second class hands over outright — a rogue dip brings thieves'
+      // tools whether the player wants them or not, so they are not a choice.
+      ...multiclassGrants.tools,
+    ],
+    [
+      backgroundProficiencyGrant.skillsGranted,
+      backgroundProficiencyGrant.toolsGranted,
+      multiclassGrants.tools,
+    ],
   );
   // A background's own bonus skill choice (a handful of SCAG backgrounds grant
   // one skill outright and a choice of a second) is folded into the same
@@ -419,12 +440,21 @@ export function App() {
   const classSkillChoices = useMemo(
     () =>
       Array.from(
-        new Set([...(classSkillChoice?.options ?? []), ...(backgroundProficiencyGrant.skillChoice?.options ?? [])]),
+        new Set([
+          ...(classSkillChoice?.options ?? []),
+          ...(backgroundProficiencyGrant.skillChoice?.options ?? []),
+          // A second class offers a shorter list than its starting one, and it
+          // folds into the same pool for the same reason the background's does:
+          // the player is picking skills either way.
+          ...(multiclassGrants.skillChoice?.options ?? []),
+        ]),
       ),
-    [classSkillChoice?.options, backgroundProficiencyGrant.skillChoice?.options],
+    [classSkillChoice?.options, backgroundProficiencyGrant.skillChoice?.options, multiclassGrants.skillChoice?.options],
   );
   const classSkillSelectionLimit =
-    (classSkillChoice?.count ?? 0) + (backgroundProficiencyGrant.skillChoice?.count ?? 0);
+    (classSkillChoice?.count ?? 0) +
+    (backgroundProficiencyGrant.skillChoice?.count ?? 0) +
+    (multiclassGrants.skillChoice?.count ?? 0);
   const skillChoices = useMemo(
     () => Array.from(new Set([...lockedProficiencies, ...classSkillChoices])),
     [classSkillChoices, lockedProficiencies],
@@ -950,6 +980,24 @@ export function App() {
                 Nivel de personaje: <strong>{characterLevel}</strong> — la suma de todas las clases.
                 Los espacios de conjuro salen de un nivel de lanzador combinado, no de la tabla de
                 cada clase por separado.
+              </div>
+            ) : null}
+
+            {state.extraClasses.length > 0 ? (
+              <div className="feat-info">
+                Lo que suman las clases extra: armadura{" "}
+                <strong>{multiclassGrants.armor.join(", ") || "ninguna"}</strong> | armas{" "}
+                <strong>{multiclassGrants.weapons.join(", ") || "ninguna"}</strong> | herramientas{" "}
+                <strong>
+                  {[
+                    ...multiclassGrants.tools,
+                    ...(multiclassGrants.toolChoice ? [`${multiclassGrants.toolChoice} (a elegir)`] : []),
+                  ].join(", ") || "ninguna"}
+                </strong>
+                {multiclassGrants.skillChoice
+                  ? ` | ${multiclassGrants.skillChoice.count} skill mas para elegir en Skills e Idiomas`
+                  : ""}
+                . Es la lista corta de multiclase, no las competencias iniciales de la clase.
               </div>
             ) : null}
 

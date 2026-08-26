@@ -28,6 +28,7 @@ import {
   type SubraceRow,
   type ExpertiseGrant,
   type ArmorClassOption,
+  type MulticlassGrants,
 } from "@bertinis-vault/vetools-index";
 import { activeExpertiseGrants, type LevellingClass } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
@@ -368,6 +369,50 @@ export function featAbilityGrantsFor(
 ): FeatAbilityGrant[] {
   const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
   return legal.find((row) => slugOf(row.name) === featId)?.ability ?? [];
+}
+
+/**
+ * What every class beyond the first grants, added together.
+ *
+ * The first class is excluded on purpose: it grants its *starting*
+ * proficiencies, which the builder already asks for. A second class grants the
+ * shorter multiclass list, and a rogue counted twice would hand the player
+ * three skills they never chose.
+ */
+export function multiclassGrantsFor({
+  classIds,
+  rulesVersion,
+}: {
+  /** Classes beyond the first, in order. */
+  classIds: string[];
+  rulesVersion: RulesVersion;
+}): MulticlassGrants {
+  const rows = classIds
+    .map((classId) => classInfoFor(classId, rulesVersion)?.multiclassGrants)
+    .filter((grants): grants is MulticlassGrants => Boolean(grants));
+
+  const skillOptions: string[] = [];
+  let skillCount = 0;
+
+  for (const grants of rows) {
+    if (!grants.skillChoice) continue;
+    skillCount += grants.skillChoice.count;
+    for (const option of grants.skillChoice.options) {
+      if (!skillOptions.includes(option)) skillOptions.push(option);
+    }
+  }
+
+  return {
+    armor: unique(rows.flatMap((grants) => grants.armor)),
+    weapons: unique(rows.flatMap((grants) => grants.weapons)),
+    skillChoice: skillCount > 0 ? { options: skillOptions, count: skillCount } : null,
+    tools: unique(rows.flatMap((grants) => grants.tools)),
+    toolChoice: rows.map((grants) => grants.toolChoice).find(Boolean) ?? null,
+  };
+}
+
+function unique(values: string[]): string[] {
+  return Array.from(new Set(values));
 }
 
 /** The subclass row for a subclass id, scoped to the class that owns it. */

@@ -274,6 +274,20 @@ export type ExpertiseGrant = {
   sets: ExpertiseSet[];
 };
 
+/** What a second class hands over, which is less than a first one does. */
+export type MulticlassGrants = {
+  /** "light", "medium", "shield". */
+  armor: string[];
+  /** "simple", "martial", or a named weapon — the 2014 monk gets shortswords. */
+  weapons: string[];
+  /** One skill from a shortlist, for the four classes that offer one. */
+  skillChoice: SkillChoice | null;
+  /** Tools granted outright, by name. */
+  tools: string[];
+  /** A category to choose a tool from, e.g. "Musical Instrument". */
+  toolChoice: string | null;
+};
+
 /** A prerequisite that can be checked against a build rather than read. */
 export type OptionalFeaturePrerequisite =
   | { kind: "level"; level: number; className: string | null; classSource: string | null }
@@ -343,6 +357,14 @@ export type ClassRow = IndexRow & {
    * editions state it in different fields and reach the same answer.
    */
   multiclassRequirements: Record<string, number>[];
+  /**
+   * What taking a level in this class grants someone who already has one.
+   *
+   * Not the same list as its starting proficiencies. A rogue's first level
+   * gives four skills and thieves' tools; a rogue level taken second gives one
+   * skill and thieves' tools. Null for the classes that state no block.
+   */
+  multiclassGrants: MulticlassGrants | null;
 };
 
 export type SubclassRow = IndexRow & {

@@ -105,6 +105,42 @@ One deliberate divergence: a monk holding a shield loses Unarmored Defense, and
 the builder says so. Neither Plutonium nor the `dnd5e` system models that
 clause, so the Foundry sheet shows 2 higher for that one build.
 
+## 3b. What a second class grants
+
+**Done, 2026-08-26.** A class taken as a second class does not hand over its
+starting proficiencies. The books print a shorter list for exactly this case,
+and 5etools carries it as `multiclassing.proficienciesGained`. The difference is
+not cosmetic: reading the starting list for a rogue dip hands the player four
+skills and every rogue tool instead of one skill and thieves' tools.
+
+Twenty-one classes carry a block; the wizard, the sorcerer and the 2024 monk
+carry none, which is not the same as an empty one. The editions disagree — the
+2024 fighter grants martial weapons where the 2014 fighter grants simple and
+martial, and the 2024 druid drops medium armour — so the two are indexed apart
+and the ruleset switch picks between them.
+
+Two shapes needed reading rather than copying. Weapons are 5etools item tags, so
+the 2014 monk's `{@item shortsword|phb|shortswords}` is a named weapon next to
+the category "simple". Tools are sometimes a sentence: "one musical instrument
+of your choice" in 2014 and "Choose one Musical Instrument" in 2024 are the same
+instruction, and what is left after the instruction is the category to choose
+from. A sentence is a choice; a name is a grant.
+
+In the wizard, a granted tool is locked rather than offered — a rogue dip brings
+thieves' tools whether the player wants them or not — and an extra skill choice
+folds into the same pool the class and the background already feed, because the
+player is picking skills either way.
+
+**A known divergence in Foundry, not in the builder.** Plutonium's class import
+grants each class's *full* starting proficiencies, for every class it imports.
+A multiclass sheet will therefore show more armour and weapon proficiency than
+the rules allow. The payload the module writes is right; the sheet Plutonium
+built underneath it is not, and nothing in the module's reach corrects it.
+
+One thing deliberately dropped: the druid's refusal of metal armour is prose
+attached to the armour entry, not a rule a number can carry. It is a table's
+business.
+
 ## 4. Ability scores and breakpoints
 
 | Thing | State |
@@ -113,7 +149,7 @@ clause, so the Foundry sheet shows 2 higher for that one build.
 | ASI versus feat at every eligible level | done — `levelChoices` holds `{kind: "improvement"}` or `{kind: "feat"}` |
 | **The +1 a half-feat grants** | done, 2026-08-25 — see below |
 | Feat prerequisites | missing |
-| The 13-in-the-ability requirement for multiclassing | missing |
+| The 13-in-the-ability requirement for multiclassing | done — reported, not refused |
 
 The half-feat is precisely the most efficient purchase in the game on an odd
 primary score: it buys the effect *and* the modifier point a flat ASI would
@@ -153,7 +189,7 @@ carries the mark.
 | **Multiclassing** — the rules | done. One combined caster level from each class's own fraction, pact slots kept apart, and hit points from the die of the class each level was taken in. The contribution is not the class's own table: a ranger 5 reads its own table at 3 and contributes 2 |
 | **Multiclassing** — the interface | done, plainly. A row per extra class with its own level and subclass; the first class keeps its own place because the rules single it out. What it looks like belongs to the design track |
 | **Multiclassing** — the prerequisite | done. Read from `multiclassing.requirements` in 2014 and from `primaryAbility` in 2024, which are different fields reaching the same answer. Reported, not refused |
-| **Multiclassing** — what a second class grants | missing. `multiclassing.proficienciesGained` is not read, so a second class grants no armour, weapon, skill or tool proficiency |
+| **Multiclassing** — what a second class grants | done, 2026-08-26. Read from `multiclassing.proficienciesGained`, which is the short list the books print separately from the starting one — see below |
 | Class skill choices | done — read from the index rather than a hand-written table |
 | Expertise | done — see Proficiencies |
 
@@ -209,16 +245,15 @@ and deity are not. Cosmetic, and last.
    species' natural armour. Parsed out of the feature text, because for the
    barbarian, the monk and the 2024 dancing bard there is nowhere else to read
    it from.
-6. **Multiclassing** — the rules, the interface and the prerequisite are
-   done. What is left is what a second class actually *grants*:
-   `multiclassing.proficienciesGained` is in the data and is not read, so a
-   second class hands out no armour, weapon, skill or tool proficiency.
+6. ~~**Multiclassing**~~ — done. The rules, the interface, the prerequisite,
+   and what a second class grants. The last one is the short list the books
+   print separately: a rogue taken second gives one skill, not four.
 7. **Equipment as choices**, with the gold alternative.
 8. **The 2024 rules**, properly.
 9. **Prerequisites and legality checking.**
 
-The cheap ones are done. What is left is the large work: multiclassing, which
-reshapes the wizard, and everything downstream of it.
+The cheap ones are done, and so is multiclassing. What is left is equipment,
+the 2024 rules as rules rather than as a source filter, and legality checking.
 
 One deliberate divergence to know about: a monk holding a shield loses Unarmored
 Defense, and the builder now says so. Neither Plutonium nor the `dnd5e` system
