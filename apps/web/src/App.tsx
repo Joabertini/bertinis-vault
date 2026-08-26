@@ -29,7 +29,7 @@ import {
   type AbilityBonusMap,
   type LevelChoice,
 } from "@bertinis-vault/domain";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   type BuilderState,
   appendUniqueLine,
@@ -47,6 +47,8 @@ import {
   characterLevelFor,
   unmetMulticlassRequirementsFor,
   unmetFeatPrerequisitesFor,
+  optionalFeatureSlotsFor,
+  optionalFeaturePrerequisitesFor,
   masteryOptionsFor,
   masteryProblemsFor,
   weaponMasterySlotsFor,
@@ -64,7 +66,13 @@ import { ExpertisePicker } from "./components/ExpertisePicker";
 import { ExtraClassRows } from "./components/ExtraClassRows";
 import { StartingEquipmentPicker } from "./components/StartingEquipmentPicker";
 import { OriginAbilityPicker } from "./components/OriginAbilityPicker";
-import { multiclassGrantsFor, spellCountsFor, spellPoolFor } from "./index-options";
+import { OptionalFeaturePicker } from "./components/OptionalFeaturePicker";
+import {
+  multiclassGrantsFor,
+  spellCountsFor,
+  spellPoolFor,
+  optionalFeatureOptionsFor,
+} from "./index-options";
 import { IndexPicker } from "./components/IndexPicker";
 import {
   featAbilityGrantsFor,
@@ -317,6 +325,19 @@ export function App() {
   // of its classes has to be met — the one being left as well as the one being
   // entered.
   const unmetMulticlass = unmetMulticlassRequirementsFor(state);
+  // Fighting styles, invocations, metamagic, maneuvers and the rest. All of it
+  // was modelled and none of it was ever asked for: the build carried a list
+  // nothing filled and nothing checked.
+  const optionalFeatureSlots = useMemo(() => optionalFeatureSlotsFor(state), [state]);
+  const optionalFeatureOptions = useCallback(
+    (featureTypes: string[]) =>
+      optionalFeatureOptionsFor(featureTypes, rulesVersion).map((row) => {
+        const id = slugOf(row.name);
+        const { unmet, text } = optionalFeaturePrerequisitesFor(state, id);
+        return { id, label: row.name, source: row.source, featureType: row.featureType, unmet, text };
+      }),
+    [rulesVersion, state],
+  );
   // 205 of the 276 feats state a prerequisite and nothing read any of them, so
   // the builder offered Heavily Armored to a wizard. Reported, never refused:
   // a table may allow anything, and a builder that refuses gets worked around.
@@ -1068,6 +1089,20 @@ export function App() {
                 . Es la lista corta de multiclase, no las competencias iniciales de la clase.
               </div>
             ) : null}
+
+            <OptionalFeaturePicker
+              onToggle={(optionId) =>
+                setState((current) => ({
+                  ...current,
+                  optionalFeatureIds: current.optionalFeatureIds.includes(optionId)
+                    ? current.optionalFeatureIds.filter((entry) => entry !== optionId)
+                    : [...current.optionalFeatureIds, optionId],
+                }))
+              }
+              optionsFor={optionalFeatureOptions}
+              slots={optionalFeatureSlots}
+              taken={state.optionalFeatureIds}
+            />
 
             {unmetMulticlass.length > 0 ? (
               <div className="field-warning">

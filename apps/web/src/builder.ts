@@ -36,6 +36,15 @@ import {
   masteryIsMeleeOnly,
   masteryProblems,
   featPrerequisiteProblems,
+  optionalFeatureQuotas,
+  optionalFeatureSlots,
+  unmetPrerequisites,
+  pactNameOf,
+  type OptionalFeatureGranter,
+  type OptionalFeatureSlot,
+  type OptionalFeatureContext,
+  type OptionalFeaturePrerequisiteLike,
+  type TakenOptionalFeature,
   type FeatCandidate,
   type FeatPrerequisiteProblem,
   weaponMasterySlots,
@@ -63,6 +72,7 @@ import {
   masteryWeaponOptions,
   weaponMasteryEntriesFor,
   featPrerequisitesFor,
+  optionalFeatureRowFor,
   optionById,
   classInfoFor,
   expertiseGrantsFor,
@@ -1039,6 +1049,123 @@ export function unmetFeatPrerequisitesFor(
   return takenFeatsFor(state)
     .map((entry) => ({ featId: entry.featId, problems: featPrerequisiteProblemsFor(state, entry.featId) }))
     .filter((entry) => entry.problems.length > 0);
+}
+
+/**
+ * The classes and subclasses that offer this character a level-up choice.
+ *
+ * Both matter and for different reasons: the fighter's fighting style is the
+ * class's, and the battle master's maneuvers are the subclass's. A build with
+ * only the class read would offer a battle master nothing.
+ */
+export function optionalFeatureGrantersFor(state: BuilderState): OptionalFeatureGranter[] {
+  const rulesVersion: RulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const granters: OptionalFeatureGranter[] = [];
+
+  for (const entry of classesFor(state)) {
+    const classRow = classInfoFor(entry.classId, rulesVersion);
+    if (classRow) {
+      granters.push({
+        name: classRow.name,
+        source: classRow.source,
+        level: entry.level,
+        optionalFeatureProgression: classRow.optionalFeatureProgression,
+      });
+    }
+
+    if (!entry.subclassId) continue;
+    const subclassRow = subclassInfoFor(entry.subclassId, entry.classId, rulesVersion);
+    if (subclassRow) {
+      granters.push({
+        name: subclassRow.name,
+        source: subclassRow.source,
+        level: entry.level,
+        optionalFeatureProgression: subclassRow.optionalFeatureProgression,
+      });
+    }
+  }
+
+  return granters;
+}
+
+/** The options this character has taken, resolved back into rows. */
+function takenOptionalFeaturesFor(state: BuilderState): TakenOptionalFeature[] {
+  const rulesVersion: RulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+
+  return state.optionalFeatureIds.flatMap((id) => {
+    const row = optionalFeatureRowFor(id, rulesVersion);
+    return row ? [{ name: row.name, source: row.source, featureType: row.featureType }] : [];
+  });
+}
+
+/**
+ * What the character is entitled to, and what they have picked against it.
+ *
+ * `remaining` goes negative when a build carries more than it should, which is
+ * what a downgraded level looks like: the picks stay and the shortfall is
+ * reported rather than silently trimmed.
+ */
+export function optionalFeatureSlotsFor(state: BuilderState): OptionalFeatureSlot[] {
+  return optionalFeatureSlots(
+    optionalFeatureQuotas(optionalFeatureGrantersFor(state)),
+    takenOptionalFeaturesFor(state),
+  );
+}
+
+/** The build in the terms an option's prerequisites are stated in. */
+export function optionalFeatureContextFor(state: BuilderState): OptionalFeatureContext {
+  const rulesVersion: RulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const classLevels: Record<string, number> = {};
+
+  for (const entry of classesFor(state)) {
+    const row = classInfoFor(entry.classId, rulesVersion);
+    if (!row) continue;
+    classLevels[`${row.name}|${row.source}`] = entry.level;
+  }
+
+  const taken = takenOptionalFeaturesFor(state);
+
+  return {
+    classLevels,
+    characterLevel: characterLevelFor(state),
+    // An invocation asks for "Tome"; the boon that grants it is called "Pact
+    // of the Tome". The rules layer knows how to bring the two together.
+    pacts: taken.map((entry) => pactNameOf(entry.name)),
+    spells: [
+      ...parseLineList(state.cantripsText),
+      ...parseLineList(state.spellsText).map((entry) => entry.replace(/^Nv\d+:\s*/i, "")),
+    ],
+    taken: taken.map((entry) => ({ name: entry.name, source: entry.source })),
+  };
+}
+
+/** Which of an option's prerequisites this build fails. */
+export function optionalFeaturePrerequisitesFor(
+  state: BuilderState,
+  optionId: string,
+): { unmet: OptionalFeaturePrerequisiteLike[]; text: string[] } {
+  const rulesVersion: RulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const row = optionalFeatureRowFor(optionId, rulesVersion);
+  if (!row) return { unmet: [], text: [] };
+
+  return {
+    unmet: unmetPrerequisites(row.prerequisites, optionalFeatureContextFor(state)),
+    // Prose prerequisites are shown rather than checked: checking them would
+    // mean guessing, and a guess that hides a legal option is worse.
+    text: row.prerequisiteText,
+  };
+}
+
+/** Every option this character holds that it does not qualify for. */
+export function unmetOptionalFeaturesFor(
+  state: BuilderState,
+): { optionId: string; unmet: OptionalFeaturePrerequisiteLike[] }[] {
+  return state.optionalFeatureIds
+    .map((optionId) => ({
+      optionId,
+      unmet: optionalFeaturePrerequisitesFor(state, optionId).unmet,
+    }))
+    .filter((entry) => entry.unmet.length > 0);
 }
 
 /** The key an expertise answer is stored under. */

@@ -30,6 +30,7 @@ import {
   type ArmorClassOption,
   type MulticlassGrants,
   type FeatPrerequisite,
+  type OptionalFeatureRow,
 } from "@bertinis-vault/vetools-index";
 import {
   activeExpertiseGrants,
@@ -542,6 +543,34 @@ export function featPrerequisitesFor(
   const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
 
   return row?.prerequisites ?? [];
+}
+
+/**
+ * The options that belong to a set of pools.
+ *
+ * A pool is matched by `featureType` rather than by the class that offers it —
+ * a fighter and a battle master draw maneuvers from one pool no matter which
+ * row named it.
+ */
+export function optionalFeatureOptionsFor(
+  featureTypes: string[],
+  rulesVersion: RulesVersion,
+): OptionalFeatureRow[] {
+  if (featureTypes.length === 0) return [];
+  const legal = forRulesVersion(collections.optionalfeature ?? [], rulesVersion) as OptionalFeatureRow[];
+
+  return legal
+    .filter((row) => row.featureType.some((type) => featureTypes.includes(type)))
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** One option by its slug, for turning a stored pick back into a row. */
+export function optionalFeatureRowFor(
+  id: string,
+  rulesVersion: RulesVersion,
+): OptionalFeatureRow | null {
+  const legal = forRulesVersion(collections.optionalfeature ?? [], rulesVersion) as OptionalFeatureRow[];
+  return legal.find((row) => slugOf(row.name) === id) ?? null;
 }
 
 /** The skills a class picks from at level 1, if it offers a choice. */

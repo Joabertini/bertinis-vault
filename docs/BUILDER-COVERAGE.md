@@ -346,8 +346,9 @@ and deity are not. Cosmetic, and last.
 
 ## The order worth building in
 
-1. ~~**Level choices (`optionalfeature`)**~~ — modelled end to end. The picker
-   is the remaining half, and it belongs with the interface work.
+1. ~~**Level choices (`optionalfeature`)**~~ — done, picker included as of
+   2026-08-26. The model had been finished for a while and nothing ever asked
+   the questions.
 2. ~~**The half-feat `+1`**~~ — done, picker included.
 3. ~~**Expertise**~~ — done, picker included. The grants are read from
    5etools' Foundry companion file rather than a hand-written table, so the
@@ -367,15 +368,41 @@ and deity are not. Cosmetic, and last.
    and the background's own list. Currency is counted but has nowhere to go in
    the payload yet.
 8. **The 2024 rules**, properly.
-9. **Prerequisites and legality checking** — feat prerequisites done, and
-   subclass spell lists done. What is left is subclass levels and the level a
-   feature is actually taken at.
+9. ~~**Prerequisites and legality checking**~~ — done. Feats, subclass spell
+   lists, and the level-up choices with their own prerequisites. What is left
+   is not legality but polish: identity fields, attunement, carrying capacity.
 
 The cheap ones are done, and so are multiclassing, equipment, and the sharp
 edges of the 2024 rules. What is left is the rest of legality checking, and
 three things written down as open: the starting money has nowhere to go in the
 payload, weapon mastery is not written to Foundry, and the four manual Foundry
 validation scenarios still need a live run.
+
+**Level-up choices — done, picker included, 2026-08-26.** Fighting styles,
+eldritch invocations, the pact boon, metamagic, maneuvers, runes, arcane
+shots, elemental disciplines and artificer infusions are one mechanism wearing
+nine names: a pool, and a count that grows with level. All of it had been
+modelled end to end in `packages/domain/src/optional-features.ts` — quotas,
+matching, prerequisites — and **nothing ever asked the questions**. The build
+carried a list nothing filled and nothing checked.
+
+Both the class and the subclass are read, and for different reasons: the
+fighter's fighting style is the class's and the battle master's maneuvers are
+the subclass's, so a build reading only the class offered a battle master
+nothing at all.
+
+Three decisions carried over from the rules layer rather than reinvented in the
+interface. A prerequisite that names a class counts the level in **that** class:
+a Warlock 2 / Fighter 10 cannot take an invocation that asks for Warlock 5. An
+option whose prerequisites are unmet is **shown and disabled** rather than
+hidden — a player who cannot yet take Agonizing Blast is better served knowing
+it exists and what it wants. And a build carrying more picks than its level
+allows keeps them and reports the excess, because that is what a downgraded
+level looks like and deleting a player's choices is worse.
+
+Prose prerequisites are shown and never checked. Checking them would mean
+guessing, and a guess that hides a legal option is worse than one the table has
+to rule on.
 
 **Subclass spell lists — done, 2026-08-26.** The headline failure: a class's
 spell list comes off the spell rows themselves, and the fighter and the rogue
