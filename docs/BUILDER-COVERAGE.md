@@ -253,10 +253,34 @@ The ruleset switch chooses **sources**, and it is starting to choose rules.
 | **The origin ability increase** | done, 2026-08-26 — see below |
 | The origin feat | done. Read from the background's own `feats` |
 | **Weapon mastery** | done, 2026-08-26 — see below |
-| Derived numbers — slots, prepared spells, cantrips | 2014 tables for both editions |
+| **Prepared spells and cantrips** | done, 2026-08-26 — read from each class's own table |
+| Spell slots | shared between the editions, which is correct: the slot tables did not change |
 
-`packages/domain/src/dnd5e-2014.ts` is named honestly, and a 2024 sibling for
-the derived numbers is still the larger part of the work.
+`packages/domain/src/dnd5e-2014.ts` is named honestly. What is left in it is
+the spell slot tables, which the editions share, and the selection-mode labels.
+
+**Prepared spells and cantrips — done, 2026-08-26.** Both editions print these
+in each class's own level table, and nothing read them: the builder carried a
+hand-written switch over eight classes with the 2014 numbers and served 2024
+characters from it too. Three separate things were wrong.
+
+2024 replaced "Spells Known" with a **Prepared Spells** column for every
+caster, and the numbers are not the same — a 2024 bard prepares nine at level
+five where a 2014 bard knows eight. 2024 also **moved the paladin's and the
+ranger's spellcasting from level 2 to level 1**, so a level-one 2024 paladin
+could prepare nothing where the rules give them two; a constant "half casters
+start at level 2" is wrong for exactly the two classes it was written for. And
+the switch only knew eight classes, so anything outside it counted zero.
+
+The 2014 prepare-casters are the one case a table cannot answer, because their
+count depends on a casting modifier — they carry a formula instead, and it is
+evaluated rather than re-derived per class. Its floor is one spell: "level plus
+a negative modifier" is not zero spells, it is a character with a bad casting
+stat.
+
+One class in the whole dataset can count nothing either way: the Rune Scribe, an
+unreleased UA prestige class that prints no table and states no formula. It is
+named in a test rather than hidden behind a weaker assertion.
 
 **Weapon mastery — done, 2026-08-26.** Every 2024 weapon carries one mastery
 property, and that half was already indexed. The half that was missing is the

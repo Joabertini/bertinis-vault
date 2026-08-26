@@ -465,6 +465,34 @@ export type ClassRow = IndexRow & {
    * paladin, ranger and rogue in the feature's text, where it never does.
    */
   weaponMastery: WeaponMastery | null;
+  /**
+   * Cantrips and spells per class level, off the class's own table.
+   *
+   * Both editions print it; nothing read it, and the builder carried a
+   * hand-written switch over eight classes with the 2014 numbers instead. The
+   * editions also renamed the column: 2014 has "Spells Known" for the classes
+   * that learn a fixed list, and 2024 has "Prepared Spells" for every caster.
+   *
+   * Null for a class with no such table, which is every non-caster.
+   */
+  spellTable: SpellTable | null;
+  /**
+   * The level this class starts casting at.
+   *
+   * Not a constant: 2024 moved the paladin's and the ranger's Spellcasting
+   * from level 2 to level 1. The warlock's feature is called Pact Magic, and
+   * is read as the same thing.
+   */
+  spellcastingLevel: number | null;
+};
+
+/** One column per kind of count, twenty entries each, or null where absent. */
+export type SpellTable = {
+  cantrips: number[] | null;
+  /** 2014's "Spells Known", for the classes that learn a fixed list. */
+  known: number[] | null;
+  /** 2024's "Prepared Spells", which every 2024 caster has. */
+  prepared: number[] | null;
 };
 
 /** What a class's weapon mastery is worth, and what it may be spent on. */

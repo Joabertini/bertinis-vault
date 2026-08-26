@@ -367,6 +367,69 @@ function abilityChoiceOf(entity) {
 }
 
 /**
+ * How many cantrips and spells a class has at each of its levels.
+ *
+ * Every casting class prints this in its own level table, in both editions,
+ * and nothing read it: the builder carried a hand-written switch covering
+ * eight classes with the 2014 numbers, used for both editions.
+
+ * The editions disagree about more than the numbers. 2014 has "Spells Known"
+ * for the classes that learn a fixed list and a formula — level plus the
+ * casting modifier — for the ones that prepare. 2024 replaced both with a
+ * "Prepared Spells" column for every caster, which is why the 2024 rows carry
+ * no formula at all: the table *is* the rule now.
+ *
+ * A cantrip column is a cantrip column in both, under two names.
+ */
+function spellTableOf(entity) {
+  const columns = { cantrips: null, known: null, prepared: null };
+
+  for (const group of entity.classTableGroups ?? []) {
+    (group.colLabels ?? []).forEach((label, index) => {
+      const text = stripTags(String(label));
+      const key = /cantrip/i.test(text)
+        ? "cantrips"
+        : /prepared/i.test(text)
+          ? "prepared"
+          : /spells known/i.test(text)
+            ? "known"
+            : null;
+      if (!key || columns[key]) return;
+
+      columns[key] = (group.rows ?? []).map((row) => {
+        const value = Number(row[index]);
+        if (!Number.isFinite(value)) {
+          throw new Error(`unreadable ${key} count for ${entity.name}: ${JSON.stringify(row[index])}`);
+        }
+        return value;
+      });
+    });
+  }
+
+  if (!columns.cantrips && !columns.known && !columns.prepared) return null;
+  return columns;
+}
+
+/**
+ * The level a class starts casting at, read from its own feature list.
+ *
+ * Not a constant: 2024 moved the paladin's and the ranger's Spellcasting from
+ * level 2 to level 1, so a hardcoded "half casters start at 2" is wrong for
+ * exactly the two classes it was written for.
+ */
+function spellcastingLevelOf(entity, features) {
+  const feature = features.find(
+    (row) =>
+      // The warlock's is called Pact Magic. Matching only "Spellcasting"
+      // leaves the one class whose magic works differently with no answer.
+      (row.name === "Spellcasting" || row.name === "Pact Magic") &&
+      row.className === entity.name &&
+      row.classSource === sourceOf(entity),
+  );
+  return feature?.level ?? null;
+}
+
+/**
  * Mastery properties, 2024's weapon system. Stored as bare names.
  *
  * Nearly every entry is the string "Topple|XPHB". One is not: the Psychic
@@ -1314,6 +1377,12 @@ const BUILDERS = {
         // 2024's weapon mastery. Null for every 2014 class, and for the 2024
         // classes that never learn it.
         weaponMastery: weaponMasteryOf(c, context.classFeatures),
+        // Cantrips and spells per level, off the class's own table. The
+        // builder used to carry these as a hand-written switch.
+        spellTable: spellTableOf(c),
+        // 2024 moved the paladin's and the ranger's spellcasting to level 1,
+        // so the level a class starts casting at is data, not a constant.
+        spellcastingLevel: spellcastingLevelOf(c, context.classFeatures),
       };
     }),
 

@@ -62,7 +62,7 @@ import { ExpertisePicker } from "./components/ExpertisePicker";
 import { ExtraClassRows } from "./components/ExtraClassRows";
 import { StartingEquipmentPicker } from "./components/StartingEquipmentPicker";
 import { OriginAbilityPicker } from "./components/OriginAbilityPicker";
-import { multiclassGrantsFor } from "./index-options";
+import { multiclassGrantsFor, spellCountsFor } from "./index-options";
 import { IndexPicker } from "./components/IndexPicker";
 import {
   featAbilityGrantsFor,
@@ -512,9 +512,27 @@ export function App() {
     spellcastingAbilityId && numericDraftKeys.includes(spellcastingAbilityId as NumericDraftKey)
       ? abilityModifier(state[spellcastingAbilityId as NumericDraftKey])
       : 0;
-  const spellSelectionProfile = derivedSpellcasting
+  // The counts come off the class's own table, which both editions print and
+  // nothing read: the fallback below is a hand-written switch over eight
+  // classes with the 2014 numbers, and it served 2024 characters too.
+  const indexedSpellCounts = derivedSpellcasting
+    ? spellCountsFor({
+        classId: state.classId,
+        level: state.level,
+        rulesVersion,
+        abilityModifier: spellcastingAbilityModifier,
+      })
+    : null;
+  const fallbackSpellProfile = derivedSpellcasting
     ? getSpellSelectionProfileForClassLevel(state.classId, state.level, spellcastingAbilityModifier)
     : { mode: "none" as const, cantripLimit: 0, spellLimit: 0 };
+  const spellSelectionProfile = indexedSpellCounts
+    ? {
+        ...fallbackSpellProfile,
+        cantripLimit: indexedSpellCounts.cantrips,
+        spellLimit: indexedSpellCounts.spells,
+      }
+    : fallbackSpellProfile;
   const spellPickerState = derivedSpellcasting
     ? buildSpellPickerState({
         slots: derivedSpellcasting.slots,
