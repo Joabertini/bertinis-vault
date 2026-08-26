@@ -19,6 +19,7 @@ import {
   formatSpellChoiceLabel,
   getSpellProgressionForClass,
   getSpellSelectionProfileForClassLevel,
+  warlockPactSlotLevelByClassLevel,
   improvementLevels,
   improvementProblems,
   pointsPerImprovement,
@@ -63,7 +64,7 @@ import { ExpertisePicker } from "./components/ExpertisePicker";
 import { ExtraClassRows } from "./components/ExtraClassRows";
 import { StartingEquipmentPicker } from "./components/StartingEquipmentPicker";
 import { OriginAbilityPicker } from "./components/OriginAbilityPicker";
-import { multiclassGrantsFor, spellCountsFor } from "./index-options";
+import { multiclassGrantsFor, spellCountsFor, spellPoolFor } from "./index-options";
 import { IndexPicker } from "./components/IndexPicker";
 import {
   featAbilityGrantsFor,
@@ -399,12 +400,33 @@ export function App() {
     name: selectedClassOption?.label ?? "",
     source: selectedClassOption?.source ?? "",
   };
+  // The class list plus whatever the subclass adds. The class list alone left
+  // an Eldritch Knight and an Arcane Trickster with an empty picker — neither
+  // the fighter nor the rogue appears on a single spell's class list.
   const classSpells = useMemo(
     () =>
       spellClassKey.name
-        ? spellOptionsForClass(spellClassKey.name, spellClassKey.source, rulesVersion, 9)
+        ? spellPoolFor({
+            className: spellClassKey.name,
+            classSource: spellClassKey.source,
+            classId: state.classId,
+            subclassId: state.subclassId,
+            classLevel: state.level,
+            // The warlock patrons gate their list on pact slot level, which is
+            // what the character's own slots are worth rather than their level.
+            pactSlotLevel: warlockPactSlotLevelByClassLevel[state.level] ?? 0,
+            rulesVersion,
+            maxLevel: 9,
+          })
         : [],
-    [rulesVersion, spellClassKey.name, spellClassKey.source],
+    [
+      rulesVersion,
+      spellClassKey.name,
+      spellClassKey.source,
+      state.classId,
+      state.subclassId,
+      state.level,
+    ],
   );
   const filteredCantrips = useMemo(
     () =>

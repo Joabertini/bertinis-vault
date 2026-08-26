@@ -39,6 +39,10 @@ import {
   type MasteryClassEntry,
   cantripsKnownAt,
   spellsAvailableAt,
+  parseSpellFilter,
+  spellMatchesFilter,
+  subclassSpellsAt,
+  PREPARABLE_KINDS,
 } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 import type { AbilityId, ArmorClassOption as BuildArmorClassOption } from "@bertinis-vault/contracts";
@@ -254,6 +258,71 @@ export function spellOptionsForClass(
   return legal
     .filter((row) => row.level <= maxLevel && row.classes.includes(key))
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+}
+
+/**
+ * Every spell a character may legally take, class list and subclass together.
+ *
+ * The class list alone is wrong twice over. It leaves an Eldritch Knight and
+ * an Arcane Trickster with *nothing* — the fighter and the rogue appear on no
+ * spell's class list, so a character who picked either subclass was offered an
+ * empty picker. And it leaves out every domain, circle and oath spell, which
+ * a prepare-caster gets on top of their own list.
+ *
+ * `innate` spells are deliberately left out of the pool: they are cast without
+ * being prepared, so offering them as something to prepare would let the
+ * player spend a slot on a spell they already have for free.
+ */
+export function spellPoolFor({
+  className,
+  classSource,
+  classId,
+  subclassId,
+  classLevel,
+  pactSlotLevel,
+  rulesVersion,
+  maxLevel,
+}: {
+  className: string;
+  classSource: string;
+  /** The class's slug, which is how a subclass is scoped to its class. */
+  classId: string;
+  subclassId: string;
+  classLevel: number;
+  pactSlotLevel: number;
+  rulesVersion: RulesVersion;
+  maxLevel: number;
+}): SpellRow[] {
+  const all = forRulesVersion(collections.spell ?? [], rulesVersion) as SpellRow[];
+  const own = className ? spellOptionsForClass(className, classSource, rulesVersion, maxLevel) : [];
+  const chosen = new Map(own.map((row) => [`${row.name}|${row.source}`, row]));
+
+  const subclass = subclassId ? subclassInfoFor(subclassId, classId, rulesVersion) : null;
+
+  for (const entry of subclassSpellsAt(subclass?.spells, { classLevel, pactSlotLevel })) {
+    if (!PREPARABLE_KINDS.includes(entry.kind)) continue;
+
+    const named = new Set(entry.names.map((name) => name.toLowerCase()));
+    const parsed = entry.filters.map((filter) => parseSpellFilter(filter.filter));
+    // A shortlist is a list of names like any other for the purpose of "may
+    // this character take it"; how many may be taken is the picker's business.
+    for (const choice of entry.choices) {
+      for (const name of choice.from) named.add(name.toLowerCase());
+    }
+
+    for (const row of all) {
+      if (row.level > maxLevel) continue;
+      const key = `${row.name}|${row.source}`;
+      if (chosen.has(key)) continue;
+
+      const matches =
+        named.has(row.name.toLowerCase()) ||
+        parsed.some((filter) => spellMatchesFilter(row, filter));
+      if (matches) chosen.set(key, row);
+    }
+  }
+
+  return [...chosen.values()].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 }
 
 /** What the index knows about an item: enough to show a weapon or armour. */

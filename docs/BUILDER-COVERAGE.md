@@ -367,15 +367,45 @@ and deity are not. Cosmetic, and last.
    and the background's own list. Currency is counted but has nowhere to go in
    the payload yet.
 8. **The 2024 rules**, properly.
-9. **Prerequisites and legality checking** — feat prerequisites done. What is
-   left is the rest of legality: spell lists against the class, subclass
-   levels, and the level a feature is actually taken at.
+9. **Prerequisites and legality checking** — feat prerequisites done, and
+   subclass spell lists done. What is left is subclass levels and the level a
+   feature is actually taken at.
 
 The cheap ones are done, and so are multiclassing, equipment, and the sharp
 edges of the 2024 rules. What is left is the rest of legality checking, and
 three things written down as open: the starting money has nowhere to go in the
 payload, weapon mastery is not written to Foundry, and the four manual Foundry
 validation scenarios still need a live run.
+
+**Subclass spell lists — done, 2026-08-26.** The headline failure: a class's
+spell list comes off the spell rows themselves, and the fighter and the rogue
+appear on none — so an **Eldritch Knight and an Arcane Trickster were offered
+no spells at all**, in a builder that let you pick the subclass and set a
+casting ability. Their list is the wizard's, and the subclass is the only place
+that says so.
+
+The same field carries every domain, circle and oath list, which 128 of the 203
+subclasses have. Those were missing too: a Light domain cleric could not
+prepare Burning Hands.
+
+Four kinds appear and they are four rules rather than four spellings.
+`prepared` and `expanded` widen what the character may prepare; `known` is
+known outright; `innate` is cast **without** preparing it, and is deliberately
+left out of the prepare pool — offering it would let the player spend a slot on
+a spell they already have for free.
+
+Two gates, and they are not interchangeable. Most subclasses state a class
+level. The warlock patrons state a *spell* level — the data keys them "s1"
+through "s5" — because a warlock gains those spells when its pact slots reach
+that level. Reading an "s3" as class level 3 hands a level 3 warlock
+third-level spells five levels early.
+
+A spell is either named or described by a filter — "every wizard cantrip". The
+filter stays a filter in the index: expanding it needs the spell list, which is
+another collection, and baking 300 names into a subclass row would be both
+large and stale. One subclass states its choice as three spell *names* instead,
+which is a different rule and is modelled as one — treating that object as a
+filter string was a crash, not a mismatch.
 
 **Feat prerequisites — done, 2026-08-26.** 205 of the 276 feats state one and
 nothing read any of them, so the builder offered Heavily Armored to a wizard

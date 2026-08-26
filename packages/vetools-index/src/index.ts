@@ -535,10 +535,46 @@ export type WeaponMastery = {
   meleeOnly: boolean;
 };
 
+/**
+ * One block of spells a subclass grants, at one gate.
+ *
+ * Four kinds, and they are four rules: `prepared` and `expanded` widen what
+ * the character may prepare, `known` is known outright, `innate` is cast
+ * without preparing it at all.
+ */
+export type SubclassSpellEntry = {
+  kind: "expanded" | "known" | "prepared" | "innate";
+  /** The class level it arrives at, or null when another gate applies. */
+  level: number | null;
+  /**
+   * The *spell* level it arrives with, for the warlock patrons.
+   *
+   * A warlock gains its patron's expanded spells when its pact slots reach
+   * that level. Reading one of these as a class level hands a level 3 warlock
+   * third-level spells five levels early.
+   */
+  spellLevel: number | null;
+  /** Spells named outright, lower case. */
+  names: string[];
+  /** A filter to evaluate against the spell list. Null count means all. */
+  filters: { filter: string; count: number | null }[];
+  /** A choice from a named shortlist, which is not a filter. */
+  choices: { from: string[]; count: number }[];
+};
+
 export type SubclassRow = IndexRow & {
   shortName: string | null;
   className: string | null;
   classSource: string | null;
+  /**
+   * The spells this subclass adds, and when.
+   *
+   * Domain, circle and oath lists for most — and for the Eldritch Knight and
+   * the Arcane Trickster, the *only* spell list they have: a class's list
+   * comes off the spell rows, the fighter and the rogue appear on none, so
+   * those two were offered nothing at all.
+   */
+  spells: SubclassSpellEntry[];
   /** Choices the subclass grants on top of its class's. */
   optionalFeatureProgression: OptionalFeatureProgression[];
   /**
