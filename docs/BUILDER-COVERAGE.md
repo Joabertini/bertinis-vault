@@ -153,9 +153,9 @@ carries the mark.
 | Thing | State |
 | --- | --- |
 | Skills, languages, saving throws | done |
-| Expertise | done — the grants come off 5etools' Foundry companion data, the choice is asked, and skills reach the actor doubled. Tool expertise travels in the payload and lands nowhere, for the same reason tools do not |
+| Expertise | done — the grants come off 5etools' Foundry companion data, the choice is asked, and skills and tools both reach the actor doubled |
 | **Artificer's Tool Expertise** | missing, and not in the data — it doubles *every* tool at once rather than a chosen one, so there is nothing for the companion file to record. Needs the tools to land first |
-| **Tools** | half done — they reach the payload correctly and the module never writes them. `TOOL_ALIAS_TO_ID` in `domain` has six ids right; gaming sets, instruments and artisan's tools are generic placeholders rather than the per-item ids `dnd5e` uses |
+| Tools | done — 44 proficiencies generated from dnd5e's own `DND5E.tools` and the importer's name map, written to `system.tools` with the ability the running system says they roll |
 | Armour and weapons | arrive with the class document |
 
 ## 7. Equipment
@@ -193,7 +193,9 @@ and deity are not. Cosmetic, and last.
    5etools' Foundry companion file rather than a hand-written table, so the
    editions differ where the books differ and Tasha's optional ranger feature
    stays optional.
-4. **Tools that land**, with `dnd5e`'s real ids.
+4. ~~**Tools that land**~~ — done. The table is generated from the game system
+   rather than written by hand, so a dnd5e upgrade that renames a key fails a
+   test instead of quietly dropping a proficiency.
 5. **Unarmored Defense** — written, never called. Answers wrong rather than not
    at all, which puts it ahead of anything merely absent.
 6. **Multiclassing** — the largest, and the one that reshapes the wizard.
@@ -201,7 +203,8 @@ and deity are not. Cosmetic, and last.
 8. **The 2024 rules**, properly.
 9. **Prerequisites and legality checking.**
 
-Three through five are cheap and change the character that comes out the most.
+Five is what is left of the cheap ones, and it is the last of the three that
+change the character that comes out the most.
 Six is what will demand a redesign of the wizard, which is where the interface
 work belongs.
 

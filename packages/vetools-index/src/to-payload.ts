@@ -16,7 +16,7 @@ import type {
   SourceBooks,
   VetoolsRefPayload,
 } from "@bertinis-vault/contracts";
-import { IMPORT_PAYLOAD_VERSION, skillIdFor } from "@bertinis-vault/contracts";
+import { IMPORT_PAYLOAD_VERSION, skillIdFor, toolIdFor } from "@bertinis-vault/contracts";
 import type { RulesVersion, VetoolsProp } from "@bertinis-vault/vetools-ref";
 
 import type { RefResolver, ResolutionFailure } from "./resolve.js";
@@ -195,9 +195,18 @@ function partitionProficiencies(
       // path that does not exist and reports nothing.
       const skillId = skillIdFor(value);
       if (skillId) result.expertise.push(skillId);
-    } else if (entry.kind === "toolExpertise") result.toolExpertise.push(value);
-    else if (entry.kind === "language") result.languages.push(value);
-    else if (entry.kind === "tool") result.tools.push(value);
+    } else if (entry.kind === "tool" || entry.kind === "toolExpertise") {
+      // A tool is a key on `system.tools` — `thief`, `smith`, `panflute` — and
+      // that map has no fixed keys, so writing the name creates
+      // `system.tools["Smith's Tools"]` and the sheet shows nothing at all.
+      // Same rule as a skill: an id that will not resolve is dropped rather
+      // than written somewhere harmless-looking.
+      const toolId = toolIdFor(value);
+      if (toolId) {
+        if (entry.kind === "tool") result.tools.push(toolId);
+        else result.toolExpertise.push(toolId);
+      }
+    } else if (entry.kind === "language") result.languages.push(value);
     // A saving throw travels as the ability id, which is what the payload
     // schema and the module both expect.
     else if (entry.kind === "savingThrow" && isAbilityId(value)) result.savingThrows.push(value);

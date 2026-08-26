@@ -94,7 +94,11 @@ test("proficiencies are split by kind, and weapons are left to the class documen
   // `system.skills.Arcana` is a path that does not exist.
   assert.deepEqual(payload.proficiencies.skills, ["arc"]);
   assert.deepEqual(payload.proficiencies.languages, ["elvish"]);
-  assert.deepEqual(payload.proficiencies.tools, ["thieves-tools"]);
+  // And so do tools. This asserted `thieves-tools` — the builder's own slug —
+  // which is what the module was handed and what it silently failed to write:
+  // `system.tools` has no fixed keys, so the wrong one is created rather than
+  // rejected. The system's key is `thief`.
+  assert.deepEqual(payload.proficiencies.tools, ["thief"]);
   // The weapon proficiency is deliberately absent: it comes from the class.
   assert.equal(JSON.stringify(payload.proficiencies).includes("longsword"), false);
 });

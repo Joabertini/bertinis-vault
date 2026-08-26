@@ -22,6 +22,7 @@ import {
   featsFromChoices,
   unansweredFeatAbilities,
   resolveSkillId,
+  resolveToolEntry,
   expertiseFrom,
   unansweredExpertise,
   type ExpertiseAnswer,
@@ -213,16 +214,24 @@ function classifyProficiencyKind(entry: string) {
     return { kind: "skill" as const, id: undefined };
   }
 
-  const gearEntry = getGearCatalogEntry(entry);
-  if (
-    gearEntry &&
-    /(tool|tools|kit|kit's|supplies|instrument|gaming set|vehicle)/i.test(gearEntry.label)
-  ) {
-    return { kind: "tool" as const, id: gearEntry.id };
+  // Asked before the name is inspected, because the table knows tools whose
+  // names say nothing: Bagpipes, Lute, Drum and Dice Set are all tools and
+  // none of them contains the word "tool". They used to fall through to
+  // "other" and be dropped without a word.
+  const toolEntry = resolveToolEntry(entry);
+  if (toolEntry) {
+    return { kind: "tool" as const, id: toolEntry.id };
   }
 
-  if (/(tool|tools|kit|supplies|instrument|gaming set|vehicle)/i.test(entry)) {
-    return { kind: "tool" as const, id: gearEntry?.id ?? resolveGearId(entry) };
+  // A name that reads like a tool but is not one dnd5e has a key for. Kept as
+  // a tool so preflight reports it as unresolved rather than filing it under
+  // "other" and saying nothing, and carried with no id because the only ids
+  // worth carrying are the system's.
+  const gearEntry = getGearCatalogEntry(entry);
+  if (
+    /(tool|tools|kit|kit's|supplies|instrument|gaming set|vehicle)/i.test(gearEntry?.label ?? entry)
+  ) {
+    return { kind: "tool" as const, id: undefined };
   }
 
   const weaponEntry = getWeaponCatalogEntry(entry);

@@ -21,6 +21,7 @@
     "test": "corepack pnpm -r test",
     "packages:build": "corepack pnpm -r --filter \"./packages/**\" --filter \"./apps/api\" --filter \"./apps/worker\" build",
     "vetools:index": "node ./scripts/build-vetools-index.mjs",
+    "tools:ids": "node ./scripts/build-tool-ids.mjs",
     "worker:dev": "corepack pnpm --filter @bertinis-vault/worker dev",
     "worker:deploy": "corepack pnpm --filter @bertinis-vault/worker deploy"
   }
