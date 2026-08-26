@@ -102,6 +102,26 @@ export type FeatAbilityGrant =
   | { kind: "fixed"; bonuses: AbilityBonuses }
   | { kind: "choice"; from: string[]; amount: number; count: number };
 
+/** One way to qualify for a feat. Every field present must hold at once. */
+export type FeatPrerequisite = {
+  /** Alternatives in their own right: [{int:13},{wis:13}] is "either". */
+  abilities?: Record<string, number>[];
+  /** Character level. */
+  level?: number;
+  /** A level in a named class, which is not the character's level. */
+  classLevel?: { className: string; level: number };
+  races?: { name: string; subrace?: string }[];
+  backgrounds?: string[];
+  feats?: string[];
+  /** A feature by name — "Fighting Style", "Spellcasting or Pact Magic". */
+  features?: string[];
+  proficiencies?: { kind: string; value: string }[];
+  /** The character must cast. Three fields in the data mean this one thing. */
+  spellcasting?: boolean;
+  /** Stated in the books and not checkable here. Shown, never tested. */
+  other?: string[];
+};
+
 export type FeatRow = IndexRow & {
   /**
    * What taking this feat raises. Empty for the 116 that raise nothing.
@@ -121,6 +141,18 @@ export type FeatRow = IndexRow & {
    * twice.
    */
   isAbilityScoreImprovement: 0 | 1;
+  /**
+   * What a character must already have before this feat is legal.
+   *
+   * A list of *alternatives*: satisfying any one is enough, and every field
+   * inside one must hold. 205 of the 276 feats state something and nothing
+   * read any of it, so the builder offered Heavily Armored to a wizard.
+   *
+   * Half of what the books state cannot be checked against a build — a
+   * campaign setting, a dragonmark category — and that half arrives in
+   * `other` as text, to show rather than to test.
+   */
+  prerequisites: FeatPrerequisite[];
   /**
    * Proficiencies this feat doubles. Empty for all but seven.
    *

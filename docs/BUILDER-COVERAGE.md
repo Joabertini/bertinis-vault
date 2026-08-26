@@ -148,7 +148,7 @@ business.
 | Four generation methods — roll, standard array, point buy, manual | done |
 | ASI versus feat at every eligible level | done — `levelChoices` holds `{kind: "improvement"}` or `{kind: "feat"}` |
 | **The +1 a half-feat grants** | done, 2026-08-25 — see below |
-| Feat prerequisites | missing |
+| **Feat prerequisites** | done, 2026-08-26 — read from the feat's own data, reported not enforced |
 | The 13-in-the-ability requirement for multiclassing | done — reported, not refused |
 
 The half-feat is precisely the most efficient purchase in the game on an odd
@@ -367,11 +367,37 @@ and deity are not. Cosmetic, and last.
    and the background's own list. Currency is counted but has nowhere to go in
    the payload yet.
 8. **The 2024 rules**, properly.
-9. **Prerequisites and legality checking.**
+9. **Prerequisites and legality checking** — feat prerequisites done. What is
+   left is the rest of legality: spell lists against the class, subclass
+   levels, and the level a feature is actually taken at.
 
-The cheap ones are done, and so are multiclassing and equipment. What is left
-is the 2024 rules as rules rather than as a source filter, and legality
-checking — plus carrying the starting money through to the payload.
+The cheap ones are done, and so are multiclassing, equipment, and the sharp
+edges of the 2024 rules. What is left is the rest of legality checking, and
+three things written down as open: the starting money has nowhere to go in the
+payload, weapon mastery is not written to Foundry, and the four manual Foundry
+validation scenarios still need a live run.
+
+**Feat prerequisites — done, 2026-08-26.** 205 of the 276 feats state one and
+nothing read any of them, so the builder offered Heavily Armored to a wizard
+and Elemental Adept to a barbarian. Both are illegal and both reached the
+sheet.
+
+The list is alternatives — any one holding is enough, every field inside one
+must hold at once — which is the same shape the multiclass requirement uses, so
+`meetsRequirement` is reused for the ability half rather than rewritten. Ten
+kinds appear in the data and a test fails if an eleventh ever does.
+
+Two decisions worth stating. **Reported, never enforced**, the same stance the
+multiclass prerequisite takes: a table may allow anything, and a builder that
+refuses is a builder people work around. And **what a build cannot answer is
+reported as unchecked rather than as met** — a Ravenloft campaign, a dragonmark
+category, "no other dragonmark" are a table's business, and a silent pass would
+be a claim this layer has no standing to make. Those travel beside a real
+failure rather than replacing it.
+
+Where several alternatives all fail, the one closest to holding is the one
+reported: telling a player they are missing five things when they are one away
+from a legal path is worse than saying nothing.
 
 One deliberate divergence to know about: a monk holding a shield loses Unarmored
 Defense, and the builder now says so. Neither Plutonium nor the `dnd5e` system

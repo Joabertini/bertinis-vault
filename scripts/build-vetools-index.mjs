@@ -509,6 +509,88 @@ function masteryCountsFromTable(entity) {
   return null;
 }
 
+/**
+ * What a character must already have before a feat is legal.
+ *
+ * 205 of the 276 feats state one and nothing read any of them, so the builder
+ * offered Heavily Armored to a wizard and Elemental Adept to a barbarian.
+ *
+ * The array is a list of *alternatives*: satisfying any one entry is enough,
+ * and every field inside one entry must hold. That is the same shape the
+ * multiclass requirements use, and it is read the same way.
+ *
+ * Half of what appears here can be checked against a build and half cannot.
+ * A Ravenloft campaign, a dragonmark category, "no other dragonmark" — those
+ * are a table's business, and pretending to check them would be worse than
+ * saying plainly that they are not checked. They are kept as text so the
+ * interface can show them beside the ones that are.
+ */
+function featPrerequisitesOf(entity) {
+  const alternatives = entity.prerequisite;
+  if (!alternatives?.length) return [];
+
+  return alternatives.map((raw) => {
+    const other = [];
+
+    // Anything with no mechanical form. `otherSummary` is the short version of
+    // `other`, and the short version is the one worth showing.
+    if (raw.otherSummary?.entry) other.push(stripTags(raw.otherSummary.entry));
+    else if (raw.other) other.push(stripTags(String(raw.other)));
+    for (const campaign of raw.campaign ?? []) other.push(`Campaign: ${campaign}`);
+    for (const category of raw.featCategory ?? []) other.push(`Feat category: ${category}`);
+    for (const category of raw.exclusiveFeatCategory ?? []) {
+      other.push(`No other feat of category ${category}`);
+    }
+
+    // A level is either a plain number or a level in a named class. The second
+    // is not the character's level, and treating it as one would let a level 3
+    // wizard take a feat that wants a level 3 fighter.
+    const level = typeof raw.level === "number" ? raw.level : null;
+    const classLevel =
+      raw.level && typeof raw.level === "object"
+        ? { className: raw.level.class?.name ?? "", level: raw.level.level ?? 1 }
+        : null;
+
+    const races = (raw.race ?? []).map((entry) => ({
+      name: entry.name,
+      ...(entry.subrace ? { subrace: entry.subrace } : {}),
+    }));
+    const proficiencies = (raw.proficiency ?? []).flatMap((entry) =>
+      Object.entries(entry).map(([kind, value]) => ({
+        // `weaponGroup` and `weapon` mean the same thing here and only the
+        // spelling differs, so they are not two kinds.
+        kind: kind === "weaponGroup" ? "weapon" : kind,
+        value: String(value),
+      })),
+    );
+
+    // Most alternatives state one thing. Writing the other nine fields as
+    // empty arrays doubles the size of the feat index for no information.
+    return {
+      // A list of alternatives in its own right: [{int:13},{wis:13}] is
+      // "Intelligence or Wisdom", the same shape the multiclass rule uses.
+      ...(raw.ability?.length ? { abilities: raw.ability } : {}),
+      ...(level === null ? {} : { level }),
+      ...(classLevel ? { classLevel } : {}),
+      ...(races.length ? { races } : {}),
+      ...(raw.background?.length
+        ? { backgrounds: raw.background.map((entry) => entry.name) }
+        : {}),
+      ...(raw.feat?.length
+        ? { feats: raw.feat.map((entry) => String(entry).split("|")[0]) }
+        : {}),
+      // "Fighting Style", or "Spellcasting or Pact Magic" — a feature by name.
+      ...(raw.feature?.length ? { features: raw.feature } : {}),
+      ...(proficiencies.length ? { proficiencies } : {}),
+      // Three spellings of the same requirement: the character must cast.
+      ...(raw.spellcasting || raw.spellcasting2020 || raw.spellcastingFeature
+        ? { spellcasting: true }
+        : {}),
+      ...(other.length ? { other } : {}),
+    };
+  });
+}
+
 /** A character never exceeds this, and every progression is stated to it. */
 const MAX_LEVEL = 20;
 
@@ -1307,6 +1389,9 @@ const BUILDERS = {
       // proficient in, which can be the one it just granted.
       expertise: expertiseSetsOf(f.expertise ?? [], `${f.name} (${sourceOf(f)})`),
       isAbilityScoreImprovement: isAbilityScoreImprovementFeat(f) ? 1 : 0,
+      // What a character must already have. 205 of the 276 state something,
+      // and nothing read any of it.
+      prerequisites: featPrerequisitesOf(f),
     })),
 
   race: (entities, context) =>

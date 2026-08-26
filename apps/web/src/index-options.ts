@@ -29,6 +29,7 @@ import {
   type ExpertiseGrant,
   type ArmorClassOption,
   type MulticlassGrants,
+  type FeatPrerequisite,
 } from "@bertinis-vault/vetools-index";
 import {
   activeExpertiseGrants,
@@ -459,6 +460,19 @@ export function spellCountsFor({
     cantrips: cantripsKnownAt(row, level),
     spells: spellsAvailableAt(row, level, abilityModifier),
   };
+}
+
+/** What a feat asks for before it may be taken. Empty for the 71 that ask nothing. */
+export function featPrerequisitesFor(
+  featId: string,
+  rulesVersion: RulesVersion,
+  sourceBook?: string,
+): FeatPrerequisite[] {
+  const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
+  const matches = legal.filter((row) => slugOf(row.name) === featId);
+  const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
+
+  return row?.prerequisites ?? [];
 }
 
 /** The skills a class picks from at level 1, if it offers a choice. */

@@ -45,6 +45,7 @@ import {
   proficiencyPoolsFor,
   characterLevelFor,
   unmetMulticlassRequirementsFor,
+  unmetFeatPrerequisitesFor,
   masteryOptionsFor,
   masteryProblemsFor,
   weaponMasterySlotsFor,
@@ -315,6 +316,10 @@ export function App() {
   // of its classes has to be met — the one being left as well as the one being
   // entered.
   const unmetMulticlass = unmetMulticlassRequirementsFor(state);
+  // 205 of the 276 feats state a prerequisite and nothing read any of them, so
+  // the builder offered Heavily Armored to a wizard. Reported, never refused:
+  // a table may allow anything, and a builder that refuses gets worked around.
+  const unmetFeats = useMemo(() => unmetFeatPrerequisitesFor(state), [state]);
   // What the classes past the first hand over. The first class grants its
   // starting proficiencies instead, which the training step already asks for.
   const multiclassGrants = useMemo(
@@ -1194,6 +1199,24 @@ export function App() {
               selectedLabel={selectedFeatOption?.label ?? state.featId}
               selectedSource={state.sourceBooks[`feat:${state.featId}`] ?? ""}
             />
+            {unmetFeats.length > 0 ? (
+              <div className="field-warning">
+                {unmetFeats.map((entry) => {
+                  const label =
+                    optionById("feat", rulesVersion, entry.featId)?.label ?? entry.featId;
+                  const unmet = entry.problems.find((problem) => problem.kind === "unmet");
+                  const notes = entry.problems.find((problem) => problem.kind === "unverifiable");
+
+                  return (
+                    <div key={entry.featId}>
+                      <strong>{label}</strong>
+                      {unmet ? ` pide ${unmet.reasons.join(", ")}.` : ""}
+                      {notes ? ` La mesa decide: ${notes.notes.join("; ")}.` : ""}
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
             {state.featId ? (
               <>
                 <FeatAbilityPicker
