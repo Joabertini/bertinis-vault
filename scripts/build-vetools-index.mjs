@@ -573,6 +573,88 @@ function readExpertise(dataDir) {
   };
 }
 
+const ABILITY_IDS = ["str", "dex", "con", "int", "wis", "cha"];
+
+/** The score 5e has asked for since 2014, and still asks for. */
+const MULTICLASS_MINIMUM = 13;
+
+/**
+ * What a character must have to take a level in this class.
+ *
+ * The outer list is alternatives and the inner object is requirements, so
+ * `[{str: 13}, {dex: 13}]` is "Strength or Dexterity" and `[{dex: 13, wis: 13}]`
+ * is "Dexterity and Wisdom". Every requirement in the game fits that shape,
+ * and both editions reach it from different fields:
+ *
+ *   2014 states it per class under `multiclassing.requirements`. Top-level
+ *   keys are all required — the monk needs both. The fighter is the only class
+ *   in the entire dataset with an `or`, and inside that `or` the keys are
+ *   alternatives rather than requirements, which is the opposite of the
+ *   top-level reading. One sample is thin evidence for a rule; it is also all
+ *   there is, so anything that does not fit stops the build rather than being
+ *   guessed at.
+ *
+ *   2024 dropped the per-class block because the rule became uniform: 13 in
+ *   the primary ability of the class. `primaryAbility` is already a list of
+ *   alternatives of objects of requirements, which is the same shape one layer
+ *   up, so it needs no interpretation at all.
+ */
+function multiclassRequirementsOf(entity) {
+  const where = `${entity.name} (${sourceOf(entity)})`;
+  const raw = entity.multiclassing?.requirements;
+
+  if (raw) {
+    const { or, ...rest } = raw;
+
+    const fixed = abilityMinimumsOf(rest, where);
+    if (!or) return fixed.length ? [fixed[0]] : [];
+
+    if (!Array.isArray(or) || or.length !== 1) {
+      throw new Error(`${where}: an "or" requirement with ${or?.length} branches, which this does not model`);
+    }
+
+    // Inside the `or`, each key is a way of meeting the requirement.
+    const alternatives = abilityMinimumsOf(or[0], where)[0] ?? {};
+    const options = Object.entries(alternatives).map(([ability, score]) => ({ [ability]: score }));
+
+    // A class with both — a fixed part and a choice — would need every option
+    // to carry the fixed part too. None exists; failing beats guessing.
+    if (fixed.length) {
+      throw new Error(`${where}: mixes a fixed requirement with an "or", which this does not model`);
+    }
+    return options;
+  }
+
+  return (entity.primaryAbility ?? []).map((option) => {
+    const out = {};
+    for (const [ability, value] of Object.entries(option)) {
+      if (value !== true) {
+        throw new Error(`${where}: primary ability "${ability}" is ${JSON.stringify(value)}`);
+      }
+      if (!ABILITY_IDS.includes(ability)) {
+        throw new Error(`${where}: primary ability "${ability}" is not an ability`);
+      }
+      out[ability] = MULTICLASS_MINIMUM;
+    }
+    return out;
+  });
+}
+
+/** `{str: 13, cha: 13}` as one requirement object, or nothing. */
+function abilityMinimumsOf(raw, where) {
+  const out = {};
+  for (const [ability, score] of Object.entries(raw ?? {})) {
+    if (!ABILITY_IDS.includes(ability)) {
+      throw new Error(`${where}: requires "${ability}", which is not an ability`);
+    }
+    if (!Number.isInteger(score)) {
+      throw new Error(`${where}: requires ${JSON.stringify(score)} in ${ability}`);
+    }
+    out[ability] = score;
+  }
+  return Object.keys(out).length ? [out] : [];
+}
+
 /** The features that replace armour class, by the name they all share. */
 const RE_UNARMORED_DEFENSE = /^unarmored defen[sc]e/i;
 
@@ -950,6 +1032,9 @@ const BUILDERS = {
         optionalFeatureProgression: optionalFeatureProgressionOf(c),
         expertise: context.expertise.forClass.get(`${c.name}|${sourceOf(c)}`) ?? [],
         armorClass: context.armorClasses.forClass.get(`${c.name}|${sourceOf(c)}`) ?? [],
+        // What a character needs before they may take a level in this class.
+        // Empty for the handful of classes that state none.
+        multiclassRequirements: multiclassRequirementsOf(c),
       };
     }),
 

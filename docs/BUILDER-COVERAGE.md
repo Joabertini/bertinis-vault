@@ -152,7 +152,8 @@ carries the mark.
 | One class, its level, its subclass | done |
 | **Multiclassing** — the rules | done. One combined caster level from each class's own fraction, pact slots kept apart, and hit points from the die of the class each level was taken in. The contribution is not the class's own table: a ranger 5 reads its own table at 3 and contributes 2 |
 | **Multiclassing** — the interface | done, plainly. A row per extra class with its own level and subclass; the first class keeps its own place because the rules single it out. What it looks like belongs to the design track |
-| **Multiclassing** — what a second class grants | missing. 5etools carries `multiclassing.requirements` and `multiclassing.proficienciesGained` per class, and neither is read. A second class grants a reduced proficiency set, not its full starting one |
+| **Multiclassing** — the prerequisite | done. Read from `multiclassing.requirements` in 2014 and from `primaryAbility` in 2024, which are different fields reaching the same answer. Reported, not refused |
+| **Multiclassing** — what a second class grants | missing. `multiclassing.proficienciesGained` is not read, so a second class grants no armour, weapon, skill or tool proficiency |
 | Class skill choices | done — read from the index rather than a hand-written table |
 | Expertise | done — see Proficiencies |
 
@@ -208,11 +209,10 @@ and deity are not. Cosmetic, and last.
    species' natural armour. Parsed out of the feature text, because for the
    barbarian, the monk and the 2024 dancing bard there is nowhere else to read
    it from.
-6. **Multiclassing** — the rules and the interface are done. What is left is
-   what a second class actually *grants*: 5etools carries
-   `multiclassing.requirements` and `multiclassing.proficienciesGained` per
-   class and neither is read, so a second class currently grants nothing and
-   its ability-score prerequisite is not checked.
+6. **Multiclassing** — the rules, the interface and the prerequisite are
+   done. What is left is what a second class actually *grants*:
+   `multiclassing.proficienciesGained` is in the data and is not read, so a
+   second class hands out no armour, weapon, skill or tool proficiency.
 7. **Equipment as choices**, with the gold alternative.
 8. **The 2024 rules**, properly.
 9. **Prerequisites and legality checking.**

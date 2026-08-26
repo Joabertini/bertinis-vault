@@ -335,6 +335,14 @@ export type ClassRow = IndexRow & {
   expertise: ExpertiseGrant[];
   /** Unarmored Defense, for the two classes that have it in every edition. */
   armorClass: ArmorClassOption[];
+  /**
+   * The scores a character needs before taking a level in this class.
+   *
+   * A list of alternatives: `[{str: 13}, {dex: 13}]` is "Strength or
+   * Dexterity", `[{dex: 13, wis: 13}]` is "Dexterity and Wisdom". The two
+   * editions state it in different fields and reach the same answer.
+   */
+  multiclassRequirements: Record<string, number>[];
 };
 
 export type SubclassRow = IndexRow & {
