@@ -59,6 +59,13 @@ export type ItemRow = IndexRow & {
   properties: string[];
   /** 2024 weapon mastery names, e.g. "Topple". Null for everything else. */
   mastery: string[] | null;
+  /**
+   * Mastery properties this weapon grants for free.
+   *
+   * One weapon in the game has one: the Psychic Blade's Vex does not count
+   * against the number of properties a character may use. Null everywhere else.
+   */
+  masteryFree: string[] | null;
   /** Base armour class, for armour and shields. */
   ac: number | null;
   /** Minimum Strength the armour asks for, as a string of digits. */
@@ -448,6 +455,24 @@ export type ClassRow = IndexRow & {
    * until this was read.
    */
   startingEquipment: StartingEquipment | null;
+  /**
+   * 2024's weapon mastery: how many kinds of weapon this class can use the
+   * mastery properties of, by character level.
+   *
+   * Null for every 2014 class and for the 2024 classes that never learn it.
+   * The five that do state the number two different ways — the fighter and the
+   * barbarian in a column of their own level table, because it grows, and the
+   * paladin, ranger and rogue in the feature's text, where it never does.
+   */
+  weaponMastery: WeaponMastery | null;
+};
+
+/** What a class's weapon mastery is worth, and what it may be spent on. */
+export type WeaponMastery = {
+  /** Twenty entries, one per character level. */
+  countByLevel: number[];
+  /** The barbarian's is narrower: Simple or Martial *Melee* weapons only. */
+  meleeOnly: boolean;
 };
 
 export type SubclassRow = IndexRow & {

@@ -252,11 +252,46 @@ The ruleset switch chooses **sources**, and it is starting to choose rules.
 | --- | --- |
 | **The origin ability increase** | done, 2026-08-26 — see below |
 | The origin feat | done. Read from the background's own `feats` |
-| Weapon mastery | indexed on the item rows, not applied |
+| **Weapon mastery** | done, 2026-08-26 — see below |
 | Derived numbers — slots, prepared spells, cantrips | 2014 tables for both editions |
 
 `packages/domain/src/dnd5e-2014.ts` is named honestly, and a 2024 sibling for
 the derived numbers is still the larger part of the work.
+
+**Weapon mastery — done, 2026-08-26.** Every 2024 weapon carries one mastery
+property, and that half was already indexed. The half that was missing is the
+one that makes it usable: how many kinds of weapon a given character may use
+them on. Five classes grant the feature, and they state the number two
+different ways — the fighter and the barbarian in a column of their own level
+table, because it grows from three to six and from two to four, and the
+paladin, ranger and rogue in the feature's own text, where it is two and stays
+two. Reading only the table loses three classes; reading only the prose freezes
+the fighter at three.
+
+The barbarian's is also narrower, Simple or Martial *Melee* only, and that
+restriction lives in a filter tag rather than in a field. It binds only while
+every class granting mastery has it: a barbarian/fighter may master a longbow,
+because the fighter's own feature says so.
+
+Two bugs came out of the same read. The index shipped the literal string
+`"[object Object]"` as a mastery property on the Psychic Blade, because one
+weapon in the game carries an object rather than a string — and the note in
+that object is a rule, not a footnote: its Vex costs no slot. And melee-vs-
+ranged was being judged from the properties, which puts the antimatter rifle
+in the melee list; the item type is the field that answers it.
+
+**What the books do not say.** Nothing states what happens when a character has
+the feature from two classes. The 2024 multiclassing rules name exactly three
+features with special handling — Extra Attack, Spellcasting, and alternative
+Armor Class — and weapon mastery is not among them. The reading taken here is
+Extra Attack's: the features do not stack, and the larger number counts.
+Summing would tell a fighter 3 / rogue 2 they may master five weapons when
+neither table ever says more than three at those levels.
+
+**Not written to Foundry.** The picks are held on the build and shown in the
+wizard. Whether `dnd5e` 5.3.3 exposes an actor path for mastery has not been
+verified against an installed system, and guessing a path would write a field
+that silently does nothing. That check needs a Foundry install.
 
 **The origin ability increase — done, 2026-08-26.** This is the sharpest
 difference between the editions at level one, and the builder got it wrong in
