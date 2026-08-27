@@ -15,6 +15,7 @@ import AshBurst from "@/components/fx/AshBurst";
 import EmberField from "@/components/fx/EmberField";
 import GrainOverlay from "@/components/fx/GrainOverlay";
 import RuneButton from "@/components/ui/RuneButton";
+import CodexBackup from "@/components/codex/CodexBackup";
 import { useVault } from "@/lib/vault-store";
 import { PAGE } from "@/styles/recipes";
 
@@ -101,6 +102,8 @@ export default function Codex() {
             Codex is exactly when a player most wants to bring characters in
             rather than start from nothing. */}
         <DropActor />
+
+        <CodexBackup />
 
         {characters.length === 0 ? (
           <EmptyState />

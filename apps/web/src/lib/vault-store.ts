@@ -25,6 +25,7 @@ import {
   type BuilderState,
 } from "./builder-state";
 import type { Pace } from "./chambers";
+import { mergeCodex, type CodexMerge } from "./codex-file";
 
 /** A character sealed in the Codex. */
 export type SealedCharacter = {
@@ -118,6 +119,14 @@ type VaultStore = {
    */
   admit: (state: BuilderState) => string;
   burn: (id: string) => void;
+  /**
+   * Fold an imported Codex into this one.
+   *
+   * Merged, never replaced — see `mergeCodex`. Returns what it did so the page
+   * can say it: an import that reports nothing looks like an import that did
+   * nothing.
+   */
+  importCharacters: (incoming: SealedCharacter[]) => CodexMerge;
 };
 
 function freshDraft(rulesVersion: BuilderRulesVersion): BuilderState {
@@ -262,6 +271,12 @@ export const useVault = create<VaultStore>()(
           characters: [{ id, sealedAt: new Date().toISOString(), state }, ...s.characters],
         }));
         return id;
+      },
+
+      importCharacters: (incoming) => {
+        const result = mergeCodex(get().characters, incoming);
+        set({ characters: result.characters });
+        return result;
       },
 
       burn: (id) =>
