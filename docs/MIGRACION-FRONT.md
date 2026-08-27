@@ -238,8 +238,15 @@ ninguna era sólo un cambio de import.
       es el número que la mesa juega sin tirar.
 - [ ] **Smoke test de la Forja** que reemplace a `builder-page.test.tsx`.
 - [ ] **Cortar el bundle.** 2.03 MB, 312 kB gzip, en un solo chunk.
-- [ ] **Modificadores de salvación y pericia en la ficha.** Se sabe *cuáles*
-      tiene el personaje, no *cuánto* suma cada uno.
+- [x] **Modificadores de salvación y pericia en la ficha.** `checks.ts` +
+      `Checks.tsx`. Las dieciocho pericias, no sólo las que sabe hacer: la
+      tirada sin competencia es la que nadie se sabe de memoria, y esconderla
+      es esconder el número que el jugador está por errar. Competencia con un
+      punto, maestría con dos.
+
+      El mapa de pericia a característica sale del `dnd5e.mjs` instalado
+      (5.3.3), no de memoria — 2024 no cambió ninguna. Las salvaciones salen de
+      la primera clase sola, que es la regla y no una simplificación.
 - [ ] **Oro inicial.** No se calcula, y `ImportPayload` no tiene campo de moneda.
 - [ ] **Export/importar el Códice.** Los personajes viven sólo en `localStorage`.
       Se pierden al limpiar el navegador, en incógnito, o en otra máquina.
