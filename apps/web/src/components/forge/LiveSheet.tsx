@@ -17,6 +17,8 @@ import { motion } from "framer-motion";
 import type { ResolvedDraft } from "@/lib/derive";
 import type { BuilderState } from "@/lib/builder";
 import { characterLevelFor, classingLabelFor } from "@/lib/builder";
+import Checks from "@/components/forge/Checks";
+import { savingThrowChecksFor, skillChecksFor } from "@/lib/checks";
 import { ABILITY_IDS, abilityLabels } from "@/lib/abilities";
 import { entryById, hitDieFor } from "@/lib/catalog";
 import { counselFor, type Advice } from "@/lib/counsel";
@@ -198,6 +200,17 @@ export default function LiveSheet({
           hint="Velocidad en pies: cuanto te moves en tu turno."
         />
       </div>
+
+      {/* What the character rolls, for everything. Only once the draft
+          derives: a modifier without a proficiency bonus behind it would be
+          a number the player could write down and be wrong about. */}
+      {snapshot && (
+        <Checks
+          saves={savingThrowChecksFor(snapshot)}
+          skills={skillChecksFor(snapshot)}
+          accent={accent}
+        />
+      )}
 
       {/*
         The hit die, from the moment a class is picked.
