@@ -9,6 +9,7 @@ import {
   unmetMulticlassRequirementsFor,
 } from "../src/lib/builder";
 import { classingLabel } from "../src/lib/classing";
+import { proficiencyPlan } from "../src/lib/grants";
 import { featCandidateFor } from "../src/lib/improvements";
 import { multiclassGrantsFor } from "../src/lib/index-options";
 
@@ -304,5 +305,36 @@ describe("los requisitos de dote leen a todo el personaje", () => {
     });
 
     expect(candidate.casts).toBe(false);
+  });
+});
+
+describe("lo que una segunda clase le da al personaje", () => {
+  test("un toque de pícaro ofrece UNA pericia, no las cuatro de un pícaro nivel 1", () => {
+    const plan = proficiencyPlan(
+      { ...base, classId: "wizard", subclassId: "", level: 4, extraClasses: [{ classId: "rogue", subclassId: "", level: 1 }] },
+      "2014",
+    );
+
+    const offer = plan.offers.find((entry) => entry.from === "multiclase");
+    expect(offer?.count).toBe(1);
+    expect(plan.grantedTools).toContain("Thieves' Tools");
+  });
+
+  test("sin segunda clase no aparece la oferta", () => {
+    const plan = proficiencyPlan({ ...base, extraClasses: [] }, "2014");
+    expect(plan.offers.some((entry) => entry.from === "multiclase")).toBe(false);
+  });
+
+  /*
+   * El mago no tiene bloque de multiclase en los datos — cinco de las
+   * dieciocho clases de 2014 no lo tienen. Contribuye nada, no rompe.
+   */
+  test("una clase sin bloque de multiclase no aporta ni falla", () => {
+    const plan = proficiencyPlan(
+      { ...base, classId: "fighter", subclassId: "", level: 4, extraClasses: [{ classId: "wizard", subclassId: "", level: 1 }] },
+      "2014",
+    );
+
+    expect(plan.offers.some((entry) => entry.from === "multiclase")).toBe(false);
   });
 });

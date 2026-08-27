@@ -16,7 +16,11 @@ import { getRaceLanguageRule } from "@bertinis-vault/data-engine";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder";
-import { proficiencyGrantForBackground, skillChoiceForClass } from "./index-options";
+import {
+  multiclassGrantsFor,
+  proficiencyGrantForBackground,
+  skillChoiceForClass,
+} from "./index-options";
 
 export type SkillOffer = {
   options: string[];
@@ -24,7 +28,7 @@ export type SkillOffer = {
   /** True when the list is "any skill", not a named set. */
   isOpen: boolean;
   /** Who is asking, for the label. */
-  from: "clase" | "trasfondo";
+  from: "clase" | "trasfondo" | "multiclase";
 };
 
 export type ProficiencyPlan = {
@@ -93,9 +97,37 @@ export function proficiencyPlan(
     });
   }
 
+  /*
+   * What the classes past the first hand over.
+   *
+   * Less than a first class does, and from a different block: a rogue who dips
+   * picks one skill from their list, not the four a first-level rogue picks.
+   * Reading the starting block for a second class would hand the player
+   * proficiencies their character does not have.
+   *
+   * Only skills and tools land here, because those are what this plan models.
+   * The armour and weapons a class grants reach no character today, first
+   * class included — a gap of its own rather than one this file can close.
+   */
+  const multiclass = multiclassGrantsFor({
+    classIds: state.extraClasses
+      .filter((extra) => extra.classId && extra.level >= 1)
+      .map((extra) => extra.classId),
+    rulesVersion,
+  });
+
+  if (multiclass.skillChoice && multiclass.skillChoice.count > 0) {
+    offers.push({
+      options: multiclass.skillChoice.options,
+      count: multiclass.skillChoice.count,
+      isOpen: false,
+      from: "multiclase",
+    });
+  }
+
   return {
     grantedSkills: dedupe(background.skillsGranted),
-    grantedTools: dedupe(background.toolsGranted),
+    grantedTools: dedupe([...background.toolsGranted, ...multiclass.tools]),
     offers,
   };
 }
