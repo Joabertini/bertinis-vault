@@ -144,3 +144,25 @@ export function classEntriesFor(
     classEntryFor(entry, rulesVersion),
   );
 }
+
+/**
+ * How the sheet names the character's classes.
+ *
+ * One class reads as it always did — just its name, because a level 5 fighter
+ * does not need to be told they are a fighter 5. More than one has to spell
+ * out the split: "Nivel 8 · Guerrero" is not a shorter way of saying what this
+ * character is, it is a different character. The player needs to see which
+ * five levels are the fighter's.
+ */
+export function classingLabel(
+  primary: { classId: string; level: number },
+  extras: ExtraClass[],
+  labelOf: (classId: string) => string,
+): string {
+  const taken = extras.filter((extra) => extra.classId && extra.level >= 1);
+  if (taken.length === 0) return labelOf(primary.classId);
+
+  return [primary, ...taken]
+    .map((entry) => `${labelOf(entry.classId)} ${entry.level}`)
+    .join(" / ");
+}

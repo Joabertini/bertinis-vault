@@ -1,7 +1,7 @@
 import type { CharacterBuild, CharacterBuildInput, ClassEntry } from "@bertinis-vault/contracts";
 import { multiclassRequirementProblems } from "@bertinis-vault/domain";
 import type { ExtraClass } from "./classing";
-import { characterLevel, classEntriesFor, coerceExtraClasses } from "./classing";
+import { characterLevel, classEntriesFor, classingLabel, coerceExtraClasses } from "./classing";
 import { collapseGearLines } from "./gear-lines";
 import {
   getArmorCatalogEntry,
@@ -771,6 +771,24 @@ export function unmetMulticlassRequirementsFor(state: BuilderState) {
     })),
     scores,
   });
+}
+
+/**
+ * How the sheet names this character's classes.
+ *
+ * `labelOf` is passed in rather than looked up here so each surface keeps its
+ * own catalog — the Codex and the Ritual resolve names differently, and the
+ * one that matters is the one the player is already reading.
+ */
+export function classingLabelFor(
+  state: BuilderState,
+  labelOf: (classId: string) => string,
+): string {
+  return classingLabel(
+    { classId: state.classId, level: state.level },
+    state.extraClasses,
+    labelOf,
+  );
 }
 
 export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {

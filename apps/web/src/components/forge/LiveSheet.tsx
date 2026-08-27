@@ -16,6 +16,7 @@ import { motion } from "framer-motion";
 
 import type { ResolvedDraft } from "@/lib/derive";
 import type { BuilderState } from "@/lib/builder";
+import { characterLevelFor, classingLabelFor } from "@/lib/builder";
 import { ABILITY_IDS, abilityLabels } from "@/lib/abilities";
 import { entryById, hitDieFor } from "@/lib/catalog";
 import { counselFor, type Advice } from "@/lib/counsel";
@@ -50,6 +51,13 @@ export default function LiveSheet({
   const race = entryById("race", rulesVersion, state.raceId, state.sourceBooks[`race:${state.raceId}`]);
   const subrace = entryById("subrace", rulesVersion, state.subraceId, state.sourceBooks[`subrace:${state.subraceId}`]);
   const cls = entryById("class", rulesVersion, state.classId);
+  // "Guerrero 5 / Mago 3" when there is more than one class, and just the
+  // class's name when there is not.
+  const classLine = classingLabelFor(
+    state,
+    (classId) => entryById("class", rulesVersion, classId)?.label ?? classId,
+  );
+
   const hitDie = state.classId ? hitDieFor(state.classId, rulesVersion) : null;
   const subclass = entryById("subclass", rulesVersion, state.subclassId, state.sourceBooks[`subclass:${state.subclassId}`]);
   const background = entryById(
@@ -129,9 +137,9 @@ export default function LiveSheet({
             {state.characterName.trim() || "El Innombrado"}
           </h3>
           <p className="mt-1 font-body text-sm italic leading-snug text-bone/45">
-            Nivel {state.level} · {race?.label ?? "sin linaje"}
+            Nivel {characterLevelFor(state)} · {race?.label ?? "sin linaje"}
             {subrace ? ` (${stripParent(subrace.label, race?.label)})` : ""}
-            {cls ? ` · ${cls.label}` : ""}
+            {cls ? ` · ${classLine}` : ""}
           </p>
           {subclass && (
             <p className="mt-0.5 font-body text-xs italic text-bone/40">{subclass.label}</p>

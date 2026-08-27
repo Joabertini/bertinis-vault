@@ -12,6 +12,7 @@
  * else — a level 12 fighter with a 15 Strength.
  */
 
+import { characterLevel } from "./classing";
 import {
   abilityScoreCap,
   bonusesFromChoices,
@@ -33,6 +34,7 @@ import { ABILITY_IDS, type AbilityId } from "./abilities";
 import { takenFeatsFor, type BuilderState } from "./builder";
 import {
   classInfoFor,
+  subclassInfoFor,
   featPrerequisitesFor,
   originAbilityChoiceFor,
   levellingFor,
@@ -283,8 +285,12 @@ export function choiceAt(state: BuilderState, level: number): LevelChoice {
  * draft that is not derivable yet. A player half way through the Forge should
  * still be told that Grappler wants a 13 in Strength.
  *
- * One class, because the Forge builds one. When multiclass arrives this list
- * grows and nothing else here changes.
+ * Every class the character has, because a prerequisite can name one. A feat
+ * that asks for a Spellcasting feature is met by a fighter 5 / wizard 1, and
+ * reading only the first class would refuse it to them.
+ *
+ * The level is the character's, not the first class's: "4th level" in a
+ * prerequisite has always meant the character's level.
  */
 export function featCandidateFor(state: BuilderState): FeatCandidate {
   const rulesVersion: RulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
@@ -292,7 +298,25 @@ export function featCandidateFor(state: BuilderState): FeatCandidate {
   const abilities = {} as Record<AbilityId, number>;
   for (const ability of ABILITY_IDS) abilities[ability] = sources[ability].final;
 
-  const classRow = state.classId ? classInfoFor(state.classId, rulesVersion) : null;
+  const taken = [
+    { classId: state.classId, subclassId: state.subclassId, level: state.level },
+    ...state.extraClasses.filter((extra) => extra.classId && extra.level >= 1),
+  ].filter((entry) => entry.classId);
+
+  const classRows = taken.flatMap((entry) => {
+    const row = classInfoFor(entry.classId, rulesVersion);
+    return row ? [{ name: row.name, level: entry.level }] : [];
+  });
+
+  // Any class that casts, subclasses included: a fighter with the Eldritch
+  // Knight subclass has a Spellcasting feature and the fighter alone does not.
+  const casts = taken.some((entry) => {
+    const row = classInfoFor(entry.classId, rulesVersion);
+    if (row?.casterProgression) return true;
+    return Boolean(
+      entry.subclassId && subclassInfoFor(entry.subclassId, entry.classId, rulesVersion)?.casterProgression,
+    );
+  });
   // Armour and weapon proficiencies are free text in the builder, so the match
   // is on what the player typed. "medium" is what the books ask for.
   const proficiencies = uniqueEntries(parseLineList(state.proficienciesText)).map((entry) =>
@@ -301,8 +325,8 @@ export function featCandidateFor(state: BuilderState): FeatCandidate {
 
   return {
     abilities,
-    level: state.level,
-    classes: classRow ? [{ name: classRow.name, level: state.level }] : [],
+    level: characterLevel(state.level, state.extraClasses),
+    classes: classRows,
     raceName: optionById("race", rulesVersion, state.raceId)?.label ?? state.raceId,
     ...(state.subraceId
       ? {
@@ -318,7 +342,7 @@ export function featCandidateFor(state: BuilderState): FeatCandidate {
     featureNames: parseLineList(state.featuresText),
     armorProficiencies: proficiencies,
     weaponProficiencies: proficiencies,
-    casts: classRow ? classRow.casterProgression !== null : false,
+    casts,
   };
 }
 

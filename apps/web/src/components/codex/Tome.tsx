@@ -24,6 +24,7 @@ import Sigil from "@/components/sigils/Sigil";
 import Vision from "@/components/codex/Vision";
 import { playbookFor } from "@/lib/playbook";
 import { entryById, hitDieFor } from "@/lib/catalog";
+import { characterLevelFor, classingLabelFor } from "@/lib/builder";
 import { tintFor } from "@/lib/class-tint";
 import { resolveDraft } from "@/lib/derive";
 import { rulesVersionOf, type SealedCharacter } from "@/lib/vault-store";
@@ -44,6 +45,13 @@ export default function Tome({
 
   const rulesVersion = rulesVersionOf(state);
   const cls = entryById("class", rulesVersion, state.classId);
+  // "Guerrero 5 / Mago 3" when there is more than one class, and just the
+  // class's name when there is not.
+  const classLine = classingLabelFor(
+    state,
+    (classId) => entryById("class", rulesVersion, classId)?.label ?? classId,
+  );
+
 
   return (
     <>
@@ -104,7 +112,7 @@ export default function Tome({
                 {state.characterName}
               </p>
               <p className="font-mono text-[9px] uppercase tracking-[0.25em]" style={{ color: accent }}>
-                Nivel {state.level}
+                Nivel {characterLevelFor(state)}
               </p>
             </div>
 
@@ -149,7 +157,7 @@ export default function Tome({
             character={character}
             accent={accent}
             hitDie={hitDieFor(state.classId, rulesVersion)}
-            className={cls?.label ?? ""}
+            className={classLine}
             onClose={() => setOpen(false)}
             onBurn={(origin) => {
               setOpen(false);
@@ -242,7 +250,7 @@ function OpenTome({
             playbook={playbook}
             accent={accent}
             name={state.characterName}
-            subtitle={`Nivel ${state.level} · ${race?.label ?? "—"} · ${className}${
+            subtitle={`Nivel ${characterLevelFor(state)} · ${race?.label ?? "—"} · ${className}${
               background ? ` · ${background.label}` : ""
             }`}
             sigilName={state.classId || state.raceId}

@@ -29,6 +29,7 @@ import { savingThrowsForClass } from "@bertinis-vault/domain";
 
 import { ABILITY_IDS, abilityLabels, type AbilityId } from "./abilities";
 import type { BuilderState } from "./builder";
+import { characterLevelFor } from "./builder";
 import { classInfoFor } from "./index-options";
 import type { ActionProfile } from "./spells";
 
@@ -152,7 +153,9 @@ export function counselFor(
   if (!state.classId) return advice;
 
   const scores = snapshot.abilities.final;
-  const level = state.level;
+  // The character's level, not the first class's: it sits beside the
+  // proficiency bonus, which every class's levels feed.
+  const level = characterLevelFor(state);
   const prof = snapshot.derived.proficiencyBonus;
   const primary = primaryAbilityOf(state, rulesVersion);
 

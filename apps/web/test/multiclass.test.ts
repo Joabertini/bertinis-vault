@@ -8,6 +8,8 @@ import {
   initialState,
   unmetMulticlassRequirementsFor,
 } from "../src/lib/builder";
+import { classingLabel } from "../src/lib/classing";
+import { featCandidateFor } from "../src/lib/improvements";
 import { multiclassGrantsFor } from "../src/lib/index-options";
 
 const base = { ...initialState, abilityBonuses: {}, levelChoices: {} };
@@ -226,5 +228,81 @@ describe("a subclass that casts when its class does not", () => {
     });
 
     expect(snapshot.derived.spellcasting).toBeUndefined();
+  });
+});
+
+describe("cómo la ficha nombra a las clases", () => {
+  const labelOf = (classId: string) => ({ fighter: "Guerrero", wizard: "Mago" })[classId] ?? classId;
+
+  test("una sola clase se lee como siempre", () => {
+    expect(classingLabel({ classId: "fighter", level: 5 }, [], labelOf)).toBe("Guerrero");
+  });
+
+  /*
+   * "Nivel 8 · Guerrero" no es una forma más corta de decir qué es este
+   * personaje: es otro personaje. El jugador necesita ver cuáles cinco niveles
+   * son del guerrero.
+   */
+  test("dos clases se parten en pantalla", () => {
+    expect(
+      classingLabel({ classId: "fighter", level: 5 }, [{ classId: "wizard", subclassId: "", level: 3 }], labelOf),
+    ).toBe("Guerrero 5 / Mago 3");
+  });
+
+  test("una fila a medio elegir no aparece en la línea", () => {
+    expect(
+      classingLabel({ classId: "fighter", level: 5 }, [{ classId: "", subclassId: "", level: 1 }], labelOf),
+    ).toBe("Guerrero");
+  });
+});
+
+describe("los requisitos de dote leen a todo el personaje", () => {
+  test("el nivel es el del personaje, no el de la primera clase", () => {
+    const candidate = featCandidateFor({
+      ...base,
+      classId: "fighter",
+      subclassId: "",
+      level: 5,
+      extraClasses: [{ classId: "wizard", subclassId: "", level: 1 }],
+    });
+
+    expect(candidate.level).toBe(6);
+    expect(candidate.classes.map((entry) => entry.level)).toEqual([5, 1]);
+  });
+
+  test("un guerrero que se metió una clase de mago sí lanza conjuros", () => {
+    const candidate = featCandidateFor({
+      ...base,
+      classId: "fighter",
+      subclassId: "",
+      level: 5,
+      extraClasses: [{ classId: "wizard", subclassId: "", level: 1 }],
+    });
+
+    expect(candidate.casts).toBe(true);
+  });
+
+  test("un Caballero Arcano lanza aunque su clase no lance", () => {
+    const candidate = featCandidateFor({
+      ...base,
+      classId: "fighter",
+      subclassId: "eldritch-knight",
+      level: 3,
+      extraClasses: [],
+    });
+
+    expect(candidate.casts).toBe(true);
+  });
+
+  test("un guerrero sin nada de eso no lanza", () => {
+    const candidate = featCandidateFor({
+      ...base,
+      classId: "fighter",
+      subclassId: "",
+      level: 5,
+      extraClasses: [],
+    });
+
+    expect(candidate.casts).toBe(false);
   });
 });

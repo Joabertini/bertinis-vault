@@ -25,6 +25,7 @@ import Sigil from "@/components/sigils/Sigil";
 import RuneButton from "@/components/ui/RuneButton";
 
 import { entryById } from "@/lib/catalog";
+import { characterLevelFor, classingLabelFor } from "@/lib/builder";
 import { tintFor } from "@/lib/class-tint";
 import { resolveDraft } from "@/lib/derive";
 import {
@@ -82,6 +83,13 @@ export default function Ritual() {
   const rulesVersion = rulesVersionOf(state);
   const accent = tintFor(state.classId);
   const cls = entryById("class", rulesVersion, state.classId);
+  // "Guerrero 5 / Mago 3" when there is more than one class, and just the
+  // class's name when there is not.
+  const classLine = classingLabelFor(
+    state,
+    (classId) => entryById("class", rulesVersion, classId)?.label ?? classId,
+  );
+
   const realm = realmById(realmId);
 
   const beginRitual = async () => {
@@ -201,7 +209,7 @@ export default function Ritual() {
           <div className="text-left">
             <p className="font-display text-lg font-bold text-bone">{state.characterName}</p>
             <p className="font-mono text-[10px] uppercase tracking-widest text-bone/40">
-              Nivel {state.level} · {cls?.label ?? "—"} · reglas {rulesVersion}
+              Nivel {characterLevelFor(state)} · {classLine || "—"} · reglas {rulesVersion}
             </p>
           </div>
         </div>

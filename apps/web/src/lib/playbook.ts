@@ -21,6 +21,7 @@ import type { CharacterBuild } from "@bertinis-vault/contracts";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder";
+import { characterLevelFor } from "./builder";
 import { entryById } from "./catalog";
 import { modifierOf, primaryAbilityOf, signed } from "./counsel";
 import { slugOf } from "./index-options";
@@ -349,7 +350,7 @@ function vitalsOf(
   vitals.push(
     { label: "CA", value: `${snapshot.derived.ac}`, from: "lo protegido que estas" },
     { label: "PG", value: `${snapshot.derived.hp}`, from: "lo que aguantas antes de caer" },
-    { label: "Competencia", value: signed(prof), from: `nivel ${state.level}` },
+    { label: "Competencia", value: signed(prof), from: `nivel ${characterLevelFor(state)}` },
   );
 
   return vitals;
