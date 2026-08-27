@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { spellCountsFor } from "../src/lib/index-options";
+import { spellCountsFor } from "../src/lib/spells";
 
 const counts = (classId: string, level: number, rulesVersion: "2014" | "2024", abilityModifier = 0) =>
   spellCountsFor({ classId, level, rulesVersion, abilityModifier });

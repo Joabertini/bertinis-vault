@@ -14,14 +14,24 @@
 
 import {
   buildSpellPickerState,
+  cantripsKnownAt,
   getSpellProgressionForClass,
   getSpellSelectionProfileForClassLevel,
+  spellCountLabel,
+  spellsAvailableAt,
   type SpellPickerState,
+  warlockPactSlotLevelByClassLevel,
+  type SpellSelectionProfile,
 } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { CharacterBuild } from "@bertinis-vault/contracts";
-import { castingTimeOf, isConcentration, spellOptionsForClass } from "./index-options";
+import {
+  castingTimeOf,
+  classInfoFor,
+  isConcentration,
+  spellPoolFor,
+} from "./index-options";
 
 export type SpellPlan = {
   caster: boolean;
@@ -34,16 +44,47 @@ export type SpellPlan = {
 
 const NONE: SpellPlan = { caster: false, picker: null, cantripOptions: [], spellsByLevel: [] };
 
+/**
+ * How many cantrips and how many spells this class has at this level, in this
+ * edition.
+ *
+ * Null when the index has never heard of the class — which is a different
+ * answer from zero, and the difference matters: zero is a fighter, null is a
+ * typo. Zero for a real class that simply has no magic yet, such as a 2014
+ * paladin at level 1.
+ *
+ * Everything is read from the class's own table. 2014 states the prepared
+ * count as a formula because a printed table cannot know a modifier; 2024
+ * replaced the formula with a column, so `abilityModifier` stops mattering
+ * there on its own, without a branch here.
+ */
+export function spellCountsFor(input: {
+  classId: string;
+  level: number;
+  rulesVersion: RulesVersion;
+  abilityModifier?: number;
+}): { cantrips: number; spells: number } | null {
+  const row = classInfoFor(input.classId, input.rulesVersion);
+  if (!row) return null;
+
+  return {
+    cantrips: cantripsKnownAt(row, input.level),
+    spells: spellsAvailableAt(row, input.level, input.abilityModifier ?? 0),
+  };
+}
+
 export function spellPlan(input: {
   classId: string;
   className: string;
   classSource: string;
+  /** Widens the pool: domain, oath, patron and circle spells all live here. */
+  subclassId: string;
   level: number;
   rulesVersion: RulesVersion;
   /** Null until the draft has enough to derive. */
   snapshot: CharacterBuild | null;
 }): SpellPlan {
-  const { classId, className, classSource, level, rulesVersion, snapshot } = input;
+  const { classId, className, classSource, subclassId, level, rulesVersion, snapshot } = input;
 
   if (!classId || getSpellProgressionForClass(classId) === "none") return NONE;
 
@@ -59,9 +100,46 @@ export function spellPlan(input: {
     ? Math.floor((snapshot!.abilities.final[spellcasting.ability] - 10) / 2)
     : 0;
 
-  const profile = getSpellSelectionProfileForClassLevel(classId, level, abilityModifier);
+  /**
+   * The counts come from the class's own table in the chosen edition, not from
+   * a 2014 implementation that takes no edition.
+   *
+   * `getSpellSelectionProfileForClassLevel` lives in `dnd5e-2014.ts` and has no
+   * `rulesVersion` parameter, so every 2024 caster was being served 2014
+   * numbers. Two of those differences are visible on the first screen a player
+   * sees: a 2024 paladin casts from level 1 and was getting nothing, and a 2024
+   * bard prepares one more spell than a 2014 bard knows from level 5 up.
+   *
+   * `classInfoFor` returns the index row, which already carries `spellTable`,
+   * `preparedSpells` and `spellcastingLevel` per edition — so this is read from
+   * data rather than from a table written here.
+   */
+  const row = classInfoFor(classId, rulesVersion);
+  const counts = spellCountsFor({ classId, level, rulesVersion, abilityModifier });
+  const profile: SpellSelectionProfile =
+    row && counts
+      ? { mode: spellCountLabel(row), cantripLimit: counts.cantrips, spellLimit: counts.spells }
+      : getSpellSelectionProfileForClassLevel(classId, level, abilityModifier);
 
-  const rows = spellOptionsForClass(className, classSource, rulesVersion, 9);
+  /**
+   * The class list plus whatever the subclass adds — not the class list alone.
+   *
+   * Reading only the class left an Eldritch Knight and an Arcane Trickster with
+   * an empty picker, and every domain, oath, patron and circle spell off the
+   * table for everyone else.
+   */
+  const rows = spellPoolFor({
+    className,
+    classSource,
+    classId,
+    subclassId,
+    classLevel: level,
+    // The warlock patrons gate their list on pact slot level, which is what the
+    // character's slots are worth rather than what their level is.
+    pactSlotLevel: warlockPactSlotLevelByClassLevel[level] ?? 0,
+    rulesVersion,
+    maxLevel: 9,
+  });
   const cantripOptions = rows.filter((row) => row.level === 0).map((row) => row.name);
   const levelled = rows.filter((row) => row.level > 0);
 

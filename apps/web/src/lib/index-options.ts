@@ -27,7 +27,13 @@ import {
   type SubclassRow,
   type SubraceRow,
 } from "@bertinis-vault/vetools-index";
-import type { LevellingClass } from "@bertinis-vault/domain";
+import {
+  PREPARABLE_KINDS,
+  parseSpellFilter,
+  spellMatchesFilter,
+  subclassSpellsAt,
+  type LevellingClass,
+} from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 export type IndexOption = {
@@ -264,6 +270,90 @@ export function spellOptionsForClass(
   return legal
     .filter((row) => row.level <= maxLevel && row.classes.includes(key))
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+}
+
+/** The subclass row, scoped to its class so two "Berserker"s cannot collide. */
+export function subclassInfoFor(
+  subclassId: string,
+  classId: string,
+  rulesVersion: RulesVersion,
+): SubclassRow | null {
+  const legal = forRulesVersion(collections.subclass ?? [], rulesVersion) as SubclassRow[];
+  return (
+    legal.find(
+      (row) => slugOf(row.name) === subclassId && slugOf(row.className ?? "") === classId,
+    ) ?? null
+  );
+}
+
+/**
+ * Every spell this character may take: the class list, plus whatever the
+ * subclass adds.
+ *
+ * The class list alone is not the answer, and for two subclasses it is not
+ * even close. Neither the fighter nor the rogue appears on a single spell's
+ * class list, so an Eldritch Knight and an Arcane Trickster get an empty
+ * picker unless the subclass is read — it is the only place that says the
+ * list is the wizard's. Everything else that widens a caster's reach comes
+ * through here too: cleric domain spells, paladin oath spells, warlock patron
+ * spells, druid circle spells.
+ *
+ * Only `expanded` and `prepared` entries count. A subclass that *grants* a
+ * spell outright has already given it; listing it as something to pick would
+ * spend a choice on what the character owns.
+ *
+ * A shortlist ("choose one of these three") joins the pool as plain names.
+ * Whether the character may take one or all of them is the picker's business,
+ * not this function's — here the only question is what is on the table.
+ */
+export function spellPoolFor({
+  className,
+  classSource,
+  classId,
+  subclassId,
+  classLevel,
+  pactSlotLevel,
+  rulesVersion,
+  maxLevel,
+}: {
+  className: string;
+  classSource: string;
+  /** The class's slug, which is how a subclass is scoped to its class. */
+  classId: string;
+  subclassId: string;
+  classLevel: number;
+  pactSlotLevel: number;
+  rulesVersion: RulesVersion;
+  maxLevel: number;
+}): SpellRow[] {
+  const all = forRulesVersion(collections.spell ?? [], rulesVersion) as SpellRow[];
+  const own = className ? spellOptionsForClass(className, classSource, rulesVersion, maxLevel) : [];
+  const chosen = new Map(own.map((row) => [`${row.name}|${row.source}`, row]));
+
+  const subclass = subclassId ? subclassInfoFor(subclassId, classId, rulesVersion) : null;
+
+  for (const entry of subclassSpellsAt(subclass?.spells, { classLevel, pactSlotLevel })) {
+    if (!PREPARABLE_KINDS.includes(entry.kind)) continue;
+
+    const named = new Set(entry.names.map((name) => name.toLowerCase()));
+    const parsed = entry.filters.map((filter) => parseSpellFilter(filter.filter));
+    for (const choice of entry.choices) {
+      for (const name of choice.from) named.add(name.toLowerCase());
+    }
+
+    for (const row of all) {
+      if (row.level > maxLevel) continue;
+      const key = `${row.name}|${row.source}`;
+      if (chosen.has(key)) continue;
+
+      const matches =
+        named.has(row.name.toLowerCase()) ||
+        parsed.some((filter) => spellMatchesFilter(row, filter));
+      if (matches) chosen.set(key, row);
+    }
+  }
+
+  return [...chosen.values()].sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 }
 
 /** What the index knows about an item: enough to show a weapon or armour. */

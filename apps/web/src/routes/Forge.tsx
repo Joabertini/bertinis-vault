@@ -227,11 +227,12 @@ export default function Forge() {
         classId: draft.classId,
         className: selectedClass?.label ?? "",
         classSource: selectedClass?.source ?? "",
+        subclassId: draft.subclassId,
         level: draft.level,
         rulesVersion,
         snapshot,
       }),
-    [draft.classId, draft.level, selectedClass, rulesVersion, snapshot],
+    [draft.classId, draft.subclassId, draft.level, selectedClass, rulesVersion, snapshot],
   );
 
   const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
