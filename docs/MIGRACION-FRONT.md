@@ -100,11 +100,25 @@ ninguna era sólo un cambio de import.
       `src/lib/table-numbers.ts`, en la ficha viva. Límite conocido y fijado en
       el test: **ninguna de las 98 subrazas trae velocidad** en el índice, así
       que un elfo del bosque lee 30 y no 35.
-- [ ] **Aplicar el kit inicial.** `starting-equipment` no era API renombrada
-      como decía el triaje: el Faro **imprime** el equipo de clase como texto y
-      el jugador tiene que buscar cada objeto a mano en la mochila. La suite
-      prueba que entre al personaje con su cantidad, respetando las elecciones
-      ("greataxe **o** battleaxe") y la alternativa de oro inicial.
+- [x] **Aplicar el kit inicial.** `starting-equipment` no era API renombrada
+      como decía el triaje: el Faro **imprimía** el equipo de clase como texto y
+      el jugador tenía que buscar cada objeto a mano en la mochila. Ahora cada
+      fila es una pregunta — lo concedido entra solo, lo elegible al contestar.
+      `starting-kit.ts` + `StartingKit.tsx`, 14 tests.
+
+      Al cablearlo salió un bug más viejo que el kit: **la mochila perdía las
+      cantidades**. Es una caja de texto y una caja de texto no tiene columna
+      para "cuántos", así que las dos hachas del bárbaro entraban como dos
+      líneas iguales, `uniqueEntries` las colapsaba a una y
+      `normalizeEquipmentEntry` estampaba `quantity: 1`. Las veinte flechas del
+      explorador importaban a Foundry **como una flecha**. Arreglado en
+      `gear-lines.ts`: una línea puede llevar la cuenta como ` x20`, las dos
+      formas de escribir tres dagas suman igual, y `GearBag` pesa por cantidad.
+
+      Queda fuera el **oro inicial** como alternativa al kit: `kitCopper` ya lo
+      calcula y la UI lo muestra, pero `ImportPayload` no tiene campo de
+      monedas, así que hoy se informa y no se exporta. Es la tarea "Oro
+      inicial" de más abajo, y toca `packages/`.
 - [ ] **Multiclase.** La Forja asume una clase. Además `deriveCharacterBuild`
       usa `classes[0]`, así que arreglarlo del lado del front no alcanza —
       Guerrero 5 / Mago 3 da 68 PG en vez de ~58.
