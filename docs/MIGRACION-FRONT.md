@@ -202,8 +202,23 @@ ninguna era sólo un cambio de import.
       estaba viejo, el exportador bien. Test corregido y paquete metido en la
       puerta: 18 tests, `mvp:verify` en verde.
 
-- [ ] **Maestría de armas.** El Faro muestra la maestría de un arma pero no deja
-      elegirla. Bloqueado además porque no se escribe al actor.
+- [x] **Maestría de armas.** Vertical entera: contrato, estado, panel y
+      exportador. La pieza que tenía que estar bien es el vocabulario —
+      `traits.weaponProf.mastery.value` es un Set que dnd5e consulta con
+      `has(item.type.baseItem)`, así que guarda **ids de arma base**:
+      `longsword`, nunca "Longsword" y nunca la propiedad "Sap". Leído del
+      `dnd5e.mjs` instalado (5.3.3), no de memoria.
+
+      Minúsculas sin separadores mapea las 38 armas base del índice sobre los
+      38 `weaponIds` de dnd5e sin fallar en ninguna dirección. El test fija las
+      dos y nombra las once del índice que dnd5e no conoce como objeto base
+      (armas de fuego modernas, la Hoja Psíquica, dos bastones), para que una
+      nueva no aparezca en silencio.
+
+      Reglas resueltas midiendo: con dos clases que la conceden se toma la más
+      alta y no la suma; la restricción de cuerpo a cuerpo del bárbaro cede si
+      otra clase que la concede no la tiene; los objetos mágicos no son opción
+      aparte porque se domina el tipo de arma.
 - [ ] **Expertise.** Nunca tuvo test. `normalizedProficiencyKindSchema` no tiene
       el kind, así que hoy se elegiría algo que nunca llega al payload.
 - [ ] **Smoke test de la Forja** que reemplace a `builder-page.test.tsx`.
