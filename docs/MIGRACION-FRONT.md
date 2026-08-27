@@ -167,11 +167,22 @@ ninguna era sólo un cambio de import.
             cambiar la clase de una fila le borra la senda; los veinte niveles
             se reparten y el deslizador de la primera clase también se acota;
             los requisitos de característica se **informan**, no se niegan.
-      - [ ] **Lo que el multiclase *no* da.** Un jugador que suma una clase no
-            recibe su equipo inicial ni sus salvaciones — sólo la tabla de
-            competencias de multiclase. `multiclassGrantsFor` ya la lee del
-            índice y está probada; falta que la Forja la use en lugar del
-            bloque inicial.
+      - [x] **Lo que el multiclase da y lo que no.** Medido: el equipo inicial
+            y las salvaciones ya salían sólo de la primera clase, así que esa
+            mitad estaba bien sin saberlo. Faltaba la otra: lo que una segunda
+            clase **sí** concede, que la Forja no daba en absoluto. Un toque de
+            pícaro ofrece **una** pericia de su lista y herramientas de ladrón,
+            no las cuatro que elige un pícaro de nivel 1.
+
+            Sólo pericias y herramientas, que es lo que `proficiencyPlan`
+            modela. Ver el hueco nuevo de abajo.
+- [ ] **Competencias de armadura y arma de la clase.** Encontrado midiendo el
+      tramo de multiclase: **ningún** personaje recibe las competencias de
+      armadura ni de arma de su clase, ni siquiera con una sola clase. Un
+      guerrero de nivel 1 sale de la Forja sin competencia en armadura pesada.
+      `proficiencyPlan` sólo modela pericias y herramientas; el índice sí trae
+      las otras dos (`multiclassGrants.armor` / `.weapons`, y el bloque inicial
+      de cada clase).
 - [ ] **Maestría de armas.** El Faro muestra la maestría de un arma pero no deja
       elegirla. Bloqueado además porque no se escribe al actor.
 - [ ] **Expertise.** Nunca tuvo test. `normalizedProficiencyKindSchema` no tiene
