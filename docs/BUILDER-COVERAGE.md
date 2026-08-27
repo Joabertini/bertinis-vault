@@ -481,8 +481,6 @@ Defense, and the builder now says so. Neither Plutonium nor the `dnd5e` system
 models that clause, so the Foundry sheet will show 2 higher for that one build.
 The builder is right and the sheet is wrong, which is an uncomfortable place to
 be but the correct one.
-Six is what will demand a redesign of the wizard, which is where the interface
-work belongs.
 
 Nothing here is about how the builder should *look*. That is its own track, and
 deliberately not mixed in: the design work happens against a model that is
