@@ -71,6 +71,10 @@ import BonusEditor from "@/components/forge/BonusEditor";
 import Improvements from "@/components/forge/Improvements";
 import TalentPools from "@/components/forge/TalentPools";
 import GearBag from "@/components/forge/GearBag";
+import Multiclass from "@/components/forge/Multiclass";
+import type { ExtraClass } from "@/lib/classing";
+import { emptyExtraClass } from "@/lib/classing";
+import { unmetMulticlassRequirementsFor } from "@/lib/builder";
 import { talentPools, talentsSatisfied } from "@/lib/optional-features";
 import {
   bonusOrigin,
@@ -184,6 +188,12 @@ export default function Forge() {
 
   const subclassLevel = levellingFor(draft.classId, rulesVersion).subclassLevel ?? 3;
   const subclassUnlocked = draft.level >= subclassLevel;
+
+  // Read against the final scores, and reported rather than refused.
+  const primaryLevelCeiling =
+    20 - draft.extraClasses.reduce((total, extra) => total + (extra.classId ? extra.level : 0), 0);
+
+  const multiclassProblems = useMemo(() => unmetMulticlassRequirementsFor(draft), [draft]);
 
   const subclasses = useMemo(
     () => (selectedClass ? subclassesFor(selectedClass.label, rulesVersion) : []),
@@ -614,6 +624,22 @@ export default function Forge() {
     patchDraft({ spellsText: fromLines(next) });
   };
 
+  /* ---------------- multiclass ---------------- */
+
+  const addClass = () => {
+    patchDraft({ extraClasses: [...draft.extraClasses, emptyExtraClass()] });
+  };
+
+  const changeClass = (index: number, next: ExtraClass) => {
+    patchDraft({
+      extraClasses: draft.extraClasses.map((extra, at) => (at === index ? next : extra)),
+    });
+  };
+
+  const removeClass = (index: number) => {
+    patchDraft({ extraClasses: draft.extraClasses.filter((_, at) => at !== index) });
+  };
+
   const setLevelChoice = (level: number, choice: (typeof draft.levelChoices)[number]) => {
     patchDraft({ levelChoices: { ...draft.levelChoices, [level]: choice } });
   };
@@ -944,7 +970,10 @@ export default function Forge() {
                       <input
                         type="range"
                         min={1}
-                        max={20}
+                        // Twenty levels between every class. Letting this reach
+                        // 20 with levels already spent elsewhere would show a
+                        // level the sheet then silently clamps back down.
+                        max={primaryLevelCeiling}
                         value={draft.level}
                         onChange={(event) => setLevel(Number(event.target.value))}
                         className="w-full accent-gold"
@@ -975,6 +1004,21 @@ export default function Forge() {
                         </p>
                       </div>
                     ))}
+
+                  {draft.classId && (
+                    <Multiclass
+                      extras={draft.extraClasses}
+                      classes={allClasses}
+                      primaryClassId={draft.classId}
+                      primaryLevel={draft.level}
+                      rulesVersion={rulesVersion}
+                      accent={accent}
+                      problems={multiclassProblems}
+                      onChange={changeClass}
+                      onRemove={removeClass}
+                      onAdd={addClass}
+                    />
+                  )}
                 </div>
               )}
 
