@@ -44,7 +44,13 @@ import {
   subracesFor,
   type CatalogEntry,
 } from "@/lib/catalog";
-import { levellingFor, optionsFor, startingEquipmentForClass } from "@/lib/index-options";
+import {
+  featChoiceForBackground,
+  levellingFor,
+  optionsFor,
+  slugOf,
+  startingEquipmentForClass,
+} from "@/lib/index-options";
 import ItemFacts from "@/components/forge/ItemFacts";
 import { factsFor } from "@/lib/item-facts";
 import PointBuy from "@/components/forge/PointBuy";
@@ -244,6 +250,50 @@ export default function Forge() {
   const growth = useMemo(() => improvementPlan(draft, rulesVersion), [draft, rulesVersion]);
 
   /** In 2014 the species grants a fixed amount; in 2024 the background gives three. */
+  /**
+   * The feat the background hands over.
+   *
+   * 59 of the 60 backgrounds in 2024 grant an origin feat, and 15 of the 101 in
+   * 2014 do. The panel below has always *shown* it; nothing ever recorded it,
+   * so every character built here left without the feat their background gives
+   * them and it never reached Foundry. The only writer of `backgroundFeatId`
+   * was the Foundry importer.
+   */
+  const backgroundFeat = useMemo(
+    () =>
+      draft.backgroundId
+        ? featChoiceForBackground(
+            draft.backgroundId,
+            rulesVersion,
+            draft.sourceBooks[`background:${draft.backgroundId}`] ?? draft.sourceBooks.background,
+          )
+        : null,
+    [draft.backgroundId, rulesVersion, draft.sourceBooks],
+  );
+
+  const backgroundFeatIds = useMemo(
+    () => (backgroundFeat?.options ?? []).map((option: { name: string }) => slugOf(option.name)),
+    [backgroundFeat],
+  );
+
+  /**
+   * A single option is a grant, not a question: record it rather than asking a
+   * player to confirm the only answer. Several are a real choice and stay for
+   * them to make. Either way a feat the current background no longer offers is
+   * dropped, so changing background does not leave the old one behind.
+   */
+  useEffect(() => {
+    const only = backgroundFeatIds.length === 1 ? backgroundFeatIds[0]! : "";
+    if (only && draft.backgroundFeatId !== only) {
+      patchDraft({ backgroundFeatId: only });
+      return;
+    }
+    if (draft.backgroundFeatId && !backgroundFeatIds.includes(draft.backgroundFeatId)) {
+      patchDraft({ backgroundFeatId: "" });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [backgroundFeatIds.join("|")]);
+
   /** The three abilities a 2024 background names. Null in 2014. */
   const originAllowance = useMemo(
     () => originAbilityAllowanceFor(draft, rulesVersion),
@@ -401,7 +451,11 @@ export default function Forge() {
   const answered: Record<ChamberKey, boolean> = {
     ancestry: Boolean(draft.raceId),
     calling: Boolean(draft.classId),
-    origin: Boolean(draft.backgroundId),
+    // A background that offers several feats owes an answer; one that grants a
+    // single one has already been recorded above.
+    origin:
+      Boolean(draft.backgroundId) &&
+      (backgroundFeatIds.length < 2 || Boolean(draft.backgroundFeatId)),
     attributes: bound.size === ABILITY_IDS.length,
     // Every reached improvement must be answered, and every pool filled: an
     // unspent one exports a character weaker than the rules make them.
