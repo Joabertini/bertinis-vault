@@ -72,9 +72,11 @@ import Improvements from "@/components/forge/Improvements";
 import TalentPools from "@/components/forge/TalentPools";
 import GearBag from "@/components/forge/GearBag";
 import Multiclass from "@/components/forge/Multiclass";
+import WeaponMastery from "@/components/forge/WeaponMastery";
 import type { ExtraClass } from "@/lib/classing";
 import { emptyExtraClass } from "@/lib/classing";
-import { unmetMulticlassRequirementsFor } from "@/lib/builder";
+import { masteryPlanFor } from "@/lib/weapon-mastery";
+import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
 import { talentPools, talentsSatisfied } from "@/lib/optional-features";
 import {
   bonusOrigin,
@@ -192,6 +194,15 @@ export default function Forge() {
   // Read against the final scores, and reported rather than refused.
   const primaryLevelCeiling =
     20 - draft.extraClasses.reduce((total, extra) => total + (extra.classId ? extra.level : 0), 0);
+
+  const masteryPlan = useMemo(
+    () =>
+      masteryPlanFor(
+        classesFor(draft).map((entry) => ({ classId: entry.classId, level: entry.level })),
+        rulesVersion,
+      ),
+    [draft, rulesVersion],
+  );
 
   const multiclassProblems = useMemo(() => unmetMulticlassRequirementsFor(draft), [draft]);
 
@@ -634,6 +645,13 @@ export default function Forge() {
     patchDraft({
       extraClasses: draft.extraClasses.map((extra, at) => (at === index ? next : extra)),
     });
+  };
+
+  const toggleMastery = (id: string) => {
+    const chosen = draft.weaponMasteryIds.includes(id)
+      ? draft.weaponMasteryIds.filter((entry) => entry !== id)
+      : [...draft.weaponMasteryIds, id];
+    patchDraft({ weaponMasteryIds: chosen });
   };
 
   const removeClass = (index: number) => {
@@ -1345,6 +1363,19 @@ export default function Forge() {
                     />
                     {armorFacts && <ItemFacts facts={armorFacts} accent={accent} />}
                   </div>
+
+                  {masteryPlan.count > 0 && (
+                    <div className={DIVIDER}>
+                      <WeaponMastery
+                        options={masteryPlan.options}
+                        chosen={draft.weaponMasteryIds}
+                        count={masteryPlan.count}
+                        meleeOnly={masteryPlan.meleeOnly}
+                        accent={accent}
+                        onToggle={toggleMastery}
+                      />
+                    </div>
+                  )}
 
                   <div className={DIVIDER}>
                     <p className={LABEL_MB2}>

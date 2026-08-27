@@ -331,3 +331,18 @@ test("a class with no multiclass block contributes nothing rather than throwing"
 
   assert.deepEqual(payload.system.traits.armorProf.value, ["light", "medium", "heavy"]);
 });
+
+test("weapon mastery reaches the actor as base-item ids", () => {
+  const build = makeCharacterBuild();
+  build.choices.weaponMasteries = ["longsword", "greataxe"];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.weaponProf.mastery.value, ["longsword", "greataxe"]);
+});
+
+test("a build with no mastery leaves the set empty rather than absent", () => {
+  const payload = buildFoundryActorPayload(makeCharacterBuild());
+
+  assert.deepEqual(payload.system.traits.weaponProf.mastery.value, []);
+});

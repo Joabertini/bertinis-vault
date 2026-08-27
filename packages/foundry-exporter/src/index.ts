@@ -349,6 +349,12 @@ function fillProficiencies(actor: Record<string, any>, character: CharacterBuild
   const weapons = merge([primary.weapons, ...extras.map((entry) => entry.weapons)]);
 
   actor.system.traits.weaponProf.custom = weapons.join(", ");
+
+  // Weapon mastery, 2024's own idea. Foundry checks this set with
+  // `has(item.type.baseItem)`, so the values are base-item ids — `longsword`,
+  // never "Longsword" and never the property "Sap". The builder produces them;
+  // anything else here would be a mastery the player chose and never got.
+  actor.system.traits.weaponProf.mastery.value = character.choices.weaponMasteries ?? [];
   actor.system.traits.armorProf.value = armor.filter((type) => ["light", "medium", "heavy"].includes(type));
   actor.system.traits.armorProf.custom = armor.includes("shields") ? "shields" : "";
 }

@@ -3,6 +3,7 @@ import { multiclassRequirementProblems } from "@bertinis-vault/domain";
 import type { ExtraClass } from "./classing";
 import { characterLevel, classEntriesFor, classingLabel, coerceExtraClasses } from "./classing";
 import { collapseGearLines } from "./gear-lines";
+import { masteryPlanFor } from "./weapon-mastery";
 import {
   getArmorCatalogEntry,
   getBackgroundCatalogEntry,
@@ -87,6 +88,13 @@ export type BuilderState = {
    * neither — see `classing.ts`.
    */
   extraClasses: ExtraClass[];
+  /**
+   * The weapons this character has mastery with, as dnd5e base-item ids.
+   *
+   * 2024 only, and only five classes grant it. Kept as ids rather than names
+   * because that is what Foundry reads — see `weapon-mastery.ts`.
+   */
+  weaponMasteryIds: string[];
   backgroundId: string;
   /**
    * The feat chosen from the ones the background offers.
@@ -443,6 +451,7 @@ export const initialState: BuilderState = {
   featuresText: "Arcane Recovery\nSculpt Spells",
   level: 3,
   extraClasses: [],
+  weaponMasteryIds: [],
   str: 8,
   dex: 14,
   con: 13,
@@ -508,6 +517,9 @@ export function coerceBuilderState(value: unknown): BuilderState {
       typeof candidate.featuresText === "string" ? candidate.featuresText : initialState.featuresText,
     level: typeof candidate.level === "number" ? candidate.level : initialState.level,
     extraClasses: coerceExtraClasses(candidate.extraClasses),
+    weaponMasteryIds: Array.isArray(candidate.weaponMasteryIds)
+      ? candidate.weaponMasteryIds.filter((entry): entry is string => typeof entry === "string")
+      : [],
     str: typeof candidate.str === "number" ? candidate.str : initialState.str,
     dex: typeof candidate.dex === "number" ? candidate.dex : initialState.dex,
     con: typeof candidate.con === "number" ? candidate.con : initialState.con,
@@ -796,6 +808,13 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const leveledSpells = parseLineList(state.spellsText);
   const features = parseLineList(state.featuresText);
   const extraEquipment = collapseGearLines(parseLineList(state.extraEquipmentText));
+  const masteryPlan = masteryPlanFor(
+    classesFor(state).map((entry) => ({ classId: entry.classId, level: entry.level })),
+    rulesVersionOf(state),
+  );
+  const masteryIds = state.weaponMasteryIds
+    .filter((id) => masteryPlan.options.some((option) => option.id === id))
+    .slice(0, masteryPlan.count);
   const proficiencies = uniqueEntries(parseLineList(state.proficienciesText));
   const languageEntries = uniqueEntries(parseLineList(state.languagesText));
   const languages = languageEntries.map((entry) => `Language: ${entry}`);
@@ -908,7 +927,11 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         ...extraEquipment.map((entry) => entry.id),
       ].filter(Boolean),
       features,
-        normalized: {
+        // Only what the character may actually have: a draft that kept a
+      // mastery from a class the player has since left would export a
+      // proficiency the sheet never granted.
+      ...(masteryIds.length > 0 ? { weaponMasteries: masteryIds } : {}),
+      normalized: {
           feats: chosenFeatIds,
           proficiencies: [
             ...proficiencies.map((entry) => {

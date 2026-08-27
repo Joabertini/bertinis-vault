@@ -224,6 +224,17 @@ export const choicesSchema = z.object({
   spells: z.array(canonicalLabelSchema).default([]),
   equipment: z.array(canonicalLabelSchema).default([]),
   features: z.array(canonicalLabelSchema).default([]),
+  /**
+   * The weapons this character has mastery with, as dnd5e base-item ids.
+   *
+   * 2024 only, and only five classes grant it. Ids rather than labels because
+   * Foundry reads them straight: `traits.weaponProf.mastery.value` is a set it
+   * checks with `has(item.type.baseItem)`, so "Longsword" would silently match
+   * nothing while `longsword` matches.
+   *
+   * Optional so every build written before this field stays valid.
+   */
+  weaponMasteries: z.array(z.string().min(1)).optional(),
   normalized: normalizedChoicesSchema.optional(),
 });
 
