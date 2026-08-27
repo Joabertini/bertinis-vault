@@ -93,6 +93,13 @@ ninguna era sólo un cambio de import.
 
 ### Pendiente, en orden
 
+- [x] **Dote de origen del trasfondo** — se mostraba y nunca se registraba.
+      59 de 60 trasfondos 2024 la otorgan. Ver `docs/AUDITORIA-CREACION.md`.
+
+- [ ] **Números de mesa: iniciativa, percepción pasiva, velocidad.** El hueco
+      más ancho de la auditoría. Foundry los calcula solo, así que el cruce no
+      los necesita — los necesita el jugador que abre el Códice en la mesa, y
+      son de lo primero que se pide en una sesión.
 - [ ] **Aplicar el kit inicial.** `starting-equipment` no era API renombrada
       como decía el triaje: el Faro **imprime** el equipo de clase como texto y
       el jugador tiene que buscar cada objeto a mano en la mochila. La suite
@@ -107,6 +114,9 @@ ninguna era sólo un cambio de import.
       el kind, así que hoy se elegiría algo que nunca llega al payload.
 - [ ] **Smoke test de la Forja** que reemplace a `builder-page.test.tsx`.
 - [ ] **Cortar el bundle.** 2.03 MB, 312 kB gzip, en un solo chunk.
+- [ ] **Modificadores de salvación y pericia en la ficha.** Se sabe *cuáles*
+      tiene el personaje, no *cuánto* suma cada uno.
+- [ ] **Oro inicial.** No se calcula, y `ImportPayload` no tiene campo de moneda.
 - [ ] **Export/importar el Códice.** Los personajes viven sólo en `localStorage`.
       Se pierden al limpiar el navegador, en incógnito, o en otra máquina.
 
