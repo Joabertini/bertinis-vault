@@ -77,7 +77,7 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
   const books = build.sourceBooks;
 
   const raceRef = tryResolve(resolver, "race", build.ancestry.raceId, failures, books);
-  const subraceRef = tryResolve(resolver, "race", build.ancestry.subraceId, failures, books);
+  const subraceRef = tryResolve(resolver, "subrace", build.ancestry.subraceId, failures, books);
   const backgroundRef = tryResolve(resolver, "background", build.background.backgroundId, failures, books);
 
   const classes = build.classing.classes.map((entry) => {

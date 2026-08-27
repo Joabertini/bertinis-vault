@@ -48,6 +48,17 @@ export const PROP_TO_PAGE = {
   class: "classes.html",
   subclass: "classes.html",
   race: "races.html",
+  /*
+   * A subrace has no page of its own, the way a subclass does not. But unlike
+   * a subclass it needs no special hash: 5etools merges subraces into the race
+   * list at load, so "Aasimar (Fallen)" is an entry on `races.html` with its
+   * own source, and the generic `name_source` builder finds it.
+   *
+   * Absent from this table, `subrace` was not a prop at all, and the build
+   * resolved every subrace against `race` — where it does not exist. Every
+   * hill dwarf reached Foundry as a plain dwarf.
+   */
+  subrace: "races.html",
   background: "backgrounds.html",
   feat: "feats.html",
   optionalfeature: "optionalfeatures.html",
