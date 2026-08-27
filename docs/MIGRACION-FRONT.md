@@ -139,15 +139,31 @@ ninguna era sólo un cambio de import.
       `subclassId` y `level` en singular, así que la Forja no puede emitir más
       de una entrada. Por tramos:
 
-      - [ ] **Estado y payload.** `classes[]` en el borrador, migración de los
-            borradores viejos en `coerceBuilderState`, emisión con `hitDie` y
-            `casterProgression` por clase. Todo lo demás sigue leyendo la
-            clase primaria.
+      - [x] **Estado y payload.** `extraClasses` en el borrador, migración de
+            los borradores viejos, emisión con `hitDie`, `casterProgression` y
+            requisitos por clase (`classing.ts`, 15 tests + el spec parqueado
+            desparqueado). Sin UI: `extraClasses` queda siempre vacío, así que
+            ningún personaje existente cambia.
+
+            Este tramo destapó un bug de la capa lógica: **un Caballero Arcano
+            de una sola clase no lanzaba nada**. `derive.ts` pedía la
+            característica de lanzamiento sólo si el personaje era multiclase,
+            así que caía a la del guerrero — que es ninguna — y los espacios
+            salían de la tabla del guerrero en vez de la fracción de un tercio.
+            Arreglado en `packages/domain/src/derive.ts`; los fixtures de
+            Foundry no cambiaron de contenido.
       - [ ] **UI para sumar y sacar una clase**, con los requisitos de
-            característica (`multiclassRequirementProblems` ya existe).
+            característica (`unmetMulticlassRequirementsFor` ya está listo y
+            probado). Va junto con el barrido de "nivel del personaje": hoy 33
+            referencias leen `state.level`, que pasa a ser el nivel de la
+            *primera clase*, y las que significan el nivel del personaje tienen
+            que pasar a `characterLevelFor`. Los dos juntos, para que la
+            inconsistencia no llegue a estar en pantalla.
       - [ ] **Lo que el multiclase *no* da.** Un jugador que suma una clase no
             recibe su equipo inicial ni sus salvaciones — sólo la tabla de
-            competencias de multiclase. Hoy la Forja daría las tres cosas.
+            competencias de multiclase. `multiclassGrantsFor` ya la lee del
+            índice y está probada; falta que la Forja la use en lugar del
+            bloque inicial.
 - [ ] **Maestría de armas.** El Faro muestra la maestría de un arma pero no deja
       elegirla. Bloqueado además porque no se escribe al actor.
 - [ ] **Expertise.** Nunca tuvo test. `normalizedProficiencyKindSchema` no tiene
