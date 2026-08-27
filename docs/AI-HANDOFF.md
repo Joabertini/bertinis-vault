@@ -127,12 +127,13 @@ In order, and stated as what blocks each:
    `toolsGranted` now reaches the payload correctly and still goes nowhere once
    it gets there — `import.js` never reads `payload.proficiencies.tools`. See
    `CHARACTER-SHEET-FIELDS.md` and the note at the end of finding C.
-4. **Write tool proficiencies onto the actor.** `payload.proficiencies.tools`
-   has had nowhere to land since the payload was written; finding C's fix
-   makes it start arriving with real data instead of none. Needs `dnd5e`'s
-   real tool ids, which `packages/domain`'s `TOOL_ALIAS_TO_ID` only has right
-   for six of them — the rest (gaming sets, instruments, artisan's tools) are
-   generic placeholders, not the specific per-item ids the system uses.
+4. ~~**Write tool proficiencies onto the actor.**~~ Done. The tool table is
+   *generated* from the game system rather than written by hand —
+   `scripts/build-tool-ids.mjs` reads `DND5E.tools` out of `dnd5e.mjs` and
+   Plutonium's `VALID_TOOL_PROFICIENCIES` out of its bundle, and writes
+   `packages/contracts/src/tool-ids.generated.ts`. A dnd5e upgrade that renames
+   a key fails a test instead of quietly dropping a proficiency. Regenerate
+   with `corepack pnpm tools:ids`.
 5. **Move `domain` off `data-engine`.** It imports it only for
    `get*CatalogEntry` lookups, which `vetools-index` supersedes. This touches 24
    passing tests, so it is the highest-risk change left. Finding I — five
@@ -140,6 +141,28 @@ In order, and stated as what blocks each:
 6. **Delete `data-engine` and the item fabrication in `foundry-exporter`.** Only
    after 5.
 7. **Retire `apps/api`.** The index is bundled; nothing fetches datasets.
+
+### Opened by the 2026-08-26 run, and still open
+
+Three things the build order finished *around* rather than through. None is
+large; two of them are blocked on something outside the repo.
+
+8. **Carry starting currency to the payload.** The builder computes it
+   correctly — a character who takes the gold, or whose background hands over a
+   pouch of 15 gp, has the right number and it is shown. `ImportPayload` has
+   nowhere to put it, so the character reaches Foundry with the items and no
+   coins. Needs a field on the payload and a line in `import.js`.
+
+9. **Write weapon mastery onto the actor.** The picks are on the build and
+   shown in the wizard. **Blocked on a Foundry install**: whether `dnd5e`
+   5.3.3 exposes an actor path for mastery has not been verified against the
+   real system, and guessing a path would write a field that silently does
+   nothing. Check `CONFIG.DND5E` and the actor data model, do not infer.
+
+10. **Run the four manual Foundry validation scenarios.** **Blocked on the
+    user**, not on code: they need a live world and a signature.
+    `release:ready` fails on the report being pending, which is correct until
+    then. See `FOUNDRY-MANUAL-VALIDATION.md`.
 
 The wizard interface is its own track. The design is ours, not a reproduction of
 Charactermancer — Plutonium's rules coverage, our interface.
@@ -154,10 +177,23 @@ happened. D (weapon and armour lists that correspond to nothing in the rules),
 E (Unarmored Defense implemented and never called), I (five equipment ids
 resolving to nothing).
 
-**Not answered at all** — multiclassing, expertise, prepared versus known,
-2024 rules beyond source selection, equipment as A-or-B choices, anything
-serving optimisation. Tool proficiencies never reaching the actor joins this
-list now that C supplies real ones for `import.js` to ignore.
+**Not answered at all** — attunement and its three slots, carrying capacity,
+the identity fields (appearance, age, height, weight, deity), and anything
+serving optimisation directly.
+
+**Closed 2026-08-26** — the whole build order in `BUILDER-COVERAGE.md`, items 1
+through 9. Nine merged PRs (#32-#40): multiclass prerequisites and what a
+second class grants; equipment as A-or-B choices with the gold alternative and
+quantities; 2024's origin ability increase, weapon mastery, and spell counts
+read from each class's own table; feat prerequisites; subclass spell lists; and
+the level-up choices with their pickers. Every one of them replaced a
+hand-written table with the structured source, and the deliverable each time
+was the conformance test against the real 5etools data rather than the fix.
+
+Three findings that came out of the same work and are worth knowing: a 2024
+character was reaching the sheet **three ability points short**, an Eldritch
+Knight was offered **no spells at all**, and the index was shipping the literal
+string `"[object Object]"` as a weapon mastery property.
 
 **Closed this run** — A (the payload and the module disagreed about slot keys,
 skill keys and language keys, and nothing marked equipment worn), F (half-caster
@@ -180,8 +216,8 @@ rather than to a fixture.
 corepack pnpm mvp:verify
 ```
 
-304 tests — 224 under `node --test` across eight suites, 80 under vitest in the
-web app — plus the Foundry fixtures. It must pass from a clean checkout — verify that by deleting every `dist` first, because two
+695 tests — 524 under `node --test` and 171 under vitest in the web app — plus
+the Foundry fixtures. It must pass from a clean checkout — verify that by deleting every `dist` first, because two
 separate bugs have hidden behind stale build output.
 
 Two things worth knowing:

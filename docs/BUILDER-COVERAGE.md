@@ -367,16 +367,36 @@ and deity are not. Cosmetic, and last.
 7. ~~**Equipment as choices**~~ — done, with the gold alternative, quantities
    and the background's own list. Currency is counted but has nowhere to go in
    the payload yet.
-8. **The 2024 rules**, properly.
+8. ~~**The 2024 rules**~~ — done where the editions actually differ: the origin
+   ability increase, weapon mastery, and the prepared/cantrip counts. The spell
+   slot tables are shared between the editions, which is correct rather than
+   outstanding.
 9. ~~**Prerequisites and legality checking**~~ — done. Feats, subclass spell
    lists, and the level-up choices with their own prerequisites. What is left
    is not legality but polish: identity fields, attunement, carrying capacity.
 
-The cheap ones are done, and so are multiclassing, equipment, and the sharp
-edges of the 2024 rules. What is left is the rest of legality checking, and
-three things written down as open: the starting money has nowhere to go in the
-payload, weapon mastery is not written to Foundry, and the four manual Foundry
-validation scenarios still need a live run.
+**The build order is complete as of 2026-08-26** — items 1 through 9, nine
+merged pull requests. What is left is not rules work.
+
+Three things are open and are written down rather than left to be rediscovered:
+
+| Open | Why it is not done |
+| --- | --- |
+| Starting currency does not reach Foundry | Computed and shown correctly; the import payload has nowhere to put it. Needs a field and a line in `import.js` |
+| Weapon mastery is not written to the actor | Blocked on a Foundry install: whether `dnd5e` 5.3.3 exposes a path for it is unverified, and guessing would write a field that silently does nothing |
+| The four manual Foundry validation scenarios | Blocked on the user, not on code: they need a live world and a signature. `release:ready` fails until then, which is correct |
+
+And what remains in this document as genuinely unbuilt is polish rather than
+rules: attunement and its three slots, carrying capacity, and the identity
+fields — appearance, age, height, weight, deity.
+
+Every slice of this run followed the same method, and it is the part worth
+carrying forward: **find the structured source before writing any table**. Every
+hand-written table this project ever had turned out wrong when finally compared
+against the data — class skills for eight of thirteen classes, background
+proficiencies for 112 of 161, spell counts for both editions from one 2014
+switch. None was written this time, and the deliverable of each slice was the
+conformance test that would catch the class of bug, not the fix.
 
 **Level-up choices — done, picker included, 2026-08-26.** Fighting styles,
 eldritch invocations, the pact boon, metamagic, maneuvers, runes, arcane
