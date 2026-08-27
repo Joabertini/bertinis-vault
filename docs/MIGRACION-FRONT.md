@@ -248,7 +248,25 @@ ninguna era sólo un cambio de import.
       había mirado antes de construirla** — ver `test/pending/README.md`:
       tenía razón en que elegir de más se recortaba en silencio, y en que un
       `""` guardado sobrevivía al `coerce`.
-- [ ] **Cortar el bundle.** 2.03 MB, 312 kB gzip, en un solo chunk.
+- [x] **Cortar el bundle.** Era un solo chunk de 2.07 MB (323 kB gzip) que
+      llegaba entero antes del primer pixel — la portada precargaba el índice
+      completo para pintar un título.
+
+      | | antes | después |
+      | --- | ---: | ---: |
+      | primer pintado | 323 kB gzip | **151 kB gzip** |
+      | entrar a la Forja | 0 | 151 kB gzip |
+
+      Tres cortes: el estado del borrador salió a `builder-state.ts`, que no
+      importa el índice (la Gate necesita la *forma* de un borrador, no los
+      datos); la Forja, el Códice y el Ritual cargan al entrar; y
+      `manualChunks` separa el índice —que cambia casi nunca— de las librerías
+      y de la app. En un solo chunk, arreglar una errata hacía que cada jugador
+      se bajara todo D&D de nuevo.
+
+      Los bytes totales son los mismos: llegan cuando hacen falta. El aviso de
+      "chunk mayor a 500 kB" **queda a propósito**: nombra un hecho real y
+      subir el límite sería taparlo.
 - [x] **Modificadores de salvación y pericia en la ficha.** `checks.ts` +
       `Checks.tsx`. Las dieciocho pericias, no sólo las que sabe hacer: la
       tirada sin competencia es la que nadie se sabe de memoria, y esconderla
