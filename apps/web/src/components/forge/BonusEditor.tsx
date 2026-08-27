@@ -21,6 +21,7 @@ export default function BonusEditor({
   budget,
   maxPerAbility,
   scoreCap = 20,
+  allowed = null,
   accent,
   onChange,
 }: {
@@ -30,13 +31,25 @@ export default function BonusEditor({
   budget: number;
   maxPerAbility: number;
   scoreCap?: number;
+  /**
+   * The abilities this increase may go into, or null when any may.
+   *
+   * 2024 backgrounds name three. The others are shown rather than hidden — a
+   * player who cannot find Strength assumes the app lost it, where a Strength
+   * that plainly will not take a point says the background decided that.
+   */
+  allowed?: AbilityId[] | null;
   accent: string;
   onChange: (next: Partial<Record<AbilityId, number>>) => void;
 }) {
   const spent = ABILITY_IDS.reduce((sum, ability) => sum + (bonuses[ability] ?? 0), 0);
   const left = budget - spent;
 
+  const permitted = allowed ? new Set(allowed) : null;
+  const mayTake = (ability: AbilityId) => !permitted || permitted.has(ability);
+
   const step = (ability: AbilityId, delta: number) => {
+    if (!mayTake(ability)) return;
     const current = bonuses[ability] ?? 0;
     const next = current + delta;
 
@@ -71,6 +84,7 @@ export default function BonusEditor({
           const before = scoresBefore[ability];
           const after = before + amount;
           const atCap = after >= scoreCap;
+          const open = mayTake(ability);
 
           return (
             <div
@@ -79,6 +93,7 @@ export default function BonusEditor({
               style={{
                 borderColor: amount > 0 ? `${accent}66` : "rgba(74,70,64,0.5)",
                 background: amount > 0 ? `${accent}0d` : "transparent",
+                opacity: open ? 1 : 0.35,
               }}
             >
               <div className="min-w-0">
@@ -96,7 +111,8 @@ export default function BonusEditor({
                       <span style={{ color: accent }}>{after}</span>
                     </>
                   )}
-                  {atCap && amount === 0 && " · tope"}
+                  {!open && " · no la ofrece tu trasfondo"}
+                  {open && atCap && amount === 0 && " · tope"}
                 </p>
               </div>
 

@@ -34,6 +34,7 @@ import {
   spellMatchesFilter,
   subclassSpellsAt,
   type LevellingClass,
+  type OriginAbilityOption,
 } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
@@ -271,6 +272,30 @@ export function spellOptionsForClass(
   return legal
     .filter((row) => row.level <= maxLevel && row.classes.includes(key))
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+}
+
+/**
+ * The ability increase the background offers, and which abilities may take it.
+ *
+ * 2024 moved the increase off the species and onto the background, and every
+ * one of the 60 names its own three: an Acolyte raises Intelligence, Wisdom or
+ * Charisma, never Strength. Each background states two alternatives — +2/+1
+ * across two of the three, or +1/+1/+1 across all three.
+ *
+ * Null in 2014, where the species grants a fixed increase and there is nothing
+ * to choose.
+ */
+export function originAbilityChoiceFor(
+  backgroundId: string,
+  rulesVersion: RulesVersion,
+  sourceBook?: string,
+): OriginAbilityOption[] | null {
+  const legal = forRulesVersion(collections.background ?? [], rulesVersion) as BackgroundRow[];
+  const matches = legal.filter((row) => slugOf(row.name) === backgroundId);
+  const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
+
+  return (row as (BackgroundRow & { abilityChoice?: OriginAbilityOption[] }) | undefined)
+    ?.abilityChoice ?? null;
 }
 
 /** What a feat asks for before it may be taken. Empty for the ones that ask nothing. */

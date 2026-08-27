@@ -66,6 +66,7 @@ import GearBag from "@/components/forge/GearBag";
 import { talentPools, talentsSatisfied } from "@/lib/optional-features";
 import {
   bonusOrigin,
+  originAbilityAllowanceFor,
   bonusShape,
   improvementPlan,
   maxPointsPerAbility,
@@ -243,6 +244,12 @@ export default function Forge() {
   const growth = useMemo(() => improvementPlan(draft, rulesVersion), [draft, rulesVersion]);
 
   /** In 2014 the species grants a fixed amount; in 2024 the background gives three. */
+  /** The three abilities a 2024 background names. Null in 2014. */
+  const originAllowance = useMemo(
+    () => originAbilityAllowanceFor(draft, rulesVersion),
+    [draft, rulesVersion],
+  );
+
   const speciesBudget = useMemo(
     () => speciesBonusBudgetFor(draft, rulesVersion),
     [draft, rulesVersion],
@@ -1028,6 +1035,7 @@ export default function Forge() {
                       }}
                       budget={speciesBudget}
                       maxPerAbility={maxPointsPerAbility}
+                      allowed={originAllowance}
                       accent={accent}
                       onChange={(abilityBonuses) => patchDraft({ abilityBonuses })}
                     />

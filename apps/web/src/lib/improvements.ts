@@ -34,6 +34,7 @@ import { takenFeatsFor, type BuilderState } from "./builder";
 import {
   classInfoFor,
   featPrerequisitesFor,
+  originAbilityChoiceFor,
   levellingFor,
   optionById,
   speciesBonusFromIndex,
@@ -354,4 +355,37 @@ export function unmetFeatPrerequisitesFor(
       problems: featPrerequisiteProblemsFor(state, entry.featId),
     }))
     .filter((entry) => entry.problems.length > 0);
+}
+
+/**
+ * Which abilities the origin increase may go into, or null when anything may.
+ *
+ * 2014 has no such restriction — the species grants what it grants. In 2024
+ * every background names three, and the editor offering all six let a player
+ * put an Acolyte's +2 into Strength, which is not a choice the book gives.
+ *
+ * The alternatives all draw from the same three, so the union across them is
+ * the answer; the difference between them is how the points are split, which
+ * the budget already governs.
+ */
+export function originAbilityAllowanceFor(
+  state: BuilderState,
+  rulesVersion: RulesVersion,
+): AbilityId[] | null {
+  if (rulesVersion !== "2024" || !state.backgroundId) return null;
+
+  const alternatives = originAbilityChoiceFor(
+    state.backgroundId,
+    rulesVersion,
+    state.sourceBooks[`background:${state.backgroundId}`] ?? state.sourceBooks.background,
+  );
+  if (!alternatives?.length) return null;
+
+  const allowed = new Set(alternatives.flatMap((alternative) => alternative.options));
+  const ids = ABILITY_IDS.filter((ability) => allowed.has(ability));
+
+  // A background whose three the index spells in some other vocabulary would
+  // otherwise lock the editor to nothing at all. Better to allow everything
+  // than to allow nothing.
+  return ids.length ? ids : null;
 }
