@@ -236,7 +236,18 @@ ninguna era sólo un cambio de import.
       lugar. El exportador escribe `value = 2` en una segunda pasada y saltea
       —no promueve— una maestría sin competencia. La percepción pasiva la lee:
       es el número que la mesa juega sin tirar.
-- [ ] **Smoke test de la Forja** que reemplace a `builder-page.test.tsx`.
+- [x] **Smoke test de la Forja** (`test/forge-smoke.test.tsx`, 8 casos). Cubre
+      el primer arranque de verdad — la Forja pregunta el ritmo antes de abrir
+      ninguna cámara —, el recorrido del riel, y cuatro personajes que
+      ejercitan lo nuevo: guerrero 2024 con maestría, pícaro con expertise, y
+      un multiclase que tiene que pintar "Nivel 8" y no "Nivel 5".
+
+      Al escribirlo salieron dos cosas. Los botones del riel **no tenían nombre
+      accesible**: leídos en voz alta eran una fila de botones sin nombre.
+      Y se leyó por fin el spec parqueado de maestría de armas, que **no se
+      había mirado antes de construirla** — ver `test/pending/README.md`:
+      tenía razón en que elegir de más se recortaba en silencio, y en que un
+      `""` guardado sobrevivía al `coerce`.
 - [ ] **Cortar el bundle.** 2.03 MB, 312 kB gzip, en un solo chunk.
 - [x] **Modificadores de salvación y pericia en la ficha.** `checks.ts` +
       `Checks.tsx`. Las dieciocho pericias, no sólo las que sabe hacer: la
