@@ -119,7 +119,7 @@ ninguna era sólo un cambio de import.
       calcula y la UI lo muestra, pero `ImportPayload` no tiene campo de
       monedas, así que hoy se informa y no se exporta. Es la tarea "Oro
       inicial" de más abajo, y toca `packages/`.
-- [ ] **Multiclase.** *La nota vieja decía que `deriveCharacterBuild` usa
+- [x] **Multiclase.** *La nota vieja decía que `deriveCharacterBuild` usa
       `classes[0]` y que por eso arreglar el front no alcanzaba. Medido: es
       falso.* `packages/domain/src/multiclass.ts` ya existe y `derive.ts`
       ramifica en `entries.length > 1` para PG (`:61`) y para espacios
