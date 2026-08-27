@@ -119,9 +119,35 @@ ninguna era sólo un cambio de import.
       calcula y la UI lo muestra, pero `ImportPayload` no tiene campo de
       monedas, así que hoy se informa y no se exporta. Es la tarea "Oro
       inicial" de más abajo, y toca `packages/`.
-- [ ] **Multiclase.** La Forja asume una clase. Además `deriveCharacterBuild`
-      usa `classes[0]`, así que arreglarlo del lado del front no alcanza —
-      Guerrero 5 / Mago 3 da 68 PG en vez de ~58.
+- [ ] **Multiclase.** *La nota vieja decía que `deriveCharacterBuild` usa
+      `classes[0]` y que por eso arreglar el front no alcanzaba. Medido: es
+      falso.* `packages/domain/src/multiclass.ts` ya existe y `derive.ts`
+      ramifica en `entries.length > 1` para PG (`:61`) y para espacios
+      (`:111`). Ejecutado contra el dominio compilado:
+
+      | Personaje | Dominio | A mano |
+      | --- | --- | --- |
+      | Guerrero 5 / Mago 3, CON +2 | 62 PG | 12 + 4×8 + 3×6 = 62 |
+      | Guerrero 5 / Mago 3 | 4/2 espacios | nivel lanzador 3 |
+      | Explorador 5 / Clérigo 1 | 4/2 espacios | ⌊5/2⌋ + 1 = 3 |
+
+      Los 68 PG que la nota reportaba eran la rama de **una sola clase**
+      (d10 a nivel 8), no un error del cálculo multiclase. El explorador es el
+      caso que importa: solo contribuye 2, no los 3 que su propia tabla le da.
+
+      Lo que falta es todo del lado del front: `BuilderState` tiene `classId`,
+      `subclassId` y `level` en singular, así que la Forja no puede emitir más
+      de una entrada. Por tramos:
+
+      - [ ] **Estado y payload.** `classes[]` en el borrador, migración de los
+            borradores viejos en `coerceBuilderState`, emisión con `hitDie` y
+            `casterProgression` por clase. Todo lo demás sigue leyendo la
+            clase primaria.
+      - [ ] **UI para sumar y sacar una clase**, con los requisitos de
+            característica (`multiclassRequirementProblems` ya existe).
+      - [ ] **Lo que el multiclase *no* da.** Un jugador que suma una clase no
+            recibe su equipo inicial ni sus salvaciones — sólo la tabla de
+            competencias de multiclase. Hoy la Forja daría las tres cosas.
 - [ ] **Maestría de armas.** El Faro muestra la maestría de un arma pero no deja
       elegirla. Bloqueado además porque no se escribe al actor.
 - [ ] **Expertise.** Nunca tuvo test. `normalizedProficiencyKindSchema` no tiene
