@@ -528,8 +528,12 @@ export function coerceBuilderState(value: unknown): BuilderState {
     level: typeof candidate.level === "number" ? candidate.level : initialState.level,
     extraClasses: coerceExtraClasses(candidate.extraClasses),
     expertiseChoices: coerceExpertiseChoices(candidate.expertiseChoices),
+    // A blank is not a pick. It survives a `typeof` check and then matches no
+    // weapon, so it reads on the page as a mastery the player cannot remove.
     weaponMasteryIds: Array.isArray(candidate.weaponMasteryIds)
-      ? candidate.weaponMasteryIds.filter((entry): entry is string => typeof entry === "string")
+      ? candidate.weaponMasteryIds.filter(
+          (entry): entry is string => typeof entry === "string" && entry.length > 0,
+        )
       : [],
     str: typeof candidate.str === "number" ? candidate.str : initialState.str,
     dex: typeof candidate.dex === "number" ? candidate.dex : initialState.dex,
@@ -856,6 +860,12 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
     classesFor(state).map((entry) => ({ classId: entry.classId, level: entry.level })),
     rulesVersionOf(state),
   );
+  /*
+   * Only what the character may actually have. Over-limit and unknown picks
+   * are *also* reported to the player by `masteryProblemsFor`, which is the
+   * half that matters: the payload staying honest is not a licence to let the
+   * page stay quiet about a pick that did not travel.
+   */
   const masteryIds = state.weaponMasteryIds
     .filter((id) => masteryPlan.options.some((option) => option.id === id))
     .slice(0, masteryPlan.count);

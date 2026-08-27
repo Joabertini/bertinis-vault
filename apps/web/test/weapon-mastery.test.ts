@@ -2,10 +2,11 @@ import { describe, expect, test } from "vitest";
 
 import { collections, forRulesVersion } from "@bertinis-vault/vetools-index";
 
-import { buildCanonicalSnapshot, initialState } from "../src/lib/builder";
+import { buildCanonicalSnapshot, coerceBuilderState, initialState } from "../src/lib/builder";
 
 import {
   FOUNDRY_WEAPON_IDS,
+  masteryProblemsFor,
   foundryWeaponId,
   masteryOptionsFor,
   masteryPlanFor,
@@ -176,5 +177,50 @@ describe("lo que llega al payload", () => {
     });
 
     expect(snapshot.choices.weaponMasteries).toBeUndefined();
+  });
+});
+
+/*
+ * Del spec parqueado en test/pending/weapon-mastery.test.ts, que pedia que los
+ * problemas se REPORTEN en vez de recortarse. Tenia razon: recortar en
+ * silencio es el modo de falla que este constructor viene arreglando en todas
+ * las otras camaras.
+ */
+describe("que esta mal con lo elegido", () => {
+  const plan = masteryPlanFor([{ classId: "fighter", level: 1 }], "2024");
+
+  test("nada, cuando se eligieron menos de las que puede", () => {
+    expect(masteryProblemsFor(["greatsword", "longsword"], plan)).toEqual([]);
+  });
+
+  test("una cuarta a nivel uno se reporta con los dos numeros", () => {
+    expect(
+      masteryProblemsFor(["greatsword", "longsword", "dagger", "battleaxe"], plan),
+    ).toEqual([{ kind: "over-limit", picked: 4, allowed: 3 }]);
+  });
+
+  test("un arma sin maestria se nombra en vez de desaparecer", () => {
+    expect(masteryProblemsFor(["net"], plan)).toEqual([{ kind: "no-property", itemId: "net" }]);
+  });
+
+  test("repetir la misma no cuenta dos veces", () => {
+    expect(masteryProblemsFor(["dagger", "dagger"], plan)).toEqual([]);
+  });
+});
+
+describe("borradores guardados antes de que esto existiera", () => {
+  test("abren sin elecciones en vez de fallar", () => {
+    expect(coerceBuilderState({ weaponMasteryIds: undefined }).weaponMasteryIds).toEqual([]);
+  });
+
+  /*
+   * Un vacio no es una eleccion: pasa un typeof, despues no coincide con
+   * ningun arma, y en la pantalla se lee como una maestria que el jugador no
+   * puede sacar.
+   */
+  test("quedan las elecciones reales y se cae lo que no lo es", () => {
+    expect(
+      coerceBuilderState({ weaponMasteryIds: ["dagger", 7, "", "longsword"] }).weaponMasteryIds,
+    ).toEqual(["dagger", "longsword"]);
   });
 });

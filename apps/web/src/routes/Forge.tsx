@@ -76,7 +76,7 @@ import WeaponMastery from "@/components/forge/WeaponMastery";
 import Expertise from "@/components/forge/Expertise";
 import type { ExtraClass } from "@/lib/classing";
 import { emptyExtraClass } from "@/lib/classing";
-import { masteryPlanFor } from "@/lib/weapon-mastery";
+import { masteryPlanFor, masteryProblemsFor } from "@/lib/weapon-mastery";
 import { expertisePlanFor } from "@/lib/expertise";
 import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
 import { talentPools, talentsSatisfied } from "@/lib/optional-features";
@@ -209,6 +209,11 @@ export default function Forge() {
         rulesVersion,
       ),
     [draft, rulesVersion],
+  );
+
+  const masteryProblems = useMemo(
+    () => masteryProblemsFor(draft.weaponMasteryIds, masteryPlan),
+    [draft.weaponMasteryIds, masteryPlan],
   );
 
   const multiclassProblems = useMemo(() => unmetMulticlassRequirementsFor(draft), [draft]);
@@ -913,6 +918,11 @@ export default function Forge() {
                 onClick={() => reachable(index) && go(index)}
                 disabled={!reachable(index)}
                 className="group flex w-full flex-col items-start"
+                // The rail's own text is a tick and a label inside two spans;
+                // read aloud it is a row of unnamed buttons. Named here so the
+                // nav is usable without seeing it.
+                aria-label={`Camara: ${CHAMBER_LABEL[key]}`}
+                data-chamber={key}
               >
                 <span
                   className={`h-px w-full transition-all duration-500 ${
@@ -1422,6 +1432,7 @@ export default function Forge() {
                         chosen={draft.weaponMasteryIds}
                         count={masteryPlan.count}
                         meleeOnly={masteryPlan.meleeOnly}
+                        problems={masteryProblems}
                         accent={accent}
                         onToggle={toggleMastery}
                       />

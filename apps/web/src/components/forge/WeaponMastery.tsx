@@ -13,7 +13,7 @@
 
 import { motion } from "framer-motion";
 
-import type { MasteryOption } from "@/lib/weapon-mastery";
+import type { MasteryOption, MasteryProblem } from "@/lib/weapon-mastery";
 import { LABEL_MB2, WHISPER } from "@/styles/recipes";
 
 export default function WeaponMastery({
@@ -21,6 +21,7 @@ export default function WeaponMastery({
   chosen,
   count,
   meleeOnly,
+  problems,
   accent,
   onToggle,
 }: {
@@ -28,6 +29,7 @@ export default function WeaponMastery({
   chosen: string[];
   count: number;
   meleeOnly: boolean;
+  problems: MasteryProblem[];
   accent: string;
   onToggle: (id: string) => void;
 }) {
@@ -44,6 +46,16 @@ export default function WeaponMastery({
           ? "Solo cuerpo a cuerpo: es lo que tu clase permite dominar."
           : "Dominas el tipo de arma, no el arma. Un mandoble magico usa la misma maestria que uno comun."}
       </p>
+
+      {/* Said out loud rather than trimmed away. A pick that silently did not
+          travel is the failure this builder keeps finding elsewhere. */}
+      {problems.map((problem, index) => (
+        <p key={index} className="mb-4 font-body text-xs italic text-ember/70">
+          {problem.kind === "over-limit"
+            ? `Elegiste ${problem.picked} y podes ${problem.allowed}: las de mas no viajan a la ficha.`
+            : `${problem.itemId} no tiene maestria que dominar.`}
+        </p>
+      ))}
 
       <div className="flex flex-wrap gap-2">
         {options.map((option) => {

@@ -152,3 +152,35 @@ export function masteryPlanFor(
     options: meleeOnly ? options.filter((option) => option.melee) : options,
   };
 }
+
+/** What is wrong with the weapons a player has picked. */
+export type MasteryProblem =
+  /** More picks than the character's classes allow. */
+  | { kind: "over-limit"; picked: number; allowed: number }
+  /** A weapon with no mastery property to master. */
+  | { kind: "no-property"; itemId: string };
+
+/**
+ * The problems with a set of picks, reported rather than silently trimmed.
+ *
+ * Trimming is the failure this builder keeps finding elsewhere: the player
+ * chose four weapons, three were kept, and nothing on the page said which one
+ * was dropped or that anything was. A number they can read beats a pick that
+ * quietly went missing.
+ */
+export function masteryProblemsFor(picked: string[], plan: MasteryPlan): MasteryProblem[] {
+  const problems: MasteryProblem[] = [];
+  const unique = [...new Set(picked)];
+
+  if (unique.length > plan.count) {
+    problems.push({ kind: "over-limit", picked: unique.length, allowed: plan.count });
+  }
+
+  for (const id of unique) {
+    if (!plan.options.some((option) => option.id === id)) {
+      problems.push({ kind: "no-property", itemId: id });
+    }
+  }
+
+  return problems;
+}
