@@ -1,11 +1,11 @@
 import { describe, expect, test } from "vitest";
 
+import { initialState } from "../src/lib/builder";
 import {
   featCandidateFor,
   featPrerequisiteProblemsFor,
-  initialState,
   unmetFeatPrerequisitesFor,
-} from "../src/lib/builder";
+} from "../src/lib/improvements";
 
 const base = { ...initialState, abilityBonuses: {}, levelChoices: {} };
 

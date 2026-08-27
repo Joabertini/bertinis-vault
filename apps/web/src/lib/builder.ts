@@ -150,14 +150,14 @@ export type BuilderState = {
   sourceBooks: Record<string, string>;
 };
 
-function parseLineList(value: string) {
+export function parseLineList(value: string) {
   return value
     .split("\n")
     .map((entry) => entry.trim())
     .filter(Boolean);
 }
 
-function uniqueEntries(values: string[]) {
+export function uniqueEntries(values: string[]) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 

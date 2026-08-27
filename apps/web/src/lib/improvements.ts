@@ -23,12 +23,23 @@ import {
   unansweredImprovementLevels,
   type AbilityBonusMap,
   type LevelChoice,
+  featPrerequisiteProblems,
+  type FeatCandidate,
+  type FeatPrerequisiteProblem,
 } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import { ABILITY_IDS, type AbilityId } from "./abilities";
 import { takenFeatsFor, type BuilderState } from "./builder";
-import { levellingFor, speciesBonusFromIndex, subraceBonusFromIndex } from "./index-options";
+import {
+  classInfoFor,
+  featPrerequisitesFor,
+  levellingFor,
+  optionById,
+  speciesBonusFromIndex,
+  subraceBonusFromIndex,
+} from "./index-options";
+import { parseLineList, uniqueEntries } from "./builder";
 
 export { maxPointsPerAbility, pointsPerImprovement };
 
@@ -254,4 +265,93 @@ export function scoresBefore(state: BuilderState): Record<AbilityId, number> {
 /** The choice recorded at a level, defaulted to an empty improvement. */
 export function choiceAt(state: BuilderState, level: number): LevelChoice {
   return state.levelChoices[level] ?? { kind: "improvement", bonuses: {} };
+}
+
+
+/* ---------------- what a feat asks of the character ---------------- */
+
+/**
+ * The character as a feat prerequisite sees them.
+ *
+ * Built once and handed to every check, because the questions overlap: half a
+ * dozen feats ask after the same score and the same class list.
+ *
+ * The scores are the final ones — a feat taken at level 8 is checked against
+ * the character who reaches level 8, raises included. They come from
+ * `abilitySources` rather than from `buildCanonicalSnapshot`, which throws on a
+ * draft that is not derivable yet. A player half way through the Forge should
+ * still be told that Grappler wants a 13 in Strength.
+ *
+ * One class, because the Forge builds one. When multiclass arrives this list
+ * grows and nothing else here changes.
+ */
+export function featCandidateFor(state: BuilderState): FeatCandidate {
+  const rulesVersion: RulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const sources = abilitySources(state);
+  const abilities = {} as Record<AbilityId, number>;
+  for (const ability of ABILITY_IDS) abilities[ability] = sources[ability].final;
+
+  const classRow = state.classId ? classInfoFor(state.classId, rulesVersion) : null;
+  // Armour and weapon proficiencies are free text in the builder, so the match
+  // is on what the player typed. "medium" is what the books ask for.
+  const proficiencies = uniqueEntries(parseLineList(state.proficienciesText)).map((entry) =>
+    entry.toLowerCase(),
+  );
+
+  return {
+    abilities,
+    level: state.level,
+    classes: classRow ? [{ name: classRow.name, level: state.level }] : [],
+    raceName: optionById("race", rulesVersion, state.raceId)?.label ?? state.raceId,
+    ...(state.subraceId
+      ? {
+          subraceName:
+            optionById("subrace", rulesVersion, state.subraceId)?.label ?? state.subraceId,
+        }
+      : {}),
+    backgroundName:
+      optionById("background", rulesVersion, state.backgroundId)?.label ?? state.backgroundId,
+    featNames: takenFeatsFor(state).map(
+      (entry) => optionById("feat", rulesVersion, entry.featId)?.label ?? entry.featId,
+    ),
+    featureNames: parseLineList(state.featuresText),
+    armorProficiencies: proficiencies,
+    weaponProficiencies: proficiencies,
+    casts: classRow ? classRow.casterProgression !== null : false,
+  };
+}
+
+/**
+ * What stands between this character and a feat.
+ *
+ * Reported, never enforced. A table may allow anything, and a builder that
+ * refuses is a builder people work around — the same stance the talent
+ * prerequisites already take.
+ */
+export function featPrerequisiteProblemsFor(
+  state: BuilderState,
+  featId: string,
+): FeatPrerequisiteProblem[] {
+  if (!featId) return [];
+
+  return featPrerequisiteProblems(
+    featPrerequisitesFor(
+      featId,
+      state.rulesVersion === "5e-2024" ? "2024" : "2014",
+      state.sourceBooks[`feat:${featId}`],
+    ),
+    featCandidateFor(state),
+  );
+}
+
+/** Every feat this character has taken that it does not qualify for. */
+export function unmetFeatPrerequisitesFor(
+  state: BuilderState,
+): { featId: string; problems: FeatPrerequisiteProblem[] }[] {
+  return takenFeatsFor(state)
+    .map((entry) => ({
+      featId: entry.featId,
+      problems: featPrerequisiteProblemsFor(state, entry.featId),
+    }))
+    .filter((entry) => entry.problems.length > 0);
 }

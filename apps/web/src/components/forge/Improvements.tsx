@@ -27,9 +27,10 @@ import {
   maxPointsPerAbility,
   pointsPerImprovement,
   scoresBefore,
+  featPrerequisiteProblemsFor,
 } from "@/lib/improvements";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
-import { DIVIDER_TIGHT, LABEL } from "@/styles/recipes";
+import { DIVIDER_TIGHT, LABEL, LABEL_MB2, WHISPER } from "@/styles/recipes";
 
 export default function Improvements({
   state,
@@ -156,6 +157,8 @@ function LevelSlot({
                 }
                 accent={accent}
               />
+
+              {featId && <FeatPrerequisiteNote state={state} featId={featId} />}
 
               {featId && (
                 <FeatAbilityPlacement
@@ -288,5 +291,57 @@ function Tab({
     >
       {children}
     </button>
+  );
+}
+
+/**
+ * What the books ask of a feat this character has already picked.
+ *
+ * Said, never enforced. A table may allow anything, and 85% of the 2024 feats
+ * ask for something — mostly a level — so a builder that refused would be a
+ * builder people work around. The two halves read differently on purpose:
+ * what the build can check is stated flatly, and what only a table can settle
+ * is handed back to the player rather than dressed up as a failure.
+ *
+ * Nothing renders for a feat that asks nothing, which is most of the ones a
+ * character actually reaches for.
+ */
+function FeatPrerequisiteNote({ state, featId }: { state: BuilderState; featId: string }) {
+  const problems = useMemo(
+    () => featPrerequisiteProblemsFor(state, featId),
+    [state, featId],
+  );
+  if (!problems.length) return null;
+
+  const unmet = problems.flatMap((problem) => (problem.kind === "unmet" ? problem.reasons : []));
+  const unverifiable = problems.flatMap((problem) =>
+    problem.kind === "unverifiable" ? problem.notes : [],
+  );
+
+  return (
+    <div className={DIVIDER_TIGHT}>
+      {unmet.length > 0 && (
+        <>
+          <p className={LABEL_MB2}>Le falta</p>
+          <ul className="space-y-1">
+            {unmet.map((reason) => (
+              <li key={reason} className="font-body text-sm text-ember/80">
+                {reason}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {unverifiable.length > 0 && (
+        <ul className={unmet.length ? "mt-4 space-y-1" : "space-y-1"}>
+          {unverifiable.map((note) => (
+            <li key={note} className={WHISPER}>
+              {note} — lo decide tu mesa.
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

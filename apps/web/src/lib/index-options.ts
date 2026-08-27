@@ -19,6 +19,7 @@ import {
   type FeatChoice,
   type IndexRow,
   type FeatAbilityGrant,
+  type FeatPrerequisite,
   type FeatRow,
   type ItemRow,
   type RaceRow,
@@ -270,6 +271,19 @@ export function spellOptionsForClass(
   return legal
     .filter((row) => row.level <= maxLevel && row.classes.includes(key))
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
+}
+
+/** What a feat asks for before it may be taken. Empty for the ones that ask nothing. */
+export function featPrerequisitesFor(
+  featId: string,
+  rulesVersion: RulesVersion,
+  sourceBook?: string,
+): FeatPrerequisite[] {
+  const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
+  const matches = legal.filter((row) => slugOf(row.name) === featId);
+  const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
+
+  return row?.prerequisites ?? [];
 }
 
 /** The subclass row, scoped to its class so two "Berserker"s cannot collide. */
