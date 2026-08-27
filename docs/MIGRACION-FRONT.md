@@ -176,13 +176,30 @@ ninguna era sólo un cambio de import.
 
             Sólo pericias y herramientas, que es lo que `proficiencyPlan`
             modela. Ver el hueco nuevo de abajo.
-- [ ] **Competencias de armadura y arma de la clase.** Encontrado midiendo el
-      tramo de multiclase: **ningún** personaje recibe las competencias de
-      armadura ni de arma de su clase, ni siquiera con una sola clase. Un
-      guerrero de nivel 1 sale de la Forja sin competencia en armadura pesada.
-      `proficiencyPlan` sólo modela pericias y herramientas; el índice sí trae
-      las otras dos (`multiclassGrants.armor` / `.weapons`, y el bloque inicial
-      de cada clase).
+- [x] **Competencias de armadura y arma con más de una clase.** *La nota que
+      escribí primero estaba mal en las dos mitades: dije que ningún personaje
+      las recibe y que el índice trae el bloque inicial. Medido: el actor
+      exportado sí las lleva — `foundry-exporter` tiene su propia tabla escrita
+      a mano — y el índice **no** trae el bloque inicial, sólo el de
+      multiclase.*
+
+      El bug real era otro y más filoso: `fillProficiencies` leía `classes[0]`
+      y nada más. **Un mago 4 / guerrero 1 exportaba sin ninguna competencia de
+      armadura**, con las armas de un mago — un personaje que no puede equipar
+      la armadura que lleva puesta. Arreglado sumando el bloque de multiclase
+      de cada clase posterior, con tabla partida por edición sacada del índice.
+
+      Lo que queda abierto de verdad es más chico: **la Forja no le muestra al
+      jugador sus competencias de armadura y arma**. Llegan a Foundry, pero el
+      constructor nunca se lo dice. `proficiencyPlan` sólo modela pericias y
+      herramientas.
+
+- [ ] **`mvp:verify` no corre los tests de `foundry-exporter`.** Encontrado al
+      agregarle tests: el paquete queda fuera de la lista del script, y tiene un
+      test rojo desde antes (`payload.system.tools.thief.prof` es `undefined`;
+      el exportador escribe `value`, que es la forma de dnd5e 5.x). Falta
+      confirmar contra el mundo vivo cuál de los dos está viejo, y meter el
+      paquete en la puerta.
 - [ ] **Maestría de armas.** El Faro muestra la maestría de un arma pero no deja
       elegirla. Bloqueado además porque no se escribe al actor.
 - [ ] **Expertise.** Nunca tuvo test. `normalizedProficiencyKindSchema` no tiene
