@@ -524,7 +524,7 @@ export function featOptionLabel(option: { name: string; qualifier?: string }): s
  * Flattened to lines a player can read, not to ids: this is the summary shown
  * while choosing, and picking the pieces is the Gear chamber's job.
  */
-type EquipmentEntry = {
+export type EquipmentEntry = {
   kind?: string;
   name?: string;
   displayName?: string;
@@ -534,7 +534,7 @@ type EquipmentEntry = {
   categories?: string[];
 };
 
-type EquipmentRow = {
+export type EquipmentRow = {
   fixed?: boolean;
   options?: Array<{ key?: string; entries?: EquipmentEntry[] }>;
 };
@@ -607,6 +607,46 @@ function flattenEquipment(rows: EquipmentRow[]): string[] {
   }
 
   return lines.filter(Boolean);
+}
+
+/* ---------------- the same equipment, unflattened ---------------- */
+
+/**
+ * The rows behind the readable lines.
+ *
+ * `startingEquipmentForClass` answers "what does this say"; these answer "what
+ * does this hand over", which is what `starting-kit.ts` needs to turn a printed
+ * list into an answerable one.
+ */
+export function startingEquipmentRowsForClass(
+  classId: string,
+  rulesVersion: RulesVersion,
+): EquipmentRow[] {
+  const row = classInfoFor(classId, rulesVersion) as
+    | (ClassRow & { startingEquipment?: { rows?: EquipmentRow[] } })
+    | null;
+  return row?.startingEquipment?.rows ?? [];
+}
+
+export function startingEquipmentRowsForBackground(
+  backgroundId: string,
+  rulesVersion: RulesVersion,
+  sourceBook?: string,
+): EquipmentRow[] {
+  const row = backgroundRowFor(backgroundId, rulesVersion, sourceBook) as
+    | (BackgroundRow & { startingEquipment?: { rows?: EquipmentRow[] } })
+    | null;
+  return row?.startingEquipment?.rows ?? [];
+}
+
+/** One entry said out loud. The same wording the printed list uses. */
+export function equipmentEntryLine(entry: EquipmentEntry): string | null {
+  return equipmentLine(entry);
+}
+
+/** A category code in words, or the code itself when the table has fallen behind. */
+export function equipmentCategoryLabel(code: string): string {
+  return EQUIPMENT_CATEGORY[code] ?? code;
 }
 
 export function startingEquipmentForBackground(
