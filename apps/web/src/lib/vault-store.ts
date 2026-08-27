@@ -13,12 +13,17 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
+/*
+ * From `builder-state`, not `builder`: the store is what the Gate reads to
+ * know whether a draft is in progress, and reaching through `builder` would
+ * pull the whole index into the first paint.
+ */
 import {
   coerceBuilderState,
   initialState,
   type BuilderRulesVersion,
   type BuilderState,
-} from "./builder";
+} from "./builder-state";
 import type { Pace } from "./chambers";
 
 /** A character sealed in the Codex. */

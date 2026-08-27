@@ -21,49 +21,9 @@
 import type { AbilityId, CasterProgression, ClassEntry } from "@bertinis-vault/contracts";
 
 import { hitDieFor } from "./catalog";
+import type { ExtraClass } from "./builder-state";
 import { classInfoFor, subclassInfoFor } from "./index-options";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
-
-/** One class beyond the first. */
-export type ExtraClass = {
-  classId: string;
-  subclassId: string;
-  level: number;
-};
-
-/** A blank second class, for the moment a player asks for one. */
-export function emptyExtraClass(): ExtraClass {
-  return { classId: "", subclassId: "", level: 1 };
-}
-
-/**
- * The extras a draft carries, read defensively.
- *
- * Drafts saved before multiclassing existed have no field at all, and a draft
- * is a `localStorage` value the player could have edited. Anything that is not
- * a usable class is dropped rather than repaired: a half-written entry that
- * survives into the payload fails schema validation at the Ritual, far from
- * where the player could do anything about it.
- */
-export function coerceExtraClasses(value: unknown): ExtraClass[] {
-  if (!Array.isArray(value)) return [];
-
-  return value.flatMap((entry): ExtraClass[] => {
-    if (typeof entry !== "object" || entry === null) return [];
-    const candidate = entry as Record<string, unknown>;
-    const classId = typeof candidate.classId === "string" ? candidate.classId : "";
-    if (!classId) return [];
-
-    const level = typeof candidate.level === "number" ? Math.trunc(candidate.level) : 1;
-    return [
-      {
-        classId,
-        subclassId: typeof candidate.subclassId === "string" ? candidate.subclassId : "",
-        level: Math.min(20, Math.max(1, level)),
-      },
-    ];
-  });
-}
 
 /**
  * The character's level: every class's levels added up.
@@ -166,3 +126,6 @@ export function classingLabel(
     .map((entry) => `${labelOf(entry.classId)} ${entry.level}`)
     .join(" / ");
 }
+
+export type { ExtraClass };
+export { coerceExtraClasses, emptyExtraClass } from "./builder-state";

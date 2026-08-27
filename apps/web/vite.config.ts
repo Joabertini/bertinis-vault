@@ -26,6 +26,35 @@ export default defineConfig({
       "@bertinis-vault/vetools-ref": vaultPackage("vetools-ref"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        /*
+         * Three kinds of chunk instead of one, split by how often each moves.
+         *
+         * The 5etools index is 1.3MB of JSON and changes when the data is
+         * regenerated, which is almost never. The vendor libraries change when
+         * they are upgraded. The app changes every deploy. In one chunk a typo
+         * fix made every player re-download all of D&D.
+         *
+         * This does not make the first load smaller: the same bytes arrive.
+         * It makes every load after it cheap, which is the load a player at a
+         * table actually has.
+         */
+        manualChunks(id: string) {
+          // Rollup hands back native paths, so on Windows the separators are
+          // backslashes. Matching on "/" alone splits nothing while the config
+          // looks right.
+          const path = id.split("\\").join("/");
+
+          if (path.includes("packages/vetools-index")) return "index-data";
+          if (path.includes("node_modules")) return "vendor";
+          return undefined;
+        },
+      },
+    },
+  },
+
   server: {
     host: "127.0.0.1",
     port: 4173,

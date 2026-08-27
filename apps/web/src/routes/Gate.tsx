@@ -25,7 +25,7 @@ import GrainOverlay from "@/components/fx/GrainOverlay";
 import Sigil from "@/components/sigils/Sigil";
 import RuneButton from "@/components/ui/RuneButton";
 import { hasProgress, useVault } from "@/lib/vault-store";
-import type { BuilderRulesVersion } from "@/lib/builder";
+import type { BuilderRulesVersion } from "@/lib/builder-state";
 import { PAGE } from "@/styles/recipes";
 
 export default function Gate() {
