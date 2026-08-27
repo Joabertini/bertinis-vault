@@ -1,0 +1,1472 @@
+/**
+ * The Forge — the chambers a character is made in.
+ *
+ * Ancestry and Calling show the edition's own Player's Handbook as cards and
+ * keep the other thirty books behind a search. Origin is search only: 161
+ * backgrounds is not a grid. Attributes rolls and binds. Gifts hands out what
+ * the class and background grant and asks for what they offer. Gear arms.
+ * Spells appears only for casters. Identity names.
+ *
+ * The chamber list is therefore not fixed, so the current chamber is tracked
+ * by key rather than by index — a wizard who becomes a fighter loses a chamber
+ * and an index would silently point at a different one.
+ *
+ * Every pick writes onto the draft in the repo's `BuilderState` shape, so the
+ * Living Record on the right is reading the same numbers the export will.
+ */
+
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+
+import EmberField from "@/components/fx/EmberField";
+import GrainOverlay from "@/components/fx/GrainOverlay";
+import TorchWipe from "@/components/fx/TorchWipe";
+import Sigil from "@/components/sigils/Sigil";
+import RuneButton from "@/components/ui/RuneButton";
+import DiceTray from "@/components/forge/DiceTray";
+import StatRune from "@/components/forge/StatRune";
+import SigilCard from "@/components/forge/SigilCard";
+import SigilShelf from "@/components/forge/SigilShelf";
+import BackgroundGrant from "@/components/forge/BackgroundGrant";
+import ScryPicker from "@/components/forge/ScryPicker";
+import PickList from "@/components/forge/PickList";
+import LiveSheet from "@/components/forge/LiveSheet";
+
+import { ABILITY_IDS, type AbilityId } from "@/lib/abilities";
+import {
+  allOptions,
+  entryById,
+  hitDieFor,
+  searchAll,
+  searchBeyondCore,
+  subclassesFor,
+  subracesFor,
+  type CatalogEntry,
+} from "@/lib/catalog";
+import { levellingFor, optionsFor, startingEquipmentForClass } from "@/lib/index-options";
+import ItemFacts from "@/components/forge/ItemFacts";
+import { factsFor } from "@/lib/item-facts";
+import PointBuy from "@/components/forge/PointBuy";
+import {
+  ROLL_ATTEMPTS,
+  STANDARD_ARRAY,
+  STAT_METHODS,
+  pointBuyFloor,
+  type StatMethodId,
+} from "@/lib/stat-methods";
+import { tintFor, VAULT_GOLD } from "@/lib/class-tint";
+import { resolveDraft } from "@/lib/derive";
+import { fromLines, languagePlan, proficiencyPlan, toLines } from "@/lib/grants";
+import { formatSpellLine, spellPlan } from "@/lib/spells";
+import BonusEditor from "@/components/forge/BonusEditor";
+import Improvements from "@/components/forge/Improvements";
+import TalentPools from "@/components/forge/TalentPools";
+import GearBag from "@/components/forge/GearBag";
+import { talentPools, talentsSatisfied } from "@/lib/optional-features";
+import {
+  bonusOrigin,
+  bonusShape,
+  improvementPlan,
+  maxPointsPerAbility,
+  seedSpeciesBonus,
+  speciesBonusBudgetFor,
+} from "@/lib/improvements";
+import { useVault, releasedByPick, rulesVersionOf, type Pace } from "@/lib/vault-store";
+import { chamberOrder, firstChamber, type ChamberKey } from "@/lib/chambers";
+import { DIVIDER, DIVIDER_TIGHT, HEADING, ITEM_META, ITEM_NAME, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
+
+const CHAMBER_LABEL: Record<ChamberKey, string> = {
+  ancestry: "Raza",
+  calling: "Camino",
+  origin: "Origen",
+  attributes: "Aptitudes",
+  growth: "Mejoras",
+  gifts: "Dones",
+  gear: "Equipo",
+  spells: "Conjuros",
+  identity: "Identidad",
+};
+
+const CHAMBER_TITLE: Record<ChamberKey, string> = {
+  ancestry: "Elegi tu raza",
+  calling: "Elegi tu camino",
+  origin: "Recorda de donde venis",
+  attributes: "Liga tus aptitudes",
+  growth: "Reclama lo que ganaste",
+  gifts: "Reclama tus dones",
+  gear: "Armate",
+  spells: "Aprende tus conjuros",
+  identity: "Talla tu nombre",
+};
+
+const CHAMBER_EPIGRAPH: Record<ChamberKey, string> = {
+  ancestry: "La sangre recuerda lo que la mente olvida.",
+  // Kept keyed as `ancestry` and `calling` on purpose: the chamber keys are
+  // stored in progress state, and renaming them would strand anyone mid-forge.
+  calling: "Todo camino elegido cierra los que no tomaste.",
+  origin: "Nadie llega a la primera puerta sin historia.",
+  attributes: "Los huesos no mienten. Ligalos con criterio.",
+  growth: "Cada nivel cobra su precio y paga lo suyo.",
+  gifts: "Lo que sabes hacer pesa mas que lo que llevas encima.",
+  gear: "El acero no pregunta de donde venis.",
+  spells: "Cada palabra aprendida ocupa un lugar que otra ya no tendra.",
+  identity: "Un nombre dicho en voz alta no se puede desdecir.",
+};
+
+/** What the notice says was changed, per chamber. */
+const SHED_SUBJECT: Partial<Record<ChamberKey, string>> = {
+  ancestry: "de especie",
+  calling: "de clase",
+  origin: "de trasfondo",
+};
+
+export default function Forge() {
+  const navigate = useNavigate();
+  const { draft, patchDraft, scratch, setScratch, seal, editingId, pace, setPace } = useVault();
+
+  // The opening chamber of whichever order this player asked for. Read once,
+  // on mount: after that the rail decides where they are.
+  const [chamberKey, setChamberKey] = useState<ChamberKey>(firstChamber(pace ?? "nuevo"));
+  const [wipeKey, setWipeKey] = useState(0);
+  /** What the last species or class change released, named for the player. */
+  const [shedByPick, setShedByPick] = useState<string[]>([]);
+
+  const rulesVersion = rulesVersionOf(draft);
+  const accent = draft.classId ? tintFor(draft.classId) : VAULT_GOLD;
+
+  const resolved = useMemo(() => resolveDraft(draft), [draft]);
+  const snapshot = resolved.status === "ready" ? resolved.snapshot : null;
+
+  /* ---------------- catalog ---------------- */
+
+  const allRaces = useMemo(() => allOptions("race", rulesVersion), [rulesVersion]);
+  const allClasses = useMemo(() => allOptions("class", rulesVersion), [rulesVersion]);
+  const allBackgrounds = useMemo(() => allOptions("background", rulesVersion), [rulesVersion]);
+
+  const weaponSearch = useMemo(
+    () => (query: string) =>
+      optionsFor({ prop: "item", rulesVersion, search: query, weaponsOnly: true, limit: 30 }),
+    [rulesVersion],
+  );
+  const armorSearch = useMemo(
+    () => (query: string) =>
+      optionsFor({ prop: "item", rulesVersion, search: query, armorOnly: true, limit: 30 }),
+    [rulesVersion],
+  );
+  // The bag searches every item, not only weapons and armour.
+  const gearSearch = useMemo(
+    () => (query: string) => optionsFor({ prop: "item", rulesVersion, search: query, limit: 30 }),
+    [rulesVersion],
+  );
+
+  const selectedRace = entryById("race", rulesVersion, draft.raceId, draft.sourceBooks[`race:${draft.raceId}`]);
+  const selectedClass = entryById("class", rulesVersion, draft.classId);
+  const selectedBackground = entryById(
+    "background",
+    rulesVersion,
+    draft.backgroundId,
+    draft.sourceBooks[`background:${draft.backgroundId}`],
+  );
+  const subraces = useMemo(
+    () => (selectedRace ? subracesFor(selectedRace.label, rulesVersion) : []),
+    [selectedRace, rulesVersion],
+  );
+
+  const subclassLevel = levellingFor(draft.classId, rulesVersion).subclassLevel ?? 3;
+  const subclassUnlocked = draft.level >= subclassLevel;
+
+  const subclasses = useMemo(
+    () => (selectedClass ? subclassesFor(selectedClass.label, rulesVersion) : []),
+    [selectedClass, rulesVersion],
+  );
+
+  /* ---------------- grants ---------------- */
+
+  const profPlan = useMemo(() => proficiencyPlan(draft, rulesVersion), [draft, rulesVersion]);
+  const langPlan = useMemo(() => languagePlan(draft), [draft]);
+
+  const granted = useMemo(
+    () => [...profPlan.grantedSkills, ...profPlan.grantedTools],
+    [profPlan],
+  );
+
+  const chosenProficiencies = useMemo(
+    () => toLines(draft.proficienciesText).filter((entry) => !granted.includes(entry)),
+    [draft.proficienciesText, granted],
+  );
+
+  const chosenLanguages = useMemo(
+    () => toLines(draft.languagesText).filter((entry) => !langPlan.fixed.includes(entry)),
+    [draft.languagesText, langPlan.fixed],
+  );
+
+  /**
+   * Keep what the background grants present in the text.
+   *
+   * Changing background changes what is granted, and the previous grants would
+   * otherwise linger as if the player had chosen them.
+   */
+  useEffect(() => {
+    const next = fromLines([...granted, ...chosenProficiencies]);
+    if (next !== draft.proficienciesText) patchDraft({ proficienciesText: next });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [granted.join("|")]);
+
+  useEffect(() => {
+    const next = fromLines([...langPlan.fixed, ...chosenLanguages]);
+    if (next !== draft.languagesText) patchDraft({ languagesText: next });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [langPlan.fixed.join("|")]);
+
+  /* ---------------- spells ---------------- */
+
+  const plan = useMemo(
+    () =>
+      spellPlan({
+        classId: draft.classId,
+        className: selectedClass?.label ?? "",
+        classSource: selectedClass?.source ?? "",
+        level: draft.level,
+        rulesVersion,
+        snapshot,
+      }),
+    [draft.classId, draft.level, selectedClass, rulesVersion, snapshot],
+  );
+
+  const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
+  const chosenSpells = useMemo(() => toLines(draft.spellsText), [draft.spellsText]);
+
+  /* ---------------- growth ---------------- */
+
+  const growth = useMemo(() => improvementPlan(draft, rulesVersion), [draft, rulesVersion]);
+
+  /** In 2014 the species grants a fixed amount; in 2024 the background gives three. */
+  const speciesBudget = useMemo(
+    () => speciesBonusBudgetFor(draft, rulesVersion),
+    [draft, rulesVersion],
+  );
+
+  /**
+   * The spread the species is printed with, kept alongside the edited one.
+   *
+   * Tasha's Cauldron let a player move a species increase wherever they like,
+   * and the editor has always allowed it — but once the numbers were moved
+   * there was no way back short of remembering what a mountain dwarf gets.
+   * Holding the seed makes "restore" a button instead of a research task.
+   */
+  const printedBonus = useMemo(
+    () => seedSpeciesBonus(draft, rulesVersion),
+    // Only the species decides it. Recomputing on every draft change would
+    // rebuild an identical object each keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [draft.raceId, draft.subraceId, rulesVersion],
+  );
+
+  /** Whether the increase has been moved off what the book prints. */
+  const bonusMoved = useMemo(() => {
+    const printed = Object.keys(printedBonus).length > 0;
+    if (!printed) return false;
+
+    return ABILITY_IDS.some(
+      (ability) => (draft.abilityBonuses[ability] ?? 0) !== (printedBonus[ability] ?? 0),
+    );
+  }, [draft.abilityBonuses, printedBonus]);
+
+  const selectedSubclass = entryById(
+    "subclass",
+    rulesVersion,
+    draft.subclassId,
+    draft.sourceBooks[`subclass:${draft.subclassId}`],
+  );
+
+  /** Styles, invocations, metamagic, maneuvers — whatever this class asks. */
+  const pools = useMemo(
+    () =>
+      talentPools(draft, rulesVersion, selectedClass?.label ?? "", selectedSubclass?.label ?? ""),
+    [draft, rulesVersion, selectedClass, selectedSubclass],
+  );
+
+  const carried = useMemo(() => toLines(draft.extraEquipmentText), [draft.extraEquipmentText]);
+
+  /* ---------------- gear ---------------- */
+
+  /** The starting equipment the class prints. 27 of the 31 classes print one. */
+  const classKit = useMemo(
+    () => (draft.classId ? startingEquipmentForClass(draft.classId, rulesVersion) : []),
+    [draft.classId, rulesVersion],
+  );
+
+  const weaponFacts = useMemo(
+    () =>
+      draft.weaponId
+        ? factsFor(draft.weaponId, rulesVersion, draft.sourceBooks[`item:${draft.weaponId}`])
+        : null,
+    [draft.weaponId, draft.sourceBooks, rulesVersion],
+  );
+
+  const armorFacts = useMemo(
+    () =>
+      draft.armorId
+        ? factsFor(draft.armorId, rulesVersion, draft.sourceBooks[`item:${draft.armorId}`])
+        : null,
+    [draft.armorId, draft.sourceBooks, rulesVersion],
+  );
+
+  const addGear = (entry: CatalogEntry) => {
+    if (carried.includes(entry.id)) return;
+    patchDraft({
+      extraEquipmentText: fromLines([...carried, entry.id]),
+      sourceBooks: { ...draft.sourceBooks, [`item:${entry.id}`]: entry.source },
+    });
+  };
+
+  const removeGear = (id: string) => {
+    patchDraft({ extraEquipmentText: fromLines(carried.filter((entry) => entry !== id)) });
+  };
+
+  const toggleTalent = (id: string) => {
+    const next = draft.optionalFeatureIds.includes(id)
+      ? draft.optionalFeatureIds.filter((entry) => entry !== id)
+      : [...draft.optionalFeatureIds, id];
+    patchDraft({ optionalFeatureIds: next });
+  };
+
+  /**
+   * Seed the species increase once the species is known.
+   *
+   * Only when nothing has been assigned yet, so a player who edited the
+   * suggestion does not have it overwritten on every render. In 2024 the seed
+   * is empty — the edition moved the increase to the background — and the
+   * editor simply starts blank.
+   */
+  useEffect(() => {
+    if (!draft.raceId) return;
+    if (Object.keys(draft.abilityBonuses).length > 0) return;
+
+    const seed = seedSpeciesBonus(draft, rulesVersion);
+    if (Object.keys(seed).length > 0) patchDraft({ abilityBonuses: seed });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.raceId, draft.subraceId, rulesVersion]);
+
+  /* ---------------- chambers ---------------- */
+
+  const chambers = useMemo<ChamberKey[]>(
+    () => chamberOrder(pace ?? "nuevo", plan.caster),
+    [plan.caster, pace],
+  );
+
+  /*
+   * Never stand in a chamber that is no longer on the list.
+   *
+   * A player reading Conjuros who changes their mind and picks a fighter drops
+   * the spells chamber out from under themselves; without this the page keeps
+   * rendering a chamber the rail no longer shows, with `position` pinned at 0.
+   */
+  useEffect(() => {
+    if (!chambers.includes(chamberKey)) setChamberKey(chambers[0]!);
+  }, [chambers, chamberKey]);
+
+  const bound = useMemo(() => new Set(scratch.bound as AbilityId[]), [scratch.bound]);
+
+  /**
+   * Whether every bounded skill offer has been answered.
+   *
+   * Counted per offer against that offer's own option list, because the class
+   * and the background can both be asking at once and a pick that satisfies
+   * one does not satisfy the other.
+   */
+  const offersSatisfied = profPlan.offers.every(
+    (offer) =>
+      chosenProficiencies.filter((entry) => offer.options.includes(entry)).length >= offer.count,
+  );
+
+  const answered: Record<ChamberKey, boolean> = {
+    ancestry: Boolean(draft.raceId),
+    calling: Boolean(draft.classId),
+    origin: Boolean(draft.backgroundId),
+    attributes: bound.size === ABILITY_IDS.length,
+    // Every reached improvement must be answered, and every pool filled: an
+    // unspent one exports a character weaker than the rules make them.
+    growth:
+      growth.unanswered.length === 0 && talentsSatisfied(pools, draft.optionalFeatureIds),
+    gifts: offersSatisfied && chosenLanguages.length >= langPlan.choiceCount,
+    // Optional: an unarmoured wizard is a legal character.
+    gear: true,
+    spells: true,
+    identity: Boolean(draft.characterName.trim()),
+  };
+
+  const position = Math.max(chambers.indexOf(chamberKey), 0);
+  const isLast = position === chambers.length - 1;
+
+  /** The furthest chamber reached, so the rail can gate what is ahead. */
+  const reachable = (index: number) =>
+    index <= position || chambers.slice(0, index).every((key) => answered[key]);
+
+  const go = (index: number) => {
+    const next = chambers[Math.min(Math.max(index, 0), chambers.length - 1)];
+    if (!next) return;
+    // The notice belongs to the chamber that caused it; leaving is reading it.
+    setShedByPick([]);
+    setWipeKey((key) => key + 1);
+    setTimeout(() => setChamberKey(next), 350); // the wipe covers the swap
+  };
+
+  /* ---------------- picks ---------------- */
+
+  const pick = (
+    prop: "race" | "class" | "background" | "subrace" | "subclass" | "weapon" | "armor",
+    entry: CatalogEntry,
+  ) => {
+    const field = {
+      race: "raceId",
+      class: "classId",
+      background: "backgroundId",
+      subrace: "subraceId",
+      subclass: "subclassId",
+      weapon: "weaponId",
+      armor: "armorId",
+    }[prop];
+
+    // Weapons and armour are both items, so their book is recorded under the
+    // prop the resolver will use to look them up.
+    const bookProp = prop === "weapon" || prop === "armor" ? "item" : prop;
+    const current = draft[field as keyof typeof draft];
+
+    // Changing species or class releases what belonged to the old one; see
+    // `releasedByPick` for why keeping it would export a wrong character.
+    const released =
+      prop === "race" || prop === "class" || prop === "background"
+        ? releasedByPick(prop, draft)
+        : { patch: {}, shed: [] };
+
+    setShedByPick(released.shed);
+
+    patchDraft({
+      // Picking the same entry twice clears it, which is the only way to
+      // un-choose an optional pick once one is set.
+      [field]: current === entry.id ? "" : entry.id,
+      sourceBooks: { ...draft.sourceBooks, [`${bookProp}:${entry.id}`]: entry.source },
+      ...released.patch,
+    } as Parameters<typeof patchDraft>[0]);
+  };
+
+  const setLevel = (level: number) => {
+    const stillEntitled = level >= (levellingFor(draft.classId, rulesVersion).subclassLevel ?? 3);
+
+    // Improvements recorded above the new level are dropped. `bonusesFromChoices`
+    // sums the whole map without consulting the level, so a character reforged
+    // down from 8 to 4 would keep the points they earned at 6 and 8 — the sheet
+    // would show scores the rules never granted, and the Growth chamber would
+    // report nothing pending because those levels are answered.
+    const levelChoices = Object.fromEntries(
+      Object.entries(draft.levelChoices).filter(([at]) => Number(at) <= level),
+    );
+
+    patchDraft({
+      level,
+      levelChoices,
+      ...(stillEntitled ? {} : { subclassId: "" }),
+    });
+  };
+
+  const toggleProficiency = (value: string) => {
+    const next = chosenProficiencies.includes(value)
+      ? chosenProficiencies.filter((entry) => entry !== value)
+      : [...chosenProficiencies, value];
+    patchDraft({ proficienciesText: fromLines([...granted, ...next]) });
+  };
+
+  const toggleLanguage = (value: string) => {
+    const next = chosenLanguages.includes(value)
+      ? chosenLanguages.filter((entry) => entry !== value)
+      : [...chosenLanguages, value];
+    patchDraft({ languagesText: fromLines([...langPlan.fixed, ...next]) });
+  };
+
+  const toggleCantrip = (value: string) => {
+    const next = chosenCantrips.includes(value)
+      ? chosenCantrips.filter((entry) => entry !== value)
+      : [...chosenCantrips, value];
+    patchDraft({ cantripsText: fromLines(next) });
+  };
+
+  const toggleSpell = (line: string) => {
+    const next = chosenSpells.includes(line)
+      ? chosenSpells.filter((entry) => entry !== line)
+      : [...chosenSpells, line];
+    patchDraft({ spellsText: fromLines(next) });
+  };
+
+  const setLevelChoice = (level: number, choice: (typeof draft.levelChoices)[number]) => {
+    patchDraft({ levelChoices: { ...draft.levelChoices, [level]: choice } });
+  };
+
+  const setFeatAbilities = (featId: string, bonuses: Record<string, number>) => {
+    patchDraft({ featAbilityChoices: { ...draft.featAbilityChoices, [featId]: bonuses } });
+  };
+
+  /* ---------------- dice ---------------- */
+
+  const rawScores = {
+    str: draft.str,
+    dex: draft.dex,
+    con: draft.con,
+    int: draft.int,
+    wis: draft.wis,
+    cha: draft.cha,
+  };
+
+  /** Every ability back to unbound, and nothing loose. */
+  const clearScores = () =>
+    patchDraft({ str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
+
+  /*
+   * Switching method clears what the last one produced.
+   *
+   * Carrying a rolled 17 into point buy would show a spread that point buy
+   * cannot sell, with a budget it never paid — the numbers on screen would
+   * stop meaning what the panel says they mean.
+   */
+  function chooseStatMethod(method: StatMethodId) {
+    if (method === draft.statMethod) return;
+
+    patchDraft({ statMethod: method });
+    setScratch({ pool: [], bound: [], sets: [] });
+
+    if (method === "pointbuy") {
+      patchDraft(pointBuyFloor());
+      return;
+    }
+    if (method === "array") {
+      // The array is a pool like any other: six numbers, assigned freely.
+      setScratch({ pool: [...STANDARD_ARRAY], bound: [], sets: [] });
+    }
+    clearScores();
+  }
+
+  /** One throw. Kept alongside the others until the player picks. */
+  const handleRoll = (rolled: number[]) => {
+    setScratch({
+      pool: [],
+      bound: [],
+      sets: [...scratch.sets, rolled].slice(-ROLL_ATTEMPTS),
+    });
+    clearScores();
+    patchDraft({ statMethod: "roll" });
+  };
+
+  /** The set the player kept becomes the pool; the rest are forgotten. */
+  const keepSet = (index: number) => {
+    const chosen = scratch.sets[index];
+    if (!chosen) return;
+    setScratch({ pool: [...chosen], bound: [], sets: scratch.sets });
+    clearScores();
+  };
+
+  const bindScore = (ability: AbilityId, value: number) => {
+    const index = scratch.pool.indexOf(value);
+    if (index < 0) return;
+
+    const pool = [...scratch.pool];
+    pool.splice(index, 1);
+    setScratch({ ...scratch, pool, bound: [...scratch.bound, ability] });
+    patchDraft({ [ability]: value } as Parameters<typeof patchDraft>[0]);
+  };
+
+  const releaseScore = (ability: AbilityId) => {
+    if (!bound.has(ability)) return;
+    setScratch({
+      ...scratch,
+      pool: [...scratch.pool, draft[ability]],
+      bound: scratch.bound.filter((entry) => entry !== ability),
+    });
+    patchDraft({ [ability]: 10 } as Parameters<typeof patchDraft>[0]);
+  };
+
+  const sealCharacter = () => {
+    if (seal()) navigate("/codex");
+  };
+
+  /** Answer the opening question and start at the top of the chosen order. */
+  const choosePace = (chosen: Pace) => {
+    setPace(chosen);
+    setChamberKey(firstChamber(chosen));
+  };
+
+  /*
+   * The one question asked before the Forge opens.
+   *
+   * Asked once ever, not once per character, and answerable again from the
+   * rail — a wrong tap here should not decide the order of every character
+   * this player ever builds.
+   */
+  if (pace === null) {
+    return (
+      <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-void px-6">
+        <GrainOverlay />
+        <EmberField density={18} />
+        <div className="relative z-10 w-full max-w-2xl">
+          <p className="font-mono text-[10px] uppercase tracking-[0.6em] text-gold/60">
+            Antes de encender la fragua
+          </p>
+          <h1 className="mt-5 font-display text-3xl font-black tracking-wide text-bone md:text-4xl">
+            ¿Cuantos personajes armaste?
+          </h1>
+          <p className="mt-4 font-body italic leading-relaxed text-bone/40">
+            Decide por donde empezamos. Podes cambiarlo cuando quieras.
+          </p>
+
+          <div className="mt-10 grid gap-4 md:grid-cols-2">
+            {(
+              [
+                {
+                  id: "nuevo",
+                  label: "Es de mis primeros",
+                  blurb:
+                    "Empezamos por la raza y el camino: lo que podes imaginarte. Los numeros vienen despues, cuando ya sabes quien es.",
+                },
+                {
+                  id: "veterano",
+                  label: "Ya perdi la cuenta",
+                  blurb:
+                    "Empezamos por las aptitudes. El reparto primero, y despues las elecciones que se juzgan contra el.",
+                },
+              ] as Array<{ id: Pace; label: string; blurb: string }>
+            ).map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => choosePace(option.id)}
+                className="group border border-iron/60 bg-void/40 p-6 text-left transition-colors hover:border-gold/60"
+              >
+                <span className="font-display text-lg font-bold text-bone transition-colors group-hover:text-gold">
+                  {option.label}
+                </span>
+                <span className="mt-3 block font-body text-xs italic leading-relaxed text-bone/40">
+                  {option.blurb}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className={PAGE}>
+      <GrainOverlay />
+      <EmberField density={30} />
+      <TorchWipe trigger={wipeKey} />
+
+      <motion.div
+        animate={{
+          background: `radial-gradient(ellipse at 75% 20%, ${accent}14, transparent 55%), #030202`,
+        }}
+        transition={{ duration: 1.2 }}
+        className="pointer-events-none fixed inset-0"
+      />
+
+      <div className="relative z-10 mx-auto max-w-6xl px-6 py-14 md:px-10">
+        <header className="mb-12 flex items-end justify-between gap-6">
+          <div>
+            <p className="font-mono text-[10px] tracking-[0.6em] uppercase text-gold/60">
+              Camara {position + 1} de {chambers.length}
+            </p>
+            <h1 className="mt-3 font-display text-4xl font-black tracking-wide text-bone md:text-5xl">
+              LA FRAGUA
+            </h1>
+            {editingId && (
+              // Said plainly: sealing again replaces the tome instead of adding
+              // one, and that is not something to discover after the fact.
+              <p className="mt-3 font-body text-sm italic text-bone/40">
+                Reforjando a{" "}
+                <span className="not-italic" style={{ color: accent }}>
+                  {draft.characterName || "un tomo sin nombre"}
+                </span>
+                . Al sellar se reescribe su tomo.
+              </p>
+            )}
+          </div>
+          <div className="text-right">
+            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/30">
+              {rulesVersion === "2024" ? "Reglas 2024" : "Reglas 2014"}
+            </p>
+            {/*
+              The way out of the opening question.
+              It decides the order of every chamber, so it cannot be a choice
+              made once by accident and never revisited.
+            */}
+            <button
+              type="button"
+              onClick={() => setPace(null)}
+              className="mt-2 font-mono text-[9px] uppercase tracking-[0.25em] text-bone/20 transition-colors hover:text-gold/70"
+            >
+              {pace === "veterano" ? "Aptitudes primero" : "Raza primero"} · cambiar
+            </button>
+          </div>
+        </header>
+
+        {/* progress rail */}
+        <nav className="mb-14 flex flex-wrap items-center gap-y-4">
+          {chambers.map((key, index) => (
+            <div key={key} className="flex flex-1 items-center last:flex-none">
+              <button
+                onClick={() => reachable(index) && go(index)}
+                disabled={!reachable(index)}
+                className="group flex w-full flex-col items-start"
+              >
+                <span
+                  className={`h-px w-full transition-all duration-500 ${
+                    index <= position ? "bg-gold" : "bg-iron"
+                  }`}
+                />
+                <span
+                  className={`mt-3 whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.3em] transition-colors ${
+                    index === position
+                      ? "text-gold"
+                      : answered[key]
+                        ? "text-bone/50"
+                        : "text-bone/20"
+                  }`}
+                >
+                  {answered[key] && index !== position ? "✓ " : ""}
+                  {CHAMBER_LABEL[key]}
+                </span>
+              </button>
+              {index < chambers.length - 1 && <span className="mx-3 h-px flex-1 bg-iron/50" />}
+            </div>
+          ))}
+        </nav>
+
+        <div className="grid gap-12 lg:grid-cols-[1fr_340px]">
+          <AnimatePresence mode="wait">
+            <motion.section
+              key={chamberKey}
+              initial={{ opacity: 0, y: 24, filter: "blur(6px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, y: -24, filter: "blur(6px)" }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <h2 className="mb-2 font-display text-2xl font-bold" style={{ color: accent }}>
+                {CHAMBER_TITLE[chamberKey]}
+              </h2>
+              <p className="mb-8 font-body italic text-bone/40">
+                {CHAMBER_EPIGRAPH[chamberKey]}
+              </p>
+
+              {/* What the last pick released. Keeping it would export a
+                  character carrying another species' or class's choices. */}
+              {shedByPick.length > 0 &&
+                (chamberKey === "ancestry" ||
+                  chamberKey === "calling" ||
+                  chamberKey === "origin") && (
+                  <motion.p
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8 border-l-2 border-ember/60 pl-4 font-body text-sm leading-relaxed text-bone/50"
+                  >
+                    Al cambiar {SHED_SUBJECT[chamberKey]} se solto {shedByPick.join(" y ")}. Eleg
+                    {shedByPick.length > 1 ? "ilos" : "ilo"} de nuevo mas adelante.
+                  </motion.p>
+                )}
+
+              {/* ---------- Ancestry ---------- */}
+              {chamberKey === "ancestry" && (
+                <div className="space-y-10">
+                  <SigilShelf
+                    entries={allRaces}
+                    selectedId={draft.raceId}
+                    onPick={(entry) => pick("race", entry)}
+                    accent={VAULT_GOLD}
+                    label="Buscar raza"
+                    placeholder="Buscar entre todas las razas…"
+                    // The book is what tells two same-named species apart, and
+                    // a build stores it, so it belongs on the card.
+                    noteFor={(entry) => entry.source}
+                  />
+
+                  {/* Only 2014 has these; 2024 folded them into the species. */}
+                  {subraces.length > 0 && (
+                    <SubChoice
+                      title="Rama"
+                      hint={`${selectedRace?.label} se divide en ${subraces.length}. Opcional.`}
+                      options={subraces}
+                      selectedId={draft.subraceId}
+                      onPick={(entry) => pick("subrace", entry)}
+                      accent={VAULT_GOLD}
+                      note="La subraza queda guardada, pero todavia no cruza a Foundry."
+                    />
+                  )}
+                </div>
+              )}
+
+              {/* ---------- Calling ---------- */}
+              {chamberKey === "calling" && (
+                <div className="space-y-10">
+                  <SigilShelf
+                    entries={allClasses}
+                    selectedId={draft.classId}
+                    onPick={(entry) => pick("class", entry)}
+                    accent={accent}
+                    label="Buscar clase"
+                    placeholder="Buscar entre todas las clases…"
+                    noteFor={(entry) => {
+                      const die = hitDieFor(entry.id, rulesVersion);
+                      // The die is the shortest true thing that separates one
+                      // class from another before you have read either.
+                      return die ? `d${die} · ${entry.source}` : entry.source;
+                    }}
+                  />
+
+                  {draft.classId && (
+                    <div className={DIVIDER}>
+                      <label className="mb-4 block font-mono text-[10px] tracking-[0.4em] uppercase text-bone/40">
+                        Nivel de poder — <span style={{ color: accent }}>{draft.level}</span>
+                      </label>
+                      <input
+                        type="range"
+                        min={1}
+                        max={20}
+                        value={draft.level}
+                        onChange={(event) => setLevel(Number(event.target.value))}
+                        className="w-full accent-gold"
+                        aria-label="Nivel"
+                      />
+                    </div>
+                  )}
+
+                  {draft.classId &&
+                    (subclassUnlocked ? (
+                      subclasses.length > 0 && (
+                        <SubChoice
+                          title="Senda"
+                          hint={`${selectedClass?.label} elige a nivel ${subclassLevel}. ${subclasses.length} disponibles.`}
+                          options={subclasses}
+                          selectedId={draft.subclassId}
+                          onPick={(entry) => pick("subclass", entry)}
+                          accent={accent}
+                        />
+                      )
+                    ) : (
+                      <div className={DIVIDER_TIGHT}>
+                        <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/25">
+                          Senda
+                        </p>
+                        <p className="mt-3 font-body italic text-bone/35">
+                          {selectedClass?.label} no elige senda hasta el nivel {subclassLevel}.
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              )}
+
+              {/* ---------- Origin ---------- */}
+              {chamberKey === "origin" && (
+                <div className="space-y-10">
+                  <SigilShelf
+                    entries={allBackgrounds}
+                    selectedId={draft.backgroundId}
+                    onPick={(entry) => pick("background", entry)}
+                    accent={accent}
+                    label="Buscar trasfondo"
+                    placeholder="Buscar entre todos los trasfondos…"
+                    noteFor={(entry) => entry.source}
+                  />
+
+                  {/* What it hands you. Everything on this panel is read off
+                      the index; the prose that 5etools prints alongside is not
+                      in there at all. See BackgroundGrant.tsx. */}
+                  {selectedBackground && (
+                    <div className={DIVIDER}>
+                      <p className="font-display text-lg font-bold" style={{ color: accent }}>
+                        {selectedBackground.label}
+                        <span className="ml-3 font-mono text-[10px] font-normal uppercase tracking-[0.25em] text-bone/35">
+                          {selectedBackground.source}
+                        </span>
+                      </p>
+                      <div className="mt-5">
+                        <BackgroundGrant
+                          backgroundId={draft.backgroundId}
+                          rulesVersion={rulesVersion}
+                          sourceBook={draft.sourceBooks[`background:${draft.backgroundId}`]}
+                          accent={accent}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ---------- Attributes ---------- */}
+              {chamberKey === "attributes" && (
+                <div className="space-y-10">
+                  {/* Which way the six numbers get made. All four already
+                      existed in the model and mapped to the payload; only
+                      rolling was ever wired to a screen. */}
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                    {STAT_METHODS.map((method) => {
+                      const active = draft.statMethod === method.id;
+                      return (
+                        <button
+                          key={method.id}
+                          onClick={() => chooseStatMethod(method.id)}
+                          className="border p-4 text-left transition-colors"
+                          style={{
+                            borderColor: active ? `${accent}88` : "rgba(74,70,64,0.4)",
+                            background: active ? `${accent}0f` : "transparent",
+                          }}
+                        >
+                          <p
+                            className={HEADING}
+                            style={{ color: active ? accent : "#E6DFCE" }}
+                          >
+                            {method.label}
+                          </p>
+                          <p className="mt-1 font-body text-xs italic leading-snug text-bone/40">
+                            {method.blurb}
+                          </p>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {draft.statMethod === "pointbuy" ? (
+                    <PointBuy
+                      scores={rawScores}
+                      bonuses={draft.abilityBonuses}
+                      accent={accent}
+                      onChange={(ability, score) =>
+                        patchDraft({ [ability]: score } as Parameters<typeof patchDraft>[0])
+                      }
+                    />
+                  ) : (
+                    <>
+                      {/* Three throws, and the player keeps one. The sum of
+                          modifiers is shown because it is the one number that
+                          compares two spreads without reading six. */}
+                      {draft.statMethod === "roll" && (
+                        <DiceTray
+                          onRoll={handleRoll}
+                          sets={scratch.sets}
+                          onKeep={keepSet}
+                          accent={accent}
+                        />
+                      )}
+
+                      <StatRune
+                        pool={scratch.pool}
+                        bound={bound}
+                        scores={rawScores}
+                        accent={accent}
+                        onBind={bindScore}
+                        onRelease={releaseScore}
+                      />
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* ---------- Growth ---------- */}
+              {chamberKey === "growth" && (
+                <div className="space-y-12">
+                  <div>
+                    <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
+                      <span className={LABEL}>
+                        Aumento de {bonusOrigin(rulesVersion)}
+                      </span>
+                      <span className={WHISPER}>
+                        {rulesVersion === "2024"
+                          ? "En 2024 el aumento lo da el trasfondo: repartilo vos."
+                          : "Sembrado desde el indice. Podes cambiarlo."}
+                      </span>
+                    </div>
+                    <p className="mb-3 font-body text-xs italic leading-relaxed text-bone/30">
+                      Se suma a los puntajes ligados. Sin esto un enano exporta sin su +2 a
+                      Constitucion.
+                    </p>
+
+                    {/*
+                      Tasha's, named.
+                      The rule has been in force here since the editor existed —
+                      the budget is fixed and the distribution free — but a
+                      player who does not know that reads a movable +2 as a bug
+                      and puts it back where it was.
+                    */}
+                    {rulesVersion === "2014" && Object.keys(printedBonus).length > 0 && (
+                      <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                        <p className="font-body text-xs italic leading-relaxed text-bone/30">
+                          El Caldero de Todo de Tasha te deja mover estos puntos a las
+                          caracteristicas que quieras. El total no cambia:{" "}
+                          <span className="text-bone/50">{bonusShape(printedBonus)}</span>.
+                        </p>
+                        {bonusMoved && (
+                          <button
+                            type="button"
+                            onClick={() => patchDraft({ abilityBonuses: printedBonus })}
+                            className="font-mono text-[10px] uppercase tracking-[0.25em] transition-colors hover:text-gold"
+                            style={{ color: `${accent}bb` }}
+                          >
+                            Volver al reparto del libro
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    <BonusEditor
+                      bonuses={draft.abilityBonuses}
+                      scoresBefore={{
+                        str: draft.str,
+                        dex: draft.dex,
+                        con: draft.con,
+                        int: draft.int,
+                        wis: draft.wis,
+                        cha: draft.cha,
+                      }}
+                      budget={speciesBudget}
+                      maxPerAbility={maxPointsPerAbility}
+                      accent={accent}
+                      onChange={(abilityBonuses) => patchDraft({ abilityBonuses })}
+                    />
+                  </div>
+
+                  {pools.length > 0 && (
+                    <div className={DIVIDER}>
+                      <p className="mb-6 font-body text-xs italic leading-relaxed text-bone/30">
+                        Lo que {selectedClass?.label} te deja elegir a nivel {draft.level}.
+                      </p>
+                      <TalentPools
+                        pools={pools}
+                        chosen={draft.optionalFeatureIds}
+                        accent={accent}
+                        onToggle={toggleTalent}
+                      />
+                    </div>
+                  )}
+
+                  <Improvements
+                    state={draft}
+                    levels={growth.levels}
+                    rulesVersion={rulesVersion}
+                    accent={accent}
+                    onSetChoice={setLevelChoice}
+                    onSetFeatAbilities={setFeatAbilities}
+                  />
+                </div>
+              )}
+
+              {/* ---------- Gifts ---------- */}
+              {chamberKey === "gifts" && (
+                <div className="space-y-10">
+                  {granted.length > 0 && (
+                    <div>
+                      <p className={LABEL_MB4}>
+                        Otorgado por {selectedBackground?.label ?? "el trasfondo"}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {granted.map((entry) => (
+                          <span
+                            key={entry}
+                            className="border px-3 py-1.5 font-body text-sm"
+                            style={{ borderColor: `${accent}55`, color: accent }}
+                          >
+                            {entry}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {profPlan.offers.map((offer, index) => (
+                    <PickList
+                      key={`${offer.from}-${index}`}
+                      title={`Competencias — ${offer.from}`}
+                      hint={
+                        offer.isOpen
+                          ? "Cualquier habilidad."
+                          : `Elegi ${offer.count} de esta lista.`
+                      }
+                      options={offer.options}
+                      selected={chosenProficiencies}
+                      locked={granted}
+                      limit={offer.count}
+                      accent={accent}
+                      onToggle={toggleProficiency}
+                    />
+                  ))}
+
+                  {profPlan.offers.length === 0 && (
+                    <p className="font-body italic text-bone/35">
+                      Ni la clase ni el trasfondo elegidos ofrecen competencias a elección.
+                    </p>
+                  )}
+
+                  <div className={DIVIDER}>
+                    <p className={LABEL_MB4}>
+                      Idiomas
+                    </p>
+                    <div className="mb-5 flex flex-wrap gap-2">
+                      {langPlan.fixed.map((entry) => (
+                        <span
+                          key={entry}
+                          className="border px-3 py-1.5 font-body text-sm"
+                          style={{ borderColor: `${accent}55`, color: accent }}
+                        >
+                          {entry}
+                        </span>
+                      ))}
+                    </div>
+
+                    {langPlan.choiceCount > 0 && (
+                      <PickList
+                        title="Idiomas adicionales"
+                        options={langPlan.choiceOptions}
+                        selected={chosenLanguages}
+                        // Human's option list repeats Common, which they
+                        // already speak; locking it stops a wasted pick.
+                        locked={langPlan.fixed}
+                        limit={langPlan.choiceCount}
+                        accent={accent}
+                        onToggle={toggleLanguage}
+                      />
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* ---------- Gear ---------- */}
+              {chamberKey === "gear" && (
+                <div className="max-w-xl space-y-10">
+                  {/*
+                    What the class hands you at level 1.
+                    Printed in the class entry and, until now, nowhere in this
+                    front: a fighter arrived at this chamber with three empty
+                    search boxes and no idea that the book already gave them
+                    chain mail, a martial weapon and a shield.
+                  */}
+                  {classKit.length > 0 && (
+                    <div>
+                      <p className={LABEL_MB2}>
+                        Lo que trae {selectedClass?.label}
+                      </p>
+                      <p className={WHISPER_MB4}>
+                        El equipo inicial que imprime la clase. Elegi abajo lo que realmente llevas.
+                      </p>
+                      <ul className="space-y-1.5">
+                        {classKit.map((line) => (
+                          <li key={line} className="font-body text-sm leading-relaxed text-bone/50">
+                            {line}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div className={classKit.length > 0 ? "border-t border-iron/40 pt-8" : ""}>
+                    <p className={LABEL_MB4}>
+                      Arma
+                    </p>
+                    <ScryPicker
+                      label="Buscar arma"
+                      placeholder="Buscar arma…"
+                      search={weaponSearch}
+                      selectedId={draft.weaponId}
+                      onPick={(entry) => pick("weapon", entry)}
+                      accent={accent}
+                    />
+                    {weaponFacts && <ItemFacts facts={weaponFacts} accent={accent} />}
+                  </div>
+
+                  <div className={DIVIDER}>
+                    <p className={LABEL_MB2}>
+                      Armadura
+                    </p>
+                    <p className={WHISPER_MB4}>
+                      Cambia la clase de armadura en la ficha. Dejala vacia para ir sin armadura.
+                    </p>
+                    <ScryPicker
+                      label="Buscar armadura"
+                      placeholder="Buscar armadura o escudo…"
+                      search={armorSearch}
+                      selectedId={draft.armorId}
+                      onPick={(entry) => pick("armor", entry)}
+                      accent={accent}
+                    />
+                    {armorFacts && <ItemFacts facts={armorFacts} accent={accent} />}
+                  </div>
+
+                  <div className={DIVIDER}>
+                    <p className={LABEL_MB2}>
+                      Lo demas
+                    </p>
+                    <p className={WHISPER_MB4}>
+                      {plan.caster
+                        ? "Un mago sin libro de conjuros importa sin aquello de lo que vive su clase."
+                        : "Mochila, cuerda, raciones, herramientas."}
+                    </p>
+                    <GearBag
+                      carried={carried}
+                      search={gearSearch}
+                      rulesVersion={rulesVersion}
+                      accent={accent}
+                      onAdd={addGear}
+                      onRemove={removeGear}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* ---------- Spells ---------- */}
+              {chamberKey === "spells" && plan.picker && (
+                <div className="space-y-10">
+                  <p className="font-body italic text-bone/40">
+                    {plan.picker.modeLabel}
+                    {plan.picker.maxSpellLevel > 0
+                      ? ` · hasta nivel ${plan.picker.maxSpellLevel}`
+                      : " · todavia sin espacios de conjuro"}
+                  </p>
+
+                  {plan.picker.availableCantripCount > 0 && (
+                    <PickList
+                      title="Trucos"
+                      options={plan.cantripOptions}
+                      selected={chosenCantrips}
+                      limit={plan.picker.availableCantripCount}
+                      accent={accent}
+                      onToggle={toggleCantrip}
+                    />
+                  )}
+
+                  {plan.picker.spellLimit > 0 ? (
+                    <div className="space-y-8 border-t border-iron/40 pt-8">
+                      <div className="flex items-baseline justify-between">
+                        <span className={LABEL}>
+                          {plan.picker.sectionTitle}
+                        </span>
+                        <span
+                          className={META}
+                          style={{
+                            color:
+                              chosenSpells.length === plan.picker.spellLimit
+                                ? accent
+                                : "rgba(230,223,206,0.35)",
+                          }}
+                        >
+                          {chosenSpells.length} / {plan.picker.spellLimit}
+                        </span>
+                      </div>
+
+                      {plan.spellsByLevel.map(({ level, names }) => (
+                        <PickList
+                          key={level}
+                          title={`Nivel ${level}`}
+                          options={names.map((name) => formatSpellLine(level, name))}
+                          selected={chosenSpells}
+                          limit={plan.picker!.spellLimit}
+                          accent={accent}
+                          onToggle={toggleSpell}
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="border-t border-iron/40 pt-8 font-body italic text-bone/35">
+                      A nivel {draft.level} esta clase no prepara conjuros todavia.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* ---------- Identity ---------- */}
+              {chamberKey === "identity" && (
+                <div className="max-w-lg space-y-8">
+                  <Field label="Nombre verdadero">
+                    <input
+                      value={draft.characterName}
+                      onChange={(event) => patchDraft({ characterName: event.target.value })}
+                      placeholder="Decilo en la oscuridad…"
+                      className="w-full border-b border-iron bg-transparent pb-3 font-display text-3xl text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                    />
+                  </Field>
+
+                  <Field label="Nombre del jugador">
+                    <input
+                      value={draft.playerName}
+                      onChange={(event) => patchDraft({ playerName: event.target.value })}
+                      placeholder="Quien sostiene la pluma"
+                      className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                    />
+                  </Field>
+
+                  <Field label="Alineamiento">
+                    <input
+                      value={draft.alignment}
+                      onChange={(event) => patchDraft({ alignment: event.target.value })}
+                      placeholder="Neutral bueno…"
+                      className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                    />
+                  </Field>
+
+                  {/* These travel in the payload's `identity.biography` and
+                      were being dropped entirely. */}
+                  <div className="space-y-6 border-t border-iron/40 pt-8">
+                    <p className={LABEL}>
+                      Lo que te hace vos
+                    </p>
+
+                    {(
+                      [
+                        ["trait", "Rasgo", "Siempre toma notas, incluso en el peligro."],
+                        ["ideal", "Ideal", "El conocimiento es la mejor defensa."],
+                        ["bond", "Vinculo", "Su mentor desaparecido dejo pistas."],
+                        ["flaw", "Defecto", "No abandona una pista, aunque arriesgue al grupo."],
+                      ] as const
+                    ).map(([field, label, placeholder]) => (
+                      <Field key={field} label={label}>
+                        <input
+                          value={draft[field]}
+                          onChange={(event) => patchDraft({ [field]: event.target.value })}
+                          placeholder={placeholder}
+                          className="w-full border-b border-iron bg-transparent pb-2 font-body text-base italic text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                        />
+                      </Field>
+                    ))}
+
+                    <Field label="Notas">
+                      <textarea
+                        value={draft.notes}
+                        onChange={(event) => patchDraft({ notes: event.target.value })}
+                        rows={3}
+                        placeholder="Lo que no entra en ninguna casilla."
+                        className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                      />
+                    </Field>
+                  </div>
+                </div>
+              )}
+            </motion.section>
+          </AnimatePresence>
+
+          <LiveSheet state={draft} resolved={resolved} accent={accent} />
+        </div>
+
+        <footer className="mt-16 flex items-center justify-between border-t border-iron/40 pt-8">
+          <button
+            onClick={() => go(position - 1)}
+            disabled={position === 0}
+            className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/40 transition-colors hover:text-bone disabled:opacity-20"
+          >
+            ← Retroceder
+          </button>
+
+          {!isLast ? (
+            <RuneButton
+              onClick={() => answered[chamberKey] && go(position + 1)}
+              variant="gold"
+              className={answered[chamberKey] ? "" : "pointer-events-none opacity-30"}
+            >
+              Descender →
+            </RuneButton>
+          ) : (
+            <RuneButton
+              variant="blood"
+              onClick={sealCharacter}
+              className={answered.identity ? "" : "pointer-events-none opacity-30"}
+            >
+              {editingId ? "Volver a sellar" : "Sellar en el Codice"}
+            </RuneButton>
+          )}
+        </footer>
+      </div>
+    </main>
+  );
+}
+
+/*
+ * `Beyond` used to live here: the fold under a grid of core-book cards, where
+ * the rest of the catalog waited behind a second search box. It went with the
+ * grids. One shelf holds the whole catalog now, so there is no "rest".
+ */
+
+/**
+ * A sub-pick under something already chosen: a subrace, a subclass.
+ *
+ * Shown as a list rather than cards because the counts are unpredictable —
+ * one class offers four sendas and the 2014 cleric offers nineteen — and a
+ * grid that is sometimes two tiles and sometimes twenty reads as a mistake.
+ */
+function SubChoice({
+  title,
+  hint,
+  options,
+  selectedId,
+  onPick,
+  accent,
+  note,
+}: {
+  title: string;
+  hint: string;
+  options: CatalogEntry[];
+  selectedId: string;
+  onPick: (entry: CatalogEntry) => void;
+  accent: string;
+  /** An honest caveat, when the pick does not yet travel the whole way. */
+  note?: string;
+}) {
+  return (
+    <div className={DIVIDER_TIGHT}>
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <span className={LABEL}>
+          {title}
+        </span>
+        <span className={WHISPER}>{hint}</span>
+      </div>
+
+      <div className="mt-5 grid max-h-64 gap-1 overflow-y-auto pr-1 sm:grid-cols-2">
+        {options.map((entry) => {
+          const active = entry.id === selectedId;
+
+          return (
+            <button
+              key={`${entry.id}:${entry.source}`}
+              onClick={() => onPick(entry)}
+              className="flex items-baseline justify-between gap-3 border-l-2 px-4 py-2.5 text-left transition-colors"
+              style={{
+                borderLeftColor: active ? accent : "transparent",
+                background: active ? `${accent}12` : "transparent",
+              }}
+            >
+              <span
+                className={ITEM_NAME}
+                style={{ color: active ? accent : "#E6DFCE" }}
+              >
+                {entry.label}
+              </span>
+              <span className={ITEM_META}>
+                {entry.source}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      {note && (
+        <p className="mt-4 border-l-2 border-ember/50 pl-3 font-body text-xs italic leading-relaxed text-bone/35">
+          {note}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="mb-3 block font-mono text-[10px] tracking-[0.4em] uppercase text-bone/40">
+        {label}
+      </label>
+      {children}
+    </div>
+  );
+}

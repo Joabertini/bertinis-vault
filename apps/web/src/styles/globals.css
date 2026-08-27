@@ -1,0 +1,17 @@
+/*
+ * Tailwind's three layers, and nothing else.
+ *
+ * The rest of the global sheet lives in siblings — fonts.css, base.css,
+ * animations.css — imported from main.tsx in that order. They are separate
+ * files so that changing a colour, a face or a keyframe is a change to one
+ * small file instead of a hunt through one long one.
+ *
+ * Why main.tsx and not `@import` here: `base.css` deliberately overrides
+ * Tailwind's preflight (its `body` background and font stack), so it has to
+ * land after `@tailwind base`. CSS requires `@import` to precede every other
+ * rule, which would flip that order and let preflight win. Import order in
+ * main.tsx expresses the cascade directly and cannot be silently hoisted.
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

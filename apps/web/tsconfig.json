@@ -26,6 +26,9 @@
       ],
       "@bertinis-vault/vetools-ref": [
         "../../packages/vetools-ref/dist/index.d.ts"
+      ],
+      "@/*": [
+        "src/*"
       ]
     }
   },
@@ -34,6 +37,10 @@
     "src/**/*.tsx",
     "test/**/*.ts",
     "test/**/*.tsx",
+    "probes/**/*.ts",
     "*.config.ts"
+  ],
+  "exclude": [
+    "test/pending"
   ]
 }

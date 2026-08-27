@@ -1,0 +1,47 @@
+/*
+ * The page under everything: ground colour, default type, and the two chrome
+ * details the browser would otherwise paint in its own palette.
+ *
+ * Loaded after `@tailwind base` on purpose — the `body` rules here override
+ * preflight's. See the note in globals.css.
+ */
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: #030202;
+  color: #e6dfce;
+  font-family: "EB Garamond", Georgia, serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: #6e0f0f;
+  color: #e6dfce;
+}
+
+/*
+ * The scrollbar reads as a seam in the page rather than as an OS control:
+ * no rounding, track the same Void as the body, thumb in iron until hovered.
+ */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #030202;
+}
+::-webkit-scrollbar-thumb {
+  background: #3a332a;
+  border-radius: 0;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #b08a3e;
+}

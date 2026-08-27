@@ -5,7 +5,7 @@ import {
   coerceBuilderState,
   initialState,
   isCharacterNameMissing,
-} from "../src/builder";
+} from "../src/lib/builder";
 
 /**
  * A draft is not a finished character. The canonical schema requires a name,

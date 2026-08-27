@@ -26,3 +26,6 @@ packages/domain/src/*.d.ts.map
 # Foundry local
 *.db
 *.log
+
+# Salida del conformance del front (`pnpm --filter @bertinis-vault/web probe`).
+.probe
