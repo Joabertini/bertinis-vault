@@ -96,10 +96,10 @@ ninguna era sólo un cambio de import.
 - [x] **Dote de origen del trasfondo** — se mostraba y nunca se registraba.
       59 de 60 trasfondos 2024 la otorgan. Ver `docs/AUDITORIA-CREACION.md`.
 
-- [ ] **Números de mesa: iniciativa, percepción pasiva, velocidad.** El hueco
-      más ancho de la auditoría. Foundry los calcula solo, así que el cruce no
-      los necesita — los necesita el jugador que abre el Códice en la mesa, y
-      son de lo primero que se pide en una sesión.
+- [x] **Números de mesa: iniciativa, percepción pasiva, velocidad** —
+      `src/lib/table-numbers.ts`, en la ficha viva. Límite conocido y fijado en
+      el test: **ninguna de las 98 subrazas trae velocidad** en el índice, así
+      que un elfo del bosque lee 30 y no 35.
 - [ ] **Aplicar el kit inicial.** `starting-equipment` no era API renombrada
       como decía el triaje: el Faro **imprime** el equipo de clase como texto y
       el jugador tiene que buscar cada objeto a mano en la mochila. La suite

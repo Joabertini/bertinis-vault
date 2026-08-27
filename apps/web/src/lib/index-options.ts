@@ -311,6 +311,28 @@ export function featPrerequisitesFor(
   return row?.prerequisites ?? [];
 }
 
+/**
+ * The race row, with the subrace's own numbers on top when it has them.
+ *
+ * A hill dwarf is a dwarf that walks at 25; a wood elf is an elf that walks at
+ * 35. The subrace row carries only what it changes, so the base fills the rest.
+ */
+export function raceInfoFor(
+  raceId: string,
+  subraceId: string,
+  rulesVersion: RulesVersion,
+): RaceRow | null {
+  const races = forRulesVersion(collections.race ?? [], rulesVersion) as RaceRow[];
+  const base = races.find((row) => slugOf(row.name) === raceId) ?? null;
+  if (!subraceId) return base;
+
+  const subraces = forRulesVersion(collections.subrace ?? [], rulesVersion) as RaceRow[];
+  const sub = subraces.find((row) => slugOf(row.name) === subraceId);
+  if (!sub) return base;
+
+  return { ...(base ?? ({} as RaceRow)), ...sub };
+}
+
 /** The subclass row, scoped to its class so two "Berserker"s cannot collide. */
 export function subclassInfoFor(
   subclassId: string,

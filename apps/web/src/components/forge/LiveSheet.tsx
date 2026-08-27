@@ -20,6 +20,7 @@ import { ABILITY_IDS, abilityLabels } from "@/lib/abilities";
 import { entryById, hitDieFor } from "@/lib/catalog";
 import { counselFor, type Advice } from "@/lib/counsel";
 import { abilitySources, bonusOrigin } from "@/lib/improvements";
+import { initiativeFor, passivePerceptionFor, speedFor } from "@/lib/table-numbers";
 import { actionProfile, concentrationAmong } from "@/lib/spells";
 import { rulesVersionOf } from "@/lib/vault-store";
 import Sigil from "@/components/sigils/Sigil";
@@ -58,8 +59,14 @@ export default function LiveSheet({
     state.sourceBooks[`background:${state.backgroundId}`],
   );
 
+  const signed = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
+
   const ready = resolved.status === "ready";
   const derived = ready ? resolved.snapshot.derived : null;
+  const snapshot = ready ? resolved.snapshot : null;
+  // Off the race row, so it stands even before the draft is derivable — a
+  // player who has picked an elf and nothing else can still read 30.
+  const speed = speedFor(state, rulesVersion);
 
   /**
    * Raw scores while unforged, final scores once derivable.
@@ -158,6 +165,29 @@ export default function LiveSheet({
           accent={accent}
           dim={!ready}
           hint="Bonificador de competencia: se suma a lo que sabes hacer. Sube con el nivel."
+        />
+        {/* The three a session asks for out loud, and that Foundry used to be
+            the only place to find. */}
+        <Vital
+          label="Inic"
+          value={snapshot ? signed(initiativeFor(snapshot)) : "—"}
+          accent={accent}
+          dim={!ready}
+          hint="Iniciativa: se suma a tu tirada para ver quien actua primero."
+        />
+        <Vital
+          label="Perc pas"
+          value={snapshot ? passivePerceptionFor(snapshot) : "—"}
+          accent={accent}
+          dim={!ready}
+          hint="Percepcion pasiva: lo que notas sin buscar. El DM tira contra esto."
+        />
+        <Vital
+          label="Vel"
+          value={speed !== null ? `${speed}` : "—"}
+          accent={accent}
+          dim={speed === null}
+          hint="Velocidad en pies: cuanto te moves en tu turno."
         />
       </div>
 
