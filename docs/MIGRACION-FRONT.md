@@ -290,8 +290,22 @@ ninguna era sólo un cambio de import.
       El reparto en monedas es presentación y vive en el exportador — y **no se
       sube a platino**: el libro dice 150 monedas de oro, así que la ficha dice
       150 po. Enrollarlo en 15 de platino es el mismo dinero y otra respuesta.
-- [ ] **Export/importar el Códice.** Los personajes viven sólo en `localStorage`.
-      Se pierden al limpiar el navegador, en incógnito, o en otra máquina.
+- [x] **Export/importar el Códice.** `codex-file.ts` + `CodexBackup.tsx`.
+      `localStorage` no es almacenamiento, es una caché que el navegador puede
+      tirar, y no había ni forma de llevarse el Códice ni aviso de que podía
+      desaparecer.
+
+      Importar es la mitad cuidadosa. **Fusiona, nunca reemplaza**: traer un
+      respaldo no puede borrar el personaje que alguien armó esta mañana.
+      Donde los dos tienen el mismo personaje **gana el sellado más tarde**,
+      que es la única regla que no puede perder una edición — tomar siempre el
+      archivo desharía lo hecho desde el respaldo, y quedarse siempre con lo
+      local haría que importar un personaje actualizado no hiciera nada.
+
+      Una entrada sin estado se cuenta, no se repara; un archivo de una versión
+      más nueva se rechaza en vez de adivinarse; y un personaje guardado antes
+      de que el estado creciera igual abre, porque se lee por
+      `coerceBuilderState` como cualquier borrador.
 
 ### Para seguir trabajando en el front
 
