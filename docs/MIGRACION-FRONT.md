@@ -219,8 +219,23 @@ ninguna era sólo un cambio de import.
       alta y no la suma; la restricción de cuerpo a cuerpo del bárbaro cede si
       otra clase que la concede no la tiene; los objetos mágicos no son opción
       aparte porque se domina el tipo de arma.
-- [ ] **Expertise.** Nunca tuvo test. `normalizedProficiencyKindSchema` no tiene
-      el kind, así que hoy se elegiría algo que nunca llega al payload.
+- [x] **Expertise (maestría).** *La nota decía que
+      `normalizedProficiencyKindSchema` no tiene el kind. Medido: sí lo tiene,
+      y `toolExpertise` también, e `ImportPayload` tiene el campo, y
+      `packages/domain/src/expertise.ts` está entero — grants activos,
+      validación de respuestas, el gate de variante de Deft Explorer.* **Nadie
+      lo llamaba.** Era código muerto, no una pieza faltante.
+
+      Cableado, entonces: los grants salen del índice (campo `expertise`), el
+      pozo es lo que el personaje ya sabe hacer, las respuestas se guardan por
+      clave de concesión — un pícaro responde la misma pregunta a nivel 1 y a
+      nivel 6 — y se revisan en el orden en que se ganaron, cada una contra lo
+      que las anteriores tomaron.
+
+      La maestría viaja **al lado** de la competencia que dobla, nunca en su
+      lugar. El exportador escribe `value = 2` en una segunda pasada y saltea
+      —no promueve— una maestría sin competencia. La percepción pasiva la lee:
+      es el número que la mesa juega sin tirar.
 - [ ] **Smoke test de la Forja** que reemplace a `builder-page.test.tsx`.
 - [ ] **Cortar el bundle.** 2.03 MB, 312 kB gzip, en un solo chunk.
 - [ ] **Modificadores de salvación y pericia en la ficha.** Se sabe *cuáles*
