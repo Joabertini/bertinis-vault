@@ -154,11 +154,32 @@ ninguna era sólo un cambio de import.
             Foundry no cambiaron de contenido.
       - [ ] **UI para sumar y sacar una clase**, con los requisitos de
             característica (`unmetMulticlassRequirementsFor` ya está listo y
-            probado). Va junto con el barrido de "nivel del personaje": hoy 33
-            referencias leen `state.level`, que pasa a ser el nivel de la
-            *primera clase*, y las que significan el nivel del personaje tienen
-            que pasar a `characterLevelFor`. Los dos juntos, para que la
-            inconsistencia no llegue a estar en pantalla.
+            probado). Va junto con el barrido de nivel, y los dos juntos, para
+            que la inconsistencia no llegue a estar en pantalla.
+
+            `state.level` pasa a significar **el nivel de la primera clase**.
+            Las referencias ya están clasificadas — no hay que volver a
+            derivarlo:
+
+            *Pasan a `characterLevelFor` (nivel del personaje):*
+            `Tome.tsx:107` y `:245`, `LiveSheet.tsx:132`, `Ritual.tsx:204` (el
+            "Nivel N" de la ficha), `playbook.ts:352` (de dónde sale el bono de
+            competencia), `counsel.ts:155` (se usa junto al bono de
+            competencia), `improvements.ts:304` (los requisitos de dote se
+            leen contra el nivel del personaje).
+
+            *Se quedan como están (nivel de esta clase):*
+            `Forge.tsx:186` (una subclase se abre por nivel de clase), `:240`
+            y `:244` (el plan de conjuros de la clase), `:942` y `:948` (el
+            deslizador de la primera clase), `:1154`, `:1380`,
+            `Improvements.tsx:55`, `improvements.ts:231`–`232` (las mejoras
+            salen de la tabla de la clase), `optional-features.ts:88` y `:133`
+            (las invocaciones se cuentan y se piden por nivel de brujo).
+
+            *Aparte:* `improvements.ts:305` pasa hoy una sola clase a los
+            requisitos de dote; tiene que pasar todas, o una dote que pida
+            "rasgo de Lanzamiento de conjuros" se le niega a un guerrero 5 /
+            mago 1 que sí lo tiene.
       - [ ] **Lo que el multiclase *no* da.** Un jugador que suma una clase no
             recibe su equipo inicial ni sus salvaciones — sólo la tabla de
             competencias de multiclase. `multiclassGrantsFor` ya la lee del
