@@ -81,6 +81,50 @@ const CLASS_PROFS_BY_ID: Record<string, { armor: string[]; weapons: string[] }> 
   artificer: { armor: ["light", "medium", "shields"], weapons: ["simple"] },
 };
 
+/**
+ * What a class hands over when it is *not* the first one.
+ *
+ * A second class grants a shorter list than a first: a fighter who dips gets
+ * light and medium armour and shields, never heavy. Reading the table above
+ * for every class would hand the character proficiencies they do not have.
+ *
+ * Split by edition because the two genuinely differ — 2024's druid loses
+ * medium armour, its barbarian and fighter grant martial weapons without
+ * restating simple ones, and its monk has no block at all. Read off the index
+ * rather than written from memory. A class with no entry contributes nothing,
+ * which is what the book says by printing nothing.
+ */
+const CLASS_MULTICLASS_PROFS: Record<
+  "2014" | "2024",
+  Record<string, { armor: string[]; weapons: string[] }>
+> = {
+  "2014": {
+    barbarian: { armor: ["shields"], weapons: ["simple", "martial"] },
+    bard: { armor: ["light"], weapons: [] },
+    cleric: { armor: ["light", "medium", "shields"], weapons: [] },
+    druid: { armor: ["light", "medium", "shields"], weapons: [] },
+    fighter: { armor: ["light", "medium", "shields"], weapons: ["simple", "martial"] },
+    monk: { armor: [], weapons: ["simple", "shortswords"] },
+    paladin: { armor: ["light", "medium", "shields"], weapons: ["simple", "martial"] },
+    ranger: { armor: ["light", "medium", "shields"], weapons: ["simple", "martial"] },
+    rogue: { armor: ["light"], weapons: [] },
+    warlock: { armor: ["light"], weapons: ["simple"] },
+    artificer: { armor: ["light", "medium", "shields"], weapons: [] },
+  },
+  "2024": {
+    barbarian: { armor: ["shields"], weapons: ["martial"] },
+    bard: { armor: ["light"], weapons: [] },
+    cleric: { armor: ["light", "medium", "shields"], weapons: [] },
+    druid: { armor: ["light", "shields"], weapons: [] },
+    fighter: { armor: ["light", "medium", "shields"], weapons: ["martial"] },
+    paladin: { armor: ["light", "medium", "shields"], weapons: ["martial"] },
+    ranger: { armor: ["light", "medium", "shields"], weapons: ["martial"] },
+    rogue: { armor: ["light"], weapons: [] },
+    warlock: { armor: ["light"], weapons: [] },
+    artificer: { armor: ["light", "medium", "shields"], weapons: [] },
+  },
+};
+
 const CLASS_SAVE_PROFS_BY_ID: Record<string, AbilityId[]> = {
   barbarian: ["str", "con"],
   bard: ["dex", "cha"],
@@ -279,11 +323,34 @@ function fillLanguages(actor: Record<string, any>, character: CharacterBuild) {
 
 function fillProficiencies(actor: Record<string, any>, character: CharacterBuild) {
   const primaryClassId = normalizeClassId(character.classing.classes[0]?.classId ?? "");
-  const profs = CLASS_PROFS_BY_ID[primaryClassId] ?? { armor: [], weapons: [] };
+  const primary = CLASS_PROFS_BY_ID[primaryClassId] ?? { armor: [], weapons: [] };
 
-  actor.system.traits.weaponProf.custom = profs.weapons.join(", ");
-  actor.system.traits.armorProf.value = profs.armor.filter((type) => ["light", "medium", "heavy"].includes(type));
-  actor.system.traits.armorProf.custom = profs.armor.includes("shields") ? "shields" : "";
+  // Every class past the first adds its multiclass block. Read only from the
+  // first class, a wizard 4 / fighter 1 exported with no armour proficiency at
+  // all — a character who cannot equip the armour they are wearing.
+  const edition = character.meta.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const extras = character.classing.classes
+    .slice(1)
+    .map(
+      (entry) =>
+        CLASS_MULTICLASS_PROFS[edition][normalizeClassId(entry.classId)] ?? {
+          armor: [],
+          weapons: [],
+        },
+    );
+
+  const merge = (lists: string[][]) => {
+    const merged: string[] = [];
+    for (const list of lists) for (const value of list) if (!merged.includes(value)) merged.push(value);
+    return merged;
+  };
+
+  const armor = merge([primary.armor, ...extras.map((entry) => entry.armor)]);
+  const weapons = merge([primary.weapons, ...extras.map((entry) => entry.weapons)]);
+
+  actor.system.traits.weaponProf.custom = weapons.join(", ");
+  actor.system.traits.armorProf.value = armor.filter((type) => ["light", "medium", "heavy"].includes(type));
+  actor.system.traits.armorProf.custom = armor.includes("shields") ? "shields" : "";
 }
 
 // ---------------------------------------------------------------------------

@@ -288,3 +288,44 @@ test("buildFoundryActorPayload defensively deduplicates duplicate spell items", 
   assert.equal(spellItems.filter((item) => item.name === "Shield").length, 1);
   assert.equal(spellItems.filter((item) => item.name === "Mage Hand").length, 1);
 });
+
+test("a second class adds its multiclass proficiencies, not its starting ones", () => {
+  // Read only from the first class, this wizard exported with no armour
+  // proficiency at all — a character who cannot equip what they are wearing.
+  const build = makeCharacterBuild();
+  build.classing.classes = [
+    { classId: "wizard", level: 4 },
+    { classId: "fighter", level: 1 },
+  ];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.armorProf.value, ["light", "medium"]);
+  assert.equal(payload.system.traits.armorProf.custom, "shields");
+  // The fighter's multiclass block stops at medium armour: a fighter dip
+  // never grants heavy, which is the whole difference from its starting list.
+  assert.equal(payload.system.traits.armorProf.value.includes("heavy"), false);
+  assert.equal(payload.system.traits.weaponProf.custom.includes("martial"), true);
+});
+
+test("a single class exports exactly the proficiencies it always did", () => {
+  const build = makeCharacterBuild();
+  build.classing.classes = [{ classId: "fighter", level: 5 }];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.armorProf.value, ["light", "medium", "heavy"]);
+  assert.equal(payload.system.traits.weaponProf.custom, "simple, martial");
+});
+
+test("a class with no multiclass block contributes nothing rather than throwing", () => {
+  const build = makeCharacterBuild();
+  build.classing.classes = [
+    { classId: "fighter", level: 5 },
+    { classId: "sorcerer", level: 1 },
+  ];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.armorProf.value, ["light", "medium", "heavy"]);
+});
