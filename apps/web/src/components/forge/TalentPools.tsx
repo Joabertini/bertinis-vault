@@ -13,8 +13,8 @@
 
 import { motion } from "framer-motion";
 
-import type { TalentPool } from "@/lib/optional-features";
-import { ITEM_META, ITEM_NAME, LABEL, META, WHISPER } from "@/styles/recipes";
+import { unmetTalents, type TalentPool } from "@/lib/optional-features";
+import { ITEM_META, ITEM_NAME, LABEL, LABEL_MB2, META, WHISPER } from "@/styles/recipes";
 
 export default function TalentPools({
   pools,
@@ -30,9 +30,30 @@ export default function TalentPools({
   if (pools.length === 0) return null;
 
   const taken = new Set(chosen);
+  /*
+   * Picks that were legal when they were made and are not any more — a swapped
+   * pact boon, a dropped cantrip. The greying in the list below only covers the
+   * moment of choosing; nothing else would ever mention these again.
+   */
+  const stale = unmetTalents(pools, chosen);
 
   return (
     <div className="space-y-10">
+      {stale.length > 0 && (
+        <div className="border-l-2 border-ember/50 pl-4">
+          <p className={LABEL_MB2}>Ya no cumplen su requisito</p>
+          <ul className="space-y-1">
+            {stale.map((entry) => (
+              <li key={entry.id} className="font-body text-sm text-ember/80">
+                {entry.label} — {entry.reason}
+              </li>
+            ))}
+          </ul>
+          <p className={`mt-2 ${WHISPER}`}>
+            Siguen elegidos: sacarlos es tu decision, no la de la app.
+          </p>
+        </div>
+      )}
       {pools.map((pool) => {
         const inPool = pool.options.filter((option) => taken.has(option.id)).length;
         const full = inPool >= pool.count;

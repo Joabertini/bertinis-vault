@@ -178,3 +178,35 @@ export function talentsSatisfied(pools: TalentPool[], chosen: string[]): boolean
     return inPool >= pool.count;
   });
 }
+
+/**
+ * Talents already on the build that the character no longer qualifies for.
+ *
+ * The picker greys out what cannot be taken, which covers the moment of
+ * choosing and nothing after it. A build drifts: a warlock who swaps Pact of
+ * the Blade keeps every invocation that asked for it, and a wizard who drops
+ * Eldritch Blast keeps Agonizing Blast. Both are illegal and both look fine.
+ *
+ * Reported, never removed. Taking a pick away from a player because a
+ * prerequisite moved is how a builder loses a character's work; saying so and
+ * letting them decide is not.
+ *
+ * An option the pools no longer offer at all — a talent from a class the
+ * character used to be — is left alone here: that is a different problem, and
+ * this function would only be guessing at it.
+ */
+export function unmetTalents(
+  pools: TalentPool[],
+  chosen: string[],
+): { id: string; label: string; reason: string }[] {
+  const taken = new Set(chosen);
+
+  return pools
+    .flatMap((pool) => pool.options)
+    .filter((option) => taken.has(option.id) && !option.eligible)
+    .map((option) => ({
+      id: option.id,
+      label: option.label,
+      reason: option.blockedBy ?? "ya no cumple su requisito",
+    }));
+}
