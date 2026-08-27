@@ -1,7 +1,14 @@
 import { describe, expect, test } from "vitest";
 
 import { buildCanonicalSnapshot, initialState, type BuilderState } from "../src/lib/builder";
-import { initiativeFor, passivePerceptionFor, sizeFor, speedFor } from "../src/lib/table-numbers";
+import {
+  foundrySizeFor,
+  initiativeFor,
+  passivePerceptionFor,
+  sizeFor,
+  sizeLabelFor,
+  speedFor,
+} from "../src/lib/table-numbers";
 
 const mk = (over: Partial<BuilderState> = {}): BuilderState => ({
   ...initialState,
@@ -59,5 +66,39 @@ describe("the numbers a session asks for", () => {
   test("and adds proficiency once the character has the skill", () => {
     const perceptive = mk({ wis: 12, proficienciesText: "Perception" });
     expect(passivePerceptionFor(buildCanonicalSnapshot(perceptive))).toBe(13);
+  });
+});
+
+describe("el tamano", () => {
+  const at = (raceId: string, subraceId = "") => ({
+    ...initialState,
+    abilityBonuses: {},
+    levelChoices: {},
+    raceId,
+    subraceId,
+  });
+
+  /*
+   * 34 de las 124 especies de 2014 son Pequenas y todas exportaban como
+   * Medianas. No es cosmetico: el tamano fija la casilla que ocupas, por donde
+   * pasas, y en 2024 si un arma Pesada te cuesta desventaja.
+   */
+  test("un gnomo es pequeno y un humano mediano", () => {
+    expect(foundrySizeFor(at("gnome"), "2014")).toBe("sm");
+    expect(foundrySizeFor(at("human"), "2014")).toBe("med");
+  });
+
+  test("sin especie elegida no hay tamano que afirmar", () => {
+    expect(foundrySizeFor(at(""), "2014")).toBeNull();
+  });
+
+  test("se dice en castellano en la ficha", () => {
+    expect(sizeLabelFor(at("halfling"), "2014")).toBe("Pequeno");
+    expect(sizeLabelFor(at("human"), "2014")).toBe("Mediano");
+  });
+
+  test("llega al payload", () => {
+    const snapshot = buildCanonicalSnapshot({ ...at("gnome"), classId: "wizard", level: 1 });
+    expect(snapshot.ancestry.size).toBe("sm");
   });
 });

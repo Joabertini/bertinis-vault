@@ -57,6 +57,18 @@ export const identitySchema = z.object({
 export const ancestrySchema = z.object({
   raceId: canonicalIdSchema,
   subraceId: canonicalIdSchema.optional(),
+  /**
+   * The character's size, as `dnd5e` keys it.
+   *
+   * A property of the species rather than a choice, and carried here because
+   * the rules layer has no species table to look it up in. Without it every
+   * character exported as Medium — a quarter of 2014's species are Small, so
+   * every gnome and halfling reached the table occupying the wrong square.
+   *
+   * Optional so every build written before this field stays valid; absent
+   * still means Medium, which is what those builds already got.
+   */
+  size: z.enum(["tiny", "sm", "med", "lg", "huge", "grg"]).optional(),
 });
 
 /** How a class advances spellcasting, in 5etools' own vocabulary. */

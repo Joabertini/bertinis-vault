@@ -407,3 +407,18 @@ test("a character with no starting coins keeps an empty purse", () => {
   assert.equal(payload.system.currency.gp, 0);
   assert.equal(payload.system.currency.cp, 0);
 });
+
+test("a small species reaches the sheet small", () => {
+  const build = makeCharacterBuild();
+  build.ancestry.size = "sm";
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.equal(payload.system.traits.size, "sm");
+});
+
+test("a build with no size stays Medium, as it always was", () => {
+  const payload = buildFoundryActorPayload(makeCharacterBuild());
+
+  assert.equal(payload.system.traits.size, "med");
+});

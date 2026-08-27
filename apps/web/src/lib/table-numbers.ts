@@ -88,3 +88,45 @@ export function passivePerceptionFor(build: CharacterBuild): number {
 
   return 10 + modifier(build.abilities.final.wis) + bonus;
 }
+
+/** What `dnd5e` calls each size the index prints. */
+const FOUNDRY_SIZE: Record<string, "tiny" | "sm" | "med" | "lg" | "huge" | "grg"> = {
+  T: "tiny",
+  S: "sm",
+  M: "med",
+  L: "lg",
+  H: "huge",
+  G: "grg",
+};
+
+/** How the sheet says it, in Spanish. */
+const SIZE_LABEL: Record<string, string> = {
+  tiny: "Diminuto",
+  sm: "Pequeno",
+  med: "Mediano",
+  lg: "Grande",
+  huge: "Enorme",
+  grg: "Gargantuesco",
+};
+
+/**
+ * The size as Foundry keys it, or null when the species does not say.
+ *
+ * One species in 2014 prints `"V"` — variable, meaning the player chooses at
+ * creation. Read as nothing rather than guessed: picking one for them would
+ * put a size on the sheet they never chose, and Medium is what an absent size
+ * already means.
+ */
+export function foundrySizeFor(
+  state: BuilderState,
+  rulesVersion: RulesVersion,
+): "tiny" | "sm" | "med" | "lg" | "huge" | "grg" | null {
+  const size = sizeFor(state, rulesVersion);
+  return size ? (FOUNDRY_SIZE[size] ?? null) : null;
+}
+
+/** The size, said the way the sheet says it. */
+export function sizeLabelFor(state: BuilderState, rulesVersion: RulesVersion): string | null {
+  const size = foundrySizeFor(state, rulesVersion);
+  return size ? (SIZE_LABEL[size] ?? null) : null;
+}

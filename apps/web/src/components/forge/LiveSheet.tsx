@@ -24,7 +24,12 @@ import { ABILITY_IDS, abilityLabels } from "@/lib/abilities";
 import { entryById, hitDieFor } from "@/lib/catalog";
 import { counselFor, type Advice } from "@/lib/counsel";
 import { abilitySources, bonusOrigin } from "@/lib/improvements";
-import { initiativeFor, passivePerceptionFor, speedFor } from "@/lib/table-numbers";
+import {
+  initiativeFor,
+  passivePerceptionFor,
+  sizeLabelFor,
+  speedFor,
+} from "@/lib/table-numbers";
 import { actionProfile, concentrationAmong } from "@/lib/spells";
 import { rulesVersionOf } from "@/lib/vault-store";
 import Sigil from "@/components/sigils/Sigil";
@@ -78,6 +83,7 @@ export default function LiveSheet({
   // Off the race row, so it stands even before the draft is derivable — a
   // player who has picked an elf and nothing else can still read 30.
   const speed = speedFor(state, rulesVersion);
+  const size = sizeLabelFor(state, rulesVersion);
 
   /**
    * Raw scores while unforged, final scores once derivable.
@@ -199,6 +205,16 @@ export default function LiveSheet({
           accent={accent}
           dim={speed === null}
           hint="Velocidad en pies: cuanto te moves en tu turno."
+        />
+        {/* Not decoration: size sets the square you occupy, what you can
+            squeeze through, and in 2024 whether a Heavy weapon costs you
+            disadvantage. */}
+        <Vital
+          label="Tam"
+          value={size ?? "—"}
+          accent={accent}
+          dim={size === null}
+          hint="Tamano: la casilla que ocupas y por donde pasas."
         />
       </div>
 

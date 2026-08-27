@@ -351,6 +351,22 @@ function fillLanguages(actor: Record<string, any>, character: CharacterBuild) {
  * back in their head to check it against what they were told they had.
  * Electrum is skipped for the same reason, and harder — almost no game uses it.
  */
+/**
+ * The character's size.
+ *
+ * The blank template says Medium, which is right for most species and wrong
+ * for a quarter of 2014's: every gnome, halfling and goblin exported occupying
+ * a square they do not occupy. Size sets the token's footprint, what the
+ * character can squeeze through, and in 2024 whether they can swing a Heavy
+ * weapon without disadvantage — not a cosmetic field.
+ *
+ * Absent still means Medium, which is what builds written before this carried.
+ */
+function fillSize(actor: Record<string, any>, character: CharacterBuild) {
+  const size = character.ancestry.size;
+  if (size) actor.system.traits.size = size;
+}
+
 function fillCurrency(actor: Record<string, any>, character: CharacterBuild) {
   const copper = character.choices.startingCopper ?? 0;
   if (copper <= 0) return;
@@ -881,6 +897,7 @@ function buildFoundryActorPayloadUnchecked(character: CharacterBuild): FoundryAc
   fillLanguages(actor, character);
   fillProficiencies(actor, character);
   fillCurrency(actor, character);
+  fillSize(actor, character);
   fillDetails(actor, character);
 
   // Items (these are built fresh and injected into the empty array)

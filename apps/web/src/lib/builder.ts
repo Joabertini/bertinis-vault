@@ -20,6 +20,7 @@ export { abilityLabels, coerceBuilderState, initialState };
 import { characterLevel, classEntriesFor, classingLabel, coerceExtraClasses } from "./classing";
 import { collapseGearLines } from "./gear-lines";
 import { expertisePlanFor } from "./expertise";
+import { foundrySizeFor } from "./table-numbers";
 import { kitCopper, startingKitFor, takenOptions } from "./starting-kit";
 import { masteryPlanFor } from "./weapon-mastery";
 import {
@@ -563,6 +564,9 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       },
     },
     ancestry: {
+      ...(foundrySizeFor(state, rulesVersionOf(state))
+        ? { size: foundrySizeFor(state, rulesVersionOf(state))! }
+        : {}),
       raceId: state.raceId,
       ...(state.subraceId ? { subraceId: state.subraceId } : {}),
     },
