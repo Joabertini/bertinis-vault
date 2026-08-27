@@ -175,6 +175,23 @@ export function grantedOptions(rows: KitRow[]): KitOption[] {
 }
 
 /**
+ * Every option the character actually took: the granted rows, plus whatever
+ * was answered on the ones that ask.
+ *
+ * The answered half is what carries the coins. 2024 states the whole kit as
+ * one row — "this pile of gear, or the money" — so a player who takes the
+ * money picks an option with no items and a `copper` on it, and reading only
+ * the granted rows would find nothing and hand them neither.
+ */
+export function takenOptions(rows: KitRow[], choices: Record<string, string>): KitOption[] {
+  return rows.flatMap((row) =>
+    row.granted
+      ? row.options
+      : row.options.filter((option) => option.key === choices[row.key]),
+  );
+}
+
+/**
  * The coins the answered kit is worth, in copper.
  *
  * Reported, not exported: `ImportPayload` has no currency field, so this cannot

@@ -337,6 +337,29 @@ function fillLanguages(actor: Record<string, any>, character: CharacterBuild) {
 // Fill weapon/armor proficiencies into cloned template
 // ---------------------------------------------------------------------------
 
+/**
+ * The coins the character starts with.
+ *
+ * Counted in copper by the builder, because that is the only unit that never
+ * rounds. Split here into gold, silver and copper — and deliberately no
+ * further.
+ *
+ * The book says a 2024 fighter who takes the money instead of the kit walks
+ * away with 150 gold pieces, so the sheet says 150 gp. Rolling that up into
+ * 15 platinum is the same money and a different answer: it puts the character's
+ * whole purse in a box most tables never use, and the player has to convert it
+ * back in their head to check it against what they were told they had.
+ * Electrum is skipped for the same reason, and harder — almost no game uses it.
+ */
+function fillCurrency(actor: Record<string, any>, character: CharacterBuild) {
+  const copper = character.choices.startingCopper ?? 0;
+  if (copper <= 0) return;
+
+  actor.system.currency.gp = Math.floor(copper / 100);
+  actor.system.currency.sp = Math.floor((copper % 100) / 10);
+  actor.system.currency.cp = copper % 10;
+}
+
 function fillProficiencies(actor: Record<string, any>, character: CharacterBuild) {
   const primaryClassId = normalizeClassId(character.classing.classes[0]?.classId ?? "");
   const primary = CLASS_PROFS_BY_ID[primaryClassId] ?? { armor: [], weapons: [] };
@@ -857,6 +880,7 @@ function buildFoundryActorPayloadUnchecked(character: CharacterBuild): FoundryAc
   fillAttributes(actor, character);
   fillLanguages(actor, character);
   fillProficiencies(actor, character);
+  fillCurrency(actor, character);
   fillDetails(actor, character);
 
   // Items (these are built fresh and injected into the empty array)

@@ -4,11 +4,13 @@ import { collections, forRulesVersion } from "@bertinis-vault/vetools-index";
 import { slugOf } from "../src/lib/index-options";
 import { collapseGearLines } from "../src/lib/gear-lines";
 import type { KitOption } from "../src/lib/starting-kit";
+import { buildCanonicalSnapshot, initialState } from "../src/lib/builder";
 import {
   coinLabel,
   kitItemIds,
   startingKitFor,
   swapKitAnswer,
+  takenOptions,
 } from "../src/lib/starting-kit";
 
 const kit = (classId: string, rulesVersion: "2014" | "2024", backgroundId = "") =>
@@ -162,5 +164,64 @@ describe("swapKitAnswer", () => {
 
   test("deseleccionar deja la bolsa sin lo que daba esa opción", () => {
     expect(swapKitAnswer(kitItemIds(javelins), javelins, undefined)).toEqual([]);
+  });
+});
+
+describe("el oro inicial", () => {
+  const base = { ...initialState, abilityBonuses: {}, levelChoices: {} };
+
+  const answered = (classId: string, rulesVersion: "5e-2014" | "5e-2024") => {
+    const rows = startingKitFor(classId, "", rulesVersion === "5e-2024" ? "2024" : "2014");
+    const coinRow = rows.find((row) =>
+      row.options.some((option) => option.copper > 0 && option.items.length === 0),
+    );
+    const coinOption = coinRow?.options.find(
+      (option) => option.copper > 0 && option.items.length === 0,
+    );
+
+    return { rows, coinRow, coinOption };
+  };
+
+  /*
+   * 2024 plantea el kit entero como una fila: este monton de equipo, o el
+   * dinero. Quien se lleva el dinero elige una opcion sin objetos, asi que
+   * leer solo lo que cayo en la mochila no encuentra nada y no le da ninguna
+   * de las dos cosas.
+   */
+  test("llevarse el dinero en vez del equipo lo pone en el payload", () => {
+    const { coinRow, coinOption } = answered("fighter", "5e-2024");
+    expect(coinOption).toBeTruthy();
+
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      rulesVersion: "5e-2024",
+      classId: "fighter",
+      subclassId: "",
+      level: 1,
+      kitChoices: { [coinRow!.key]: coinOption!.key },
+    });
+
+    expect(snapshot.choices.startingCopper).toBe(coinOption!.copper);
+  });
+
+  test("sin contestar la fila no hay monedas", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      rulesVersion: "5e-2024",
+      classId: "fighter",
+      subclassId: "",
+      level: 1,
+      kitChoices: {},
+    });
+
+    expect(snapshot.choices.startingCopper).toBeUndefined();
+  });
+
+  test("takenOptions trae lo concedido y lo contestado, no lo descartado", () => {
+    const { rows, coinRow, coinOption } = answered("fighter", "5e-2024");
+    const taken = takenOptions(rows, { [coinRow!.key]: coinOption!.key });
+
+    expect(taken).toContainEqual(coinOption);
+    expect(taken.filter((option) => option.copper > 0 && option.items.length === 0)).toHaveLength(1);
   });
 });

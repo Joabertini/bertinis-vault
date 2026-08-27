@@ -19,6 +19,7 @@ import type { BuilderState } from "@/lib/builder";
 import { characterLevelFor, classingLabelFor } from "@/lib/builder";
 import Checks from "@/components/forge/Checks";
 import { savingThrowChecksFor, skillChecksFor } from "@/lib/checks";
+import { coinLabel } from "@/lib/starting-kit";
 import { ABILITY_IDS, abilityLabels } from "@/lib/abilities";
 import { entryById, hitDieFor } from "@/lib/catalog";
 import { counselFor, type Advice } from "@/lib/counsel";
@@ -200,6 +201,15 @@ export default function LiveSheet({
           hint="Velocidad en pies: cuanto te moves en tu turno."
         />
       </div>
+
+      {/* The purse, once there is one. A player who took the money instead of
+          the gear has nothing else on the sheet to show for that choice. */}
+      {snapshot?.choices.startingCopper ? (
+        <p className="mt-4 font-body text-xs italic leading-relaxed text-bone/40">
+          Empezas con{" "}
+          <span style={{ color: accent }}>{coinLabel(snapshot.choices.startingCopper)}</span>.
+        </p>
+      ) : null}
 
       {/* What the character rolls, for everything. Only once the draft
           derives: a modifier without a proficiency bonus behind it would be

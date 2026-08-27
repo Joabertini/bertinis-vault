@@ -373,3 +373,37 @@ test("a proficiency without expertise stays at one", () => {
 
   assert.equal(payload.system.skills.arc.value, 1);
 });
+
+test("starting coins reach the sheet as the book states them", () => {
+  const build = makeCharacterBuild();
+  // What a 2024 fighter who takes the money instead of the kit walks away
+  // with: 150 gold pieces. The sheet should say so.
+  build.choices.startingCopper = 15000;
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.equal(payload.system.currency.gp, 150);
+  // Not rolled up into platinum: 15pp is the same money and a different
+  // answer, in a box most tables never use.
+  assert.equal(payload.system.currency.pp, 0);
+  assert.equal(payload.system.currency.sp, 0);
+  assert.equal(payload.system.currency.cp, 0);
+});
+
+test("odd change lands in silver and copper rather than being lost", () => {
+  const build = makeCharacterBuild();
+  build.choices.startingCopper = 1234; // 12gp 3sp 4cp
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.equal(payload.system.currency.gp, 12);
+  assert.equal(payload.system.currency.sp, 3);
+  assert.equal(payload.system.currency.cp, 4);
+});
+
+test("a character with no starting coins keeps an empty purse", () => {
+  const payload = buildFoundryActorPayload(makeCharacterBuild());
+
+  assert.equal(payload.system.currency.gp, 0);
+  assert.equal(payload.system.currency.cp, 0);
+});

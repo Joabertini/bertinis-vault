@@ -235,6 +235,18 @@ export const choicesSchema = z.object({
    * Optional so every build written before this field stays valid.
    */
   weaponMasteries: z.array(z.string().min(1)).optional(),
+  /**
+   * The coins the character starts with, counted in copper.
+   *
+   * Copper because that is what the index counts in, and because it is the
+   * only unit that never rounds: 2024 states the alternative to a class kit as
+   * a flat sum, and a background can add its own on top. The split into
+   * platinum, gold, silver and copper is presentation, and belongs where it is
+   * presented.
+   *
+   * Optional so every build written before this field stays valid.
+   */
+  startingCopper: z.number().int().min(0).optional(),
   normalized: normalizedChoicesSchema.optional(),
 });
 

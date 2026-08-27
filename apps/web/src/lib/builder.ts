@@ -20,6 +20,7 @@ export { abilityLabels, coerceBuilderState, initialState };
 import { characterLevel, classEntriesFor, classingLabel, coerceExtraClasses } from "./classing";
 import { collapseGearLines } from "./gear-lines";
 import { expertisePlanFor } from "./expertise";
+import { kitCopper, startingKitFor, takenOptions } from "./starting-kit";
 import { masteryPlanFor } from "./weapon-mastery";
 import {
   getArmorCatalogEntry,
@@ -465,6 +466,20 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const leveledSpells = parseLineList(state.spellsText);
   const features = parseLineList(state.featuresText);
   const extraEquipment = collapseGearLines(parseLineList(state.extraEquipmentText));
+  /*
+   * The coins the kit is worth, from the rows the character actually took.
+   *
+   * A player who takes the money instead of the gear picks an option with no
+   * items on it: reading only what landed in the bag would find nothing and
+   * give them neither the gear nor the money.
+   */
+  const startingCopper = kitCopper(
+    takenOptions(
+      startingKitFor(state.classId, state.backgroundId, rulesVersionOf(state)),
+      state.kitChoices,
+    ),
+  );
+
   const expertiseTaken = expertisePlanFor(state, rulesVersionOf(state)).doubled;
 
   const masteryPlan = masteryPlanFor(
@@ -596,6 +611,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       // mastery from a class the player has since left would export a
       // proficiency the sheet never granted.
       ...(masteryIds.length > 0 ? { weaponMasteries: masteryIds } : {}),
+      ...(startingCopper > 0 ? { startingCopper } : {}),
       normalized: {
           feats: chosenFeatIds,
           proficiencies: [
