@@ -276,7 +276,20 @@ ninguna era sólo un cambio de import.
       El mapa de pericia a característica sale del `dnd5e.mjs` instalado
       (5.3.3), no de memoria — 2024 no cambió ninguna. Las salvaciones salen de
       la primera clase sola, que es la regla y no una simplificación.
-- [ ] **Oro inicial.** No se calcula, y `ImportPayload` no tiene campo de moneda.
+- [x] **Oro inicial.** *La nota decía que no se calcula. Medido: `kitCopper` ya
+      lo calculaba y `coinLabel` ya lo escribía — no había dónde ponerlo.* El
+      contrato no tenía campo y el actor salía con la bolsa en cero, así que
+      quien se llevaba el dinero en vez del equipo se quedaba sin las dos cosas.
+
+      2024 plantea el kit entero como una fila —este montón de equipo, o el
+      dinero— así que quien se lleva el dinero elige una opción **sin objetos**,
+      y leer sólo lo que cayó en la mochila no encontraba nada. `takenOptions`
+      lee lo concedido más lo contestado, que es por donde viajan las monedas.
+
+      El contrato cuenta en cobre, que es la única unidad que nunca redondea.
+      El reparto en monedas es presentación y vive en el exportador — y **no se
+      sube a platino**: el libro dice 150 monedas de oro, así que la ficha dice
+      150 po. Enrollarlo en 15 de platino es el mismo dinero y otra respuesta.
 - [ ] **Export/importar el Códice.** Los personajes viven sólo en `localStorage`.
       Se pierden al limpiar el navegador, en incógnito, o en otra máquina.
 
