@@ -1,4 +1,4 @@
-import type { CharacterBuild } from "@bertinis-vault/contracts";
+import type { CharacterBuild, NormalizedProficiencyKind } from "@bertinis-vault/contracts";
 
 export type DerivedEquipmentEntry = {
   lookupName: string;
@@ -13,9 +13,17 @@ export type DerivedSpellEntry = {
   spellId?: string;
 };
 
+/**
+ * The labels of one kind of normalized proficiency.
+ *
+ * Takes the whole kind union rather than the three the text form can express.
+ * Expertise has no text form — it exists only as a normalized entry — so
+ * narrowing this to what `getProficiencyLabels` can fall back on would make
+ * the doubling unreadable.
+ */
 export function getNormalizedProficiencyLabels(
   character: CharacterBuild,
-  kind: "skill" | "language" | "tool",
+  kind: NormalizedProficiencyKind,
 ): string[] {
   const entries = character.choices.normalized?.proficiencies ?? [];
   return entries

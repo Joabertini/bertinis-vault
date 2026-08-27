@@ -73,9 +73,11 @@ import TalentPools from "@/components/forge/TalentPools";
 import GearBag from "@/components/forge/GearBag";
 import Multiclass from "@/components/forge/Multiclass";
 import WeaponMastery from "@/components/forge/WeaponMastery";
+import Expertise from "@/components/forge/Expertise";
 import type { ExtraClass } from "@/lib/classing";
 import { emptyExtraClass } from "@/lib/classing";
 import { masteryPlanFor } from "@/lib/weapon-mastery";
+import { expertisePlanFor } from "@/lib/expertise";
 import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
 import { talentPools, talentsSatisfied } from "@/lib/optional-features";
 import {
@@ -194,6 +196,11 @@ export default function Forge() {
   // Read against the final scores, and reported rather than refused.
   const primaryLevelCeiling =
     20 - draft.extraClasses.reduce((total, extra) => total + (extra.classId ? extra.level : 0), 0);
+
+  const expertisePlan = useMemo(
+    () => expertisePlanFor(draft, rulesVersion),
+    [draft, rulesVersion],
+  );
 
   const masteryPlan = useMemo(
     () =>
@@ -644,6 +651,36 @@ export default function Forge() {
   const changeClass = (index: number, next: ExtraClass) => {
     patchDraft({
       extraClasses: draft.extraClasses.map((extra, at) => (at === index ? next : extra)),
+    });
+  };
+
+  /**
+   * One pick on one grant.
+   *
+   * A pick already taken is dropped rather than re-added, so the same button
+   * both chooses and unchooses. Changing which set the grant is spent on
+   * clears the picks with it: the 2014 rogue's two-skill answer is not half of
+   * its one-skill-and-tools answer.
+   */
+  const answerExpertise = (
+    key: string,
+    setIndex: number,
+    of: "skills" | "tools",
+    id: string,
+  ) => {
+    const current = draft.expertiseChoices[key] ?? { setIndex, skills: [], tools: [] };
+    const base =
+      current.setIndex === setIndex ? current : { setIndex, skills: [], tools: [] };
+
+    const picked = base[of];
+    const next = id
+      ? picked.includes(id)
+        ? picked.filter((entry) => entry !== id)
+        : [...picked, id]
+      : picked;
+
+    patchDraft({
+      expertiseChoices: { ...draft.expertiseChoices, [key]: { ...base, [of]: next } },
     });
   };
 
@@ -1279,6 +1316,20 @@ export default function Forge() {
                     <p className="font-body italic text-bone/35">
                       Ni la clase ni el trasfondo elegidos ofrecen competencias a elección.
                     </p>
+                  )}
+
+                  {/* After the skills, not before: you double what you have
+                      already picked, so asking first would offer an empty pool. */}
+                  {expertisePlan.slots.length > 0 && (
+                    <div className={DIVIDER}>
+                      <Expertise
+                        slots={expertisePlan.slots}
+                        proficientSkills={expertisePlan.proficientSkills}
+                        proficientTools={expertisePlan.proficientTools}
+                        accent={accent}
+                        onAnswer={answerExpertise}
+                      />
+                    </div>
                   )}
 
                   <div className={DIVIDER}>

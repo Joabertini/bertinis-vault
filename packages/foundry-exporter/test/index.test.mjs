@@ -346,3 +346,30 @@ test("a build with no mastery leaves the set empty rather than absent", () => {
 
   assert.deepEqual(payload.system.traits.weaponProf.mastery.value, []);
 });
+
+test("expertise doubles a skill the character is proficient in", () => {
+  const build = makeCharacterBuild();
+  build.choices.normalized.proficiencies.push({ kind: "expertise", label: "Arcana" });
+
+  const payload = buildFoundryActorPayload(build);
+
+  // 1 is proficient, 2 is expertise. Arcana is among the build's own skills.
+  assert.equal(payload.system.skills.arc.value, 2);
+});
+
+test("expertise in a skill the character does not have is skipped, not granted", () => {
+  // The rules layer reports this as a problem the player can see. Promoting it
+  // here would hide it and hand out a proficiency the sheet never granted.
+  const build = makeCharacterBuild();
+  build.choices.normalized.proficiencies.push({ kind: "expertise", label: "Athletics" });
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.equal(payload.system.skills.ath.value, 0);
+});
+
+test("a proficiency without expertise stays at one", () => {
+  const payload = buildFoundryActorPayload(makeCharacterBuild());
+
+  assert.equal(payload.system.skills.arc.value, 1);
+});

@@ -300,6 +300,7 @@ export type ClassEntry = z.infer<typeof classEntrySchema>;
 export type Classing = z.infer<typeof classingSchema>;
 export type Background = z.infer<typeof backgroundSchema>;
 export type Abilities = z.infer<typeof abilitiesSchema>;
+export type NormalizedProficiencyKind = z.infer<typeof normalizedProficiencyKindSchema>;
 export type NormalizedProficiencyEntry = z.infer<typeof normalizedProficiencyEntrySchema>;
 export type NormalizedSpellEntry = z.infer<typeof normalizedSpellEntrySchema>;
 export type NormalizedEquipmentEntry = z.infer<typeof normalizedEquipmentEntrySchema>;

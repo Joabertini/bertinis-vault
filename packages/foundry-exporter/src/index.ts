@@ -18,6 +18,7 @@ import {
   getEquipmentEntries,
   getFeatureEntries,
   getHitDieForClass,
+  getNormalizedProficiencyLabels,
   getProficiencyLabels,
   resolveLanguageId as resolveLanguageIdShared,
   resolveSkillId as resolveSkillIdShared,
@@ -256,6 +257,21 @@ function fillSkills(actor: Record<string, any>, character: CharacterBuild) {
   for (const skillId of proficientSkills) {
     if (skillId in skills) {
       skills[skillId].value = 1;
+    }
+  }
+
+  // Expertise doubles a proficiency rather than adding one, which is why it is
+  // a second pass over the same skills. dnd5e reads the level as a number:
+  // 1 is proficient, 2 is expertise. Written after the pass above so the
+  // doubling is not overwritten by the proficiency it doubles.
+  //
+  // A skill listed as expertise the character is not proficient in is skipped,
+  // not promoted. The rules layer already reports that as a problem the player
+  // can see; silently granting it here would hide it.
+  for (const label of getNormalizedProficiencyLabels(character, "expertise")) {
+    const skillId = resolveSkillId(label);
+    if (skillId && proficientSkills.has(skillId) && skillId in skills) {
+      skills[skillId].value = 2;
     }
   }
 }

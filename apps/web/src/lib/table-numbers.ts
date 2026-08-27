@@ -62,17 +62,29 @@ export function initiativeFor(build: CharacterBuild): number {
 
 /**
  * Passive Perception: 10 + Wisdom modifier, plus proficiency when the character
- * has the skill.
+ * has the skill, doubled when they have expertise in it.
  *
- * Expertise would double the proficiency and is not read, because the build
- * cannot express expertise at all yet — see `docs/AUDITORIA-CREACION.md`. A
- * rogue with expertise in Perception reads 5 low here, and that is worth
- * knowing rather than hiding.
+ * The doubling is not a rounding detail. A rogue who doubles Perception reads
+ * a number the whole table plays against — it is what the DM checks a hidden
+ * creature's Stealth against without anyone rolling — and reading it five low
+ * silently makes the character worse at the thing they spent their rarest
+ * choice on.
  */
 export function passivePerceptionFor(build: CharacterBuild): number {
-  const proficient = (build.choices.normalized?.proficiencies ?? []).some(
-    (entry) => entry.kind === "skill" && /^percepci|^perception/i.test(entry.label),
+  const entries = build.choices.normalized?.proficiencies ?? [];
+  const isPerception = (label: string) => /^percepci|^perception/i.test(label);
+
+  const proficient = entries.some(
+    (entry) => entry.kind === "skill" && isPerception(entry.label),
+  );
+  const expert = entries.some(
+    (entry) => entry.kind === "expertise" && isPerception(entry.label),
   );
 
-  return 10 + modifier(build.abilities.final.wis) + (proficient ? build.derived.proficiencyBonus : 0);
+  // Expertise travels beside the proficiency, never instead of it, so a label
+  // marked expert without being marked proficient is a build that is wrong
+  // elsewhere — counted once here rather than twice.
+  const bonus = proficient ? build.derived.proficiencyBonus * (expert ? 2 : 1) : 0;
+
+  return 10 + modifier(build.abilities.final.wis) + bonus;
 }

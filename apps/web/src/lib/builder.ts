@@ -1,8 +1,9 @@
 import type { CharacterBuild, CharacterBuildInput, ClassEntry } from "@bertinis-vault/contracts";
-import { multiclassRequirementProblems } from "@bertinis-vault/domain";
+import { multiclassRequirementProblems, type ExpertiseAnswer } from "@bertinis-vault/domain";
 import type { ExtraClass } from "./classing";
 import { characterLevel, classEntriesFor, classingLabel, coerceExtraClasses } from "./classing";
 import { collapseGearLines } from "./gear-lines";
+import { expertisePlanFor } from "./expertise";
 import { masteryPlanFor } from "./weapon-mastery";
 import {
   getArmorCatalogEntry,
@@ -95,6 +96,14 @@ export type BuilderState = {
    * because that is what Foundry reads — see `weapon-mastery.ts`.
    */
   weaponMasteryIds: string[];
+  /**
+   * What the player answered for each expertise grant, keyed by the grant.
+   *
+   * Keyed rather than listed because a rogue has two grants both named
+   * "Expertise", at levels 1 and 6: a list would collapse them and spend the
+   * second question's picks on the first.
+   */
+  expertiseChoices: Record<string, ExpertiseAnswer>;
   backgroundId: string;
   /**
    * The feat chosen from the ones the background offers.
@@ -257,7 +266,7 @@ function normalizeText(value: string) {
     .replace(/\s+/g, " ");
 }
 
-function classifyProficiencyKind(entry: string) {
+export function classifyProficiencyKind(entry: string) {
   const normalized = normalizeText(entry);
 
   if (skillNames.has(normalized)) {
@@ -452,6 +461,7 @@ export const initialState: BuilderState = {
   level: 3,
   extraClasses: [],
   weaponMasteryIds: [],
+  expertiseChoices: {},
   str: 8,
   dex: 14,
   con: 13,
@@ -517,6 +527,7 @@ export function coerceBuilderState(value: unknown): BuilderState {
       typeof candidate.featuresText === "string" ? candidate.featuresText : initialState.featuresText,
     level: typeof candidate.level === "number" ? candidate.level : initialState.level,
     extraClasses: coerceExtraClasses(candidate.extraClasses),
+    expertiseChoices: coerceExpertiseChoices(candidate.expertiseChoices),
     weaponMasteryIds: Array.isArray(candidate.weaponMasteryIds)
       ? candidate.weaponMasteryIds.filter((entry): entry is string => typeof entry === "string")
       : [],
@@ -803,11 +814,44 @@ export function classingLabelFor(
   );
 }
 
+/**
+ * Expertise answers from a stored draft, read defensively.
+ *
+ * A draft is a `localStorage` value the player could have edited, and a
+ * half-formed answer here would reach `expertiseProblems` as a shape it does
+ * not check for. Anything that is not a complete answer is dropped: the
+ * question simply reads as unanswered, which is recoverable.
+ */
+function coerceExpertiseChoices(value: unknown): Record<string, ExpertiseAnswer> {
+  if (typeof value !== "object" || value === null) return {};
+
+  const answers: Record<string, ExpertiseAnswer> = {};
+
+  for (const [key, entry] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof entry !== "object" || entry === null) continue;
+    const candidate = entry as Record<string, unknown>;
+    if (typeof candidate.setIndex !== "number") continue;
+
+    const list = (of: unknown) =>
+      Array.isArray(of) ? of.filter((item): item is string => typeof item === "string") : [];
+
+    answers[key] = {
+      setIndex: Math.max(0, Math.trunc(candidate.setIndex)),
+      skills: list(candidate.skills),
+      tools: list(candidate.tools),
+    };
+  }
+
+  return answers;
+}
+
 export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const cantrips = parseLineList(state.cantripsText).map((entry) => `Nv0: ${entry}`);
   const leveledSpells = parseLineList(state.spellsText);
   const features = parseLineList(state.featuresText);
   const extraEquipment = collapseGearLines(parseLineList(state.extraEquipmentText));
+  const expertiseTaken = expertisePlanFor(state, rulesVersionOf(state)).doubled;
+
   const masteryPlan = masteryPlanFor(
     classesFor(state).map((entry) => ({ classId: entry.classId, level: entry.level })),
     rulesVersionOf(state),
@@ -942,6 +986,20 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
                 label: entry,
               };
             }),
+            /*
+             * Expertise travels beside the proficiency it doubles, never
+             * instead of it: a skill written only as expertise is a skill the
+             * character is not recorded as proficient in. The entries above
+             * already carry the proficiency; these add the doubling.
+             */
+            ...expertiseTaken.skills.map((entry) => ({
+              kind: "expertise" as const,
+              label: entry,
+            })),
+            ...expertiseTaken.tools.map((entry) => ({
+              kind: "toolExpertise" as const,
+              label: entry,
+            })),
             ...languageEntries.map((entry) => ({
               kind: "language" as const,
               label: entry,
