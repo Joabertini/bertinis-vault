@@ -195,3 +195,36 @@ describe("what the classes past the first hand over", () => {
     expect(grants.skillChoice).toBeNull();
   });
 });
+
+describe("a subclass that casts when its class does not", () => {
+  /*
+   * Un Caballero Arcano de una sola clase. El guerrero no lanza, así que la
+   * rama de una sola clase leía la clase, no encontraba característica, y
+   * devolvía un personaje sin lanzamiento — sin espacios y sin CD de salvación
+   * para los conjuros que la subclase le acaba de dar.
+   */
+  test("a single-class Eldritch Knight casts", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      classId: "fighter",
+      subclassId: "eldritch-knight",
+      level: 12,
+      extraClasses: [],
+    });
+
+    expect(snapshot.derived.spellcasting?.ability).toBe("int");
+    expect(snapshot.derived.spellcasting?.slots).toEqual({ 1: 4, 2: 3 });
+  });
+
+  test("a fighter with no such subclass still casts nothing", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      classId: "fighter",
+      subclassId: "",
+      level: 12,
+      extraClasses: [],
+    });
+
+    expect(snapshot.derived.spellcasting).toBeUndefined();
+  });
+});

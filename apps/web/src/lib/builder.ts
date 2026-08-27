@@ -1,4 +1,7 @@
-import type { CharacterBuild, CharacterBuildInput } from "@bertinis-vault/contracts";
+import type { CharacterBuild, CharacterBuildInput, ClassEntry } from "@bertinis-vault/contracts";
+import { multiclassRequirementProblems } from "@bertinis-vault/domain";
+import type { ExtraClass } from "./classing";
+import { characterLevel, classEntriesFor, coerceExtraClasses } from "./classing";
 import { collapseGearLines } from "./gear-lines";
 import {
   getArmorCatalogEntry,
@@ -75,6 +78,15 @@ export type BuilderState = {
   subraceId: string;
   classId: string;
   subclassId: string;
+  /**
+   * The classes beyond the first.
+   *
+   * Empty for every character that has one class, which is nearly all of them.
+   * `classId` above stays the first class, because the book gives the first
+   * class the saving throws and the starting equipment and gives a second one
+   * neither — see `classing.ts`.
+   */
+  extraClasses: ExtraClass[];
   backgroundId: string;
   /**
    * The feat chosen from the ones the background offers.
@@ -430,6 +442,7 @@ export const initialState: BuilderState = {
   spellsText: "Nv1: Shield\nNv1: Magic Missile\nNv2: Misty Step",
   featuresText: "Arcane Recovery\nSculpt Spells",
   level: 3,
+  extraClasses: [],
   str: 8,
   dex: 14,
   con: 13,
@@ -494,6 +507,7 @@ export function coerceBuilderState(value: unknown): BuilderState {
     featuresText:
       typeof candidate.featuresText === "string" ? candidate.featuresText : initialState.featuresText,
     level: typeof candidate.level === "number" ? candidate.level : initialState.level,
+    extraClasses: coerceExtraClasses(candidate.extraClasses),
     str: typeof candidate.str === "number" ? candidate.str : initialState.str,
     dex: typeof candidate.dex === "number" ? candidate.dex : initialState.dex,
     con: typeof candidate.con === "number" ? candidate.con : initialState.con,
@@ -700,6 +714,65 @@ export function backgroundFeatIdsFor(state: BuilderState): string[] {
   return uniqueEntries(entry?.grantedFeatIds ?? []);
 }
 
+/** The rules version of a draft, in the vocabulary the index speaks. */
+function rulesVersionOf(state: BuilderState): "2014" | "2024" {
+  return state.rulesVersion === "5e-2024" ? "2024" : "2014";
+}
+
+/**
+ * Every class the character has, first one first.
+ *
+ * A row the player started and did not finish is not a class they have — it is
+ * an empty select. Dropped here rather than repaired, so a half-filled row
+ * never becomes a level-1 something the player did not choose.
+ */
+export function classesFor(state: BuilderState): ClassEntry[] {
+  return classEntriesFor(
+    { classId: state.classId, subclassId: state.subclassId, level: state.level },
+    state.extraClasses.filter((extra) => extra.classId && extra.level >= 1),
+    rulesVersionOf(state),
+  );
+}
+
+/**
+ * The character's level: every class's levels added up.
+ *
+ * The number the proficiency bonus and the improvement levels read. A fighter
+ * 5 / wizard 3 is level 8 for both, not a level 5 fighter who also has spells.
+ */
+export function characterLevelFor(state: BuilderState): number {
+  return characterLevel(
+    state.level,
+    state.extraClasses.filter((extra) => extra.classId && extra.level >= 1),
+  );
+}
+
+/**
+ * The classes this character has levels in but does not qualify for.
+ *
+ * Reported, never refused. A table that ignores the requirement is a table
+ * that exists, and a warning the player can read beats a build they cannot
+ * make. Read against the final scores, species bonuses included, because that
+ * is what the book means by an ability score.
+ */
+export function unmetMulticlassRequirementsFor(state: BuilderState) {
+  const scores = applyAbilityBonuses(
+    { str: state.str, dex: state.dex, con: state.con, int: state.int, wis: state.wis, cha: state.cha },
+    state.abilityBonuses,
+    bonusesFromChoices(state.levelChoices),
+    bonusesFromFeats(takenFeatsFor(state)),
+  );
+
+  return multiclassRequirementProblems({
+    entries: classesFor(state).map((entry) => ({
+      classId: entry.classId,
+      level: entry.level,
+      ...(entry.multiclassRequirements ? { multiclassRequirements: entry.multiclassRequirements } : {}),
+    })),
+    scores,
+  });
+}
+
 export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const cantrips = parseLineList(state.cantripsText).map((entry) => `Nv0: ${entry}`);
   const leveledSpells = parseLineList(state.spellsText);
@@ -777,13 +850,10 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       ...(state.subraceId ? { subraceId: state.subraceId } : {}),
     },
     classing: {
-      classes: [
-        {
-          classId: state.classId,
-          ...(state.subclassId ? { subclassId: state.subclassId } : {}),
-          level: state.level,
-        },
-      ],
+      // First class first: everything downstream that asks for "the" class of
+      // a character reads `classes[0]`, and for a multiclass character that is
+      // the one the rules actually privilege.
+      classes: classesFor(state),
     },
     background: {
       backgroundId: state.backgroundId,

@@ -36,6 +36,7 @@ import {
   type LevellingClass,
   type OriginAbilityOption,
 } from "@bertinis-vault/domain";
+import type { MulticlassGrants } from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 export type IndexOption = {
@@ -740,4 +741,63 @@ export function featAbilityGrantsFor(
 ): FeatAbilityGrant[] {
   const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
   return legal.find((row) => slugOf(row.name) === featId)?.ability ?? [];
+}
+
+/**
+ * What the classes past the first hand over.
+ *
+ * A second class is not a first one. The book prints a separate, shorter block
+ * for it — the rogue who dips gets one skill and thieves' tools rather than the
+ * four skills a first-level rogue picks, and the fighter who dips gets light
+ * and medium armour and shields but not heavy. Reading the starting block
+ * instead would hand a player proficiencies their character does not have.
+ *
+ * Merged across every extra class, because a character can dip twice. Armour
+ * and weapons are sets — two classes that both grant light armour grant it
+ * once — but skills are not: two classes that each offer a choice offer two
+ * choices, from their own lists.
+ *
+ * A class with no block in the data contributes nothing. Five of 2014's
+ * eighteen have none, and refusing them would be inventing a rule.
+ */
+export function multiclassGrantsFor({
+  classIds,
+  rulesVersion,
+}: {
+  classIds: string[];
+  rulesVersion: RulesVersion;
+}): MulticlassGrants {
+  const armor: string[] = [];
+  const weapons: string[] = [];
+  const tools: string[] = [];
+  const skillOptions: string[] = [];
+  let skillCount = 0;
+  let toolChoice: string | null = null;
+
+  const push = (into: string[], values: string[]) => {
+    for (const value of values) if (!into.includes(value)) into.push(value);
+  };
+
+  for (const classId of classIds) {
+    const grants = classInfoFor(classId, rulesVersion)?.multiclassGrants;
+    if (!grants) continue;
+
+    push(armor, grants.armor);
+    push(weapons, grants.weapons);
+    push(tools, grants.tools);
+    toolChoice = toolChoice ?? grants.toolChoice;
+
+    if (grants.skillChoice) {
+      skillCount += grants.skillChoice.count;
+      push(skillOptions, grants.skillChoice.options);
+    }
+  }
+
+  return {
+    armor,
+    weapons,
+    tools,
+    toolChoice,
+    skillChoice: skillCount > 0 ? { options: skillOptions, count: skillCount } : null,
+  };
 }
