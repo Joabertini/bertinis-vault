@@ -26,7 +26,9 @@ test("buildFoundryActorPayload maps canonical build into a richer Foundry actor"
   assert.deepEqual(payload.system.abilities.str.check.roll, { min: null, max: null, mode: 0 });
   assert.equal(payload.system.spells.spell1.value, 4);
   assert.equal(payload.system.traits.languages.value.includes("elvish"), true);
-  assert.equal(payload.system.tools.thief.prof, 1);
+  // dnd5e 5.3.3 keys the proficiency level as `value` (DND5E.ProficiencyLevel);
+  // there is no `prof` field on a tool. Checked against the installed system.
+  assert.equal(payload.system.tools.thief.value, 1);
 
   const itemTypes = payload.items.map((item) => item.type);
   assert.equal(itemTypes.includes("class"), true);

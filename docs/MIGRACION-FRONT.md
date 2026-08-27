@@ -194,12 +194,14 @@ ninguna era sólo un cambio de import.
       constructor nunca se lo dice. `proficiencyPlan` sólo modela pericias y
       herramientas.
 
-- [ ] **`mvp:verify` no corre los tests de `foundry-exporter`.** Encontrado al
-      agregarle tests: el paquete queda fuera de la lista del script, y tiene un
-      test rojo desde antes (`payload.system.tools.thief.prof` es `undefined`;
-      el exportador escribe `value`, que es la forma de dnd5e 5.x). Falta
-      confirmar contra el mundo vivo cuál de los dos está viejo, y meter el
-      paquete en la puerta.
+- [x] **`mvp:verify` no corría los tests de `foundry-exporter`.** Encontrado al
+      agregarle tests: el paquete quedaba fuera de la lista del script y tenía
+      un test rojo desde antes. Zanjado leyendo el `dnd5e.mjs` instalado
+      (5.3.3): una herramienta guarda el nivel de competencia en `value`
+      (`DND5E.ProficiencyLevel`) y **no existe** el campo `prof` — el test
+      estaba viejo, el exportador bien. Test corregido y paquete metido en la
+      puerta: 18 tests, `mvp:verify` en verde.
+
 - [ ] **Maestría de armas.** El Faro muestra la maestría de un arma pero no deja
       elegirla. Bloqueado además porque no se escribe al actor.
 - [ ] **Expertise.** Nunca tuvo test. `normalizedProficiencyKindSchema` no tiene
