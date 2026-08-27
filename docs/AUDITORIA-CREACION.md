@@ -23,9 +23,9 @@ personaje sale sin ella.
 | Aumento de característica (2014) | ✅ sembrado desde el índice, editable |
 | Rasgos raciales | ⚠️ como texto libre en `featuresText`, no como items |
 | Idiomas | ✅ con la regla de la raza |
-| Tamaño | ❌ no se captura |
-| Velocidad | ❌ no se deriva ni se muestra |
-| Sentidos (visión en la oscuridad) | ❌ no se deriva |
+| Tamaño | ✅ del índice al actor (`foundrySizeFor`). Una especie de 2014 imprime `"V"` —variable— y se lee como nada en vez de adivinarse |
+| Velocidad | ✅ `speedFor`, en la ficha viva. Límite fijado en el test: **ninguna de las 98 subrazas trae velocidad**, así que un elfo del bosque lee 30 y no 35 |
+| Sentidos (visión en la oscuridad) | ❌ **el índice no lo trae**: una fila de especie sólo tiene `name, source, size, ability, speed, armorClass`. Hueco de datos, no de código |
 
 ## Paso 2 — Clase
 
@@ -39,8 +39,8 @@ personaje sale sin ella.
 | Competencias de armadura, armas, herramientas | ✅ |
 | Salvaciones | ✅ `savingThrowsForClass` |
 | Pericias, con su cupo | ✅ |
-| Equipo inicial | ⚠️ **se imprime como texto, no entra al personaje** |
-| Multiclase | ❌ la Forja asume una clase; `deriveCharacterBuild` usa `classes[0]` |
+| Equipo inicial | ✅ cada fila es una pregunta; lo concedido entra solo, lo elegible al contestar |
+| Multiclase | ✅ estado, UI y competencias. *La nota sobre `classes[0]` era falsa: el dominio ya ramificaba* |
 
 ## Paso 3 — Características
 
@@ -69,9 +69,9 @@ personaje sale sin ella.
 
 | Qué pide el manual | Estado |
 |---|---|
-| Kit de clase | ⚠️ impreso, no aplicado. 13 de 13 clases en 2024, 14 de 18 en 2014 |
-| Kit de trasfondo | ⚠️ igual |
-| Alternativa de oro inicial | ❌ no se calcula, y **`ImportPayload` no tiene campo de moneda** |
+| Kit de clase | ✅ aplicado, con las cantidades (`gear-lines.ts`) |
+| Kit de trasfondo | ✅ igual |
+| Alternativa de oro inicial | ✅ `startingCopper` en el contrato, repartido en po/pp/pc en el exportador. No se sube a platino: el libro dice 150 po, la ficha dice 150 po |
 | Arma y armadura equipadas | ✅ la armadura mueve la CA real |
 | Mochila | ✅ buscador sobre 2658 objetos |
 | Peso y capacidad de carga | ❌ |
@@ -134,3 +134,18 @@ El patrón que comparten los tres últimos: **el panel mostraba la palabra
 correcta y nada la escribía**. Un builder que imprime "Elegís una dote de:
 Magic Initiate" y no guarda la elección se ve completo y no lo está. Vale
 revisar con esa sospecha cualquier panel que sólo pinte chips.
+
+## Lo que queda, después de la migración (2026-08-27)
+
+La lista de `MIGRACION-FRONT.md` quedó sin pendientes, así que ésta pasa a ser
+la cola. Medido contra el código, no contra las notas viejas:
+
+| Hueco | Dónde muerde |
+| --- | --- |
+| **Subraza no cruza a Foundry** | `to-payload.ts:80` resuelve la subraza contra la colección `race`; las subrazas son su propia colección, así que no encuentra nada |
+| **Sentidos** | El índice no trae visión en la oscuridad. Hueco de datos: hay que sacarlo de otra fuente o escribirlo a mano |
+| **Rasgos raciales** | Viajan como texto libre en `featuresText`, no como items |
+| **Método de PG** | `combat.ts:52` sólo promedia; el contrato no tiene forma de decir "tiré los dados" |
+| **Competencias de armadura y arma en la Forja** | Llegan a Foundry (el exportador tiene su tabla) pero el constructor nunca se las muestra al jugador |
+| **Edad, altura, peso, aspecto** | No se capturan |
+| **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
