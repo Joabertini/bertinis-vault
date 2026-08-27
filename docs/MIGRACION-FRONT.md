@@ -71,22 +71,41 @@ sea más fácil de cambiar. Se reemplazaron 49 usos en 12 archivos.
 - [x] `dice.ts` arreglado por `noUncheckedIndexedAccess`
 - [x] Tres `TS2375` de `exactOptionalPropertyTypes` arreglados sin tocar comportamiento
 
+### Hecho después de la migración
+
+Las suites se cerraron una por una, y cada una destapó un bug de producto —
+ninguna era sólo un cambio de import.
+
+- [x] **`spell-counts`** — las cuentas salían de `dnd5e-2014.ts`, que no recibe
+      edición, así que todo lanzador 2024 recibía números de 2014. Un paladín
+      2024 nivel 1 recibía cero conjuros en vez de 2.
+- [x] **`subclass-spells`** — nada leía la subclase. Un Eldritch Knight abría el
+      selector vacío, y **50 de 135 subclases en 2014 y 42 de 68 en 2024**
+      perdían su lista ampliada: todos los dominios, juramentos y patrones.
+- [x] **`feat-prerequisites`** — el Faro validaba talentos y no dotes. Con
+      **143 de 168 dotes 2024** pidiendo algo, un personaje de nivel 1 podía
+      tomarse un Epic Boon de nivel 19.
+- [x] **`optional-features`** → reescrita como `talents.test.ts`, más
+      `unmetTalents`: un talento que dejó de ser legal ahora se avisa.
+- [x] **`origin-abilities`** — **los 60 trasfondos de 2024** declaran qué tres
+      características admiten y el Faro no leía ninguno: el +2 de un Acólito
+      podía ir a Fuerza.
+
 ### Pendiente, en orden
 
-- [ ] **Reescribir cinco suites contra la API nueva.** `spell-counts`,
-      `subclass-spells`, `feat-prerequisites`, `optional-features`,
-      `starting-equipment` y `origin-abilities` prueban comportamiento que el
-      Faro **sí tiene**, con otros nombres. No es portar funciones: es apuntar
-      el test al módulo que hoy es dueño. Ver `test/pending/README.md`.
-- [ ] **Multiclase.** Hueco real del Faro: la Forja asume una clase. Además
-      `deriveCharacterBuild` usa `classes[0]`, así que arreglarlo del lado del
-      front no alcanza — Guerrero 5 / Mago 3 da 68 PG en vez de ~58.
+- [ ] **Aplicar el kit inicial.** `starting-equipment` no era API renombrada
+      como decía el triaje: el Faro **imprime** el equipo de clase como texto y
+      el jugador tiene que buscar cada objeto a mano en la mochila. La suite
+      prueba que entre al personaje con su cantidad, respetando las elecciones
+      ("greataxe **o** battleaxe") y la alternativa de oro inicial.
+- [ ] **Multiclase.** La Forja asume una clase. Además `deriveCharacterBuild`
+      usa `classes[0]`, así que arreglarlo del lado del front no alcanza —
+      Guerrero 5 / Mago 3 da 68 PG en vez de ~58.
 - [ ] **Maestría de armas.** El Faro muestra la maestría de un arma pero no deja
       elegirla. Bloqueado además porque no se escribe al actor.
 - [ ] **Expertise.** Nunca tuvo test. `normalizedProficiencyKindSchema` no tiene
       el kind, así que hoy se elegiría algo que nunca llega al payload.
-- [ ] **Smoke test de la Forja** que reemplace a `builder-page.test.tsx`, que se
-      fue con el front viejo.
+- [ ] **Smoke test de la Forja** que reemplace a `builder-page.test.tsx`.
 - [ ] **Cortar el bundle.** 2.03 MB, 312 kB gzip, en un solo chunk.
 - [ ] **Export/importar el Códice.** Los personajes viven sólo en `localStorage`.
       Se pierden al limpiar el navegador, en incógnito, o en otra máquina.

@@ -299,7 +299,16 @@ export default function Forge() {
 
   /* ---------------- gear ---------------- */
 
-  /** The starting equipment the class prints. 27 of the 31 classes print one. */
+  /**
+   * The starting equipment the class prints, as lines to read.
+   *
+   * Measured: 2024 prints a kit for all 13 of its classes, 2014 for 14 of 18.
+   * The four without are the three Tasha's sidekicks and a UA prestige class —
+   * none is a class a character is built from.
+   *
+   * These are shown, not applied: the items still have to be picked by hand in
+   * the bag below. See `docs/MIGRACION-FRONT.md`.
+   */
   const classKit = useMemo(
     () => (draft.classId ? startingEquipmentForClass(draft.classId, rulesVersion) : []),
     [draft.classId, rulesVersion],
