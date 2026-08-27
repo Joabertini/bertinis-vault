@@ -21,6 +21,7 @@
  */
 
 import type { CharacterBuild, ImportPayload } from "@bertinis-vault/contracts";
+import { parseGearLine } from "./gear-lines";
 import {
   RefResolver,
   buildToPayload,
@@ -171,7 +172,7 @@ function asTyped(failure: ResolutionFailure, state: BuilderState): string {
 
   if (failure.prop === "item") {
     const written = lines(state.extraEquipmentText).find(
-      (line) => resolveGearId(line) === failure.query,
+      (line) => resolveGearId(parseGearLine(line).id) === failure.query,
     );
     if (written) return written;
   }

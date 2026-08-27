@@ -3,7 +3,7 @@
   "label": "Martial with armor and shield",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-24T01:46:36.254Z",
+    "generatedAt": "2026-08-27T17:54:37.905Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -436,7 +436,6 @@
       "tools": {
         "game": {
           "value": 1,
-          "ability": "int",
           "roll": {
             "min": null,
             "max": null,
@@ -448,7 +447,6 @@
         },
         "land": {
           "value": 1,
-          "ability": "dex",
           "roll": {
             "min": null,
             "max": null,
@@ -668,7 +666,7 @@
     },
     "items": [
       {
-        "_id": "e45JnGZxlwiq4YWK",
+        "_id": "IEEb2MgxLF2w5A7g",
         "name": "fighter",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -728,7 +726,7 @@
         }
       },
       {
-        "_id": "V1MYpQSjHvdoeNyZ",
+        "_id": "OKyiLuWXSxfNJAiO",
         "name": "Tough",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -786,7 +784,7 @@
         }
       },
       {
-        "_id": "GY9SGQeGvXkC81r3",
+        "_id": "15iLE3Xg1Nv2A8cz",
         "name": "Second Wind",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -844,7 +842,7 @@
         }
       },
       {
-        "_id": "cg2zaQmZSAQ6kyQS",
+        "_id": "tyMNC0cqyw833fGf",
         "name": "Action Surge",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -902,7 +900,7 @@
         }
       },
       {
-        "_id": "Uq2bwiw2s3vdjxiD",
+        "_id": "TGfC9l8DDq9mWlmm",
         "name": "longsword",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1101,7 +1099,7 @@
         }
       },
       {
-        "_id": "NNjl9zTVrUszqMp4",
+        "_id": "5tdMTxCaAjOGdccc",
         "name": "Shield",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1167,7 +1165,7 @@
         }
       },
       {
-        "_id": "CfnowTdDadWadIX1",
+        "_id": "NsmTOkw5Nn0NzaEv",
         "name": "Chain Mail",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1233,7 +1231,7 @@
         }
       },
       {
-        "_id": "RkPeZTEwfkEJOW7W",
+        "_id": "as8RcT29aETOyBwB",
         "name": "Explorer's Pack",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",

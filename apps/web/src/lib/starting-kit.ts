@@ -21,6 +21,7 @@
 
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
+import { formatGearLine } from "./gear-lines";
 import {
   equipmentCategoryLabel,
   equipmentEntryLine,
@@ -165,7 +166,7 @@ export function startingKitFor(
  * four lines.
  */
 export function kitItemIds(option: KitOption): string[] {
-  return option.items.flatMap((item) => Array.from({ length: item.quantity }, () => item.id));
+  return option.items.map((item) => formatGearLine(item.id, item.quantity));
 }
 
 /** What a granted row hands over without being asked. */
@@ -192,4 +193,30 @@ export function coinLabel(copper: number): string {
   const rest = copper % 100;
   if (!gold) return `${rest} pc`;
   return rest ? `${gold} po ${rest} pc` : `${gold} po`;
+}
+
+/**
+ * The bag after changing a row's answer.
+ *
+ * The previous option's items come out **one copy at a time**, not by name. A
+ * barbarian who bought a third handaxe and then swaps the row that granted two
+ * keeps the one they paid for. Removing by name would take all three and look
+ * like the app eating their gear.
+ *
+ * An item the previous option granted and the player had already removed is
+ * simply not found, which is the right outcome: nothing to take back.
+ */
+export function swapKitAnswer(
+  carried: string[],
+  previous: KitOption | undefined,
+  next: KitOption | undefined,
+): string[] {
+  const kept = [...carried];
+
+  for (const id of previous ? kitItemIds(previous) : []) {
+    const at = kept.indexOf(id);
+    if (at >= 0) kept.splice(at, 1);
+  }
+
+  return [...kept, ...(next ? kitItemIds(next) : [])];
 }

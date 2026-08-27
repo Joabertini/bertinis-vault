@@ -1,4 +1,5 @@
 import type { CharacterBuild, CharacterBuildInput } from "@bertinis-vault/contracts";
+import { collapseGearLines } from "./gear-lines";
 import {
   getArmorCatalogEntry,
   getBackgroundCatalogEntry,
@@ -147,6 +148,22 @@ export type BuilderState = {
    * recording it for every pick made through the index costs nothing and keeps
    * the draft resolvable if a later book adds a colliding name.
    */
+  /**
+   * Which lettered option was taken for each starting-equipment row, keyed by
+   * the row's own key. Empty for a character built before the kit was
+   * answerable, which reads as "nothing chosen yet" and is correct.
+   */
+  kitChoices: Record<string, string>;
+  /**
+   * The class and background the kit was last applied for, e.g.
+   * `"wizard|acolyte|5e-2014"`.
+   *
+   * Granted rows land once per combination rather than on every render. Without
+   * this an item the player deliberately removed would reappear on the next
+   * keystroke, and a builder that argues with the player about their own bag is
+   * one they stop trusting.
+   */
+  kitAppliedFor: string;
   sourceBooks: Record<string, string>;
 };
 
@@ -277,13 +294,13 @@ function normalizeArmorEntry(state: BuilderState) {
   };
 }
 
-function normalizeEquipmentEntry(entry: string) {
+function normalizeEquipmentEntry(entry: string, quantity = 1) {
   const weaponEntry = getWeaponCatalogEntry(entry);
   if (weaponEntry) {
     return {
       itemId: weaponEntry.id,
       label: weaponEntry.label,
-      quantity: 1,
+      quantity,
       category: "weapon" as const,
     };
   }
@@ -293,7 +310,7 @@ function normalizeEquipmentEntry(entry: string) {
     return {
       itemId: armorEntry.id,
       label: armorEntry.label,
-      quantity: 1,
+      quantity,
       category: armorEntry.grantsShieldBonus ? ("shield" as const) : ("armor" as const),
     };
   }
@@ -303,7 +320,7 @@ function normalizeEquipmentEntry(entry: string) {
     return {
       itemId: gearEntry.id,
       label: gearEntry.label,
-      quantity: 1,
+      quantity,
       category: "gear" as const,
     };
   }
@@ -311,7 +328,7 @@ function normalizeEquipmentEntry(entry: string) {
   return {
     itemId: idOrFallback(resolveGearId(entry), entry),
     label: entry,
-    quantity: 1,
+    quantity,
     category: "other" as const,
   };
 }
@@ -424,6 +441,8 @@ export const initialState: BuilderState = {
   bond: "Su mentor desaparecido dejo pistas sobre una biblioteca sellada.",
   flaw: "Le cuesta abandonar una pista, incluso cuando pone al grupo en riesgo.",
   notes: "Lleva un grimorio con observaciones sobre portales, constelaciones y runas rotas.",
+  kitChoices: {},
+  kitAppliedFor: "",
   sourceBooks: {},
 };
 
@@ -454,6 +473,9 @@ export function coerceBuilderState(value: unknown): BuilderState {
     featId: typeof candidate.featId === "string" ? candidate.featId : initialState.featId,
     weaponId: typeof candidate.weaponId === "string" ? candidate.weaponId : initialState.weaponId,
     armorId: typeof candidate.armorId === "string" ? candidate.armorId : initialState.armorId,
+    // Same shape as sourceBooks: a key to a non-empty string.
+    kitChoices: coerceSourceBooks(candidate.kitChoices),
+    kitAppliedFor: typeof candidate.kitAppliedFor === "string" ? candidate.kitAppliedFor : "",
     extraEquipmentText:
       typeof candidate.extraEquipmentText === "string"
         ? candidate.extraEquipmentText
@@ -682,7 +704,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const cantrips = parseLineList(state.cantripsText).map((entry) => `Nv0: ${entry}`);
   const leveledSpells = parseLineList(state.spellsText);
   const features = parseLineList(state.featuresText);
-  const extraEquipment = uniqueEntries(parseLineList(state.extraEquipmentText));
+  const extraEquipment = collapseGearLines(parseLineList(state.extraEquipmentText));
   const proficiencies = uniqueEntries(parseLineList(state.proficienciesText));
   const languageEntries = uniqueEntries(parseLineList(state.languagesText));
   const languages = languageEntries.map((entry) => `Language: ${entry}`);
@@ -789,7 +811,14 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       spells: [...cantrips, ...leveledSpells],
       // armorId is blank for an unarmoured build (a wizard who never picked
       // one, say) — filtered here rather than treated as an item to resolve.
-      equipment: [state.weaponId, state.armorId, ...extraEquipment].filter(Boolean),
+      // The objects to resolve, once each — how many of each is `normalized`'s
+      // job, and asking the catalogs for the same arrow twenty times resolves
+      // to the same arrow twenty times.
+      equipment: [
+        state.weaponId,
+        state.armorId,
+        ...extraEquipment.map((entry) => entry.id),
+      ].filter(Boolean),
       features,
         normalized: {
           feats: chosenFeatIds,
@@ -823,7 +852,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         equipment: [
             ...(state.weaponId ? [normalizedWeapon] : []),
             ...(state.armorId ? [normalizedArmor] : []),
-            ...extraEquipment.map((entry) => normalizeEquipmentEntry(entry)),
+            ...extraEquipment.map((entry) => normalizeEquipmentEntry(entry.id, entry.quantity)),
         ],
           features: features.map((entry) => normalizeFeatureEntry(entry, state)),
           /*

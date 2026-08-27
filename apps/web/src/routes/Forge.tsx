@@ -49,10 +49,12 @@ import {
   levellingFor,
   optionsFor,
   slugOf,
-  startingEquipmentForClass,
+
 } from "@/lib/index-options";
 import ItemFacts from "@/components/forge/ItemFacts";
 import { factsFor } from "@/lib/item-facts";
+import StartingKit from "@/components/forge/StartingKit";
+import { grantedOptions, kitItemIds, startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
 import PointBuy from "@/components/forge/PointBuy";
 import {
   ROLL_ATTEMPTS,
@@ -350,19 +352,61 @@ export default function Forge() {
   /* ---------------- gear ---------------- */
 
   /**
-   * The starting equipment the class prints, as lines to read.
+   * The starting equipment, as questions rather than as lines.
    *
    * Measured: 2024 prints a kit for all 13 of its classes, 2014 for 14 of 18.
    * The four without are the three Tasha's sidekicks and a UA prestige class —
-   * none is a class a character is built from.
-   *
-   * These are shown, not applied: the items still have to be picked by hand in
-   * the bag below. See `docs/MIGRACION-FRONT.md`.
+   * none is a class anyone builds a character from.
    */
-  const classKit = useMemo(
-    () => (draft.classId ? startingEquipmentForClass(draft.classId, rulesVersion) : []),
-    [draft.classId, rulesVersion],
+  const kitRows = useMemo(
+    () => startingKitFor(draft.classId, draft.backgroundId, rulesVersion, draft.sourceBooks),
+    [draft.classId, draft.backgroundId, rulesVersion, draft.sourceBooks],
   );
+
+  /** Changing class, background or edition is what makes the kit a new kit. */
+  const kitSignature = `${draft.classId}|${draft.backgroundId}|${draft.rulesVersion}`;
+
+  /**
+   * Granted rows land in the bag once per kit, not on every render.
+   *
+   * Applying them continuously would put back anything the player deliberately
+   * removed, and a builder that argues with someone about their own bag is one
+   * they stop trusting. Answers are cleared at the same time: the letters of one
+   * class's rows mean nothing under another's.
+   */
+  useEffect(() => {
+    if (draft.kitAppliedFor === kitSignature) return;
+
+    const granted = grantedOptions(kitRows).flatMap(kitItemIds);
+    patchDraft({
+      kitChoices: {},
+      kitAppliedFor: kitSignature,
+      extraEquipmentText: fromLines([...toLines(draft.extraEquipmentText), ...granted]),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [kitSignature, kitRows]);
+
+  /**
+   * Answering a row swaps what it put in the bag.
+   *
+   * The previous option's items are removed one copy at a time rather than by
+   * name, so a handaxe the player added themselves survives changing an answer
+   * that also granted a handaxe.
+   */
+  const answerKitRow = (rowKey: string, optionKey: string) => {
+    const row = kitRows.find((entry) => entry.key === rowKey);
+    if (!row) return;
+
+    const previous = row.options.find((option) => option.key === draft.kitChoices[rowKey]);
+    const next = row.options.find((option) => option.key === optionKey);
+
+    patchDraft({
+      kitChoices: { ...draft.kitChoices, [rowKey]: optionKey },
+      extraEquipmentText: fromLines(
+        swapKitAnswer(toLines(draft.extraEquipmentText), previous, next),
+      ),
+    });
+  };
 
   const weaponFacts = useMemo(
     () =>
@@ -1218,25 +1262,14 @@ export default function Forge() {
                     search boxes and no idea that the book already gave them
                     chain mail, a martial weapon and a shield.
                   */}
-                  {classKit.length > 0 && (
-                    <div>
-                      <p className={LABEL_MB2}>
-                        Lo que trae {selectedClass?.label}
-                      </p>
-                      <p className={WHISPER_MB4}>
-                        El equipo inicial que imprime la clase. Elegi abajo lo que realmente llevas.
-                      </p>
-                      <ul className="space-y-1.5">
-                        {classKit.map((line) => (
-                          <li key={line} className="font-body text-sm leading-relaxed text-bone/50">
-                            {line}
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                  <StartingKit
+                    rows={kitRows}
+                    choices={draft.kitChoices}
+                    accent={accent}
+                    onAnswer={answerKitRow}
+                  />
 
-                  <div className={classKit.length > 0 ? "border-t border-iron/40 pt-8" : ""}>
+                  <div className={kitRows.length > 0 ? DIVIDER : ""}>
                     <p className={LABEL_MB4}>
                       Arma
                     </p>

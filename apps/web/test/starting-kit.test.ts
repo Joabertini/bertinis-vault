@@ -2,7 +2,14 @@ import { describe, expect, test } from "vitest";
 
 import { collections, forRulesVersion } from "@bertinis-vault/vetools-index";
 import { slugOf } from "../src/lib/index-options";
-import { coinLabel, kitItemIds, startingKitFor } from "../src/lib/starting-kit";
+import { collapseGearLines } from "../src/lib/gear-lines";
+import type { KitOption } from "../src/lib/starting-kit";
+import {
+  coinLabel,
+  kitItemIds,
+  startingKitFor,
+  swapKitAnswer,
+} from "../src/lib/starting-kit";
 
 const kit = (classId: string, rulesVersion: "2014" | "2024", backgroundId = "") =>
   startingKitFor(classId, backgroundId, rulesVersion);
@@ -53,11 +60,12 @@ describe("the two editions ask different questions", () => {
 });
 
 describe("what an answer is worth", () => {
-  test("a quantity becomes repeated lines, because that is what the bag stores", () => {
+  test("a quantity travels on the line, not as repeated lines", () => {
     const [row] = kit("barbarian", "2024").filter((entry) => entry.source === "class");
-    const ids = kitItemIds(row!.options[0]!);
+    const lines = kitItemIds(row!.options[0]!);
 
-    expect(ids.filter((id) => id === "handaxe")).toHaveLength(4);
+    expect(lines).toContain("handaxe x4");
+    expect(collapseGearLines(lines)).toContainEqual({ id: "handaxe", quantity: 4 });
   });
 
   test("copper reads as a table says it", () => {
@@ -115,4 +123,44 @@ describe("conformance: every id the kits produce is a real item", () => {
       expect(unresolved).toEqual([]);
     });
   }
+});
+
+describe("swapKitAnswer", () => {
+  const twoAxes: KitOption = {
+    key: "a",
+    label: "dos hachas de mano",
+    items: [{ id: "handaxe|xphb", label: "Hacha de mano", quantity: 2 }],
+    openPicks: [],
+    copper: 0,
+  };
+  const javelins: KitOption = {
+    key: "b",
+    label: "cuatro jabalinas",
+    items: [{ id: "javelin|xphb", label: "Jabalina", quantity: 4 }],
+    openPicks: [],
+    copper: 0,
+  };
+
+  test("cambia la respuesta: saca lo viejo, pone lo nuevo", () => {
+    expect(swapKitAnswer(kitItemIds(twoAxes), twoAxes, javelins)).toEqual([
+      "javelin|xphb x4",
+    ]);
+  });
+
+  test("respeta la copia que el jugador compró de su bolsillo", () => {
+    const bought = [...kitItemIds(twoAxes), "handaxe|xphb"];
+    expect(swapKitAnswer(bought, twoAxes, javelins)).toEqual([
+      "handaxe|xphb",
+      "javelin|xphb x4",
+    ]);
+  });
+
+  test("no rompe si el jugador ya había borrado lo que el kit dio", () => {
+    const bag = swapKitAnswer([], twoAxes, javelins);
+    expect(bag).toEqual(kitItemIds(javelins));
+  });
+
+  test("deseleccionar deja la bolsa sin lo que daba esa opción", () => {
+    expect(swapKitAnswer(kitItemIds(javelins), javelins, undefined)).toEqual([]);
+  });
 });
