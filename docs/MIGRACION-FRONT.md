@@ -152,34 +152,21 @@ ninguna era sólo un cambio de import.
             salían de la tabla del guerrero en vez de la fracción de un tercio.
             Arreglado en `packages/domain/src/derive.ts`; los fixtures de
             Foundry no cambiaron de contenido.
-      - [ ] **UI para sumar y sacar una clase**, con los requisitos de
-            característica (`unmetMulticlassRequirementsFor` ya está listo y
-            probado). Va junto con el barrido de nivel, y los dos juntos, para
-            que la inconsistencia no llegue a estar en pantalla.
+      - [x] **UI para sumar y sacar una clase** (`Multiclass.tsx`) y el
+            barrido de nivel, los dos juntos. `state.level` ahora significa el
+            nivel de la **primera clase**; el "Nivel N" de la ficha, el bono de
+            competencia y el consejo pasaron a `characterLevelFor`, y la ficha
+            parte la línea de clase — "Nivel 8 · Guerrero 5 / Mago 3".
 
-            `state.level` pasa a significar **el nivel de la primera clase**.
-            Las referencias ya están clasificadas — no hay que volver a
-            derivarlo:
+            Los requisitos de dote leen ahora a todo el personaje: pasaban una
+            sola clase, así que una dote que pide un rasgo de Lanzamiento de
+            conjuros se le negaba a un guerrero 5 / mago 1 que sí lo tiene, y a
+            un Caballero Arcano, que lanza aunque su clase no lance.
 
-            *Pasan a `characterLevelFor` (nivel del personaje):*
-            `Tome.tsx:107` y `:245`, `LiveSheet.tsx:132`, `Ritual.tsx:204` (el
-            "Nivel N" de la ficha), `playbook.ts:352` (de dónde sale el bono de
-            competencia), `counsel.ts:155` (se usa junto al bono de
-            competencia), `improvements.ts:304` (los requisitos de dote se
-            leen contra el nivel del personaje).
-
-            *Se quedan como están (nivel de esta clase):*
-            `Forge.tsx:186` (una subclase se abre por nivel de clase), `:240`
-            y `:244` (el plan de conjuros de la clase), `:942` y `:948` (el
-            deslizador de la primera clase), `:1154`, `:1380`,
-            `Improvements.tsx:55`, `improvements.ts:231`–`232` (las mejoras
-            salen de la tabla de la clase), `optional-features.ts:88` y `:133`
-            (las invocaciones se cuentan y se piden por nivel de brujo).
-
-            *Aparte:* `improvements.ts:305` pasa hoy una sola clase a los
-            requisitos de dote; tiene que pasar todas, o una dote que pida
-            "rasgo de Lanzamiento de conjuros" se le niega a un guerrero 5 /
-            mago 1 que sí lo tiene.
+            Decisiones del panel, todas por "qué haría un jugador":
+            cambiar la clase de una fila le borra la senda; los veinte niveles
+            se reparten y el deslizador de la primera clase también se acota;
+            los requisitos de característica se **informan**, no se niegan.
       - [ ] **Lo que el multiclase *no* da.** Un jugador que suma una clase no
             recibe su equipo inicial ni sus salvaciones — sólo la tabla de
             competencias de multiclase. `multiclassGrantsFor` ya la lee del
