@@ -331,7 +331,16 @@ export function raceInfoFor(
   const sub = subraces.find((row) => slugOf(row.name) === subraceId);
   if (!sub) return base;
 
-  return { ...(base ?? ({} as RaceRow)), ...sub };
+  // A subrace states only what it *changes*, and states the rest as null. A
+  // plain spread would read those nulls as answers and take the dwarf's speed
+  // away from the hill dwarf. The wood elf's 35 still wins over the elf's 30,
+  // because that one is a number.
+  const merged = { ...(base ?? ({} as RaceRow)) };
+  for (const [key, value] of Object.entries(sub)) {
+    if (value !== null && value !== undefined) (merged as Record<string, unknown>)[key] = value;
+  }
+
+  return merged;
 }
 
 /** The subclass row, scoped to its class so two "Berserker"s cannot collide. */

@@ -83,19 +83,56 @@ export type ItemRow = IndexRow & {
 
 export type AbilityBonuses = Record<string, number>;
 
+/**
+ * How far a species moves, in every way it moves.
+ *
+ * `walk` is the one every character has. The rest are the reason someone picks
+ * the species: an Aarakocra flies 50 feet, a Sea Elf swims 30. 5etools writes
+ * "as fast as you walk" as `true`; the number is resolved before it lands here.
+ */
+export type SpeedMap = {
+  walk?: number;
+  burrow?: number;
+  climb?: number;
+  fly?: number;
+  swim?: number;
+};
+
 export type RaceRow = IndexRow & {
   size: string | null;
   /** The fixed part of the species bonus. Null when the player chooses it. */
   ability: AbilityBonuses | null;
   speed: number | null;
+  speeds: SpeedMap | null;
+  /**
+   * How far this species sees in the dark, in feet.
+   *
+   * Null for the ones that see no better than a human. A number here is not a
+   * detail: it decides whether the party needs a torch, and a torch decides
+   * whether anything can see the party.
+   */
+  darkvision: number | null;
+  /** Rarer than darkvision, and not the same thing: sight without light. */
+  blindsight: number | null;
   /** Natural armour: a tortle shell, lizardfolk scales, a loxodon hide. */
   armorClass: ArmorClassOption[];
 };
 
+/**
+ * A subrace states only what it changes.
+ *
+ * Null means "whatever the race said", never "nothing": the hill dwarf prints
+ * no speed because it walks at the dwarf's 25, while the wood elf prints 35
+ * because it does not walk at the elf's 30.
+ */
 export type SubraceRow = IndexRow & {
   raceName: string;
   raceSource: string;
   ability: AbilityBonuses | null;
+  speed: number | null;
+  speeds: SpeedMap | null;
+  darkvision: number | null;
+  blindsight: number | null;
 };
 
 /**

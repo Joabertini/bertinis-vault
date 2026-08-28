@@ -20,10 +20,9 @@ import { raceInfoFor } from "./index-options";
 /**
  * The walking speed in feet, or null when the race is not picked or not known.
  *
- * Known limit: measured, **none of the 98 subrace rows carries a speed** — they
- * carry only their ability increase. So a wood elf reads its base 30 rather
- * than the 35 the book gives it. Pinned in the test, so the day the index grows
- * the field this fails instead of staying quietly wrong.
+ * A subrace's own speed wins when it prints one — the wood elf walks 35 where
+ * the elf walks 30 — and its silence leaves the race's standing, which is how
+ * the hill dwarf keeps the dwarf's 25.
  */
 export function speedFor(state: BuilderState, rulesVersion: RulesVersion): number | null {
   if (!state.raceId) return null;
@@ -32,6 +31,53 @@ export function speedFor(state: BuilderState, rulesVersion: RulesVersion): numbe
     | null;
 
   return typeof row?.speed === "number" ? row.speed : null;
+}
+
+/**
+ * How far this character sees in the dark, and how far they move otherwise.
+ *
+ * Darkvision is not a detail. It decides whether the party lights a torch, and
+ * a torch decides whether anything in the dungeon can see the party — which is
+ * the difference between a scouting rogue and a lit-up one. It never appeared
+ * anywhere in the Forge, so a drow's 120 feet and a human's nothing looked the
+ * same on the sheet.
+ *
+ * The other movement modes are here for the same reason: an Aarakocra's 50-foot
+ * fly speed is the entire argument for playing one, and it was not shown.
+ */
+export type RaceSenses = {
+  /** Feet. Null for the species that see no better than a human. */
+  darkvision: number | null;
+  /** Sight without light at all. Rarer, and not the same thing. */
+  blindsight: number | null;
+  /** Every way this character moves except walking, in feet. */
+  otherSpeeds: { mode: "burrow" | "climb" | "fly" | "swim"; feet: number }[];
+};
+
+const MOVEMENT_MODES = ["burrow", "climb", "fly", "swim"] as const;
+
+export function sensesFor(state: BuilderState, rulesVersion: RulesVersion): RaceSenses | null {
+  if (!state.raceId) return null;
+  const row = raceInfoFor(state.raceId, state.subraceId, rulesVersion) as
+    | {
+        darkvision?: number | null;
+        blindsight?: number | null;
+        speeds?: Partial<Record<string, number>> | null;
+      }
+    | null;
+  if (!row) return null;
+
+  const speeds = row.speeds ?? {};
+  const otherSpeeds = MOVEMENT_MODES.flatMap((mode) => {
+    const feet = speeds[mode];
+    return typeof feet === "number" ? [{ mode, feet }] : [];
+  });
+
+  return {
+    darkvision: typeof row.darkvision === "number" ? row.darkvision : null,
+    blindsight: typeof row.blindsight === "number" ? row.blindsight : null,
+    otherSpeeds,
+  };
 }
 
 /** Small, Medium — whatever the race prints. Null when it prints nothing. */

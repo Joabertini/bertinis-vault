@@ -29,6 +29,7 @@ import { abilitySources, bonusOrigin } from "@/lib/improvements";
 import {
   initiativeFor,
   passivePerceptionFor,
+  sensesFor,
   sizeLabelFor,
   speedFor,
 } from "@/lib/table-numbers";
@@ -39,6 +40,13 @@ import { HEADING } from "@/styles/recipes";
 
 /** The highest score the sheet draws a full bar for. */
 const BAR_CEILING = 20;
+
+const MOVEMENT_LABEL: Record<string, string> = {
+  burrow: "Excavas",
+  climb: "Trepas",
+  fly: "Volas",
+  swim: "Nadas",
+};
 
 /** Non-empty lines, the way the builder stores its text lists. */
 function toLines(value: string): string[] {
@@ -100,6 +108,7 @@ export default function LiveSheet({
   // player who has picked an elf and nothing else can still read 30.
   const speed = speedFor(state, rulesVersion);
   const size = sizeLabelFor(state, rulesVersion);
+  const senses = sensesFor(state, rulesVersion);
 
   /**
    * Raw scores while unforged, final scores once derivable.
@@ -222,6 +231,17 @@ export default function LiveSheet({
           dim={speed === null}
           hint="Velocidad en pies: cuanto te moves en tu turno."
         />
+        {/* Vision in the dark, when there is any. Not decoration either: it
+            decides whether the party lights a torch, and a torch decides
+            whether anything in the dungeon can see the party. */}
+        {senses?.darkvision !== null && senses !== null && (
+          <Vital
+            label="V. oscura"
+            value={`${senses.darkvision}`}
+            accent={accent}
+            hint="Vision en la oscuridad, en pies. Ves con poca luz como si fuera clara, y a oscuras como con poca luz — en blanco y negro."
+          />
+        )}
         {/* Not decoration: size sets the square you occupy, what you can
             squeeze through, and in 2024 whether a Heavy weapon costs you
             disadvantage. */}
@@ -233,6 +253,21 @@ export default function LiveSheet({
           hint="Tamano: la casilla que ocupas y por donde pasas."
         />
       </div>
+
+      {/* Flying, swimming, climbing, burrowing — the reason someone picked
+          this species. An Aarakocra's 50 feet of flight was nowhere on the
+          sheet. */}
+      {senses?.otherSpeeds.length ? (
+        <p className="mt-3 font-body text-xs italic leading-relaxed text-bone/40">
+          {senses.otherSpeeds.map((entry, index) => (
+            <span key={entry.mode}>
+              {index > 0 && ", "}
+              {MOVEMENT_LABEL[entry.mode]} <span style={{ color: accent }}>{entry.feet}</span> pies
+            </span>
+          ))}
+          .
+        </p>
+      ) : null}
 
       {/* The purse, once there is one. A player who took the money instead of
           the gear has nothing else on the sheet to show for that choice. */}
