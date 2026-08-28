@@ -145,11 +145,21 @@ la cola. Medido contra el código, no contra las notas viejas:
 | **Sentidos** | El índice no trae visión en la oscuridad. Hueco de datos: hay que sacarlo de otra fuente o escribirlo a mano |
 | **Rasgos raciales** | Viajan como texto libre en `featuresText`, no como items |
 | **Método de PG** | `combat.ts:52` sólo promedia; el contrato no tiene forma de decir "tiré los dados" |
-| **Competencias de armadura y arma en la Forja** | Llegan a Foundry (el exportador tiene su tabla) pero el constructor nunca se las muestra al jugador |
 | **Edad, altura, peso, aspecto** | No se capturan |
 | **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
 
 ### Cerrado desde entonces
+
+- **Competencias de armadura y arma.** El renglón decía que llegaban a Foundry
+  y sólo faltaba mostrarlas. Medido contra `dnd5e.mjs`, no llegaban: el
+  exportador escribía `"light"`, `"medium"`, `"heavy"` donde
+  `DND5E.armorProficiencies` sólo acepta `lgt`, `med`, `hvy`, `shl`, y metía
+  las armas en el campo de texto libre en vez de `sim`/`mar`. **Todo personaje
+  exportado llevaba su armadura sin competencia** — desventaja en cada tirada
+  de Fuerza y Destreza, sin lanzar conjuros — y atacaba sin bonificador.
+  La tabla se mudó a `packages/domain/src/class-proficiencies.ts`, partida por
+  edición (2024 le saca la armadura media al druida y le da armas simples al
+  mago), y la Forja ya la muestra con la clase que concedió cada línea.
 
 - **Subraza a Foundry.** No era un string mal puesto: `subrace` no era un
   `VetoolsProp`, así que no había forma de pedirlo. Ninguna de las 98 subrazas
