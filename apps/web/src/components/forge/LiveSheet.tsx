@@ -21,6 +21,7 @@ import Checks from "@/components/forge/Checks";
 import GearProficienciesPanel from "@/components/forge/GearProficiencies";
 import { savingThrowChecksFor, skillChecksFor } from "@/lib/checks";
 import { gearProficienciesFor } from "@/lib/gear-proficiencies";
+import { speciesProficienciesFor, speciesTraitsFor } from "@/lib/species";
 import { coinLabel } from "@/lib/starting-kit";
 import { ABILITY_IDS, abilityLabels } from "@/lib/abilities";
 import { entryById, hitDieFor } from "@/lib/catalog";
@@ -36,7 +37,7 @@ import {
 import { actionProfile, concentrationAmong } from "@/lib/spells";
 import { rulesVersionOf } from "@/lib/vault-store";
 import Sigil from "@/components/sigils/Sigil";
-import { HEADING } from "@/styles/recipes";
+import { HEADING, LABEL_MB2 } from "@/styles/recipes";
 
 /** The highest score the sheet draws a full bar for. */
 const BAR_CEILING = 20;
@@ -82,15 +83,30 @@ export default function LiveSheet({
   // draft to derive: a player choosing between a rapier and a greatsword is
   // choosing before they have a background, and this is the answer.
   const classEntries = state.classId ? classesFor(state) : [];
-  const gearProficiencies = classEntries.length
-    ? gearProficienciesFor(classEntries, rulesVersion)
+  // The species grants weapons no class does — the dwarf's warhammer, the high
+  // elf's longbow — and a dwarf wizard's only reason to swing one.
+  const speciesGrant = state.raceId
+    ? speciesProficienciesFor(state.raceId, state.subraceId, rulesVersion)
     : null;
-  const classLabels = Object.fromEntries(
-    classEntries.map((entry) => [
+  const gearProficiencies = classEntries.length
+    ? gearProficienciesFor(
+        classEntries,
+        rulesVersion,
+        speciesGrant ? { id: state.raceId, ...speciesGrant } : null,
+      )
+    : null;
+  const speciesTraits = state.raceId
+    ? speciesTraitsFor(state.raceId, state.subraceId, rulesVersion)
+    : [];
+  const classLabels = Object.fromEntries([
+    ...classEntries.map((entry) => [
       entry.classId,
       entryById("class", rulesVersion, entry.classId)?.label ?? entry.classId,
     ]),
-  );
+    // The species is credited beside the classes, under the name the player
+    // picked it by.
+    ...(state.raceId ? [[state.raceId, race?.label ?? state.raceId]] : []),
+  ]);
   const subclass = entryById("subclass", rulesVersion, state.subclassId, state.sourceBooks[`subclass:${state.subclassId}`]);
   const background = entryById(
     "background",
@@ -298,6 +314,25 @@ export default function LiveSheet({
           classLabels={classLabels}
           accent={accent}
         />
+      )}
+
+      {/* What the species can do, by name. It is why someone picked a dwarf
+          over a halfling, and it was the one thing about the choice the sheet
+          never showed. */}
+      {speciesTraits.length > 0 && (
+        <div className="mt-6 border-t border-iron/40 pt-5">
+          <p className={LABEL_MB2}>Rasgos de especie</p>
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
+            {speciesTraits.map((trait) => (
+              <li key={trait} className="flex items-baseline gap-1.5">
+                <span className="font-mono text-[9px] leading-none" style={{ color: accent }}>
+                  •
+                </span>
+                <span className="truncate font-body text-xs">{trait}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/*

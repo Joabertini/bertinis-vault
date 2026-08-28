@@ -98,6 +98,22 @@ export type SpeedMap = {
   swim?: number;
 };
 
+/**
+ * The armour and weapons a species grants, on top of what a class grants.
+ *
+ * A dwarf is proficient with the battleaxe, the handaxe, the light hammer and
+ * the warhammer whatever they take levels in. Split the same three ways as a
+ * class's, because two species state theirs as a rule rather than a list.
+ */
+export type SpeciesProficiencies = {
+  /** "light", "medium". */
+  armor: string[];
+  /** Weapon names as the books print them, e.g. "light hammer". */
+  weaponItems: string[];
+  /** "Firearms", "Choose 2 martial weapons". */
+  weaponClauses: string[];
+};
+
 export type RaceRow = IndexRow & {
   size: string | null;
   /** The fixed part of the species bonus. Null when the player chooses it. */
@@ -114,6 +130,16 @@ export type RaceRow = IndexRow & {
   darkvision: number | null;
   /** Rarer than darkvision, and not the same thing: sight without light. */
   blindsight: number | null;
+  /**
+   * What this species can do, by name — "Stonecunning", "Breath Weapon".
+   *
+   * Names only: the full text of every trait is roughly twenty times this
+   * index, and it is what the reference import already brings across. The
+   * headings every species page repeats (Size, Age, Languages, Darkvision) are
+   * left out, because the sheet answers each of them somewhere better.
+   */
+  traits: string[];
+  speciesProficiencies: SpeciesProficiencies | null;
   /** Natural armour: a tortle shell, lizardfolk scales, a loxodon hide. */
   armorClass: ArmorClassOption[];
 };
@@ -133,6 +159,9 @@ export type SubraceRow = IndexRow & {
   speeds: SpeedMap | null;
   darkvision: number | null;
   blindsight: number | null;
+  /** A subrace *adds* traits: a hill dwarf is a dwarf that is also tough. */
+  traits: string[];
+  speciesProficiencies: SpeciesProficiencies | null;
 };
 
 /**
