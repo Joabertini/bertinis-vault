@@ -75,6 +75,7 @@ import {
 } from "@/lib/grants";
 import { formatSpellLine, spellPlan } from "@/lib/spells";
 import BonusEditor from "@/components/forge/BonusEditor";
+import OriginBonus from "@/components/forge/OriginBonus";
 import Improvements from "@/components/forge/Improvements";
 import TalentPools from "@/components/forge/TalentPools";
 import GearBag from "@/components/forge/GearBag";
@@ -505,6 +506,25 @@ export default function Forge() {
     if (Object.keys(seed).length > 0) patchDraft({ abilityBonuses: seed });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.raceId, draft.subraceId, rulesVersion]);
+
+  /**
+   * Without Customizing Your Origin the increase is not a choice.
+   *
+   * So it follows the species instead of the player: changing from a dwarf to
+   * an elf moves the +2 with it. Left alone, a switched-off character kept the
+   * previous species' spread — the one thing the switch being off is meant to
+   * make impossible.
+   */
+  useEffect(() => {
+    if (rulesVersion !== "2014" || draft.customOrigin) return;
+    if (Object.keys(printedBonus).length === 0) return;
+
+    const already = ABILITY_IDS.every(
+      (ability) => (draft.abilityBonuses[ability] ?? 0) === (printedBonus[ability] ?? 0),
+    );
+    if (!already) patchDraft({ abilityBonuses: printedBonus });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft.customOrigin, rulesVersion, printedBonus]);
 
   /* ---------------- chambers ---------------- */
 
@@ -1223,48 +1243,46 @@ export default function Forge() {
                     </p>
 
                     {/*
-                      Tasha's, named.
-                      The rule has been in force here since the editor existed —
-                      the budget is fixed and the distribution free — but a
-                      player who does not know that reads a movable +2 as a bug
-                      and puts it back where it was.
+                      2014 hands out blocks and Tasha's moves them whole; 2024
+                      moved the increase to the background, where it really is
+                      a small budget the player spends. Two rules, two editors —
+                      one editor for both was what let a gnome be +1/+1/+1.
                     */}
-                    {rulesVersion === "2014" && Object.keys(printedBonus).length > 0 && (
-                      <div className="mb-5 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <p className="font-body text-xs italic leading-relaxed text-bone/30">
-                          El Caldero de Todo de Tasha te deja mover estos puntos a las
-                          caracteristicas que quieras. El total no cambia:{" "}
-                          <span className="text-bone/50">{bonusShape(printedBonus)}</span>.
-                        </p>
-                        {bonusMoved && (
-                          <button
-                            type="button"
-                            onClick={() => patchDraft({ abilityBonuses: printedBonus })}
-                            className="font-mono text-[10px] uppercase tracking-[0.25em] transition-colors hover:text-gold"
-                            style={{ color: `${accent}bb` }}
-                          >
-                            Volver al reparto del libro
-                          </button>
-                        )}
-                      </div>
+                    {rulesVersion === "2014" ? (
+                      <OriginBonus
+                        printed={printedBonus}
+                        bonuses={draft.abilityBonuses}
+                        custom={draft.customOrigin}
+                        accent={accent}
+                        onToggleCustom={(customOrigin) =>
+                          patchDraft({
+                            customOrigin,
+                            // Turning it off puts the increase back where the
+                            // book prints it, which is the whole meaning of
+                            // turning it off.
+                            ...(customOrigin ? {} : { abilityBonuses: printedBonus }),
+                          })
+                        }
+                        onChange={(abilityBonuses) => patchDraft({ abilityBonuses })}
+                      />
+                    ) : (
+                      <BonusEditor
+                        bonuses={draft.abilityBonuses}
+                        scoresBefore={{
+                          str: draft.str,
+                          dex: draft.dex,
+                          con: draft.con,
+                          int: draft.int,
+                          wis: draft.wis,
+                          cha: draft.cha,
+                        }}
+                        budget={speciesBudget}
+                        maxPerAbility={maxPointsPerAbility}
+                        allowed={originAllowance}
+                        accent={accent}
+                        onChange={(abilityBonuses) => patchDraft({ abilityBonuses })}
+                      />
                     )}
-
-                    <BonusEditor
-                      bonuses={draft.abilityBonuses}
-                      scoresBefore={{
-                        str: draft.str,
-                        dex: draft.dex,
-                        con: draft.con,
-                        int: draft.int,
-                        wis: draft.wis,
-                        cha: draft.cha,
-                      }}
-                      budget={speciesBudget}
-                      maxPerAbility={maxPointsPerAbility}
-                      allowed={originAllowance}
-                      accent={accent}
-                      onChange={(abilityBonuses) => patchDraft({ abilityBonuses })}
-                    />
                   </div>
 
                   {pools.length > 0 && (
