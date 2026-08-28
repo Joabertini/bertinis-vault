@@ -48,6 +48,7 @@ function payload(overrides = {}) {
       toolExpertise: [],
       armor: [],
       weapons: [],
+      masteries: [],
     },
     feats: [],
     optionalFeatures: [],
@@ -148,11 +149,16 @@ test("a payload written before a field existed comes back with it defaulted", as
   const env = { BUILDS: makeStore() };
   const older = payload();
   delete older.optionalFeatures;
+  delete older.proficiencies.masteries;
 
   const created = await (await handle(post(older), env)).json();
   const stored = await (await handle(get(created.code), env)).json();
 
   assert.deepEqual(stored.payload.optionalFeatures, []);
+  assert.deepEqual(stored.payload.proficiencies.masteries, []);
+  // A purse is the exception: absent stays absent, because five zeroes would
+  // blank the money on an actor the old build never had an opinion about.
+  assert.equal(stored.payload.currency, undefined);
 });
 
 test("a code round-trips however the player retypes it", async () => {

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   baseActorData,
+  startingCurrency,
   appearanceDetails,
   biographyHtml,
   derivedUpdates,
@@ -377,4 +378,48 @@ test("the actor is built with the description on it", () => {
   assert.equal(actor.system.details.age, "27");
   // And the personality lines still go where they always did.
   assert.match(actor.system.details.biography.value, /Writes everything down/);
+});
+
+test("the money the character chose reaches the box the sheet adds up", () => {
+  // dnd5e keys the purse `pp`/`gp`/`ep`/`sp`/`cp` on `system.currency`, and
+  // the builder already split the total.
+  const actor = baseActorData(payload({ currency: { pp: 0, gp: 150, ep: 0, sp: 5, cp: 2 } }));
+
+  assert.deepEqual(actor.system.currency, { gp: 150, sp: 5, cp: 2 });
+});
+
+test("an empty purse writes nothing rather than five zeroes", () => {
+  /*
+   * A payload written before the field existed carries none, and blanking an
+   * actor's money because an old build said nothing about it is a loss the
+   * player never asked for.
+   */
+  assert.equal(baseActorData(payload()).system.currency, undefined);
+  assert.deepEqual(startingCurrency({ pp: 0, gp: 0, ep: 0, sp: 0, cp: 0 }), {});
+  assert.deepEqual(startingCurrency(undefined), {});
+});
+
+test("a coin that is not a whole coin is left out rather than written", () => {
+  // The schema refuses these, but the module reads payloads it did not write.
+  assert.deepEqual(startingCurrency({ gp: 1.5, sp: "many", cp: -3, ep: 2 }), { currency: { ep: 2 } });
+});
+
+test("mastery is written to its own set, not to the proficiency beside it", () => {
+  // `weaponProf.value` says which weapons the character swings with their
+  // bonus; `weaponProf.mastery.value` says which ones the 2024 feature applies
+  // to. Foundry tests the second with `.has(baseItem)`.
+  const build = payload();
+  build.proficiencies.masteries = ["longsword", "shortbow"];
+
+  const updates = proficiencyUpdates(build);
+
+  assert.deepEqual(updates["system.traits.weaponProf.mastery.value"], ["longsword", "shortbow"]);
+  assert.notDeepEqual(updates["system.traits.weaponProf.value"], ["longsword", "shortbow"]);
+});
+
+test("no mastery writes no key, so a sheet that has one keeps it", () => {
+  assert.equal(
+    "system.traits.weaponProf.mastery.value" in proficiencyUpdates(payload()),
+    false,
+  );
 });

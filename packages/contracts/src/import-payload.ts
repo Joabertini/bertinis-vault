@@ -93,6 +93,58 @@ export const equipmentRefSchema = z.object({
 });
 
 /**
+ * A purse, in dnd5e's own five denominations.
+ *
+ * The actor keys them `pp`, `gp`, `ep`, `sp` and `cp` and stores whole coins,
+ * so the payload carries coins rather than a total the module would have to
+ * split — the split is a rule about which boxes a table reads, and it belongs
+ * where both exporters can share it rather than in each of them.
+ */
+export const currencySchema = z.object({
+  pp: z.number().int().min(0).default(0),
+  gp: z.number().int().min(0).default(0),
+  ep: z.number().int().min(0).default(0),
+  sp: z.number().int().min(0).default(0),
+  cp: z.number().int().min(0).default(0),
+});
+
+export type Currency = z.infer<typeof currencySchema>;
+
+/**
+ * Copper as coins: gold, silver and copper, and deliberately no further.
+ *
+ * The builder counts in copper because it is the only unit that never rounds.
+ * The book says a 2024 fighter who takes the money instead of the kit walks
+ * away with 150 gold pieces, so the sheet says 150 gp. Rolling that up into 15
+ * platinum is the same money and a different answer: it puts the character's
+ * whole purse in a box most tables never use, and the player has to convert it
+ * back in their head to check it against what they were told they had.
+ * Electrum is skipped for the same reason, and harder — almost no game uses it.
+ */
+export function coinsFromCopper(copper: number): Currency {
+  const total = Math.max(Math.floor(copper), 0);
+
+  return {
+    pp: 0,
+    gp: Math.floor(total / 100),
+    ep: 0,
+    sp: Math.floor((total % 100) / 10),
+    cp: total % 10,
+  };
+}
+
+/** What a purse is worth, in copper — every denomination, not only the three. */
+export function copperFromCoins(coins: Partial<Currency>): number {
+  return (
+    (coins.pp ?? 0) * 1000 +
+    (coins.gp ?? 0) * 100 +
+    (coins.ep ?? 0) * 50 +
+    (coins.sp ?? 0) * 10 +
+    (coins.cp ?? 0)
+  );
+}
+
+/**
  * Choices with no entity behind them.
  *
  * Skills, languages and tool proficiencies are picked from lists rather than
@@ -109,10 +161,8 @@ export const proficiencyChoicesSchema = z.object({
    * Tools whose proficiency is doubled.
    *
    * Separate from `expertise` because the actor keys them separately —
-   * `system.tools` rather than `system.skills`. Nothing writes these yet, for
-   * the same reason nothing writes `tools`: the identifiers `dnd5e` uses for
-   * tools are not the names, and mapping them is its own piece of work. The
-   * choice travels rather than being dropped at the builder.
+   * `system.tools` rather than `system.skills`, and with the ability the tool
+   * rolls beside the value.
    */
   toolExpertise: z.array(z.string()).default([]),
   /**
@@ -131,6 +181,18 @@ export const proficiencyChoicesSchema = z.object({
    */
   armor: z.array(z.string()).default([]),
   weapons: z.array(z.string()).default([]),
+  /**
+   * The weapons this character has mastery with, as dnd5e base-item ids.
+   *
+   * 2024's own idea, and the only one of these that is a *choice* rather than
+   * a grant: five classes let the player name which weapons the feature
+   * applies to, and it may be changed on a long rest.
+   *
+   * Foundry keeps it apart from the proficiency it sits beside —
+   * `traits.weaponProf.mastery.value`, checked with `.has(baseItem)` against
+   * the weapon's own id, never its name and never the mastery property.
+   */
+  masteries: z.array(z.string()).default([]),
 });
 
 /**
@@ -205,6 +267,16 @@ export const importPayloadSchema = z.object({
   optionalFeatures: z.array(z.object({ ref: vetoolsRefSchema })).default([]),
   spells: z.array(spellRefSchema).default([]),
   equipment: z.array(equipmentRefSchema).default([]),
+
+  /**
+   * The money the character starts with.
+   *
+   * Absent when they start with none, and absent from every payload written
+   * before this field existed — which is why it is optional rather than
+   * defaulted: a purse of five zeroes and no purse at all are the same thing,
+   * and neither should overwrite what is already on an actor.
+   */
+  currency: currencySchema.optional(),
 
   derived: payloadDerivedSchema,
 });

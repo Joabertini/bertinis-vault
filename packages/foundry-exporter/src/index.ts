@@ -3,6 +3,7 @@ import {
   type CharacterBuild,
   type FoundryActorPayload,
   type PreflightResult,
+  coinsFromCopper,
   foundryActorPayloadSchema,
 } from "@bertinis-vault/contracts";
 import { findWeaponCatalogEntry } from "@bertinis-vault/data-engine";
@@ -276,20 +277,6 @@ function fillLanguages(actor: Record<string, any>, character: CharacterBuild) {
 // ---------------------------------------------------------------------------
 
 /**
- * The coins the character starts with.
- *
- * Counted in copper by the builder, because that is the only unit that never
- * rounds. Split here into gold, silver and copper — and deliberately no
- * further.
- *
- * The book says a 2024 fighter who takes the money instead of the kit walks
- * away with 150 gold pieces, so the sheet says 150 gp. Rolling that up into
- * 15 platinum is the same money and a different answer: it puts the character's
- * whole purse in a box most tables never use, and the player has to convert it
- * back in their head to check it against what they were told they had.
- * Electrum is skipped for the same reason, and harder — almost no game uses it.
- */
-/**
  * The character's size.
  *
  * The blank template says Medium, which is right for most species and wrong
@@ -305,13 +292,20 @@ function fillSize(actor: Record<string, any>, character: CharacterBuild) {
   if (size) actor.system.traits.size = size;
 }
 
+/**
+ * The coins the character starts with.
+ *
+ * Counted in copper by the builder, because that is the only unit that never
+ * rounds. The split into gold, silver and copper is `coinsFromCopper`, shared
+ * with the payload the module imports — this file and that one used to be the
+ * only two places the money could reach an actor, and they are the two places
+ * that must agree on which boxes it lands in.
+ */
 function fillCurrency(actor: Record<string, any>, character: CharacterBuild) {
   const copper = character.choices.startingCopper ?? 0;
   if (copper <= 0) return;
 
-  actor.system.currency.gp = Math.floor(copper / 100);
-  actor.system.currency.sp = Math.floor((copper % 100) / 10);
-  actor.system.currency.cp = copper % 10;
+  actor.system.currency = { ...actor.system.currency, ...coinsFromCopper(copper) };
 }
 
 function fillProficiencies(actor: Record<string, any>, character: CharacterBuild) {

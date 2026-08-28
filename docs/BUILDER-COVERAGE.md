@@ -80,9 +80,9 @@ multiclassing gets wrong when it is not stated.
 | Slots by level, pact slots separate | done |
 | Spell save DC, spell attack bonus | done |
 | Cantrips and spells from the class list | done |
-| **Prepared versus known** | missing — the count label does not distinguish, so a wizard sees the size of their spellbook rather than how many they prepare. The class rows already carry `preparedSpells` (`"<$level$> + <$int_mod$>"`) |
-| Always-prepared spells (Domain, Circle, Oath) | missing |
-| Spells granted by species or feat | missing |
+| **Prepared versus known** | done. `spellCountLabel` reads the class's own table: a 2024 caster has a Prepared column, a 2014 bard has Spells Known, and the 2014 prepare-casters carry the formula instead |
+| Always-prepared spells (Domain, Circle, Oath) | done. Handed over rather than offered — the cleric has them without spending a preparation, and offering them spent one on a free spell |
+| Spells granted by species or feat | done. They travel with `method` and `uses`, so a once-a-day innate spell is not imported as one that costs a slot |
 | Spell text in the picker | missing — the full text of every spell is roughly twenty times the size of the index |
 
 ## 3. Defenses
@@ -213,8 +213,8 @@ carries the mark.
 | Quantities | done. Two daggers is one line of two, and an item granted twice adds up |
 | The background's own list | done. It stacks when the class says it does, which is a flag on the class |
 | Attunement, and its three slots | missing |
-| Carrying capacity | missing |
-| **Currency** | computed, not exported. See the gap below |
+| Carrying capacity | done, 2026-08-27. The bag, the weapon and the armour on one scale, against Strength × 15, with the variant thresholds marked and never enforced |
+| **Currency** | done, 2026-08-28. Counted in copper, split into gold, silver and copper, and written to `system.currency` by both export routes |
 
 **Done, 2026-08-26.** The books write the list as a sentence — "(a) a rapier or
 (b) a shortsword" — and a sentence cannot be answered, so the builder granted a
@@ -382,13 +382,13 @@ Three things are open and are written down rather than left to be rediscovered:
 
 | Open | Why it is not done |
 | --- | --- |
-| Starting currency does not reach Foundry | Computed and shown correctly; the import payload has nowhere to put it. Needs a field and a line in `import.js` |
-| Weapon mastery is not written to the actor | Blocked on a Foundry install: whether `dnd5e` 5.3.3 exposes a path for it is unverified, and guessing would write a field that silently does nothing |
+| ~~Starting currency does not reach Foundry~~ | Done 2026-08-28. `ImportPayload.currency` carries coins and `import.js` writes `system.currency`. The split into gold, silver and copper is `coinsFromCopper`, shared with the actor JSON export so the two routes cannot disagree |
+| ~~Weapon mastery is not written to the actor~~ | Done 2026-08-28. Measured against the installed `dnd5e` 5.3.3: `system.traits.weaponProf.mastery.value`, a set tested with `.has(baseItem)`. The actor JSON export already wrote it; the payload had no field, so a fighter sent by code arrived with the feature and nothing chosen for it |
 | The four manual Foundry validation scenarios | Blocked on the user, not on code: they need a live world and a signature. `release:ready` fails until then, which is correct |
 
 And what remains in this document as genuinely unbuilt is polish rather than
-rules: attunement and its three slots, carrying capacity, and the identity
-fields — appearance, age, height, weight, deity.
+rules: attunement and its three slots. Carrying capacity landed 2026-08-27 and
+the identity fields — appearance, age, height, weight, deity — on 2026-08-28.
 
 Every slice of this run followed the same method, and it is the part worth
 carrying forward: **find the structured source before writing any table**. Every

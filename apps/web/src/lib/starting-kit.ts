@@ -194,10 +194,10 @@ export function takenOptions(rows: KitRow[], choices: Record<string, string>): K
 /**
  * The coins the answered kit is worth, in copper.
  *
- * Reported, not exported: `ImportPayload` has no currency field, so this cannot
- * cross to Foundry yet. Showing it anyway is the point — a 2024 barbarian who
- * takes option B is choosing 75 gold over a greataxe, and a builder that hides
- * the number is asking them to choose blind.
+ * Shown as well as exported. A 2024 barbarian who takes option B is choosing
+ * 75 gold over a greataxe, and a builder that hides the number is asking them
+ * to choose blind. It crosses as `ImportPayload.currency`, split into coins by
+ * `coinsFromCopper`.
  */
 export function kitCopper(options: KitOption[]): number {
   return options.reduce((sum, option) => sum + option.copper, 0);

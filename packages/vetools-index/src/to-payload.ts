@@ -16,7 +16,12 @@ import type {
   SourceBooks,
   VetoolsRefPayload,
 } from "@bertinis-vault/contracts";
-import { IMPORT_PAYLOAD_VERSION, skillIdFor, toolIdFor } from "@bertinis-vault/contracts";
+import {
+  coinsFromCopper,
+  IMPORT_PAYLOAD_VERSION,
+  skillIdFor,
+  toolIdFor,
+} from "@bertinis-vault/contracts";
 import type { RulesVersion, VetoolsProp } from "@bertinis-vault/vetools-ref";
 
 import type { RefResolver, ResolutionFailure } from "./resolve.js";
@@ -144,6 +149,8 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
     return { payload: null, failures };
   }
 
+  const startingCopper = build.choices.startingCopper ?? 0;
+
   const payload: ImportPayload = {
     version: IMPORT_PAYLOAD_VERSION,
     rulesVersion: rulesVersionFromMeta(build.meta),
@@ -166,11 +173,25 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
       // direct import never runs.
       armor: build.choices.armorProficiencies ?? [],
       weapons: build.choices.weaponProficiencies ?? [],
+      // The weapons the player named for 2024's mastery feature. The actor JSON
+      // export has carried them since the feature landed; this route had no
+      // field for them, so a fighter sent by code arrived mastering nothing.
+      masteries: build.choices.weaponMasteries ?? [],
     },
     feats,
     optionalFeatures,
     spells,
     equipment,
+    /*
+     * The money the kit was worth.
+     *
+     * It has been counted correctly and shown in the wizard since the equipment
+     * choices landed, and had nowhere to go: a 2024 fighter who took the 150 gp
+     * over the gear reached Foundry with the gear they refused and none of the
+     * money. A background's pouch is the same money by a quieter route — 69 of
+     * them state their coins that way.
+     */
+    ...(startingCopper > 0 ? { currency: coinsFromCopper(startingCopper) } : {}),
     derived: {
       hp: build.derived.hp,
       ac: build.derived.ac,
@@ -204,9 +225,11 @@ function partitionProficiencies(
     savingThrows: [],
     expertise: [],
     toolExpertise: [],
-    // Filled by the caller: armour and weapons are not picks from a list.
+    // Filled by the caller: armour and weapons are not picks from a list, and
+    // mastery is a pick the class already resolved.
     armor: [],
     weapons: [],
+    masteries: [],
   };
 
   for (const entry of entries) {
