@@ -392,12 +392,42 @@ async function applyItemState(actor, payload) {
   }
 
   for (const entry of payload.spells ?? []) {
-    if (!entry.preparation) continue;
     const item = findByRef(byName, entry.ref);
-    if (item) updates.push({ _id: item.id, "system.prepared": preparationState(entry.preparation) });
+    if (!item) continue;
+
+    const update = { _id: item.id, ...spellUpdates(entry) };
+    if (Object.keys(update).length > 1) updates.push(update);
   }
 
   if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+}
+
+/**
+ * What has to change on a spell that Plutonium has already imported.
+ *
+ * Three things, and only one of them is about preparation. A species grants
+ * its spells cast `innate`ly, a fixed number of times a day and without a
+ * slot: importing one as an ordinary spell charges a tiefling a level 1 slot
+ * for a Faerie Fire the rules hand over free. `system.method` is where dnd5e
+ * keeps that, and `system.uses` is how many and how they come back.
+ *
+ * dnd5e sets `uses.max` from a formula string rather than a number, which is
+ * why the count is written as one.
+ */
+export function spellUpdates(entry) {
+  const updates = {};
+
+  if (entry.preparation) updates["system.prepared"] = preparationState(entry.preparation);
+  if (entry.method) updates["system.method"] = entry.method;
+  if (entry.uses) {
+    updates["system.uses.max"] = String(entry.uses.max);
+    updates["system.uses.spent"] = 0;
+    // `recoverAll` rather than a formula: a spell that comes back once a day
+    // comes back entirely, and dnd5e's own default for a recovery is this.
+    updates["system.uses.recovery"] = [{ period: entry.uses.period, type: "recoverAll" }];
+  }
+
+  return updates;
 }
 
 /**

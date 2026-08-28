@@ -19,6 +19,7 @@ import {
   abilityIdSchema,
   abilityScoreMapSchema,
   biographySchema,
+  spellMethodSchema,
   spellPreparationSchema,
 } from "./character-build.js";
 
@@ -62,6 +63,16 @@ export const spellRefSchema = z.object({
    * prepared itself on creation and which no rule ever unprepares.
    */
   preparation: spellPreparationSchema.optional(),
+  /**
+   * How it is cast, where that is not the ordinary way.
+   *
+   * `innate` is the one that arrives: a species grants its spells cast once a
+   * day without a slot, and importing one as an ordinary spell charges the
+   * character a slot the rules never asked for.
+   */
+  method: spellMethodSchema.optional(),
+  /** Casts before it comes back, and when. `period` is a dnd5e period key. */
+  uses: z.object({ max: z.number().int().min(1), period: z.string().min(1) }).optional(),
   /** Set when a feature grants the spell outside the class list. */
   grantedBy: z.string().optional(),
 });

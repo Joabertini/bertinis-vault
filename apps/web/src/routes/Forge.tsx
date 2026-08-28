@@ -77,6 +77,7 @@ import {
   toLines,
 } from "@/lib/grants";
 import { formatSpellLine, spellPlan } from "@/lib/spells";
+import { spellGrantsFor, type SpellGrantSource } from "@/lib/granted-spells";
 import BonusEditor from "@/components/forge/BonusEditor";
 import OriginBonus from "@/components/forge/OriginBonus";
 import Improvements from "@/components/forge/Improvements";
@@ -328,6 +329,21 @@ export default function Forge() {
   const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
   const chosenSpells = useMemo(() => toLines(draft.spellsText), [draft.spellsText]);
   const chosenBook = useMemo(() => toLines(draft.spellbookText), [draft.spellbookText]);
+
+  /*
+   * The named alternatives a species or a subclass offers.
+   *
+   * In 2024 this is the lineage itself and not a spell detail: XPHB ships no
+   * subraces at all, so an elf's Drow, High Elf and Wood Elf exist nowhere in
+   * the data but as the names on its spell blocks. The question is asked in
+   * the chamber that raised it — a species question next to the species —
+   * because a fighter elf never opens the spell chamber and still has one.
+   */
+  const spellGrants = useMemo(() => spellGrantsFor(draft, rulesVersion), [draft, rulesVersion]);
+
+  const chooseVariant = (key: string, name: string) => {
+    patchDraft({ spellVariantChoices: { ...draft.spellVariantChoices, [key]: name } });
+  };
 
   /* ---------------- growth ---------------- */
 
@@ -1105,6 +1121,13 @@ export default function Forge() {
                     noteFor={(entry) => entry.source}
                   />
 
+                  <VariantChoices
+                    sources={spellGrants.filter((source) => source.chamber === "species")}
+                    chosen={draft.spellVariantChoices}
+                    accent={VAULT_GOLD}
+                    onPick={chooseVariant}
+                  />
+
                   {/* Only 2014 has these; 2024 folded them into the species. */}
                   {subraces.length > 0 && (
                     <SubChoice
@@ -1180,6 +1203,13 @@ export default function Forge() {
                         </p>
                       </div>
                     ))}
+
+                  <VariantChoices
+                    sources={spellGrants.filter((source) => source.chamber === "class")}
+                    chosen={draft.spellVariantChoices}
+                    accent={accent}
+                    onPick={chooseVariant}
+                  />
 
                   {draft.classId && (
                     <Multiclass
@@ -1867,6 +1897,52 @@ export default function Forge() {
  * one class offers four sendas and the 2014 cleric offers nineteen — and a
  * grid that is sometimes two tiles and sometimes twenty reads as a mistake.
  */
+/**
+ * The named alternatives something offers, one question each.
+ *
+ * Six subclasses ask this — Circle of the Land's terrain, the Genie's four
+ * patrons — and in 2024 two species do, which is not a spell question at all:
+ * XPHB has no subraces, so an elf's Drow, High Elf and Wood Elf live only as
+ * the names on its spell blocks. Until it is answered the character has none
+ * of them, which is the honest reading: three lineages at once is three
+ * characters.
+ */
+function VariantChoices({
+  sources,
+  chosen,
+  accent,
+  onPick,
+}: {
+  sources: SpellGrantSource[];
+  chosen: Record<string, string>;
+  accent: string;
+  onPick: (key: string, name: string) => void;
+}) {
+  const asking = sources.filter((source) => source.variants.length > 0);
+  if (!asking.length) return null;
+
+  return (
+    <>
+      {asking.map((source) => (
+        <SubChoice
+          key={source.key}
+          title="Linaje"
+          hint={`${source.label} se divide en ${source.variants.length}. Decide que conjuros trae.`}
+          options={source.variants.map((name) => ({
+            id: name,
+            label: name,
+            source: "",
+            shared: false,
+          }))}
+          selectedId={chosen[source.key] ?? ""}
+          onPick={(entry) => onPick(source.key, entry.id)}
+          accent={accent}
+        />
+      ))}
+    </>
+  );
+}
+
 function SubChoice({
   title,
   hint,

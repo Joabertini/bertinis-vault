@@ -13,6 +13,7 @@ export * from "./weapon-mastery.js";
 export * from "./spell-counts.js";
 export * from "./feat-prerequisites.js";
 export * from "./subclass-spells.js";
+export * from "./granted-spells.js";
 export * from "./feat-abilities.js";
 export * from "./optional-features.js";
 export * from "./spell-slots-payload.js";

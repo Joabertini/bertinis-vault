@@ -21,6 +21,7 @@ import Checks from "@/components/forge/Checks";
 import GearProficienciesPanel from "@/components/forge/GearProficiencies";
 import { savingThrowChecksFor, skillChecksFor } from "@/lib/checks";
 import { gearProficienciesFor } from "@/lib/gear-proficiencies";
+import { grantedSpellsFor } from "@/lib/granted-spells";
 import { speciesProficienciesFor, speciesTraitsFor } from "@/lib/species";
 import { coinLabel } from "@/lib/starting-kit";
 import { ABILITY_IDS, abilityLabels } from "@/lib/abilities";
@@ -95,6 +96,7 @@ export default function LiveSheet({
         speciesGrant ? { id: state.raceId, ...speciesGrant } : null,
       )
     : null;
+  const grantedSpells = grantedSpellsFor(state, rulesVersion);
   const speciesTraits = state.raceId
     ? speciesTraitsFor(state.raceId, state.subraceId, rulesVersion)
     : [];
@@ -336,6 +338,34 @@ export default function LiveSheet({
       )}
 
       {/*
+        Spells nobody typed: a tiefling's Thaumaturgy, a drow's Faerie Fire.
+        They reach the sheet whether or not the character casts anything, so a
+        fighter who never opens the spell chamber still has to be told they
+        have them — and told what handed them over, because a spell with no
+        visible cause reads as a bug.
+      */}
+      {grantedSpells.length > 0 && (
+        <div className="mt-6 border-t border-iron/40 pt-5">
+          <p className={LABEL_MB2}>Conjuros que ya tenes</p>
+          <ul className="space-y-1">
+            {grantedSpells.map((granted) => (
+              <li key={`${granted.grantedBy}:${granted.label}`} className="flex items-baseline gap-1.5">
+                <span className="font-mono text-[9px] leading-none" style={{ color: accent }}>
+                  •
+                </span>
+                <span className="font-body text-xs capitalize">{granted.label}</span>
+                <span className="font-body text-[10px] italic text-bone/35">
+                  {granted.uses
+                    ? `${granted.grantedBy} · ${granted.uses.max}/${periodLabel(granted.uses.period)}`
+                    : granted.grantedBy}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/*
         The hit die, from the moment a class is picked.
         It is the one number that explains where the hit points came from, and
         it is knowable before the draft derives — a barbarian is a d12 whether
@@ -560,4 +590,9 @@ function stripParent(label: string, parent?: string): string {
   if (!parent) return label;
   const prefix = `${parent} (`;
   return label.startsWith(prefix) ? label.slice(prefix.length).replace(/\)$/, "") : label;
+}
+
+/** dnd5e's recovery periods, as a player reads them. */
+function periodLabel(period: string): string {
+  return period === "lr" ? "descanso largo" : period === "sr" ? "descanso corto" : "dia";
 }

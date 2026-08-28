@@ -173,6 +173,15 @@ export type RaceRow = IndexRow & {
   languages: LanguageGrant | null;
   /** Natural armour: a tortle shell, lizardfolk scales, a loxodon hide. */
   armorClass: ArmorClassOption[];
+  /**
+   * The spells the species itself grants — the tiefling's Thaumaturgy, the
+   * drow's Faerie Fire — gated by the *character's* level and not a class's.
+   *
+   * In 2024 the lineage choice lives here and nowhere else: XPHB ships no
+   * subraces, so the elf's Drow, High Elf and Wood Elf are three named blocks
+   * on this list and nothing in the index says so anywhere but here.
+   */
+  spells: GrantedSpellEntry[];
 };
 
 /**
@@ -195,6 +204,8 @@ export type SubraceRow = IndexRow & {
   speciesProficiencies: SpeciesProficiencies | null;
   /** Added to the species', like traits and unlike speed. */
   languages: LanguageGrant | null;
+  /** What the subspecies grants, on top of the species'. */
+  spells: GrantedSpellEntry[];
 };
 
 /**
@@ -268,6 +279,13 @@ export type FeatRow = IndexRow & {
    * counts, so the two halves are read in order.
    */
   expertise: ExpertiseSet[];
+  /**
+   * The spells the feat grants. Empty for the 210 that grant none.
+   *
+   * Ten of the 66 state a choice between named lists — Magic Initiate's six
+   * classes, Ritual Caster's five — which is why the entries carry a variant.
+   */
+  spells: GrantedSpellEntry[];
 };
 
 /** One feat a background offers, already scoped to the book it comes from. */
@@ -350,6 +368,8 @@ export type BackgroundRow = IndexRow & {
    * 2014 background.
    */
   abilityChoice: AbilityChoice[] | null;
+  /** 15 backgrounds widen a caster's list. Empty for the other 146. */
+  spells: GrantedSpellEntry[];
 };
 
 /**
@@ -557,6 +577,11 @@ export type OptionalFeatureRow = IndexRow & {
    * they are shown and the player judges.
    */
   prerequisiteText: string[];
+  /**
+   * What this choice grants. Mostly warlock invocations, which is where a
+   * warlock's list stops being the class's.
+   */
+  spells: GrantedSpellEntry[];
 };
 
 export type ClassRow = IndexRow & {
@@ -682,9 +707,54 @@ export type WeaponMastery = {
  * the character may prepare, `known` is known outright, `innate` is cast
  * without preparing it at all.
  */
-export type SubclassSpellEntry = {
+/**
+ * A spell as a grant names it: `"faerie fire|xphb"`.
+ *
+ * The book is kept because a name is not always unique. The 2024 tiefling is
+ * granted `faerie fire|xphb` and the 2014 spell of that name is a different
+ * document; resolving to either one at random would put the wrong text on the
+ * sheet. Null where the data names no book, which is most of the older ones.
+ */
+export type GrantedSpellRef = {
+  /** Lower case, and without the `#c` cantrip marker the data writes. */
+  name: string;
+  source: string | null;
+  /**
+   * The level the grant casts it at, where that is above the spell's own.
+   *
+   * 22 of them, and the 2014 tiefling's Hellish Rebuke is one: it is cast as a
+   * 2nd-level spell. Null for everything else, which is nearly all of them.
+   */
+  castLevel: number | null;
+};
+
+/** The ability a granted spell is cast with, when the grant states one. */
+export type GrantedSpellAbility = {
+  /** Named outright by the grant. */
+  fixed: string | null;
+  /** Offered as a choice, e.g. the 2024 species' Intelligence, Wisdom or Charisma. */
+  choose: string[];
+};
+
+export type GrantedSpellEntry = {
   kind: "expanded" | "known" | "prepared" | "innate";
-  /** The class level it arrives at, or null when another gate applies. */
+  /**
+   * The named alternative this belongs to, when the entity offers several.
+   *
+   * The 2024 elf's three lineages and the 2024 tiefling's three legacies live
+   * nowhere else: XPHB has no subraces at all, so this name *is* the choice.
+   * Magic Initiate and Ritual Caster state their lists the same way. Null when
+   * the grant simply applies.
+   */
+  variant: string | null;
+  /** The ability it is cast with, when the grant says. Usually null. */
+  ability: GrantedSpellAbility | null;
+  /**
+   * The level it arrives at, or null when another gate applies.
+   *
+   * Which level depends on what granted it: a subclass counts class levels, a
+   * species counts the character's. The entity knows; the row cannot.
+   */
   level: number | null;
   /**
    * The *spell* level it arrives with, for the warlock patrons.
@@ -694,13 +764,24 @@ export type SubclassSpellEntry = {
    * third-level spells five levels early.
    */
   spellLevel: number | null;
-  /** Spells named outright, lower case. */
-  names: string[];
+  /**
+   * How an innate spell comes back: `"daily"`, `"rest"`, `"will"`,
+   * `"ritual"`, `"resource"`. Null for everything that is not innate, and
+   * for the innate spells that are simply always available.
+   */
+  recharge: string | null;
+  /** Casts per recharge — the 1 in "1/day". Null when it does not run out. */
+  uses: number | null;
+  /** Spells named outright. */
+  names: GrantedSpellRef[];
   /** A filter to evaluate against the spell list. Null count means all. */
   filters: { filter: string; count: number | null }[];
   /** A choice from a named shortlist, which is not a filter. */
-  choices: { from: string[]; count: number }[];
+  choices: { from: GrantedSpellRef[]; count: number }[];
 };
+
+/** What the subclass rows have always called it. */
+export type SubclassSpellEntry = GrantedSpellEntry;
 
 export type SubclassRow = IndexRow & {
   shortName: string | null;

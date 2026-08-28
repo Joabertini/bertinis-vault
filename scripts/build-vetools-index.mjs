@@ -784,31 +784,38 @@ function featPrerequisitesOf(entity) {
  */
 const SPELL_LIST_KINDS = ["expanded", "known", "prepared", "innate"];
 
-function subclassSpellsOf(entity) {
+function grantedSpellsOf(entity) {
   const blocks = entity.additionalSpells;
   if (!blocks?.length) return [];
 
   const out = [];
 
   for (const block of blocks) {
+    // A block with a name is one of several the player chooses between: the
+    // 2024 elf's three lineages, Magic Initiate's six lists. Unnamed blocks
+    // all apply at once.
+    const variant = block.name ?? null;
+    const ability = castingAbilityOf(block.ability);
+
     for (const kind of SPELL_LIST_KINDS) {
       for (const [levelKey, raw] of Object.entries(block[kind] ?? {})) {
         // An innate block nests one more level deep, under how the spell is
-        // regained: "daily", "rest", "resource", "ritual", or "_" for plain.
+        // regained: "daily", "rest", "will", "ritual", "resource", or "_".
         const groups = Array.isArray(raw) ? { _: raw } : raw;
-        const names = [];
-        const filters = [];
-        const choices = [];
 
-        for (const group of Object.values(groups)) {
-          // "daily" nests again, keyed by uses per day. Anything below is a
+        for (const [rechargeKey, group] of Object.entries(groups)) {
+          // "daily" nests once more, keyed by uses per day. Below that is a
           // list of spells however deep it sits.
-          const lists = Array.isArray(group) ? [group] : Object.values(group ?? {});
+          const byUses = Array.isArray(group) ? { _: group } : (group ?? {});
 
-          for (const list of lists) {
+          for (const [usesKey, list] of Object.entries(byUses)) {
+            const names = [];
+            const filters = [];
+            const choices = [];
+
             for (const entry of Array.isArray(list) ? list : [list]) {
               if (typeof entry === "string") {
-                names.push(stripTags(entry).split("|")[0]);
+                names.push(spellReference(entry));
                 continue;
               }
               if (entry?.all) {
@@ -817,36 +824,49 @@ function subclassSpellsOf(entity) {
                 filters.push({ filter: entry.choose, count: entry.count ?? 1 });
               } else if (entry?.choose?.from) {
                 // A choice from a named shortlist rather than from a filter.
-                // One subclass states it this way, and it is a different rule:
-                // there is no filter to evaluate, only a list to pick from.
+                // There is nothing to evaluate, only a list to pick from.
                 choices.push({
-                  from: entry.choose.from.map((name) => stripTags(String(name)).split("|")[0]),
+                  from: entry.choose.from.map((name) => spellReference(String(name))),
                   count: entry.choose.count ?? entry.count ?? 1,
                 });
               } else {
-                throw new Error(`unmodelled subclass spell: ${JSON.stringify(entry)}`);
+                throw new Error(`unmodelled granted spell: ${JSON.stringify(entry)}`);
               }
             }
+
+            if (!names.length && !filters.length && !choices.length) continue;
+
+            // The warlock patrons key their expanded list by *spell* level —
+            // "s1" through "s5" — because a warlock gains those spells when
+            // their pact slots reach that level, not at a fixed class level.
+            // Reading an "s3" as class level 3 would hand a level 3 warlock
+            // third-level spells five levels early.
+            const spellLevelKey = /^s(\d+)$/.exec(levelKey);
+            // "_" means the spell arrives with the entity itself, gated by
+            // nothing further. Both null is that: no level of either kind.
+            const gated = levelKey !== "_";
+            const level = spellLevelKey || !gated ? null : Number(levelKey);
+            const spellLevel = spellLevelKey ? Number(spellLevelKey[1]) : null;
+
+            if (level !== null && !Number.isFinite(level)) {
+              throw new Error(`unreadable spell level: ${levelKey}`);
+            }
+
+            out.push({
+              kind,
+              variant,
+              ability,
+              level,
+              spellLevel,
+              // How an innate spell comes back, and how many times it can be
+              // cast before it does. A spell with neither is cast at will.
+              recharge: rechargeKey === "_" ? null : rechargeKey,
+              uses: usesKey === "_" ? null : Number(usesKey) || null,
+              names,
+              filters,
+              choices,
+            });
           }
-        }
-
-        // The warlock patrons key their expanded list by *spell* level —
-        // "s1" through "s5" — because a warlock gains those spells when their
-        // pact slots reach that level, not at a fixed class level. Reading an
-        // "s3" as class level 3 would hand a level 3 warlock third-level
-        // spells five levels early.
-        const spellLevelKey = /^s(\d+)$/.exec(levelKey);
-        // "_" means the spell arrives with the subclass itself and is gated by
-        // nothing further. Both null is that: no class level, no spell level.
-        const gated = levelKey !== "_";
-        const level = spellLevelKey || !gated ? null : Number(levelKey);
-        const spellLevel = spellLevelKey ? Number(spellLevelKey[1]) : null;
-
-        if (level !== null && !Number.isFinite(level)) {
-          throw new Error(`unreadable spell level: ${levelKey}`);
-        }
-        if (names.length || filters.length || choices.length) {
-          out.push({ kind, level, spellLevel, names, filters, choices });
         }
       }
     }
@@ -858,6 +878,61 @@ function subclassSpellsOf(entity) {
       (a.spellLevel ?? 0) - (b.spellLevel ?? 0) ||
       a.kind.localeCompare(b.kind),
   );
+}
+
+/**
+ * A spell as 5etools writes it in a grant: `"light|xphb#c"`,
+ * `"hellish rebuke#2"`.
+ *
+ * Three parts and they answer different questions.
+ *
+ * `|source` says which book's version, which matters where a name is printed
+ * twice: the 2024 tiefling is granted `faerie fire|xphb`, and the 2014 spell
+ * of that name is a different document.
+ *
+ * `#c` marks a cantrip — 160 of them. That is a note to a reader and not to
+ * us, because the catalog already knows what level Light is, so it is dropped.
+ *
+ * `#2` through `#9` are the level the spell is *cast* at — 22 of them, and
+ * the 2014 tiefling's `hellish rebuke#2` is one. It is neither the spell's
+ * level nor part of its name, and leaving it attached is what made that
+ * tiefling's second spell resolve to nothing at all.
+ */
+function spellReference(raw) {
+  const [reference, source] = stripTags(String(raw)).split("|");
+  const [name, marker] = splitMarker(reference);
+  const [bareSource, sourceMarker] = splitMarker(source ?? "");
+
+  const at = Number(marker || sourceMarker);
+
+  return {
+    name: name.trim().toLowerCase(),
+    source: bareSource.trim() || null,
+    // The level it is cast at, where the grant raises it above its own.
+    castLevel: Number.isFinite(at) && at > 0 ? at : null,
+  };
+}
+
+/** `"hellish rebuke#2"` as its name and its marker. */
+function splitMarker(value) {
+  const at = value.lastIndexOf("#");
+  return at < 0 ? [value, ""] : [value.slice(0, at), value.slice(at + 1)];
+}
+
+/**
+ * The ability a granted spell is cast with, which is not always the class's.
+ *
+ * A species grants its spells with an ability of the player's choice — the
+ * 2024 elf casts them with Intelligence, Wisdom or Charisma — and a subclass
+ * usually fixes one. Reading the class's own ability instead would give a
+ * fighter's Eldritch Knight the wrong attack bonus on a species cantrip.
+ */
+function castingAbilityOf(ability) {
+  if (!ability) return null;
+  if (typeof ability === "string") return { fixed: ability, choose: [] };
+  if (Array.isArray(ability.choose)) return { fixed: null, choose: [...ability.choose] };
+
+  throw new Error(`unmodelled casting ability: ${JSON.stringify(ability)}`);
 }
 
 /** A character never exceeds this, and every progression is stated to it. */
@@ -1721,6 +1796,10 @@ const BUILDERS = {
       // What a character must already have. 205 of the 276 state something,
       // and nothing read any of it.
       prerequisites: featPrerequisitesOf(f),
+      // 66 feats grant spells: Magic Initiate, Fey Touched, Ritual Caster.
+      // Ten of them are a choice between named lists, which is why the blocks
+      // carry a name.
+      spells: grantedSpellsOf(f),
     })),
 
   race: (entities, context) =>
@@ -1744,6 +1823,11 @@ const BUILDERS = {
       // The languages the species itself grants. Null for the 85 of 160 that
       // grant none — every 2024 species among them, because 2024 moved
       // languages onto the background.
+      // Spells the species itself grants: the tiefling's Thaumaturgy, the
+      // drow's Faerie Fire. In 2024 these carry the lineage choice too —
+      // XPHB has no subraces, so the elf's three lineages exist nowhere but
+      // in the names on these blocks.
+      spells: grantedSpellsOf(r),
       languages: languagesOf(r),
       // Natural armour: the tortle's shell, the lizardfolk's scales. Six
       // species have it and it beats leather for most of them.
@@ -1774,6 +1858,8 @@ const BUILDERS = {
       // gnome speaks Undercommon on top of Common and Gnomish. That is how
       // 5etools merges them, and it is what the books print.
       languages: languagesOf(r),
+      // A subspecies grants its own, on top of the species'.
+      spells: grantedSpellsOf(r),
     })),
 
   background: (entities) =>
@@ -1790,6 +1876,9 @@ const BUILDERS = {
         // the player's choosing. Without this a wizard of the Sage arrived
         // knowing only what their species taught them.
         languages: languagesOf(b),
+        // 15 backgrounds widen a caster's list — the Strixhaven ones by two
+        // spells per spell level.
+        spells: grantedSpellsOf(b),
         startingEquipment: startingEquipmentOf(b),
         // 2024 moved the ability increase off the species and onto the
         // background. Null for every 2014 background, which grants none.
@@ -1846,7 +1935,7 @@ const BUILDERS = {
       classSource: c.classSource ?? null,
       // Domain, circle and oath spells — and, for the Eldritch Knight and the
       // Arcane Trickster, the only spell list they have at all.
-      spells: subclassSpellsOf(c),
+      spells: grantedSpellsOf(c),
       // A third-caster is a subclass, not a class: the eldritch knight and the
       // arcane trickster are the only two, and their progression is the
       // subclass's to state. Without this a fighter 12 / wizard 1 reads as one
@@ -1875,6 +1964,9 @@ const BUILDERS = {
       // names the same codes, and that pairing is the whole mechanism.
       featureType: f.featureType ?? [],
       ...prerequisitesOf(f),
+      // 54 grant spells — most of them warlock invocations, which is where a
+      // warlock's list stops being the class's.
+      spells: grantedSpellsOf(f),
     })),
 };
 

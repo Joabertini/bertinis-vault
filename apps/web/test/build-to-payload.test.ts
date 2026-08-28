@@ -176,3 +176,71 @@ test("a caster with no book has every spell prepared", () => {
 
   expect(payload?.spells.map((entry) => entry.preparation)).toEqual(["prepared", "prepared"]);
 });
+
+/* --------------------------------------------- what a species grants -- */
+
+test("a species spell reaches the payload without anyone typing it", () => {
+  /*
+   * 222 entities outside the subclasses grant spells and not one of them used
+   * to reach a character. A tiefling arrived without Thaumaturgy.
+   */
+  const { payload } = buildToPayload(
+    buildCanonicalSnapshot({
+      ...initialState,
+      raceId: slugOf("Tiefling"),
+      sourceBooks: { [`race:${slugOf("Tiefling")}`]: "PHB" },
+      classId: "fighter",
+      level: 5,
+      cantripsText: "",
+      spellsText: "",
+    }),
+    resolver,
+  );
+
+  const byHash = new Map(payload?.spells.map((entry) => [entry.ref.hash, entry]));
+  const thaumaturgy = byHash.get("thaumaturgy_phb");
+
+  expect(thaumaturgy).toBeDefined();
+  expect(thaumaturgy?.grantedBy).toBe("Tiefling");
+});
+
+test("a spell granted once a day is cast innately, and says how often", () => {
+  const { payload } = buildToPayload(
+    buildCanonicalSnapshot({
+      ...initialState,
+      raceId: slugOf("Tiefling"),
+      sourceBooks: { [`race:${slugOf("Tiefling")}`]: "PHB" },
+      classId: "fighter",
+      level: 5,
+      cantripsText: "",
+      spellsText: "",
+    }),
+    resolver,
+  );
+
+  // Hellish Rebuke, once a day at level 3. Importing it as an ordinary spell
+  // would charge a fighter a level 1 slot for magic the species hands over.
+  const rebuke = payload?.spells.find((entry) => entry.ref.hash === "hellish%20rebuke_phb");
+
+  expect(rebuke?.method).toBe("innate");
+  expect(rebuke?.uses).toEqual({ max: 1, period: "day" });
+});
+
+test("a spell both granted and written is one spell", () => {
+  const { payload } = buildToPayload(
+    buildCanonicalSnapshot({
+      ...initialState,
+      raceId: slugOf("Tiefling"),
+      sourceBooks: { [`race:${slugOf("Tiefling")}`]: "PHB" },
+      classId: "sorcerer",
+      level: 5,
+      cantripsText: "Thaumaturgy",
+      spellsText: "",
+    }),
+    resolver,
+  );
+
+  const found = payload?.spells.filter((entry) => entry.ref.hash === "thaumaturgy_phb") ?? [];
+
+  expect(found).toHaveLength(1);
+});

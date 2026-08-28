@@ -45,9 +45,16 @@ test("a domain list is spelled out by name and gated by class level", () => {
 
   assert.deepEqual(life.spells[0], {
     kind: "prepared",
+    variant: null,
+    ability: null,
     level: 1,
     spellLevel: null,
-    names: ["bless", "cure wounds"],
+    recharge: null,
+    uses: null,
+    names: [
+      { name: "bless", source: null, castLevel: null },
+      { name: "cure wounds", source: null, castLevel: null },
+    ],
     filters: [],
     choices: [],
   });
@@ -122,7 +129,10 @@ test("a choice from a named shortlist is kept apart from a filter", () => {
   const choice = scion.spells.flatMap((entry) => entry.choices).find(Boolean);
 
   assert.equal(choice.count, 1);
-  assert.deepEqual(choice.from, ["minor illusion", "blade ward", "chill touch"]);
+  assert.deepEqual(
+    choice.from.map((ref) => ref.name),
+    ["minor illusion", "blade ward", "chill touch"],
+  );
 });
 
 test("every entry is a shape the rules layer can act on", () => {
@@ -140,7 +150,7 @@ test("every entry is a shape the rules layer can act on", () => {
         entry.names.length || entry.filters.length || entry.choices.length,
         `${where}: an empty entry means nothing`,
       );
-      for (const name of entry.names) assert.ok(name.length > 0, where);
+      for (const ref of entry.names) assert.ok(ref.name.length > 0, where);
       for (const filter of entry.filters) {
         assert.equal(typeof filter.filter, "string", where);
         assert.ok(filter.filter.includes("="), where);

@@ -109,7 +109,10 @@ lo primero que se pide en una sesión, y hoy no están en ningún lado.
 | **Libro de conjuros del mago** | ✅ **arreglado en esta auditoría** — el mago preparaba de la lista de clase, sin libro |
 | **Estado de preparación en Foundry** | ✅ **arreglado en esta auditoría** — se escribía en un campo que dnd5e no tiene desde 5.1 |
 | Ritual y concentración | ✅ en la Visión |
-| Lo que conceden dotes, trasfondos, especies y dones | ❌ 350 entidades tienen `additionalSpells`; sólo se leen las 128 subclases |
+| **Lo que concede la especie** | ✅ **arreglado en esta auditoría** — un tiefling llegaba sin Taumaturgia |
+| **El linaje 2024** | ✅ **arreglado en esta auditoría** — XPHB no trae subrazas: el elfo y el tiefling eligen ahí y en ningún otro lado |
+| Lo que conceden dotes, trasfondos y dones | ❌ leídos ya en el índice; falta preguntarlos en la Forja |
+| **Elegir de un filtro concedido** | ❌ el elfo alto elige *un* truco de mago y todavía no hay dónde. Es la misma máquina que necesitan Iniciado Mágico y Lanzador de Rituales, así que va con ellos |
 | Filtros de ritual y de tipo de ataque | ❌ `parseSpellFilter` lee class/level/school/source y descarta en silencio los otros dos |
 
 ## Progresión y dotes
@@ -161,6 +164,48 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **Lo que concede la especie, y el linaje que lo decide.** 5etools guarda todo
+  esto en un solo campo, `additionalSpells`, y la Forja lo leía sólo en las
+  subclases. Medido: 128 subclases lo tienen, y también **66 dotes, 54 dones,
+  50 subrazas, 30 razas, 15 trasfondos y 7 clases**. Ninguna de esas 222 le
+  llegaba a un personaje. Un tiefling llegaba sin Taumaturgia.
+  Y en 2024 no es un detalle de conjuros: **XPHB no trae ni una subraza**. Los
+  tres linajes del elfo —Drow, High Elf, Wood Elf— y los tres del tiefling
+  existen únicamente como el nombre de estos bloques, así que hasta ahora la
+  elección no se podía hacer. Se pregunta en la cámara que la levanta, no en la
+  de conjuros: un guerrero elfo nunca abre esa cámara y tiene linaje igual.
+  Sin responder no concede nada. Tres linajes a la vez son tres personajes.
+  El nivel que abre la puerta es el **del personaje** y no el de una clase: el
+  tiefling recibe su conjuro de nivel 3 al nivel 3 aunque multiclasee.
+  Un filtro no es una concesión. El elfo alto elige *un* truco de mago; elegirlo
+  por él sería poner en la ficha un conjuro que nadie eligió, así que eso
+  ensancha la lista y no la llena.
+
+- **Los conjuros de dominio se cobraban dos veces.** `prepared` en el dato
+  quiere decir *siempre preparado*: un clérigo del Dominio de la Vida tiene
+  Bendecir y Curar Heridas listos sin gastar una de las preparaciones del día.
+  La Forja los metía en el selector, así que el clérigo pagaba una preparación
+  por un conjuro que el dominio regala. Ahora se conceden con
+  `prepared: 2` y salen del selector.
+  `expanded` es la otra regla y sí es una oferta: un brujo del Archihada
+  *puede* aprender Fuego Feérico, y nada dice que lo haya hecho. Esa sigue
+  ensanchando la lista.
+
+- **Innato no es preparado.** Un conjuro que la especie da 1/día se lanza sin
+  gastar espacio. Importarlo como conjuro común le cobraba a un tiefling un
+  espacio de nivel 1 por un Represalia Infernal que las reglas regalan. Ahora
+  viaja con `system.method: "innate"` y sus usos —`system.uses.max` y una
+  `recovery` con el período de dnd5e (`day`, `lr`)—, con los nombres de
+  `DND5E.spellcasting` y `DND5E.limitedUsePeriods` y no con inventados.
+
+- **Tres sufijos, no uno.** Una referencia se escribe `nombre|libro#marca`.
+  El libro importa donde el mismo nombre está impreso dos veces —al tiefling
+  2024 le dan `faerie fire|xphb`, y el conjuro 2014 de ese nombre es otro
+  documento—. `#c` marca truco, que es una nota para un lector y no para
+  nosotros. Y `#2` a `#9` son **el nivel al que se lanza**: el
+  `hellish rebuke#2` del tiefling 2014 se lanza como conjuro de nivel 2, y
+  dejarlo pegado al nombre hacía que ese conjuro no resolviera a nada.
 
 - **El libro del mago.** El mago preparaba directo de la lista de clase, que es
   la clase de otro: un mago prepara **de su libro**, y el libro es lo que la

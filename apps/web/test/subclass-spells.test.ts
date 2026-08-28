@@ -61,40 +61,40 @@ describe("the spells a character may take", () => {
     expect(later.some((row) => row.level === 2)).toBe(true);
   });
 
-  test("a domain adds to the class list rather than replacing it", () => {
-    const plain = pool();
-    const light = pool({ subclassId: "light-domain" });
-
-    // Every cleric spell is still there, and the domain's are on top.
-    expect(light.length).toBeGreaterThan(plain.length);
-    for (const name of names(plain)) expect(names(light)).toContain(name);
-  });
-
-  test("a domain whose whole list is already the class's changes the count by nothing", () => {
-    // The Life domain grants bless, cure wounds, revivify and the rest —
-    // every one of them already a cleric spell. Growing the pool here would
-    // mean something had been double-counted.
+  test("a domain does not enlarge the list the cleric prepares from", () => {
+    /*
+     * It used to, and that was the double charge: a Light Domain cleric has
+     * Burning Hands *always prepared*, and offering it in the picker as well
+     * spent one of the day's preparations on a spell the domain hands over
+     * free. The domain's spells are granted now — `grantedSpellsFor` — and the
+     * pool is the class list plus what a subclass genuinely *offers*.
+     */
+    expect(pool({ subclassId: "light-domain" }).length).toBe(pool().length);
     expect(pool({ subclassId: "life-domain" }).length).toBe(pool().length);
   });
 
-  test("a domain spell that is not on the class list arrives with the domain", () => {
-    // Spiritual Weapon is a cleric spell, so it proves nothing. Divine
-    // Favour, on the Light domain's list, is a paladin spell.
-    const plain = names(pool());
-    const light = names(pool({ subclassId: "light-domain" }));
+  test("a warlock's expanded list is an offer, and does enlarge it", () => {
+    // The other rule, and it really is an offer: an Archfey warlock *may*
+    // learn Faerie Fire, and nothing says they have.
+    const plain = pool({
+      className: "Warlock",
+      classSource: "PHB",
+      classId: "warlock",
+      classLevel: 3,
+      pactSlotLevel: 2,
+    });
+    const archfey = pool({
+      className: "Warlock",
+      classSource: "PHB",
+      classId: "warlock",
+      subclassId: "the-archfey",
+      classLevel: 3,
+      pactSlotLevel: 2,
+    });
 
-    for (const name of ["Burning Hands", "Scorching Ray"]) {
-      expect(plain).not.toContain(name);
-      expect(light).toContain(name);
-    }
-  });
-
-  test("a domain's later spells wait for the level that grants them", () => {
-    const early = names(pool({ subclassId: "light-domain", classLevel: 1 }));
-    const later = names(pool({ subclassId: "light-domain", classLevel: 5 }));
-
-    expect(early).not.toContain("Fireball");
-    expect(later).toContain("Fireball");
+    expect(archfey.length).toBeGreaterThan(plain.length);
+    expect(names(archfey)).toContain("Faerie Fire");
+    for (const name of names(plain)) expect(names(archfey)).toContain(name);
   });
 
   test("a warlock patron waits on the pact slot level, not the class level", () => {
