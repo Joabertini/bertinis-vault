@@ -113,9 +113,9 @@ lo primero que se pide en una sesión, y hoy no están en ningún lado.
 | Ritual y concentración | ✅ en la Visión |
 | **Lo que concede la especie** | ✅ **arreglado en esta auditoría** — un tiefling llegaba sin Taumaturgia |
 | **El linaje 2024** | ✅ **arreglado en esta auditoría** — XPHB no trae subrazas: el elfo y el tiefling eligen ahí y en ningún otro lado |
-| Lo que conceden dotes, trasfondos y dones | ❌ leídos ya en el índice; falta preguntarlos en la Forja |
+| **Lo que conceden dotes, trasfondos y dones** | ✅ **arreglado en esta auditoría** — las 222 entidades que faltaban |
+| **Elegir de un filtro concedido** | ✅ **arreglado en esta auditoría** — Iniciado Mágico, Lanzador de Rituales, el truco de mago del elfo alto |
 | Arcanum Místico del brujo | ❌ un conjuro de nivel 6 a 9, 1/día, fuera de los espacios de pacto. Niveles 11, 13, 15 y 17 |
-| **Elegir de un filtro concedido** | ❌ el elfo alto elige *un* truco de mago y todavía no hay dónde. Es la misma máquina que necesitan Iniciado Mágico y Lanzador de Rituales, así que va con ellos |
 | Filtros de ritual y de tipo de ataque | ❌ `parseSpellFilter` lee class/level/school/source y descarta en silencio los otros dos |
 
 ## Progresión y dotes
@@ -167,6 +167,34 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **Un filtro es una pregunta, no una concesión.** "Dos trucos a tu elección de
+  la lista de esa clase" no se puede resolver por el jugador: elegir sería
+  poner en la ficha un conjuro que no eligió. Ahora es una pregunta con su
+  lista, y la respuesta llega con los mismos términos que la concesión —el
+  truco de Iniciado Mágico se lanza con la misma característica y se conoce
+  igual que si la dote lo hubiera impreso por nombre—.
+  Un filtro **sin cuenta** no es pregunta: toma todo lo que matchea, que es
+  ensanchar la lista, y así funciona la lista expandida del brujo.
+  Iniciado Mágico pregunta dos veces, porque concede dos cosas distintas: dos
+  trucos, y un conjuro de nivel 1 que se lanza una vez por día. Meterlas en una
+  sola pregunta dejaría llevarse tres trucos.
+
+- **Dos claves de filtro que se tiraban en silencio.** De las 227 filtros del
+  dato se leían cuatro claves y se descartaban dos, que es peor que no leerlas.
+  `components & miscellaneous=ritual` aparece 14 veces: Lanzador de Rituales
+  concede "un conjuro de nivel 1 de esa lista **con la etiqueta de ritual**", y
+  sin la cláusula ofrecía los cien conjuros de nivel 1 de la clase en vez de
+  los diez que la dote da. La clave viene escrita en dos capitalizaciones
+  distintas en el mismo dato, así que se compara sin distinguir mayúsculas.
+  `spell attack=m;r;o` aparece 6 veces, todas de Francotirador Mágico: "un
+  truco que requiera tirada de ataque". La fila de conjuro no traía ese dato;
+  ahora sí, de los 70 conjuros que lo tienen.
+
+- **La cámara que pregunta es la que retiene.** Un linaje sin elegir no concede
+  nada y un Iniciado Mágico sin trucos elegidos es una dote que no hizo nada.
+  Ninguno de los dos es un error que la exportación pueda reportar —el payload
+  es válido, sólo que más pobre—, así que retiene la cámara que preguntó.
 
 - **Cada lanzador tiene su regla, y dos no la tenían.** Al pasar los diez
   lanzadores por el mismo camino que usa la Forja aparecieron dos que no

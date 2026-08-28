@@ -1794,6 +1794,11 @@ const BUILDERS = {
       components: componentsOf(s),
       concentration: s.duration?.[0]?.concentration ? 1 : 0,
       ritual: s.meta?.ritual ? 1 : 0,
+      // Whether the spell needs an attack roll, and of which kind: "m" melee,
+      // "r" ranged. 70 spells have one. Spell Sniper is the reason it is read
+      // — it grants "a cantrip that requires an attack roll", and without this
+      // the filter reads as "a cantrip" and offers three hundred.
+      attack: (s.spellAttack ?? []).map((kind) => String(kind).toLowerCase()),
       classes: context.spellClasses.get(`${s.name}|${sourceOf(s)}`) ?? [],
     })),
 

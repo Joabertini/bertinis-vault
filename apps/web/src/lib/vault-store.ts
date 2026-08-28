@@ -176,6 +176,7 @@ function freshDraft(rulesVersion: BuilderRulesVersion): BuilderState {
     spellbookText: "",
     spellVariantChoices: {},
     spellAbilityChoices: {},
+    grantedSpellChoices: {},
     featuresText: "",
   };
 }

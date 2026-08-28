@@ -35,17 +35,47 @@ export type SpellFilter = {
   levels: number[];
   schools: string[];
   sources: string[];
+  /**
+   * Whether the spell must be castable as a ritual.
+   *
+   * Null when the filter does not ask. Fourteen do, and Ritual Caster is why:
+   * "a 1st-level spell from that class's spell list **that has the ritual
+   * tag**". Dropped, the filter reads as "a 1st-level bard spell" and offers
+   * a hundred where the feat grants a choice of ten.
+   */
+  ritual: boolean | null;
+  /**
+   * The attack rolls the spell may need: `"m"` melee, `"r"` ranged.
+   *
+   * Empty when the filter does not ask. One feat does — Spell Sniper grants
+   * "a cantrip that requires an attack roll" — and it asks for all of them,
+   * which is the same as asking for any.
+   */
+  attacks: string[];
 };
 
 /**
  * "level=0;1|class=Wizard" as something checkable.
  *
- * Four keys appear across all 57 filters in the data: class, level, school and
- * source. An unknown key is kept out rather than guessed at — a filter that
- * silently ignores half of itself offers spells the subclass never granted.
+ * Six keys appear across the 227 filters in the data. Four were read and two
+ * were dropped in silence, which is worse than not reading them: a filter that
+ * ignores half of itself offers spells the thing never granted. Ritual Caster
+ * asked for "a 1st-level spell with the ritual tag" and was served every
+ * 1st-level spell of the class.
+ *
+ * An unknown key still yields nothing rather than a guess. The key match is
+ * case-insensitive because the data is not consistent about it — one filter
+ * writes `Components & Miscellaneous` and thirteen write it lower case.
  */
 export function parseSpellFilter(filter: string): SpellFilter {
-  const parsed: SpellFilter = { classes: [], levels: [], schools: [], sources: [] };
+  const parsed: SpellFilter = {
+    classes: [],
+    levels: [],
+    schools: [],
+    sources: [],
+    ritual: null,
+    attacks: [],
+  };
 
   for (const clause of filter.split("|")) {
     const [key, values] = clause.split("=");
@@ -65,6 +95,15 @@ export function parseSpellFilter(filter: string): SpellFilter {
       case "source":
         parsed.sources.push(...parts);
         break;
+      case "components & miscellaneous":
+        // The only value that appears is "ritual". Anything else here is a
+        // component or a tag nothing asks about yet, and is left unread rather
+        // than turned into a constraint that was never stated.
+        if (parts.some((part) => same(part, "ritual"))) parsed.ritual = true;
+        break;
+      case "spell attack":
+        parsed.attacks.push(...parts.map((part) => part.toLowerCase()));
+        break;
     }
   }
 
@@ -78,6 +117,10 @@ export type FilterableSpell = {
   source: string;
   /** "Wizard|PHB" entries, as the index stores them. */
   classes: string[];
+  /** Whether it can be cast as a ritual. */
+  ritual?: number | boolean | null;
+  /** The attack rolls it needs: `"m"`, `"r"`. */
+  attack?: string[] | null;
 };
 
 const same = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase();
@@ -95,6 +138,15 @@ export function spellMatchesFilter(spell: FilterableSpell, filter: SpellFilter):
   }
   if (filter.schools.length && !filter.schools.some((school) => same(school, spell.school ?? ""))) {
     return false;
+  }
+  if (filter.ritual !== null && Boolean(spell.ritual) !== filter.ritual) return false;
+  /*
+   * "m;r;o" asks for any attack roll, so any of the listed kinds matching is
+   * a match. A spell with no attack at all never matches an asking filter.
+   */
+  if (filter.attacks.length) {
+    const kinds = (spell.attack ?? []).map((kind) => kind.toLowerCase());
+    if (!kinds.some((kind) => filter.attacks.includes(kind))) return false;
   }
   if (filter.classes.length) {
     const names = spell.classes.map((entry) => entry.split("|")[0] ?? "");
