@@ -248,6 +248,19 @@ export const choicesSchema = z.object({
    */
   weaponMasteries: z.array(z.string().min(1)).optional(),
   /**
+   * Weapons a printed rule grants that no category names, as base-item ids.
+   *
+   * The 2024 monk and rogue are proficient with "martial weapons that have the
+   * Light property" — a rule, not a list. Foundry has nowhere to store a rule:
+   * `traits.weaponProf.value` is checked with `has(item.type.baseItem)`, so a
+   * sentence there matches nothing and the character swings their scimitar
+   * without their proficiency bonus. The list the rule comes to is worked out
+   * where the weapon table lives and carried here.
+   *
+   * Optional so every build written before this field stays valid.
+   */
+  weaponProficiencies: z.array(z.string().min(1)).optional(),
+  /**
    * The coins the character starts with, counted in copper.
    *
    * Copper because that is what the index counts in, and because it is the

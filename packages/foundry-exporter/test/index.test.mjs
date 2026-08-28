@@ -405,6 +405,43 @@ test("a proficiency the book prints as a rule stays a rule", () => {
   assert.match(payload.system.traits.weaponProf.custom, /Finesse or Light/);
 });
 
+test("a rule the builder already expanded arrives as ids Foundry can check", () => {
+  // The sentence stays for the player to read; the weapons it comes to are
+  // what makes the scimitar swing at the right bonus.
+  const build = makeCharacterBuild();
+  build.meta.rulesVersion = "5e-2024";
+  build.classing.classes = [{ classId: "rogue", level: 3 }];
+  build.choices.weaponProficiencies = ["scimitar", "shortsword", "whip"];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.weaponProf.value, [
+    "sim",
+    "scimitar",
+    "shortsword",
+    "whip",
+  ]);
+  assert.match(payload.system.traits.weaponProf.custom, /Finesse or Light/);
+});
+
+test("an expanded weapon the class already named is not listed twice", () => {
+  const build = makeCharacterBuild();
+  build.meta.rulesVersion = "5e-2014";
+  build.classing.classes = [{ classId: "bard", level: 3 }];
+  build.choices.weaponProficiencies = ["rapier", "scimitar"];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.weaponProf.value, [
+    "sim",
+    "handcrossbow",
+    "longsword",
+    "rapier",
+    "shortsword",
+    "scimitar",
+  ]);
+});
+
 test("weapon mastery reaches the actor as base-item ids", () => {
   const build = makeCharacterBuild();
   build.choices.weaponMasteries = ["longsword", "greataxe"];

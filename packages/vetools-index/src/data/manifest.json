@@ -6,8 +6,8 @@
   },
   "item": {
     "count": 2658,
-    "bytes": 728920,
-    "gzip": 36069
+    "bytes": 788868,
+    "gzip": 36924
   },
   "feat": {
     "count": 276,
@@ -26,8 +26,8 @@
   },
   "class": {
     "count": 31,
-    "bytes": 44111,
-    "gzip": 3581
+    "bytes": 47713,
+    "gzip": 3823
   },
   "subclass": {
     "count": 203,

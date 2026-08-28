@@ -330,7 +330,18 @@ function fillProficiencies(actor: Record<string, any>, character: CharacterBuild
   // Foundry accepts two shapes in the same set: the category keys `sim` and
   // `mar`, and a weapon's own base-item id. The 2014 bard needs both — every
   // simple weapon, plus four martial ones by name.
-  actor.system.traits.weaponProf.value = [...profs.weaponCategories, ...profs.weaponItems];
+  // A rule the builder already expanded joins the list as ids. Without it the
+  // 2024 rogue's scimitar is swung without a proficiency bonus, because the
+  // sentence explaining that it should not be is in a field Foundry never
+  // reads. Deduplicated: a rule may name a weapon the class also named.
+  const clauseWeapons = (character.choices.weaponProficiencies ?? []).filter(
+    (id) => !profs.weaponItems.includes(id),
+  );
+  actor.system.traits.weaponProf.value = [
+    ...profs.weaponCategories,
+    ...profs.weaponItems,
+    ...clauseWeapons,
+  ];
 
   // What the book prints as a rule rather than a list stays prose. Foundry has
   // no way to store "martial weapons with the Light property" as a checkbox,
