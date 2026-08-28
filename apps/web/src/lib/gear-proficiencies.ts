@@ -23,6 +23,23 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import { FOUNDRY_WEAPON_IDS, foundryWeaponId } from "./weapon-mastery";
 
+/**
+ * What the species contributes, and the name to credit it under.
+ *
+ * A dwarf is proficient with the warhammer whatever they take levels in, and a
+ * dwarf wizard swinging one swings it at their proficiency bonus. Left out of
+ * the class table on purpose: it is not a class's to grant.
+ */
+export type SpeciesGrant = {
+  /** The id `grantedBy` credits — the species slug the sheet can label. */
+  id: string;
+  /** "light", "medium", as the books print them. */
+  armor: string[];
+  /** Weapon names as the books print them, e.g. "light hammer". */
+  weaponItems: string[];
+  weaponClauses: string[];
+};
+
 export type ProficiencyLine = {
   /** The dnd5e key or base-item id this line stands for. */
   id: string;
@@ -44,6 +61,14 @@ export type GearProficiencies = {
    * against nothing at all.
    */
   clauseWeaponIds: string[];
+  /**
+   * The weapons the species grants by name, as base-item ids.
+   *
+   * Separate from the clause ids only so the caller can tell where each came
+   * from. Both are proficiencies no class document carries, so both have to
+   * reach Foundry from here.
+   */
+  speciesWeaponIds: string[];
 };
 
 const ARMOR_LABEL: Record<string, string> = {
@@ -51,6 +76,14 @@ const ARMOR_LABEL: Record<string, string> = {
   med: "Armadura media",
   hvy: "Armadura pesada",
   shl: "Escudos",
+};
+
+/** The books say "light"; dnd5e says "lgt". */
+const SPECIES_ARMOR_KEY: Record<string, string> = {
+  light: "lgt",
+  medium: "med",
+  heavy: "hvy",
+  shield: "shl",
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -171,6 +204,25 @@ function clauseLabel(clause: string): string {
   return `${category} ${words.map((word) => PROPERTY_LABEL[word]).join(joiner)}`;
 }
 
+/**
+ * Whether a category the character already has covers this weapon.
+ *
+ * Read off the item table rather than from a list written here. A dwarf
+ * *fighter* has martial weapons outright, so naming the battleaxe again would
+ * be noise; a dwarf *wizard* has nothing of the kind, and the battleaxe is the
+ * only reason they can swing one.
+ */
+function weaponCategoryIndex(rulesVersion: RulesVersion): Map<string, string> {
+  const rows = forRulesVersion(collections.item ?? [], rulesVersion) as WeaponRow[];
+  const categories = new Map<string, string>();
+  for (const row of rows) {
+    if (!row.weaponCategory) continue;
+    const id = foundryWeaponId(row.name);
+    if (!categories.has(id)) categories.set(id, row.weaponCategory);
+  }
+  return categories;
+}
+
 /** A base-item id back to the name the index prints for it. */
 function weaponNameById(rulesVersion: RulesVersion): Map<string, string> {
   const rows = forRulesVersion(collections.item ?? [], rulesVersion) as WeaponRow[];
@@ -193,33 +245,78 @@ function weaponNameById(rulesVersion: RulesVersion): Map<string, string> {
 export function gearProficienciesFor(
   classes: ReadonlyArray<{ classId: string }>,
   rulesVersion: RulesVersion,
+  species?: SpeciesGrant | null,
 ): GearProficiencies {
   const resolved: ResolvedClassProficiencies = classProficienciesFor(
     classes,
     rulesVersion === "2024" ? "5e-2024" : "5e-2014",
   );
   const names = weaponNameById(rulesVersion);
+  const categories = weaponCategoryIndex(rulesVersion);
   const clauseWeaponIds: string[] = [];
+
+  const grantedBy: Record<string, string[]> = { ...resolved.grantedBy };
+  const credit = (value: string, granter: string) => {
+    const seen = grantedBy[value];
+    if (!seen) grantedBy[value] = [granter];
+    else if (!seen.includes(granter)) seen.push(granter);
+  };
+
+  const armorIds: string[] = [...resolved.armor];
+  const weaponItemIds = [...resolved.weaponItems];
+  const clauses = [...resolved.weaponClauses];
+  const speciesWeaponIds: string[] = [];
+
+  if (species) {
+    for (const value of species.armor) {
+      const id = SPECIES_ARMOR_KEY[value];
+      if (!id) continue;
+      if (!armorIds.includes(id)) armorIds.push(id);
+      credit(id, species.id);
+    }
+
+    for (const name of species.weaponItems) {
+      const id = foundryWeaponId(name);
+      // Only what dnd5e has a base item for; anything else is a name Foundry
+      // would check against nothing.
+      if (!FOUNDRY_WEAPON_IDS.has(id)) continue;
+      // A class that already grants the whole category covers it. A dwarf
+      // fighter does not need the battleaxe named; a dwarf wizard does.
+      const category = categories.get(id);
+      const covered =
+        (category === "simple" && resolved.weaponCategories.includes("sim")) ||
+        (category === "martial" && resolved.weaponCategories.includes("mar"));
+      if (!speciesWeaponIds.includes(id)) speciesWeaponIds.push(id);
+      if (covered) continue;
+      if (!weaponItemIds.includes(id)) weaponItemIds.push(id);
+      credit(id, species.id);
+    }
+
+    for (const clause of species.weaponClauses) {
+      if (!clauses.includes(clause)) clauses.push(clause);
+      credit(clause, species.id);
+    }
+  }
 
   const line = (id: string, label: string): ProficiencyLine => ({
     id,
     label,
-    from: resolved.grantedBy[id] ?? [],
+    from: grantedBy[id] ?? [],
   });
 
   const weapons: ProficiencyLine[] = [
     ...resolved.weaponCategories.map((id) => line(id, CATEGORY_LABEL[id] ?? id)),
-    ...resolved.weaponItems.map((id) => line(id, names.get(id) ?? id)),
+    ...weaponItemIds.map((id) => line(id, names.get(id) ?? id)),
   ];
 
-  for (const clause of resolved.weaponClauses) {
+  for (const clause of clauses) {
     const ids = weaponsMatchingClause(clause, rulesVersion);
     for (const id of ids) if (!clauseWeaponIds.includes(id)) clauseWeaponIds.push(id);
 
     weapons.push({
       id: clause,
       label: clauseLabel(clause),
-      from: resolved.grantedBy[clause] ?? [],
+      from: grantedBy[clause] ?? [],
       // The rule is the proficiency; the list is what it comes to. Both are
       // shown because the player needs the first to argue with a DM and the
       // second to buy a weapon.
@@ -228,8 +325,12 @@ export function gearProficienciesFor(
   }
 
   return {
-    armor: resolved.armor.map((id) => line(id, ARMOR_LABEL[id] ?? id)),
+    armor: armorIds.map((id) => line(id, ARMOR_LABEL[id] ?? id)),
     weapons,
     clauseWeaponIds,
+    // Kept even when a class category already covers them: the sheet has no
+    // need to repeat the battleaxe to a dwarf fighter, but Foundry writes the
+    // set from ids and a redundant one costs nothing there.
+    speciesWeaponIds,
   };
 }

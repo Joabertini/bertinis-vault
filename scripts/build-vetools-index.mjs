@@ -357,6 +357,84 @@ function speedsOf(entity) {
   return Object.keys(speeds).length ? speeds : null;
 }
 
+/**
+ * The boilerplate every species entry repeats.
+ *
+ * "Size", "Age", "Languages", "Darkvision" are headings the books print on
+ * every page, and the sheet already answers each of them somewhere better —
+ * size and speed as vitals, darkvision as its own number. Repeating them as
+ * traits would bury the four or five lines that are actually why someone
+ * picked this species.
+ */
+const BOILERPLATE_TRAITS = new Set([
+  "ability score increase",
+  "age",
+  "alignment",
+  "creature type",
+  "darkvision",
+  "language",
+  "languages",
+  "size",
+  "speed",
+  "superior darkvision",
+]);
+
+/**
+ * What this species can do, by name.
+ *
+ * Names only. The full text of every trait is roughly twenty times this index,
+ * and a player scanning "what does a dwarf get" reads the list of names — the
+ * text is what they open one of at a time, which is what the reference import
+ * already brings across.
+ */
+function traitsOf(entity) {
+  return (entity.entries ?? [])
+    .map((entry) => (typeof entry === "object" && entry.name ? String(entry.name) : null))
+    .filter((name) => name && !BOILERPLATE_TRAITS.has(name.toLowerCase()));
+}
+
+/**
+ * The armour and weapons a species grants, on top of what a class grants.
+ *
+ * A dwarf is proficient with the battleaxe, the handaxe, the light hammer and
+ * the warhammer whatever they take levels in, and a wizard dwarf swinging a
+ * warhammer swings it at their proficiency bonus. Split the same three ways as
+ * a class's — named weapons, categories, and the rules that are neither —
+ * because two species state theirs as a rule: the Giff's firearms are a
+ * category dnd5e has no base item for, and the Hobgoblin's is a choice of two
+ * martial weapons that nothing here asks the player to make.
+ */
+function speciesProficienciesOf(entity) {
+  const weaponItems = [];
+  const weaponClauses = [];
+
+  for (const group of entity.weaponProficiencies ?? []) {
+    for (const [key, value] of Object.entries(group)) {
+      if (!value) continue;
+      if (key === "choose") {
+        const count = value?.count ?? 1;
+        weaponClauses.push(`Choose ${count} martial weapons`);
+        continue;
+      }
+      if (key === "firearms") {
+        weaponClauses.push("Firearms");
+        continue;
+      }
+      weaponItems.push(String(key).split("|")[0]);
+    }
+  }
+
+  const armor = [];
+  for (const group of entity.armorProficiencies ?? []) {
+    for (const [key, value] of Object.entries(group)) {
+      if (value) armor.push(String(key).split("|")[0]);
+    }
+  }
+
+  if (!weaponItems.length && !weaponClauses.length && !armor.length) return null;
+  return { armor, weaponItems, weaponClauses };
+}
+
 function abilityOf(entity) {
   const ability = entity.ability?.[0];
   if (!ability) return null;
@@ -1600,6 +1678,10 @@ const BUILDERS = {
       // see no better than a human, which is most of them.
       darkvision: r.darkvision ?? null,
       blindsight: r.blindsight ?? null,
+      // What this species can do, by name. The reason someone picked it.
+      traits: traitsOf(r),
+      // Armour and weapons a species grants whatever class it takes.
+      speciesProficiencies: speciesProficienciesOf(r),
       // Natural armour: the tortle's shell, the lizardfolk's scales. Six
       // species have it and it beats leather for most of them.
       armorClass: context.armorClasses.forRace.get(`${r.name}|${sourceOf(r)}`) ?? [],
@@ -1621,6 +1703,10 @@ const BUILDERS = {
       speeds: speedsOf(r),
       darkvision: r.darkvision ?? null,
       blindsight: r.blindsight ?? null,
+      // A subrace adds traits rather than replacing them: a hill dwarf is a
+      // dwarf that is also tough, so both lists are shown.
+      traits: traitsOf(r),
+      speciesProficiencies: speciesProficienciesOf(r),
     })),
 
   background: (entities) =>
