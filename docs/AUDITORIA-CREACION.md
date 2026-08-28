@@ -142,8 +142,8 @@ la cola. Medido contra el código, no contra las notas viejas:
 
 | Hueco | Dónde muerde |
 | --- | --- |
-| **Rasgos raciales** | Viajan como texto libre en `featuresText`, no como items |
 | **Método de PG** | `combat.ts:52` sólo promedia; el contrato no tiene forma de decir "tiré los dados" |
+| **Lo que la especie concede y no se pregunta** | El enano elige una de tres herramientas de artesano, el elfo recibe Percepcion gratis, cada especie trae sus idiomas. El indice ya los trae medidos (`skillProficiencies`, `toolProficiencies`, `languageProficiencies` en crudo); la Forja no los pide ni los suma |
 | **Edad, altura, peso, aspecto** | No se capturan |
 | **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
 
@@ -157,6 +157,18 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **Rasgos de especie.** El renglón decía "viajan como texto libre en
+  `featuresText`". Medido: `featuresText` no está atado a ningún componente y
+  nunca entra al payload del módulo — es un campo vestigial. Lo que faltaba de
+  verdad era que la Forja nunca mostró qué da la especie. Ahora se listan por
+  nombre, sin los encabezados que toda página repite.
+  Con el mismo dato se cerró el hueco que dejé abierto en las competencias:
+  **un enano es competente con cuatro armas tome la clase que tome**, y eso no
+  lo concede ningún documento de clase.
+  La subraza **suma** rasgos y competencias donde **pisa** tamaño, velocidad y
+  visión. Las dos reglas están en los libros; confundirlas parte una especie o
+  duplica un número.
 
 - **Sentidos y velocidades.** El renglón decía "hueco de datos, hay que sacarlo
   de otra fuente". Los datos crudos de Plutonium sí traen `darkvision`,
