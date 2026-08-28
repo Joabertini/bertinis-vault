@@ -19,7 +19,7 @@ personaje sale sin ella.
 | Qué pide el manual | Estado |
 |---|---|
 | Raza | ✅ las 160, con buscador |
-| Subraza (sólo 2014) | ⚠️ se elige y **no cruza a Foundry** — `to-payload.ts:80` la busca entre razas base y falta `subrace` en `PROP_TO_PAGE` |
+| Subraza (sólo 2014) | ✅ `subrace: "races.html"` en `PROP_TO_PAGE`; 5etools fusiona las subrazas en la lista de razas, así que hashea como una raza |
 | Aumento de característica (2014) | ✅ sembrado desde el índice, editable |
 | Rasgos raciales | ⚠️ como texto libre en `featuresText`, no como items |
 | Idiomas | ✅ con la regla de la raza |
@@ -142,10 +142,19 @@ la cola. Medido contra el código, no contra las notas viejas:
 
 | Hueco | Dónde muerde |
 | --- | --- |
-| **Subraza no cruza a Foundry** | `to-payload.ts:80` resuelve la subraza contra la colección `race`; las subrazas son su propia colección, así que no encuentra nada |
 | **Sentidos** | El índice no trae visión en la oscuridad. Hueco de datos: hay que sacarlo de otra fuente o escribirlo a mano |
 | **Rasgos raciales** | Viajan como texto libre en `featuresText`, no como items |
 | **Método de PG** | `combat.ts:52` sólo promedia; el contrato no tiene forma de decir "tiré los dados" |
 | **Competencias de armadura y arma en la Forja** | Llegan a Foundry (el exportador tiene su tabla) pero el constructor nunca se las muestra al jugador |
 | **Edad, altura, peso, aspecto** | No se capturan |
 | **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
+
+### Cerrado desde entonces
+
+- **Subraza a Foundry.** No era un string mal puesto: `subrace` no era un
+  `VetoolsProp`, así que no había forma de pedirlo. Ninguna de las 98 subrazas
+  resolvía y cada enano de las colinas llegaba como un enano a secas. Arreglar
+  el prop arregló también la pista de libro en silencio: `sourceBookKey` armaba
+  `race:<id>` y la Forja guarda `subrace:<id>`, así que las **10 subrazas que
+  existen en más de un libro** (el Eladrin está en el DMG y en Mordenkainen's,
+  con rasgos distintos) se rechazaban por ambiguas sin que la pista llegara.
