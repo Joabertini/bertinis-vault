@@ -700,6 +700,7 @@ const spellcaster: BuilderState = {
   subraceId: "dwarf-hill",
   cantripsText: "Fire Bolt",
   spellsText: "Nv1: Magic Missile",
+  spellbookText: "Nv1: Magic Missile\nNv1: Shield",
   optionalFeatureIds: ["defense"],
 };
 
@@ -714,6 +715,10 @@ if (afterRace.patch.subraceId !== "") {
 }
 if (afterClass.patch.cantripsText !== "" || afterClass.patch.spellsText !== "") {
   progressFaults.push("cambiar de clase no suelta los conjuros: un guerrero exporta con Bola de Fuego");
+}
+// The book goes with them. A fighter has no spellbook to keep one in.
+if (afterClass.patch.spellbookText !== "") {
+  progressFaults.push("cambiar de clase no suelta el libro de conjuros");
 }
 if ((afterClass.patch.optionalFeatureIds ?? ["x"]).length !== 0) {
   progressFaults.push("cambiar de clase no suelta los dones");

@@ -173,6 +173,7 @@ function freshDraft(rulesVersion: BuilderRulesVersion): BuilderState {
     languagesText: "",
     cantripsText: "",
     spellsText: "",
+    spellbookText: "",
     featuresText: "",
   };
 }
@@ -414,10 +415,20 @@ export function releasedByPick(
   const shed: string[] = [];
   if (draft.subclassId) shed.push("la subclase");
   if (draft.optionalFeatureIds.length > 0) shed.push("los dones");
-  if (draft.cantripsText.trim() || draft.spellsText.trim()) shed.push("los conjuros");
+  if (draft.cantripsText.trim() || draft.spellsText.trim() || draft.spellbookText.trim()) {
+    shed.push("los conjuros");
+  }
 
   return {
-    patch: { subclassId: "", optionalFeatureIds: [], cantripsText: "", spellsText: "" },
+    patch: {
+      subclassId: "",
+      optionalFeatureIds: [],
+      cantripsText: "",
+      spellsText: "",
+      // The book is a wizard's, and a player leaving the wizard behind is not
+      // taking it with them.
+      spellbookText: "",
+    },
     shed,
   };
 }

@@ -1,4 +1,9 @@
-import type { CharacterBuild, CharacterBuildInput, ClassEntry } from "@bertinis-vault/contracts";
+import type {
+  CharacterBuild,
+  CharacterBuildInput,
+  ClassEntry,
+  SpellPreparation,
+} from "@bertinis-vault/contracts";
 import { multiclassRequirementProblems, type ExpertiseAnswer } from "@bertinis-vault/domain";
 import type { BuilderRulesVersion, BuilderState, ExtraClass, StatMethod } from "./builder-state";
 import {
@@ -467,6 +472,17 @@ export function classingLabelFor(
 export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const cantrips = parseLineList(state.cantripsText).map((entry) => `Nv0: ${entry}`);
   const leveledSpells = parseLineList(state.spellsText);
+  /*
+   * The wizard's book, minus whatever is prepared out of it.
+   *
+   * Both lists reach the sheet as items, because a spell in the book is on the
+   * character whether or not it is prepared today — that is what a spellbook
+   * is. What separates them is the preparation state, so a spell written in
+   * both places is counted once, as prepared.
+   */
+  const unpreparedSpells = parseLineList(state.spellbookText).filter(
+    (entry) => !leveledSpells.includes(entry),
+  );
   const features = parseLineList(state.featuresText);
   const extraEquipment = collapseGearLines(parseLineList(state.extraEquipmentText));
   /*
@@ -536,20 +552,19 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const languages = languageEntries.map((entry) => `Language: ${entry}`);
   const normalizedWeapon = normalizeEquipmentEntry(state.weaponId);
   const normalizedArmor = normalizeArmorEntry(state);
-  const spellEntries = [
+  const writtenSpells: Array<{ label: string; level: number; preparation?: SpellPreparation }> = [
     ...parseLineList(state.cantripsText).map((entry) => ({ label: entry, level: 0 })),
-    ...leveledSpells.map((entry) => {
-      const match = entry.match(/^Nv(\d+):\s*(.+)$/i);
-      if (!match) {
-        return { label: entry, level: 1 };
-      }
+    ...leveledSpells.map((entry) => ({
+      ...parseSpellEntry(entry),
+      preparation: "prepared" as const,
+    })),
+    ...unpreparedSpells.map((entry) => ({
+      ...parseSpellEntry(entry),
+      preparation: "unprepared" as const,
+    })),
+  ];
 
-      return {
-        label: (match[2] ?? entry).trim(),
-        level: Number.parseInt(match[1] ?? "1", 10),
-      };
-    }),
-  ].map((entry) => {
+  const spellEntries = writtenSpells.map((entry) => {
     const spellId = idOrFallback(resolveSpellId(entry.label), entry.label);
     const catalogEntry = getSpellCatalogEntry(spellId);
 
@@ -557,6 +572,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       spellId,
       label: catalogEntry?.label ?? entry.label,
       level: entry.level,
+      ...(entry.preparation ? { preparation: entry.preparation } : {}),
     };
   });
   const backgroundGrantedFeatIds = backgroundFeatIdsFor(state);
@@ -634,7 +650,10 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       feats: chosenFeatIds,
       optionalFeatures: state.optionalFeatureIds,
       proficiencies: [...proficiencies, ...languages],
-      spells: [...cantrips, ...leveledSpells],
+      // The book travels with the prepared list. A wizard whose export held
+      // only what they prepared today would arrive at the table having lost
+      // everything they ever copied.
+      spells: [...cantrips, ...leveledSpells, ...unpreparedSpells],
       // armorId is blank for an unarmoured build (a wizard who never picked
       // one, say) — filtered here rather than treated as an item to resolve.
       // The objects to resolve, once each — how many of each is `normalized`'s
@@ -753,4 +772,21 @@ export function removeLine(currentValue: string, targetValue: string) {
   return parseLineList(currentValue)
     .filter((entry) => entry !== targetValue)
     .join("\n");
+}
+
+/**
+ * A stored spell line as a label and a level.
+ *
+ * Levelled spells are written `"Nv3: Fireball"`; a line without the prefix is
+ * read as first level rather than dropped, because a player who typed a spell
+ * name by hand meant a spell.
+ */
+function parseSpellEntry(line: string): { label: string; level: number } {
+  const match = line.match(/^Nv(\d+):\s*(.+)$/i);
+  if (!match) return { label: line, level: 1 };
+
+  return {
+    label: (match[2] ?? line).trim(),
+    level: Number.parseInt(match[1] ?? "1", 10),
+  };
 }

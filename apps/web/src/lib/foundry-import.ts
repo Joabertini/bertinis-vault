@@ -24,6 +24,7 @@
  * one that says it could not place it.
  */
 
+import { hasSpellbook } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder";
@@ -210,13 +211,39 @@ export function readFoundryActor(raw: unknown): ActorImport | null {
   }
 
   /* ---- spells ---- */
+  /*
+   * `system.prepared` is 0, 1 or 2 — unprepared, prepared, always — and only
+   * one class has anywhere to put the 0.
+   *
+   * A wizard's unprepared spell is one written in the book and not prepared
+   * today, so it goes to the book and not to the prepared list; reading them
+   * all as prepared would import a wizard with a dozen spells ready to cast
+   * and no book at all.
+   *
+   * For anyone else the state is not kept, because the Forge has no second
+   * list to keep it in. They all arrive in the prepared list, where the player
+   * can see them and uncheck what they do not want — which is a better place
+   * for them than a field no chamber shows. Dropping them outright would be
+   * worse still: measured on a real paladin export, 16 of 40 spells sat at 0.
+   */
+  const usesBook = hasSpellbook(classId);
   const cantrips: string[] = [];
   const spells: string[] = [];
+  const book: string[] = [];
   for (const item of items) {
     if (item.type !== "spell" || !item.name) continue;
-    const spellLevel = (item.system as { level?: number } | undefined)?.level ?? 0;
-    if (spellLevel === 0) cantrips.push(item.name);
-    else spells.push(`Nv${spellLevel}: ${item.name}`);
+    const system = item.system as { level?: number; prepared?: number } | undefined;
+    const spellLevel = system?.level ?? 0;
+    if (spellLevel === 0) {
+      cantrips.push(item.name);
+      continue;
+    }
+
+    const line = `Nv${spellLevel}: ${item.name}`;
+    // A spell in the book is on the character either way, so it is written
+    // down whether or not it is prepared today.
+    if (usesBook) book.push(line);
+    if (!usesBook || system?.prepared !== 0) spells.push(line);
   }
 
   /* ---- gear ---- */
@@ -293,6 +320,7 @@ export function readFoundryActor(raw: unknown): ActorImport | null {
     languagesText: "",
     cantripsText: cantrips.join("\n"),
     spellsText: spells.join("\n"),
+    spellbookText: book.join("\n"),
     featuresText: "",
 
     alignment: details.alignment ?? "",

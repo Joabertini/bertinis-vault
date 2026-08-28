@@ -101,12 +101,20 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
     .filter((ref): ref is VetoolsRefPayload => ref !== null)
     .map((ref) => ({ ref }));
 
+  /*
+   * The preparation state travels with the spell, and its absence is not the
+   * same as `unprepared`: a build written before the field existed said
+   * nothing, and every one of its spells is meant to be castable. So the
+   * module's default is prepared and only an explicit `unprepared` — a
+   * wizard's book — turns it off.
+   */
   const spells = (normalized?.spells ?? [])
     .map((entry) => {
       const ref = tryResolve(resolver, "spell", entry.spellId ?? entry.label, failures, books);
-      return ref ? { ref } : null;
+      if (!ref) return null;
+      return entry.preparation ? { ref, preparation: entry.preparation } : { ref };
     })
-    .filter((entry): entry is { ref: VetoolsRefPayload } => entry !== null);
+    .filter((entry) => entry !== null);
 
   const equipment = (normalized?.equipment ?? [])
     .map((entry) => {

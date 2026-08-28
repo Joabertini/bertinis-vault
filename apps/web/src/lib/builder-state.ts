@@ -138,6 +138,15 @@ export type BuilderState = {
   languagesText: string;
   cantripsText: string;
   spellsText: string;
+  /**
+   * The wizard's book, as `"Nv1: Shield"` lines.
+   *
+   * Kept apart from `spellsText` because they answer different questions: the
+   * book is what the wizard has written down, `spellsText` is what they
+   * prepared out of it today. Empty for every other class, which has one list
+   * and no book to keep it in.
+   */
+  spellbookText: string;
   featuresText: string;
   level: number;
   str: number;
@@ -254,6 +263,7 @@ export const initialState: BuilderState = {
   languagesText: "Common\nElvish\nDraconic",
   cantripsText: "Mage Hand\nPrestidigitation",
   spellsText: "Nv1: Shield\nNv1: Magic Missile\nNv2: Misty Step",
+  spellbookText: "",
   featuresText: "Arcane Recovery\nSculpt Spells",
   level: 3,
   extraClasses: [],
@@ -320,6 +330,10 @@ export function coerceBuilderState(value: unknown): BuilderState {
     cantripsText:
       typeof candidate.cantripsText === "string" ? candidate.cantripsText : initialState.cantripsText,
     spellsText: typeof candidate.spellsText === "string" ? candidate.spellsText : initialState.spellsText,
+    spellbookText:
+      typeof candidate.spellbookText === "string"
+        ? candidate.spellbookText
+        : initialState.spellbookText,
     featuresText:
       typeof candidate.featuresText === "string" ? candidate.featuresText : initialState.featuresText,
     level: typeof candidate.level === "number" ? candidate.level : initialState.level,
