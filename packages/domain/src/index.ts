@@ -2,6 +2,7 @@ export * from "./abilities.js";
 export * from "./armor-class.js";
 export * from "./ability-bonuses.js";
 export * from "./choices.js";
+export * from "./carrying.js";
 export * from "./combat.js";
 export * from "./dnd5e-2014.js";
 export * from "./levelling.js";
