@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { spellOptionsForClass, spellPoolFor } from "../src/index-options";
+import { spellOptionsForClass, spellPoolFor } from "../src/lib/index-options";
 
 const pool = (over: Partial<Parameters<typeof spellPoolFor>[0]> = {}) =>
   spellPoolFor({

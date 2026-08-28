@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 
-import { optionById, optionsFor, slugOf, spellInfoFor } from "../src/index-options";
+import { optionById, optionsFor, slugOf, spellInfoFor } from "../src/lib/index-options";
 
 describe("what a player can choose", () => {
   test("races come from the index, not the two dozen hand-written ones", () => {

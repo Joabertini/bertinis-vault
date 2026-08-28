@@ -1,121 +1,226 @@
 import { describe, expect, test } from "vitest";
 
+import { collections, forRulesVersion } from "@bertinis-vault/vetools-index";
+
+import { buildCanonicalSnapshot, coerceBuilderState, initialState } from "../src/lib/builder";
+
 import {
-  coerceBuilderState,
-  initialState,
-  masteryIsMeleeOnlyFor,
-  masteryOptionsFor,
+  FOUNDRY_WEAPON_IDS,
   masteryProblemsFor,
-  weaponMasterySlotsFor,
-} from "../src/builder";
+  foundryWeaponId,
+  masteryOptionsFor,
+  masteryPlanFor,
+} from "../src/lib/weapon-mastery";
 
-const base = { ...initialState, abilityBonuses: {}, levelChoices: {} };
-
-const modern = (over = {}) => ({
-  ...base,
-  rulesVersion: "5e-2024" as const,
-  classId: "fighter",
-  subclassId: "",
-  level: 1,
-  extraClasses: [],
-  weaponMasteryIds: [],
-  ...over,
-});
-
-describe("how many weapons a character may master", () => {
-  test("a 2024 fighter starts with three and reaches six", () => {
-    expect(weaponMasterySlotsFor(modern())).toBe(3);
-    expect(weaponMasterySlotsFor(modern({ level: 4 }))).toBe(4);
-    expect(weaponMasterySlotsFor(modern({ level: 16 }))).toBe(6);
+describe("los ids que Foundry lee", () => {
+  test("minusculas y sin separadores", () => {
+    expect(foundryWeaponId("Light Crossbow")).toBe("lightcrossbow");
+    expect(foundryWeaponId("War Pick")).toBe("warpick");
+    expect(foundryWeaponId("Longsword")).toBe("longsword");
   });
 
-  test("a 2014 fighter masters nothing, because the rule does not exist", () => {
-    expect(weaponMasterySlotsFor({ ...base, classId: "fighter", level: 20 })).toBe(0);
-    expect(masteryOptionsFor({ ...base, classId: "fighter", level: 20 })).toEqual([]);
+  /*
+   * La prueba de conformidad, en las dos direcciones. Un arma del indice que
+   * no cae en un id de Foundry se exportaria como maestria de nada; un id de
+   * Foundry sin arma del indice seria una maestria que el jugador no puede
+   * elegir.
+   */
+  test("cada id de Foundry tiene un arma que el jugador puede elegir", () => {
+    const ids = new Set(masteryOptionsFor("2024").map((option) => option.id));
+    expect([...FOUNDRY_WEAPON_IDS].filter((id) => !ids.has(id))).toEqual([]);
   });
 
-  test("a 2024 class that never learns it grants none", () => {
-    expect(weaponMasterySlotsFor(modern({ classId: "wizard" }))).toBe(0);
+  /*
+   * La otra direccion. Si el indice suma un arma con maestria que dnd5e no
+   * tiene como objeto base, este test la nombra: o dnd5e la agrego y hay que
+   * sumarla a la lista, o no la tiene y queda fuera a proposito. Lo que no
+   * puede pasar es que aparezca sin que nadie lo note.
+   */
+  test("las armas del indice que Foundry no conoce son exactamente estas", () => {
+    const rows = forRulesVersion(collections.item ?? [], "2024") as {
+      name: string;
+      mastery?: string[] | null;
+      rarity?: string | null;
+    }[];
+
+    const unknown = rows
+      .filter((row) => row.mastery?.length && (!row.rarity || row.rarity === "none"))
+      .map((row) => row.name)
+      .filter((name) => !FOUNDRY_WEAPON_IDS.has(foundryWeaponId(name)))
+      .sort();
+
+    expect(unknown).toEqual([
+      "Antimatter Rifle",
+      "Automatic Rifle",
+      "Hunting Rifle",
+      "Laser Pistol",
+      "Laser Rifle",
+      "Psychic Blade",
+      "Revolver",
+      "Semiautomatic Pistol",
+      "Shotgun",
+      "Staff",
+      "Wooden Staff",
+    ]);
   });
 
-  test("two classes do not stack, and each reads its own table", () => {
-    // A fighter 3 / rogue 2 is fifth level. The fighter's table at 3 says
-    // three; reading it at 5 would say four, and summing would say five.
-    const split = modern({
-      classId: "fighter",
-      level: 3,
-      extraClasses: [{ classId: "rogue", subclassId: "", level: 2 }],
-    });
-
-    expect(weaponMasterySlotsFor(split)).toBe(3);
-  });
-});
-
-describe("which weapons are on offer", () => {
-  test("only weapons that carry a mastery property", () => {
-    const options = masteryOptionsFor(modern());
-
-    expect(options.length).toBeGreaterThan(80);
-    for (const option of options) expect(option.property).not.toBe("");
-  });
-
-  test("a barbarian is held to melee weapons and a fighter is not", () => {
-    const barbarian = modern({ classId: "barbarian" });
-
-    expect(masteryIsMeleeOnlyFor(barbarian)).toBe(true);
-    expect(masteryOptionsFor(barbarian).some((option) => option.id === "longbow")).toBe(false);
-    expect(masteryOptionsFor(modern()).some((option) => option.id === "longbow")).toBe(true);
-  });
-
-  test("a barbarian/fighter may master a bow, because the fighter says so", () => {
-    const both = modern({
-      classId: "barbarian",
-      level: 5,
-      extraClasses: [{ classId: "fighter", subclassId: "", level: 1 }],
-    });
-
-    expect(masteryIsMeleeOnlyFor(both)).toBe(false);
-    expect(masteryOptionsFor(both).some((option) => option.id === "longbow")).toBe(true);
-  });
-
-  test("a thrown dagger is a melee weapon and a rifle is not", () => {
-    // The item type says which; the properties do not. The antimatter rifle
-    // has no Ammunition property and is plainly not a melee weapon.
-    const melee = masteryOptionsFor(modern({ classId: "barbarian" })).map((option) => option.id);
-
-    expect(melee).toContain("dagger");
-    expect(melee).not.toContain("antimatter-rifle");
+  test("los objetos magicos no son una opcion aparte", () => {
+    const labels = masteryOptionsFor("2024").map((option) => option.label);
+    expect(labels).not.toContain("Dagger of Venom");
+    expect(labels).toContain("Dagger");
   });
 });
 
-describe("what is wrong with the picks", () => {
-  test("nothing, when there are fewer than allowed", () => {
-    expect(masteryProblemsFor(modern({ weaponMasteryIds: ["greatsword", "longsword"] }))).toEqual([]);
+describe("cuantas armas puede dominar", () => {
+  test("una clase que no la concede no ofrece nada", () => {
+    expect(masteryPlanFor([{ classId: "wizard", level: 12 }], "2024").count).toBe(0);
   });
 
-  test("picking a fourth at level one is reported with both numbers", () => {
-    const problems = masteryProblemsFor(
-      modern({ weaponMasteryIds: ["greatsword", "longsword", "dagger", "battleaxe"] }),
+  test("2014 no la tiene en absoluto", () => {
+    expect(masteryPlanFor([{ classId: "fighter", level: 12 }], "2014").count).toBe(0);
+  });
+
+  test("el guerrero sube con el nivel", () => {
+    expect(masteryPlanFor([{ classId: "fighter", level: 1 }], "2024").count).toBe(3);
+    expect(masteryPlanFor([{ classId: "fighter", level: 4 }], "2024").count).toBe(4);
+    expect(masteryPlanFor([{ classId: "fighter", level: 16 }], "2024").count).toBe(6);
+  });
+
+  test("el barbaro solo cuerpo a cuerpo", () => {
+    const plan = masteryPlanFor([{ classId: "barbarian", level: 5 }], "2024");
+
+    expect(plan.meleeOnly).toBe(true);
+    expect(plan.options.map((option) => option.id)).not.toContain("longbow");
+    expect(plan.options.map((option) => option.id)).toContain("greataxe");
+  });
+
+  /*
+   * Dos clases que la conceden dan la MAS ALTA, no la suma: la tabla de cada
+   * clase imprime un numero para un personaje de esa clase, y sumar dos
+   * inventa un numero que ninguna tabla imprime.
+   */
+  test("con dos clases se toma la mas alta, no la suma", () => {
+    const plan = masteryPlanFor(
+      [{ classId: "fighter", level: 4 }, { classId: "rogue", level: 2 }],
+      "2024",
     );
 
-    expect(problems).toEqual([{ kind: "over-limit", picked: 4, allowed: 3 }]);
+    expect(plan.count).toBe(4);
   });
 
-  test("a weapon with no mastery property is named rather than dropped", () => {
-    const problems = masteryProblemsFor(modern({ weaponMasteryIds: ["net"] }));
+  test("la restriccion de cuerpo a cuerpo cede si alguna clase no la tiene", () => {
+    const plan = masteryPlanFor(
+      [{ classId: "barbarian", level: 3 }, { classId: "fighter", level: 3 }],
+      "2024",
+    );
 
-    expect(problems).toEqual([{ kind: "no-property", itemId: "net" }]);
+    expect(plan.meleeOnly).toBe(false);
+    expect(plan.options.map((option) => option.id)).toContain("longbow");
   });
 });
 
-describe("drafts saved before mastery was read", () => {
-  test("open with no picks rather than failing", () => {
-    expect(coerceBuilderState({ ...base, weaponMasteryIds: undefined }).weaponMasteryIds).toEqual([]);
+describe("lo que llega al payload", () => {
+  const base = { ...initialState, abilityBonuses: {}, levelChoices: {} };
+
+  test("un guerrero de 2024 exporta sus maestrias como ids", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      rulesVersion: "5e-2024",
+      classId: "fighter",
+      subclassId: "",
+      level: 5,
+      weaponMasteryIds: ["longsword", "greataxe"],
+    });
+
+    expect(snapshot.choices.weaponMasteries).toEqual(["longsword", "greataxe"]);
   });
 
-  test("keep real picks and drop what is not one", () => {
+  /*
+   * Un borrador puede quedar con maestrias de una clase que el jugador ya
+   * cambio. Exportarlas seria darle al personaje una competencia que su ficha
+   * nunca le concedio.
+   */
+  test("una maestria de una clase que ya no tiene no viaja", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      rulesVersion: "5e-2024",
+      classId: "wizard",
+      subclassId: "",
+      level: 5,
+      weaponMasteryIds: ["longsword"],
+    });
+
+    expect(snapshot.choices.weaponMasteries).toBeUndefined();
+  });
+
+  test("elegir de mas se recorta a lo que la clase permite", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      rulesVersion: "5e-2024",
+      classId: "rogue",
+      subclassId: "",
+      level: 3,
+      weaponMasteryIds: ["dagger", "rapier", "shortsword", "scimitar"],
+    });
+
+    expect(snapshot.choices.weaponMasteries).toEqual(["dagger", "rapier"]);
+  });
+
+  test("2014 no exporta maestrias en absoluto", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      rulesVersion: "5e-2014",
+      classId: "fighter",
+      subclassId: "",
+      level: 5,
+      weaponMasteryIds: ["longsword"],
+    });
+
+    expect(snapshot.choices.weaponMasteries).toBeUndefined();
+  });
+});
+
+/*
+ * Del spec parqueado en test/pending/weapon-mastery.test.ts, que pedia que los
+ * problemas se REPORTEN en vez de recortarse. Tenia razon: recortar en
+ * silencio es el modo de falla que este constructor viene arreglando en todas
+ * las otras camaras.
+ */
+describe("que esta mal con lo elegido", () => {
+  const plan = masteryPlanFor([{ classId: "fighter", level: 1 }], "2024");
+
+  test("nada, cuando se eligieron menos de las que puede", () => {
+    expect(masteryProblemsFor(["greatsword", "longsword"], plan)).toEqual([]);
+  });
+
+  test("una cuarta a nivel uno se reporta con los dos numeros", () => {
     expect(
-      coerceBuilderState({ ...base, weaponMasteryIds: ["dagger", 7, "", "longsword"] }).weaponMasteryIds,
+      masteryProblemsFor(["greatsword", "longsword", "dagger", "battleaxe"], plan),
+    ).toEqual([{ kind: "over-limit", picked: 4, allowed: 3 }]);
+  });
+
+  test("un arma sin maestria se nombra en vez de desaparecer", () => {
+    expect(masteryProblemsFor(["net"], plan)).toEqual([{ kind: "no-property", itemId: "net" }]);
+  });
+
+  test("repetir la misma no cuenta dos veces", () => {
+    expect(masteryProblemsFor(["dagger", "dagger"], plan)).toEqual([]);
+  });
+});
+
+describe("borradores guardados antes de que esto existiera", () => {
+  test("abren sin elecciones en vez de fallar", () => {
+    expect(coerceBuilderState({ weaponMasteryIds: undefined }).weaponMasteryIds).toEqual([]);
+  });
+
+  /*
+   * Un vacio no es una eleccion: pasa un typeof, despues no coincide con
+   * ningun arma, y en la pantalla se lee como una maestria que el jugador no
+   * puede sacar.
+   */
+  test("quedan las elecciones reales y se cae lo que no lo es", () => {
+    expect(
+      coerceBuilderState({ weaponMasteryIds: ["dagger", 7, "", "longsword"] }).weaponMasteryIds,
     ).toEqual(["dagger", "longsword"]);
   });
 });

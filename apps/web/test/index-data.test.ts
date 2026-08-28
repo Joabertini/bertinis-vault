@@ -12,7 +12,7 @@ import {
   speciesBonusFromIndex,
   spellInfoFor,
   spellOptionsForClass,
-} from "../src/index-options";
+} from "../src/lib/index-options";
 
 describe("subclasses", () => {
   test("resolve at all, which they never did", () => {
@@ -196,7 +196,7 @@ describe("the feat a background grants", () => {
 
 describe("what the web builder actually sends", () => {
   test("its skill picks reach the payload as dnd5e keys", async () => {
-    const { buildCanonicalSnapshot, initialState } = await import("../src/builder");
+    const { buildCanonicalSnapshot, initialState } = await import("../src/lib/builder");
     const { buildToPayload, RefResolver, collections } = await import("@bertinis-vault/vetools-index");
 
     const snapshot = buildCanonicalSnapshot({
@@ -209,7 +209,7 @@ describe("what the web builder actually sends", () => {
   });
 
   test("its armour and weapon reach the payload marked worn", async () => {
-    const { buildCanonicalSnapshot, initialState } = await import("../src/builder");
+    const { buildCanonicalSnapshot, initialState } = await import("../src/lib/builder");
     const { buildToPayload, RefResolver, collections } = await import("@bertinis-vault/vetools-index");
 
     // The ids a pick from the index produces. The hand-written catalog's own

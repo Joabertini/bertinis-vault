@@ -57,6 +57,18 @@ export const identitySchema = z.object({
 export const ancestrySchema = z.object({
   raceId: canonicalIdSchema,
   subraceId: canonicalIdSchema.optional(),
+  /**
+   * The character's size, as `dnd5e` keys it.
+   *
+   * A property of the species rather than a choice, and carried here because
+   * the rules layer has no species table to look it up in. Without it every
+   * character exported as Medium — a quarter of 2014's species are Small, so
+   * every gnome and halfling reached the table occupying the wrong square.
+   *
+   * Optional so every build written before this field stays valid; absent
+   * still means Medium, which is what those builds already got.
+   */
+  size: z.enum(["tiny", "sm", "med", "lg", "huge", "grg"]).optional(),
 });
 
 /** How a class advances spellcasting, in 5etools' own vocabulary. */
@@ -224,6 +236,29 @@ export const choicesSchema = z.object({
   spells: z.array(canonicalLabelSchema).default([]),
   equipment: z.array(canonicalLabelSchema).default([]),
   features: z.array(canonicalLabelSchema).default([]),
+  /**
+   * The weapons this character has mastery with, as dnd5e base-item ids.
+   *
+   * 2024 only, and only five classes grant it. Ids rather than labels because
+   * Foundry reads them straight: `traits.weaponProf.mastery.value` is a set it
+   * checks with `has(item.type.baseItem)`, so "Longsword" would silently match
+   * nothing while `longsword` matches.
+   *
+   * Optional so every build written before this field stays valid.
+   */
+  weaponMasteries: z.array(z.string().min(1)).optional(),
+  /**
+   * The coins the character starts with, counted in copper.
+   *
+   * Copper because that is what the index counts in, and because it is the
+   * only unit that never rounds: 2024 states the alternative to a class kit as
+   * a flat sum, and a background can add its own on top. The split into
+   * platinum, gold, silver and copper is presentation, and belongs where it is
+   * presented.
+   *
+   * Optional so every build written before this field stays valid.
+   */
+  startingCopper: z.number().int().min(0).optional(),
   normalized: normalizedChoicesSchema.optional(),
 });
 
@@ -289,6 +324,7 @@ export type ClassEntry = z.infer<typeof classEntrySchema>;
 export type Classing = z.infer<typeof classingSchema>;
 export type Background = z.infer<typeof backgroundSchema>;
 export type Abilities = z.infer<typeof abilitiesSchema>;
+export type NormalizedProficiencyKind = z.infer<typeof normalizedProficiencyKindSchema>;
 export type NormalizedProficiencyEntry = z.infer<typeof normalizedProficiencyEntrySchema>;
 export type NormalizedSpellEntry = z.infer<typeof normalizedSpellEntrySchema>;
 export type NormalizedEquipmentEntry = z.infer<typeof normalizedEquipmentEntrySchema>;

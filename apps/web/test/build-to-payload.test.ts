@@ -1,8 +1,8 @@
 import { RefResolver, buildToPayload, collections } from "@bertinis-vault/vetools-index";
 import { expect, test } from "vitest";
 
-import { buildCanonicalSnapshot, initialState } from "../src/builder";
-import { slugOf } from "../src/index-options";
+import { buildCanonicalSnapshot, initialState } from "../src/lib/builder";
+import { slugOf } from "../src/lib/index-options";
 
 const resolver = new RefResolver("2014", collections);
 

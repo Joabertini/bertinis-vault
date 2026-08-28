@@ -6,7 +6,7 @@ import {
   buildCanonicalSnapshot,
   coerceBuilderState,
   initialState,
-} from "../src/builder";
+} from "../src/lib/builder";
 
 const resolver = new RefResolver("2014", collections);
 

@@ -26,7 +26,9 @@ test("buildFoundryActorPayload maps canonical build into a richer Foundry actor"
   assert.deepEqual(payload.system.abilities.str.check.roll, { min: null, max: null, mode: 0 });
   assert.equal(payload.system.spells.spell1.value, 4);
   assert.equal(payload.system.traits.languages.value.includes("elvish"), true);
-  assert.equal(payload.system.tools.thief.prof, 1);
+  // dnd5e 5.3.3 keys the proficiency level as `value` (DND5E.ProficiencyLevel);
+  // there is no `prof` field on a tool. Checked against the installed system.
+  assert.equal(payload.system.tools.thief.value, 1);
 
   const itemTypes = payload.items.map((item) => item.type);
   assert.equal(itemTypes.includes("class"), true);
@@ -287,4 +289,136 @@ test("buildFoundryActorPayload defensively deduplicates duplicate spell items", 
 
   assert.equal(spellItems.filter((item) => item.name === "Shield").length, 1);
   assert.equal(spellItems.filter((item) => item.name === "Mage Hand").length, 1);
+});
+
+test("a second class adds its multiclass proficiencies, not its starting ones", () => {
+  // Read only from the first class, this wizard exported with no armour
+  // proficiency at all — a character who cannot equip what they are wearing.
+  const build = makeCharacterBuild();
+  build.classing.classes = [
+    { classId: "wizard", level: 4 },
+    { classId: "fighter", level: 1 },
+  ];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.armorProf.value, ["light", "medium"]);
+  assert.equal(payload.system.traits.armorProf.custom, "shields");
+  // The fighter's multiclass block stops at medium armour: a fighter dip
+  // never grants heavy, which is the whole difference from its starting list.
+  assert.equal(payload.system.traits.armorProf.value.includes("heavy"), false);
+  assert.equal(payload.system.traits.weaponProf.custom.includes("martial"), true);
+});
+
+test("a single class exports exactly the proficiencies it always did", () => {
+  const build = makeCharacterBuild();
+  build.classing.classes = [{ classId: "fighter", level: 5 }];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.armorProf.value, ["light", "medium", "heavy"]);
+  assert.equal(payload.system.traits.weaponProf.custom, "simple, martial");
+});
+
+test("a class with no multiclass block contributes nothing rather than throwing", () => {
+  const build = makeCharacterBuild();
+  build.classing.classes = [
+    { classId: "fighter", level: 5 },
+    { classId: "sorcerer", level: 1 },
+  ];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.armorProf.value, ["light", "medium", "heavy"]);
+});
+
+test("weapon mastery reaches the actor as base-item ids", () => {
+  const build = makeCharacterBuild();
+  build.choices.weaponMasteries = ["longsword", "greataxe"];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.weaponProf.mastery.value, ["longsword", "greataxe"]);
+});
+
+test("a build with no mastery leaves the set empty rather than absent", () => {
+  const payload = buildFoundryActorPayload(makeCharacterBuild());
+
+  assert.deepEqual(payload.system.traits.weaponProf.mastery.value, []);
+});
+
+test("expertise doubles a skill the character is proficient in", () => {
+  const build = makeCharacterBuild();
+  build.choices.normalized.proficiencies.push({ kind: "expertise", label: "Arcana" });
+
+  const payload = buildFoundryActorPayload(build);
+
+  // 1 is proficient, 2 is expertise. Arcana is among the build's own skills.
+  assert.equal(payload.system.skills.arc.value, 2);
+});
+
+test("expertise in a skill the character does not have is skipped, not granted", () => {
+  // The rules layer reports this as a problem the player can see. Promoting it
+  // here would hide it and hand out a proficiency the sheet never granted.
+  const build = makeCharacterBuild();
+  build.choices.normalized.proficiencies.push({ kind: "expertise", label: "Athletics" });
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.equal(payload.system.skills.ath.value, 0);
+});
+
+test("a proficiency without expertise stays at one", () => {
+  const payload = buildFoundryActorPayload(makeCharacterBuild());
+
+  assert.equal(payload.system.skills.arc.value, 1);
+});
+
+test("starting coins reach the sheet as the book states them", () => {
+  const build = makeCharacterBuild();
+  // What a 2024 fighter who takes the money instead of the kit walks away
+  // with: 150 gold pieces. The sheet should say so.
+  build.choices.startingCopper = 15000;
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.equal(payload.system.currency.gp, 150);
+  // Not rolled up into platinum: 15pp is the same money and a different
+  // answer, in a box most tables never use.
+  assert.equal(payload.system.currency.pp, 0);
+  assert.equal(payload.system.currency.sp, 0);
+  assert.equal(payload.system.currency.cp, 0);
+});
+
+test("odd change lands in silver and copper rather than being lost", () => {
+  const build = makeCharacterBuild();
+  build.choices.startingCopper = 1234; // 12gp 3sp 4cp
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.equal(payload.system.currency.gp, 12);
+  assert.equal(payload.system.currency.sp, 3);
+  assert.equal(payload.system.currency.cp, 4);
+});
+
+test("a character with no starting coins keeps an empty purse", () => {
+  const payload = buildFoundryActorPayload(makeCharacterBuild());
+
+  assert.equal(payload.system.currency.gp, 0);
+  assert.equal(payload.system.currency.cp, 0);
+});
+
+test("a small species reaches the sheet small", () => {
+  const build = makeCharacterBuild();
+  build.ancestry.size = "sm";
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.equal(payload.system.traits.size, "sm");
+});
+
+test("a build with no size stays Medium, as it always was", () => {
+  const payload = buildFoundryActorPayload(makeCharacterBuild());
+
+  assert.equal(payload.system.traits.size, "med");
 });

@@ -1,0 +1,22 @@
+/*
+ * Jim Nightshade, served from the app rather than from Google.
+ *
+ * The wordmark is the first thing on screen, and a webfont that arrives late
+ * makes the title visibly reflow on every cold load. Shipped locally it is
+ * there on the first paint.
+ *
+ * One weight only, which is why this face is bound to `font-title` and not to
+ * `font-display`: asking a browser to fake a 900 out of a 400 smears exactly
+ * the decorative strokes that make it worth using. Everything smaller than a
+ * wordmark keeps Cinzel.
+ *
+ * Cinzel, EB Garamond and JetBrains Mono come from Google Fonts, linked in
+ * index.html. Only this one is local, and only because it paints first.
+ */
+@font-face {
+  font-family: "Jim Nightshade";
+  src: url("/fonts/JimNightshade-Regular.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}

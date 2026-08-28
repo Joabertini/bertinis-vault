@@ -1,0 +1,311 @@
+/**
+ * Reading a Foundry actor back into the Vault.
+ *
+ * A character exported out of Foundry is a `.json` a player already has on
+ * disk, and until now it was a one-way trip: the Vault could send one out and
+ * never take one back. This closes the loop, which also means a character that
+ * lives in Foundry can be filed on the shelf here without being rebuilt.
+ *
+ * The join is exact, not fuzzy. Every dnd5e item carries
+ * `system.identifier` — "paladin", "oath-of-the-ancients", "kender",
+ * "rune-carver" — and that string is character-for-character the slug this
+ * front already stores. Checked against a real level 5 paladin with 90 items:
+ * class, subclass, species, background and all three feats resolved against
+ * the index on the identifier alone, including a Kender out of Dragonlance
+ * and a Rune Carver out of Bigby's. Matching on printed names would have had
+ * to survive translation, punctuation and reprints; this does not.
+ *
+ * The edition comes out of the file too: `system.source.rules` is "2014" or
+ * "2024" on every item, so nobody is asked which books their own character
+ * was built from.
+ *
+ * What the index does not recognise is named in `unresolved` rather than
+ * dropped in silence. An import that quietly loses a species is worse than
+ * one that says it could not place it.
+ */
+
+import type { RulesVersion } from "@bertinis-vault/vetools-ref";
+
+import type { BuilderState } from "./builder";
+import { initialState } from "./builder";
+import { entryById } from "./catalog";
+import { featChoiceForBackground, levellingFor, optionsFor, slugOf } from "./index-options";
+
+export type ActorImport = {
+  state: BuilderState;
+  /** What was recognised, for the confirmation the player reads. */
+  resolved: string[];
+  /** What the index did not know, named so it can be fixed by hand. */
+  unresolved: string[];
+};
+
+/* The parts of a dnd5e actor this reads. Everything else is ignored. */
+type ActorItem = {
+  type?: string;
+  name?: string;
+  system?: {
+    identifier?: string;
+    levels?: number;
+    level?: number;
+    type?: { value?: string };
+    source?: { rules?: string };
+  };
+};
+
+type Actor = {
+  name?: string;
+  type?: string;
+  items?: ActorItem[];
+  system?: {
+    abilities?: Record<string, { value?: number }>;
+    details?: Record<string, unknown>;
+  };
+};
+
+/** The id a dnd5e item resolves to, preferring its own identifier. */
+function idOf(item: ActorItem): string {
+  return item.system?.identifier?.trim() || slugOf(item.name ?? "");
+}
+
+/**
+ * Which ruleset this actor was built under.
+ *
+ * Read off the items rather than asked, and by majority rather than from the
+ * first one: a 2024 character can carry a spell reprinted out of a 2014 book
+ * without being a 2014 character.
+ */
+function editionOf(items: ActorItem[]): RulesVersion {
+  let newer = 0;
+  let older = 0;
+  for (const item of items) {
+    const rules = item.system?.source?.rules;
+    if (rules === "2024") newer++;
+    else if (rules === "2014") older++;
+  }
+  return newer > older ? "2024" : "2014";
+}
+
+export function readFoundryActor(raw: unknown): ActorImport | null {
+  const actor = raw as Actor;
+  if (!actor || typeof actor !== "object") return null;
+  // A monster, a vehicle or an unrelated json is not a character sheet.
+  if (actor.type !== "character" || !Array.isArray(actor.items)) return null;
+
+  const items = actor.items;
+  const rulesVersion = editionOf(items);
+  const resolved: string[] = [];
+  const unresolved: string[] = [];
+
+  const first = (type: string) => items.find((item) => item.type === type);
+
+  /**
+   * One pick, resolved against the index and reported either way.
+   *
+   * The source book is recorded alongside the id because a build stores it,
+   * and because two books can print the same name — without it a shared name
+   * resolves to whichever row happens to come first.
+   */
+  const books: Record<string, string> = {};
+  const pick = (
+    prop: "race" | "class" | "background" | "subclass",
+    item: ActorItem | undefined,
+    label: string,
+  ): string => {
+    if (!item) return "";
+    const id = idOf(item);
+    if (!id) return "";
+
+    const entry = entryById(prop, rulesVersion, id);
+    if (!entry) {
+      unresolved.push(`${label}: ${item.name ?? id}`);
+      return "";
+    }
+
+    books[`${prop}:${id}`] = entry.source;
+    resolved.push(`${label}: ${entry.label}`);
+    return id;
+  };
+
+  const classItem = first("class");
+  const classId = pick("class", classItem, "Clase");
+  const subclassId = pick("subclass", first("subclass"), "Subclase");
+  const raceId = pick("race", first("race"), "Raza");
+  const backgroundId = pick("background", first("background"), "Trasfondo");
+
+  const level = Math.min(20, Math.max(1, classItem?.system?.levels ?? classItem?.system?.level ?? 1));
+
+  /*
+   * Only the real feats.
+   *
+   * dnd5e files a character's racial traits, class features and background
+   * features as `feat` items too — this paladin carries 26 of them and only
+   * three are feats a player chose. `system.type.value` is what tells them
+   * apart, and without it an import would hand someone "Divine Smite" and
+   * "Kender Curiosity" as if they had spent ability score improvements on them.
+   */
+  const featIds: string[] = [];
+  for (const item of items) {
+    if (item.type !== "feat" || item.system?.type?.value !== "feat") continue;
+
+    const id = idOf(item);
+    const known = optionsFor({ prop: "feat", rulesVersion, search: item.name ?? id, limit: 40 }).find(
+      (option) => option.id === id,
+    );
+    if (!known) {
+      unresolved.push(`Dote: ${item.name ?? id}`);
+      continue;
+    }
+    featIds.push(id);
+    resolved.push(`Dote: ${known.label}`);
+  }
+
+  /*
+   * Where each feat goes.
+   *
+   * A character can hold more feats than it has ability score improvements —
+   * this paladin is level 5, has one improvement at level 4, and carries
+   * three. The extras are real: one comes from the background, and Foundry
+   * lets a table hand out the rest. So the feats are placed against the three
+   * places a build can actually hold one, in order of certainty:
+   *
+   *   1. the background's own feat, where the background offers it
+   *   2. the class's improvement levels, up to this character's level
+   *   3. the build's single free feat slot
+   *
+   * The actor never records which level a feat was taken at, so step 2 uses
+   * the levels the class actually offers rather than a guess. That derives
+   * the same numbers; it is not a claim about the order they were chosen in.
+   *
+   * Anything still left over is named. A feat silently dropped is a character
+   * that imports weaker than it left.
+   */
+  const levelChoices: BuilderState["levelChoices"] = {};
+  let freeFeatId = "";
+  let backgroundFeatId = "";
+
+  const offeredByBackground = new Set(
+    (backgroundId ? featChoiceForBackground(backgroundId, rulesVersion)?.options ?? [] : []).map(
+      (option) => slugOf(option.name),
+    ),
+  );
+
+  const improvementLevels = (classId ? levellingFor(classId, rulesVersion)?.improvementLevels : null) ?? [];
+  const openLevels = improvementLevels.filter((entry) => entry <= level);
+
+  for (const id of featIds) {
+    if (!backgroundFeatId && offeredByBackground.has(id)) {
+      backgroundFeatId = id;
+      continue;
+    }
+    const at = openLevels.shift();
+    if (at !== undefined) {
+      levelChoices[at] = { kind: "feat", featId: id };
+      continue;
+    }
+    if (!freeFeatId) {
+      freeFeatId = id;
+      continue;
+    }
+    unresolved.push(`Dote sin lugar donde ponerla: ${id}`);
+  }
+
+  /* ---- spells ---- */
+  const cantrips: string[] = [];
+  const spells: string[] = [];
+  for (const item of items) {
+    if (item.type !== "spell" || !item.name) continue;
+    const spellLevel = (item.system as { level?: number } | undefined)?.level ?? 0;
+    if (spellLevel === 0) cantrips.push(item.name);
+    else spells.push(`Nv${spellLevel}: ${item.name}`);
+  }
+
+  /* ---- gear ---- */
+  const weapon = items.find(
+    // Every character carries an Unarmed Strike; it is not a weapon anyone
+    // chose, and importing it would put it in the Gear chamber as if it were.
+    (item) => item.type === "weapon" && item.name && item.name !== "Unarmed Strike",
+  );
+  const armor = items.find((item) => {
+    if (item.type !== "equipment") return false;
+    const kind = item.system?.type?.value;
+    return kind === "light" || kind === "medium" || kind === "heavy";
+  });
+
+  const resolveItem = (item: ActorItem | undefined, label: string): string => {
+    if (!item?.name) return "";
+    const id = idOf(item);
+    const known = optionsFor({ prop: "item", rulesVersion, search: item.name, limit: 40 }).find(
+      (option) => option.id === id,
+    );
+    if (!known) {
+      unresolved.push(`${label}: ${item.name}`);
+      return "";
+    }
+    resolved.push(`${label}: ${known.label}`);
+    return id;
+  };
+
+  const details = (actor.system?.details ?? {}) as Record<string, string>;
+  const scores = actor.system?.abilities ?? {};
+  const score = (ability: string) => scores[ability]?.value ?? 10;
+
+  const state: BuilderState = {
+    ...initialState,
+    rulesVersion: rulesVersion === "2024" ? "5e-2024" : "5e-2014",
+    createdAt: new Date().toISOString(),
+    characterName: actor.name?.trim() || "Sin nombre",
+    playerName: "",
+    raceId,
+    subraceId: "",
+    classId,
+    subclassId,
+    backgroundId,
+    backgroundFeatId,
+    featId: freeFeatId,
+    level,
+    statMethod: "roll",
+
+    /*
+     * Foundry's scores are already final — species bonus, improvements and
+     * half-feats all baked in. They are stored here as the base with no
+     * bonuses on top, so the derived total matches the sheet the character
+     * came from. Seeding a species bonus as well would silently add two to a
+     * score the player never raised.
+     */
+    str: score("str"),
+    dex: score("dex"),
+    con: score("con"),
+    int: score("int"),
+    wis: score("wis"),
+    cha: score("cha"),
+    abilityBonuses: {},
+
+    levelChoices,
+    optionalFeatureIds: [],
+    featAbilityChoices: {},
+    sourceBooks: books,
+
+    weaponId: resolveItem(weapon, "Arma"),
+    armorId: resolveItem(armor, "Armadura"),
+    extraEquipmentText: "",
+
+    proficienciesText: "",
+    languagesText: "",
+    cantripsText: cantrips.join("\n"),
+    spellsText: spells.join("\n"),
+    featuresText: "",
+
+    alignment: details.alignment ?? "",
+    trait: details.trait ?? "",
+    ideal: details.ideal ?? "",
+    bond: details.bond ?? "",
+    flaw: details.flaw ?? "",
+    notes: "",
+  };
+
+  if (cantrips.length + spells.length > 0) {
+    resolved.push(`${cantrips.length} trucos y ${spells.length} conjuros`);
+  }
+
+  return { state, resolved, unresolved };
+}

@@ -1,6 +1,6 @@
 # Foundry Manual Validation Working Copy
 
-Generated at: `2026-08-24T01:46:36.319Z`
+Generated at: `2026-08-27T17:54:37.971Z`
 
 Start from `docs/FOUNDRY-MANUAL-VALIDATION-REPORT.md` for the canonical template.
 

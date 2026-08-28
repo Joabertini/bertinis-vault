@@ -107,18 +107,35 @@ export function deriveCharacterBuild(
   // have alone: they come from one combined caster level read against the
   // full-caster table, and each class contributes a different fraction of its
   // levels. A wizard 3 / cleric 2 used to be given a wizard 3's slots.
-  const payloadSlots = isMulticlass
-    ? multiclassSpellSlots(entries)
-    : spellSlotsForPayload(primaryClassId, primaryClassLevel, slotRules);
+  //
+  // A subclass can also cast when its class does not, and then the class's own
+  // table is the wrong one to read: the Eldritch Knight is a third-caster
+  // built on a fighter, and asking the fighter's table for slots returns none.
+  // Its levels have to go through the same fraction the combined table
+  // applies, so it takes the same path a multiclass character does.
+  const subclassCarriesTheCasting = entries.some(
+    (entry) => !entry.casterProgression && entry.subclassCasterProgression,
+  );
+
+  const payloadSlots =
+    isMulticlass || subclassCarriesTheCasting
+      ? multiclassSpellSlots(entries)
+      : spellSlotsForPayload(primaryClassId, primaryClassLevel, slotRules);
 
   // The ability comes from the first class that casts at all. A character
   // with two casting classes has two save DCs, which this contract has never
   // carried; naming the first is the honest partial answer rather than
   // silently picking whichever table was consulted last.
+  //
+  // Asked of every build, not only a multiclass one. Gated on `isMulticlass`,
+  // a single-class Eldritch Knight fell through to the fighter's ability,
+  // which is none — a character holding spells with no save DC to cast them
+  // at. A single-class caster reaches the same answer either way: the entry's
+  // ability comes from the same index row the fallback consults.
   const castingEntry = entries.find((entry) => progressionOf(entry) !== null);
   const spellAbilityForBuild =
-    (isMulticlass ? castingEntry?.spellcastingAbility : undefined) ??
-    (isMulticlass ? getSpellAbilityForClass(castingEntry?.classId ?? "") : undefined) ??
+    castingEntry?.spellcastingAbility ??
+    getSpellAbilityForClass(castingEntry?.classId ?? "") ??
     spellAbility;
 
   const spellcasting = spellAbilityForBuild

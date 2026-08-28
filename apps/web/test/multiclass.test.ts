@@ -7,8 +7,11 @@ import {
   coerceBuilderState,
   initialState,
   unmetMulticlassRequirementsFor,
-} from "../src/builder";
-import { multiclassGrantsFor } from "../src/index-options";
+} from "../src/lib/builder";
+import { classingLabel } from "../src/lib/classing";
+import { proficiencyPlan } from "../src/lib/grants";
+import { featCandidateFor } from "../src/lib/improvements";
+import { multiclassGrantsFor } from "../src/lib/index-options";
 
 const base = { ...initialState, abilityBonuses: {}, levelChoices: {} };
 
@@ -193,5 +196,145 @@ describe("what the classes past the first hand over", () => {
     // shields, which is exactly the difference from its starting list.
     expect(grants.armor).toEqual(["light", "medium", "shield"]);
     expect(grants.skillChoice).toBeNull();
+  });
+});
+
+describe("a subclass that casts when its class does not", () => {
+  /*
+   * Un Caballero Arcano de una sola clase. El guerrero no lanza, así que la
+   * rama de una sola clase leía la clase, no encontraba característica, y
+   * devolvía un personaje sin lanzamiento — sin espacios y sin CD de salvación
+   * para los conjuros que la subclase le acaba de dar.
+   */
+  test("a single-class Eldritch Knight casts", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      classId: "fighter",
+      subclassId: "eldritch-knight",
+      level: 12,
+      extraClasses: [],
+    });
+
+    expect(snapshot.derived.spellcasting?.ability).toBe("int");
+    expect(snapshot.derived.spellcasting?.slots).toEqual({ 1: 4, 2: 3 });
+  });
+
+  test("a fighter with no such subclass still casts nothing", () => {
+    const snapshot = buildCanonicalSnapshot({
+      ...base,
+      classId: "fighter",
+      subclassId: "",
+      level: 12,
+      extraClasses: [],
+    });
+
+    expect(snapshot.derived.spellcasting).toBeUndefined();
+  });
+});
+
+describe("cómo la ficha nombra a las clases", () => {
+  const labelOf = (classId: string) => ({ fighter: "Guerrero", wizard: "Mago" })[classId] ?? classId;
+
+  test("una sola clase se lee como siempre", () => {
+    expect(classingLabel({ classId: "fighter", level: 5 }, [], labelOf)).toBe("Guerrero");
+  });
+
+  /*
+   * "Nivel 8 · Guerrero" no es una forma más corta de decir qué es este
+   * personaje: es otro personaje. El jugador necesita ver cuáles cinco niveles
+   * son del guerrero.
+   */
+  test("dos clases se parten en pantalla", () => {
+    expect(
+      classingLabel({ classId: "fighter", level: 5 }, [{ classId: "wizard", subclassId: "", level: 3 }], labelOf),
+    ).toBe("Guerrero 5 / Mago 3");
+  });
+
+  test("una fila a medio elegir no aparece en la línea", () => {
+    expect(
+      classingLabel({ classId: "fighter", level: 5 }, [{ classId: "", subclassId: "", level: 1 }], labelOf),
+    ).toBe("Guerrero");
+  });
+});
+
+describe("los requisitos de dote leen a todo el personaje", () => {
+  test("el nivel es el del personaje, no el de la primera clase", () => {
+    const candidate = featCandidateFor({
+      ...base,
+      classId: "fighter",
+      subclassId: "",
+      level: 5,
+      extraClasses: [{ classId: "wizard", subclassId: "", level: 1 }],
+    });
+
+    expect(candidate.level).toBe(6);
+    expect(candidate.classes.map((entry) => entry.level)).toEqual([5, 1]);
+  });
+
+  test("un guerrero que se metió una clase de mago sí lanza conjuros", () => {
+    const candidate = featCandidateFor({
+      ...base,
+      classId: "fighter",
+      subclassId: "",
+      level: 5,
+      extraClasses: [{ classId: "wizard", subclassId: "", level: 1 }],
+    });
+
+    expect(candidate.casts).toBe(true);
+  });
+
+  test("un Caballero Arcano lanza aunque su clase no lance", () => {
+    const candidate = featCandidateFor({
+      ...base,
+      classId: "fighter",
+      subclassId: "eldritch-knight",
+      level: 3,
+      extraClasses: [],
+    });
+
+    expect(candidate.casts).toBe(true);
+  });
+
+  test("un guerrero sin nada de eso no lanza", () => {
+    const candidate = featCandidateFor({
+      ...base,
+      classId: "fighter",
+      subclassId: "",
+      level: 5,
+      extraClasses: [],
+    });
+
+    expect(candidate.casts).toBe(false);
+  });
+});
+
+describe("lo que una segunda clase le da al personaje", () => {
+  test("un toque de pícaro ofrece UNA pericia, no las cuatro de un pícaro nivel 1", () => {
+    const plan = proficiencyPlan(
+      { ...base, classId: "wizard", subclassId: "", level: 4, extraClasses: [{ classId: "rogue", subclassId: "", level: 1 }] },
+      "2014",
+    );
+
+    const offer = plan.offers.find((entry) => entry.from === "multiclase");
+    expect(offer?.count).toBe(1);
+    expect(plan.grantedTools).toContain("Thieves' Tools");
+  });
+
+  test("sin segunda clase no aparece la oferta", () => {
+    const plan = proficiencyPlan({ ...base, extraClasses: [] }, "2014");
+    expect(plan.offers.some((entry) => entry.from === "multiclase")).toBe(false);
+  });
+
+  /*
+   * El mago no tiene bloque de multiclase en los datos — cinco de las
+   * dieciocho clases de 2014 no lo tienen. Contribuye nada, no rompe.
+   */
+  test("una clase sin bloque de multiclase no aporta ni falla", () => {
+    const plan = proficiencyPlan(
+      { ...base, classId: "fighter", subclassId: "", level: 4, extraClasses: [{ classId: "wizard", subclassId: "", level: 1 }] },
+      "2014",
+    );
+
+    expect(plan.offers.some((entry) => entry.from === "multiclase")).toBe(false);
   });
 });
