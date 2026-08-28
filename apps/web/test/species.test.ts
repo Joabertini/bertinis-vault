@@ -87,7 +87,10 @@ describe("species weapon proficiencies", () => {
   });
 
   test("a high elf's four weapons come from the subrace, not the race", () => {
-    expect(speciesProficienciesFor("elf", "", "2014")).toBeNull();
+    // The elf grants a skill and no weapons — Keen Senses is Perception — so
+    // the row is no longer null, and the weapons are still the subrace's.
+    expect(speciesProficienciesFor("elf", "", "2014")?.weaponItems).toEqual([]);
+    expect(speciesProficienciesFor("elf", "", "2014")?.skills.granted).toEqual(["Perception"]);
     expect(speciesProficienciesFor("elf", "elf-high", "2014")?.weaponItems).toEqual([
       "longsword",
       "shortsword",

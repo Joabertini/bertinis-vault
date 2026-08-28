@@ -25,7 +25,8 @@ personaje sale sin ella.
 | Idiomas | ✅ de la especie, la subespecie y el trasfondo, medidos del índice |
 | Tamaño | ✅ del índice al actor (`foundrySizeFor`). Una especie de 2014 imprime `"V"` —variable— y se lee como nada en vez de adivinarse |
 | Velocidad | ✅ `speedFor`, en la ficha viva. Límite fijado en el test: **ninguna de las 98 subrazas trae velocidad**, así que un elfo del bosque lee 30 y no 35 |
-| Sentidos (visión en la oscuridad) | ❌ **el índice no lo trae**: una fila de especie sólo tiene `name, source, size, ability, speed, armorClass`. Hueco de datos, no de código |
+| Sentidos (visión en la oscuridad) | ✅ el índice trae `darkvision` y `blindsight`; la ficha viva los muestra. La nota vieja de que no estaban ya no era cierta |
+| Competencias de especie (habilidad y herramienta) | ✅ 77 especies conceden una habilidad y 14 una herramienta; concedidas se otorgan, con elección se pregunta con su lista |
 
 ## Paso 2 — Clase
 
@@ -152,7 +153,6 @@ la cola. Medido contra el código, no contra las notas viejas:
 
 | Hueco | Dónde muerde |
 | --- | --- |
-| **Lo que la especie concede y no se pregunta** | El enano elige una de tres herramientas de artesano y el elfo recibe Percepcion gratis. El indice trae `skillProficiencies` y `toolProficiencies` en crudo; la Forja no los pide ni los suma. Los idiomas ya se cerraron |
 | **Edad, altura, peso, aspecto** | No se capturan |
 | **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
 
@@ -166,6 +166,30 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **Lo que la especie concede.** Medido sobre las 258 filas de especie y
+  subespecie de los datos: **77 conceden una habilidad y 14 una herramienta**, y
+  ninguna llegaba al personaje. Intimidacion del semiorco, Percepcion del elfo
+  de 2014, la habilidad libre del humano de 2024, las tres herramientas de
+  artesano del enano — todo se leia de la pagina y se escribia a mano, o se
+  perdia. La nota vieja de esta auditoria decia que el indice traia
+  `skillProficiencies` y `toolProficiencies` en crudo; no era cierto, el
+  constructor del indice los descartaba.
+  Tres formas y son tres preguntas distintas: una clave con nombre es concedida
+  y no se pregunta; `choose` es una eleccion acotada con su lista; `any: N` es
+  la lista entera de habilidades. Las herramientas tienen una cuarta —
+  `anyArtisansTool`, `anyMusicalInstrument` — que nombra un **tipo** y no una
+  lista: eso se dice al lado del campo donde el jugador escribe, porque
+  inventar la lista aca seria inventar una regla.
+  Cada eleccion es su propio presupuesto: la del mago no paga la del elfo.
+
+- **El elfo de 2024 no era el elfo de 2024.** `rowsFor` en `species.ts` tomaba
+  la primera fila con ese nombre legal en la edicion, y para 2024 la primera es
+  la de Lorwyn, que no concede nada. Como todos los lectores de especie pasan
+  por ahi, no se perdia solo la eleccion de habilidad: tambien los rasgos, la
+  velocidad y los idiomas. Ahora se resuelve por el libro que el borrador
+  guarda, igual que ya se hacia con los conjuros concedidos.
+
 
 - **Metodo de PG.** Las dos ediciones imprimen dos formas en la pagina de cada
   clase —tirar el dado, o tomar el numero fijo que la clase dice— y cada mesa

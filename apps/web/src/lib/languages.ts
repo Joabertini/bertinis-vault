@@ -117,8 +117,9 @@ export function languagePlanFor(
   subraceId: string,
   backgroundId: string,
   rulesVersion: RulesVersion,
+  books?: Record<string, string>,
 ): LanguagePlan {
-  const species = speciesLanguagesFor(raceId, subraceId, rulesVersion);
+  const species = speciesLanguagesFor(raceId, subraceId, rulesVersion, books);
   const background = backgroundRow(backgroundId, rulesVersion)?.languages ?? null;
 
   // Common is the one every character in the game speaks. A 2024 species grants

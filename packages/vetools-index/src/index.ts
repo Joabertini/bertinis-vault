@@ -114,6 +114,27 @@ export type SpeedMap = {
  * the warhammer whatever they take levels in. Split the same three ways as a
  * class's, because two species state theirs as a rule rather than a list.
  */
+/**
+ * A bounded choice a species offers: N of these.
+ *
+ * `options` empty with a `scope` set is a choice the data states as a *kind*
+ * rather than a list — "any skill", "any artisan's tools", "any musical
+ * instrument". The list is not in the data, and writing one here would be
+ * inventing a rule; the sheet says what is owed and the player writes what
+ * they took.
+ */
+export type ProficiencyOffer = {
+  options: string[];
+  count: number;
+  scope: "any" | "artisan" | "instrument" | null;
+};
+
+/** What a species hands over of one kind, and what it asks. */
+export type ProficiencyGrant = {
+  granted: string[];
+  choices: ProficiencyOffer[];
+};
+
 export type SpeciesProficiencies = {
   /** "light", "medium". */
   armor: string[];
@@ -121,6 +142,13 @@ export type SpeciesProficiencies = {
   weaponItems: string[];
   /** "Firearms", "Choose 2 martial weapons". */
   weaponClauses: string[];
+  /**
+   * The skills, granted and offered. 77 of the 258 species rows have one and
+   * not a single one of them reached a character before this field existed.
+   */
+  skills: ProficiencyGrant;
+  /** The tools, the same way. The 2014 dwarf's three artisan's tools live here. */
+  tools: ProficiencyGrant;
 };
 
 /**

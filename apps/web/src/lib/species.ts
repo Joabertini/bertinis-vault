@@ -30,13 +30,41 @@ function rowsFor(
   raceId: string,
   subraceId: string,
   rulesVersion: RulesVersion,
+  books?: SourceBooks,
 ): { race: RaceRow | null; subrace: SubraceRow | null } {
   const races = forRulesVersion(collections.race ?? [], rulesVersion) as RaceRow[];
-  const race = races.find((row) => slugOf(row.name) === raceId) ?? null;
+  const race = pickRow(races, raceId, books?.[`race:${raceId}`]);
   if (!subraceId) return { race, subrace: null };
 
   const subraces = forRulesVersion(collections.subrace ?? [], rulesVersion) as SubraceRow[];
-  return { race, subrace: subraces.find((row) => slugOf(row.name) === subraceId) ?? null };
+  return { race, subrace: pickRow(subraces, subraceId, books?.[`subrace:${subraceId}`]) };
+}
+
+/** Which book each pick came from, keyed by `"<prop>:<id>"`, as a build stores it. */
+export type SourceBooks = Record<string, string>;
+
+/**
+ * The row the player actually picked, and not merely one of that name.
+ *
+ * Twenty-five species names appear in more than one book legal for the same
+ * edition, and taking the first match is taking whichever the index happened
+ * to sort first. Measured: four books print an Elf legal in 2024, and the
+ * first of them is Lorwyn's — which grants nothing. So the 2024 elf's choice
+ * of Insight, Perception or Survival reached no character, and neither did
+ * their traits or their speed.
+ *
+ * Falling back to the first match when the draft names no book is what every
+ * build written before `sourceBooks` existed needs, and it is no worse than
+ * what those builds already had.
+ */
+function pickRow<Row extends { name: string; source: string }>(
+  rows: Row[],
+  id: string,
+  book: string | undefined,
+): Row | null {
+  const named = rows.filter((row) => slugOf(row.name) === id);
+  if (!named.length) return null;
+  return named.find((row) => row.source === book) ?? named[0] ?? null;
 }
 
 /**
@@ -50,8 +78,9 @@ export function speciesTraitsFor(
   raceId: string,
   subraceId: string,
   rulesVersion: RulesVersion,
+  books?: SourceBooks,
 ): string[] {
-  const { race, subrace } = rowsFor(raceId, subraceId, rulesVersion);
+  const { race, subrace } = rowsFor(raceId, subraceId, rulesVersion, books);
   const traits: string[] = [];
 
   for (const name of [...(race?.traits ?? []), ...(subrace?.traits ?? [])]) {
@@ -61,27 +90,50 @@ export function speciesTraitsFor(
   return traits;
 }
 
-/** The armour and weapons the species grants, race and subrace together. */
+/**
+ * What the species grants, race and subrace together.
+ *
+ * Added rather than replaced, the same rule as traits: a hill dwarf keeps the
+ * dwarf's warhammer and the dwarf's choice of artisan's tools.
+ *
+ * The choices are kept as a list and never merged into one. Two choices are
+ * two budgets — a species offering one skill and its subspecies offering
+ * another is two picks, and folding them into "choose 2" would let the player
+ * take both from the same list and neither from the other.
+ */
 export function speciesProficienciesFor(
   raceId: string,
   subraceId: string,
   rulesVersion: RulesVersion,
+  books?: SourceBooks,
 ): SpeciesProficiencies | null {
-  const { race, subrace } = rowsFor(raceId, subraceId, rulesVersion);
+  const { race, subrace } = rowsFor(raceId, subraceId, rulesVersion, books);
   const grants = [race?.speciesProficiencies, subrace?.speciesProficiencies].filter(
     (grant): grant is SpeciesProficiencies => Boolean(grant),
   );
   if (!grants.length) return null;
 
-  const merged: SpeciesProficiencies = { armor: [], weaponItems: [], weaponClauses: [] };
+  const merged: SpeciesProficiencies = {
+    armor: [],
+    weaponItems: [],
+    weaponClauses: [],
+    skills: { granted: [], choices: [] },
+    tools: { granted: [], choices: [] },
+  };
+
+  const add = (into: string[], values: string[]) => {
+    for (const value of values) if (!into.includes(value)) into.push(value);
+  };
+
   for (const grant of grants) {
-    for (const value of grant.armor) if (!merged.armor.includes(value)) merged.armor.push(value);
-    for (const value of grant.weaponItems) {
-      if (!merged.weaponItems.includes(value)) merged.weaponItems.push(value);
-    }
-    for (const value of grant.weaponClauses) {
-      if (!merged.weaponClauses.includes(value)) merged.weaponClauses.push(value);
-    }
+    add(merged.armor, grant.armor);
+    add(merged.weaponItems, grant.weaponItems);
+    add(merged.weaponClauses, grant.weaponClauses);
+    // A row built before these fields existed carries neither.
+    add(merged.skills.granted, grant.skills?.granted ?? []);
+    add(merged.tools.granted, grant.tools?.granted ?? []);
+    merged.skills.choices.push(...(grant.skills?.choices ?? []));
+    merged.tools.choices.push(...(grant.tools?.choices ?? []));
   }
 
   return merged;
@@ -101,8 +153,9 @@ export function speciesLanguagesFor(
   raceId: string,
   subraceId: string,
   rulesVersion: RulesVersion,
+  books?: SourceBooks,
 ): LanguageGrant | null {
-  const { race, subrace } = rowsFor(raceId, subraceId, rulesVersion);
+  const { race, subrace } = rowsFor(raceId, subraceId, rulesVersion, books);
   const grants = [race?.languages, subrace?.languages].filter(
     (grant): grant is LanguageGrant => Boolean(grant),
   );

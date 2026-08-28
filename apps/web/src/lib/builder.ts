@@ -501,7 +501,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
    * reason to know that.
    */
   const speciesGrant = state.raceId
-    ? speciesProficienciesFor(state.raceId, state.subraceId, rulesVersionOf(state))
+    ? speciesProficienciesFor(state.raceId, state.subraceId, rulesVersionOf(state), state.sourceBooks)
     : null;
   const gearProficiencies = state.classId
     ? gearProficienciesFor(

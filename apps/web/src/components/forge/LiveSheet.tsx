@@ -87,7 +87,7 @@ export default function LiveSheet({
   // The species grants weapons no class does — the dwarf's warhammer, the high
   // elf's longbow — and a dwarf wizard's only reason to swing one.
   const speciesGrant = state.raceId
-    ? speciesProficienciesFor(state.raceId, state.subraceId, rulesVersion)
+    ? speciesProficienciesFor(state.raceId, state.subraceId, rulesVersion, state.sourceBooks)
     : null;
   const gearProficiencies = classEntries.length
     ? gearProficienciesFor(
@@ -98,7 +98,7 @@ export default function LiveSheet({
     : null;
   const grantedSpells = grantedSpellsFor(state, rulesVersion);
   const speciesTraits = state.raceId
-    ? speciesTraitsFor(state.raceId, state.subraceId, rulesVersion)
+    ? speciesTraitsFor(state.raceId, state.subraceId, rulesVersion, state.sourceBooks)
     : [];
   const classLabels = Object.fromEntries([
     ...classEntries.map((entry) => [

@@ -394,6 +394,66 @@ function traitsOf(entity) {
 }
 
 /**
+ * The skills and tools a species grants, and the ones it asks about.
+ *
+ * Measured over the 258 species and subspecies in the data: 77 grant a skill
+ * and 14 grant a tool, and **none of them reached a character**. The elf's
+ * Keen Senses, the half-orc's Menacing, the 2024 human's free skill — every
+ * one of them was read off the page by a player and typed in by hand, or lost.
+ *
+ * Three shapes, and they are three different questions:
+ *
+ * - a named key set to `true` is granted outright; nobody is asked
+ * - `choose: {from, count}` is a bounded choice — the 2024 elf picks one of
+ *   Insight, Perception and Survival, and the 2014 dwarf one of three
+ *   artisan's tools
+ * - `any: N` is any N of them, which for a skill is the whole skill list
+ *
+ * The tools have a fourth: `anyArtisansTool` and `anyMusicalInstrument` name a
+ * *kind* with no list in the data. Those travel as an open offer carrying the
+ * kind, because inventing the list here would be inventing a rule — the sheet
+ * says what the species owes and the player writes what they took.
+ *
+ * Every array in the data has exactly one element, so there is no second grant
+ * hiding behind the first.
+ */
+function proficiencyOffersOf(groups, nameOf) {
+  const granted = [];
+  const choices = [];
+
+  for (const group of groups ?? []) {
+    for (const [key, value] of Object.entries(group)) {
+      if (!value) continue;
+
+      if (key === "choose") {
+        choices.push({
+          options: (value.from ?? []).map(nameOf),
+          count: value.count ?? 1,
+          scope: null,
+        });
+        continue;
+      }
+      if (key === "any") {
+        choices.push({ options: [], count: Number(value) || 1, scope: "any" });
+        continue;
+      }
+      if (key === "anyArtisansTool") {
+        choices.push({ options: [], count: Number(value) || 1, scope: "artisan" });
+        continue;
+      }
+      if (key === "anyMusicalInstrument") {
+        choices.push({ options: [], count: Number(value) || 1, scope: "instrument" });
+        continue;
+      }
+
+      granted.push(nameOf(key));
+    }
+  }
+
+  return { granted, choices };
+}
+
+/**
  * The armour and weapons a species grants, on top of what a class grants.
  *
  * A dwarf is proficient with the battleaxe, the handaxe, the light hammer and
@@ -431,8 +491,20 @@ function speciesProficienciesOf(entity) {
     }
   }
 
-  if (!weaponItems.length && !weaponClauses.length && !armor.length) return null;
-  return { armor, weaponItems, weaponClauses };
+  const skills = proficiencyOffersOf(entity.skillProficiencies, skillNameOf);
+  const tools = proficiencyOffersOf(entity.toolProficiencies, titleCase);
+
+  const empty =
+    !weaponItems.length &&
+    !weaponClauses.length &&
+    !armor.length &&
+    !skills.granted.length &&
+    !skills.choices.length &&
+    !tools.granted.length &&
+    !tools.choices.length;
+  if (empty) return null;
+
+  return { armor, weaponItems, weaponClauses, skills, tools };
 }
 
 /**
