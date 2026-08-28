@@ -324,6 +324,117 @@ function rangeOf(spell) {
 }
 
 /** The species ability bonus, flattened. Null when the player chooses it. */
+/**
+ * How far a species moves, in every way it moves.
+ *
+ * 5etools writes one number when walking is all there is, and an object when
+ * there is more. Inside that object `true` is not a boolean: it means "the
+ * same as your walking speed", which is how the Dhampir's climb and the
+ * Aarakocra's fly are printed. Kept as numbers here so nothing downstream has
+ * to know that.
+ *
+ * The walk speed is returned separately because it is the one every character
+ * has and the one the sheet shows first.
+ */
+function speedsOf(entity) {
+  const raw = entity.speed;
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw === "number") return { walk: raw };
+
+  const walk = typeof raw.walk === "number" ? raw.walk : null;
+  const speeds = {};
+  if (walk !== null) speeds.walk = walk;
+
+  for (const mode of ["burrow", "climb", "fly", "swim"]) {
+    const value = raw[mode];
+    if (value === undefined || value === null || value === false) continue;
+    // `true` is "as fast as you walk". With no walk speed to match it there is
+    // no number to write, and a guess would be a speed nobody printed.
+    const resolved = value === true ? walk : typeof value === "number" ? value : null;
+    if (resolved !== null) speeds[mode] = resolved;
+  }
+
+  return Object.keys(speeds).length ? speeds : null;
+}
+
+/**
+ * The boilerplate every species entry repeats.
+ *
+ * "Size", "Age", "Languages", "Darkvision" are headings the books print on
+ * every page, and the sheet already answers each of them somewhere better —
+ * size and speed as vitals, darkvision as its own number. Repeating them as
+ * traits would bury the four or five lines that are actually why someone
+ * picked this species.
+ */
+const BOILERPLATE_TRAITS = new Set([
+  "ability score increase",
+  "age",
+  "alignment",
+  "creature type",
+  "darkvision",
+  "language",
+  "languages",
+  "size",
+  "speed",
+  "superior darkvision",
+]);
+
+/**
+ * What this species can do, by name.
+ *
+ * Names only. The full text of every trait is roughly twenty times this index,
+ * and a player scanning "what does a dwarf get" reads the list of names — the
+ * text is what they open one of at a time, which is what the reference import
+ * already brings across.
+ */
+function traitsOf(entity) {
+  return (entity.entries ?? [])
+    .map((entry) => (typeof entry === "object" && entry.name ? String(entry.name) : null))
+    .filter((name) => name && !BOILERPLATE_TRAITS.has(name.toLowerCase()));
+}
+
+/**
+ * The armour and weapons a species grants, on top of what a class grants.
+ *
+ * A dwarf is proficient with the battleaxe, the handaxe, the light hammer and
+ * the warhammer whatever they take levels in, and a wizard dwarf swinging a
+ * warhammer swings it at their proficiency bonus. Split the same three ways as
+ * a class's — named weapons, categories, and the rules that are neither —
+ * because two species state theirs as a rule: the Giff's firearms are a
+ * category dnd5e has no base item for, and the Hobgoblin's is a choice of two
+ * martial weapons that nothing here asks the player to make.
+ */
+function speciesProficienciesOf(entity) {
+  const weaponItems = [];
+  const weaponClauses = [];
+
+  for (const group of entity.weaponProficiencies ?? []) {
+    for (const [key, value] of Object.entries(group)) {
+      if (!value) continue;
+      if (key === "choose") {
+        const count = value?.count ?? 1;
+        weaponClauses.push(`Choose ${count} martial weapons`);
+        continue;
+      }
+      if (key === "firearms") {
+        weaponClauses.push("Firearms");
+        continue;
+      }
+      weaponItems.push(String(key).split("|")[0]);
+    }
+  }
+
+  const armor = [];
+  for (const group of entity.armorProficiencies ?? []) {
+    for (const [key, value] of Object.entries(group)) {
+      if (value) armor.push(String(key).split("|")[0]);
+    }
+  }
+
+  if (!weaponItems.length && !weaponClauses.length && !armor.length) return null;
+  return { armor, weaponItems, weaponClauses };
+}
+
 function abilityOf(entity) {
   const ability = entity.ability?.[0];
   if (!ability) return null;
@@ -1018,6 +1129,60 @@ function abilityMinimumsOf(raw, where) {
  * your choice"). A sentence is a choice, and the thing being chosen from is
  * the tool category the tag names — which the tool table already resolves.
  */
+/**
+ * What a class hands a character who takes it *first*.
+ *
+ * Three different things share one list in 5etools, and telling them apart is
+ * the whole job: "simple" is a category, "{@item rapier|phb|rapiers}" is one
+ * named weapon, and "Martial weapons that have the Light property" is a rule
+ * the 2024 books print in place of a list. A category can be a checkbox on a
+ * sheet, a named weapon can be one too, and a rule can only be a sentence.
+ *
+ * The armour half is the same shape as the multiclass block: a string, or an
+ * object carrying prose the table does not need — the druid's refusal of metal
+ * is a caveat, not a proficiency.
+ */
+function startingProficienciesOf(entity) {
+  const starting = entity.startingProficiencies;
+  if (!starting) return null;
+
+  const weapons = [];
+  const weaponItems = [];
+  const weaponClauses = [];
+
+  for (const raw of starting.weapons ?? []) {
+    if (raw && typeof raw === "object") {
+      // The artificer's firearms are an optional rule the DM turns on, not a
+      // proficiency the class grants. Reading it as one would arm every
+      // artificer at a table that never allowed guns.
+      if (raw.optional) continue;
+      if (raw.proficiency) weapons.push(String(raw.proficiency));
+      continue;
+    }
+
+    const text = stripTags(String(raw)).trim();
+    if (text === "simple" || text === "martial") {
+      weapons.push(text);
+      continue;
+    }
+    // A sentence about weapons is a rule. A weapon's name never says the word.
+    if (/weapon|propert/i.test(text)) {
+      weaponClauses.push(text);
+      continue;
+    }
+    weaponItems.push(text);
+  }
+
+  return {
+    armor: (starting.armor ?? [])
+      .map((entry) => (typeof entry === "string" ? entry : (entry.proficiency ?? "")))
+      .filter(Boolean),
+    weapons,
+    weaponItems,
+    weaponClauses,
+  };
+}
+
 function multiclassGrantsOf(entity) {
   const gained = entity.multiclassing?.proficienciesGained;
   if (!gained) return null;
@@ -1469,6 +1634,12 @@ const BUILDERS = {
       damageType: i.dmgType ?? null,
       versatileDamage: i.dmg2 ?? null,
       properties: (i.property ?? []).map((entry) => String(entry).split("|")[0]),
+      // Simple or martial. `type` says melee or ranged and nothing about the
+      // category, so without this there is no way to answer "which martial
+      // weapons have the Light property" — which is how the 2024 monk's and
+      // rogue's proficiencies are printed. Null for everything that is not a
+      // weapon, which is most of the table.
+      weaponCategory: i.weaponCategory ?? null,
       mastery: masteryOf(i)?.names ?? null,
       // The one property that costs no slot. Only the Psychic Blade has one,
       // and it is a rule rather than a footnote.
@@ -1500,6 +1671,17 @@ const BUILDERS = {
       size: r.size?.[0] ?? null,
       ability: abilityOf(r),
       speed: typeof r.speed === "number" ? r.speed : r.speed?.walk ?? null,
+      // Flying, swimming, climbing and burrowing, for the species that do.
+      // The Aarakocra's 50-foot fly speed is the whole point of playing one.
+      speeds: speedsOf(r),
+      // How far this species sees in the dark, in feet. Null for the ones that
+      // see no better than a human, which is most of them.
+      darkvision: r.darkvision ?? null,
+      blindsight: r.blindsight ?? null,
+      // What this species can do, by name. The reason someone picked it.
+      traits: traitsOf(r),
+      // Armour and weapons a species grants whatever class it takes.
+      speciesProficiencies: speciesProficienciesOf(r),
       // Natural armour: the tortle's shell, the lizardfolk's scales. Six
       // species have it and it beats leather for most of them.
       armorClass: context.armorClasses.forRace.get(`${r.name}|${sourceOf(r)}`) ?? [],
@@ -1514,6 +1696,17 @@ const BUILDERS = {
       raceName: r.raceName,
       raceSource: r.raceSource,
       ability: abilityOf(r),
+      // A subrace overrides its race rather than adding to it: the wood elf
+      // walks 35 where the elf walks 30, and the drow sees 120 feet where the
+      // elf sees 60. Null means "whatever the race said", not "nothing".
+      speed: typeof r.speed === "number" ? r.speed : r.speed?.walk ?? null,
+      speeds: speedsOf(r),
+      darkvision: r.darkvision ?? null,
+      blindsight: r.blindsight ?? null,
+      // A subrace adds traits rather than replacing them: a hill dwarf is a
+      // dwarf that is also tough, so both lists are shown.
+      traits: traitsOf(r),
+      speciesProficiencies: speciesProficienciesOf(r),
     })),
 
   background: (entities) =>
@@ -1553,6 +1746,9 @@ const BUILDERS = {
         // What a character needs before they may take a level in this class.
         // Empty for the handful of classes that state none.
         multiclassRequirements: multiclassRequirementsOf(c),
+        // The armour and weapons a first class grants. Split three ways
+        // because the books write them three ways.
+        startingProficiencies: startingProficienciesOf(c),
         // What a second class grants, which is not what a first one does.
         multiclassGrants: multiclassGrantsOf(c),
         // The A-or-B list, structured. The prose form says the same thing and

@@ -16,9 +16,12 @@ import { motion } from "framer-motion";
 
 import type { ResolvedDraft } from "@/lib/derive";
 import type { BuilderState } from "@/lib/builder";
-import { characterLevelFor, classingLabelFor } from "@/lib/builder";
+import { characterLevelFor, classesFor, classingLabelFor } from "@/lib/builder";
 import Checks from "@/components/forge/Checks";
+import GearProficienciesPanel from "@/components/forge/GearProficiencies";
 import { savingThrowChecksFor, skillChecksFor } from "@/lib/checks";
+import { gearProficienciesFor } from "@/lib/gear-proficiencies";
+import { speciesProficienciesFor, speciesTraitsFor } from "@/lib/species";
 import { coinLabel } from "@/lib/starting-kit";
 import { ABILITY_IDS, abilityLabels } from "@/lib/abilities";
 import { entryById, hitDieFor } from "@/lib/catalog";
@@ -27,16 +30,24 @@ import { abilitySources, bonusOrigin } from "@/lib/improvements";
 import {
   initiativeFor,
   passivePerceptionFor,
+  sensesFor,
   sizeLabelFor,
   speedFor,
 } from "@/lib/table-numbers";
 import { actionProfile, concentrationAmong } from "@/lib/spells";
 import { rulesVersionOf } from "@/lib/vault-store";
 import Sigil from "@/components/sigils/Sigil";
-import { HEADING } from "@/styles/recipes";
+import { HEADING, LABEL_MB2 } from "@/styles/recipes";
 
 /** The highest score the sheet draws a full bar for. */
 const BAR_CEILING = 20;
+
+const MOVEMENT_LABEL: Record<string, string> = {
+  burrow: "Excavas",
+  climb: "Trepas",
+  fly: "Volas",
+  swim: "Nadas",
+};
 
 /** Non-empty lines, the way the builder stores its text lists. */
 function toLines(value: string): string[] {
@@ -67,6 +78,35 @@ export default function LiveSheet({
   );
 
   const hitDie = state.classId ? hitDieFor(state.classId, rulesVersion) : null;
+
+  // Armour and weapons, from the class alone. Deliberately not waiting for the
+  // draft to derive: a player choosing between a rapier and a greatsword is
+  // choosing before they have a background, and this is the answer.
+  const classEntries = state.classId ? classesFor(state) : [];
+  // The species grants weapons no class does — the dwarf's warhammer, the high
+  // elf's longbow — and a dwarf wizard's only reason to swing one.
+  const speciesGrant = state.raceId
+    ? speciesProficienciesFor(state.raceId, state.subraceId, rulesVersion)
+    : null;
+  const gearProficiencies = classEntries.length
+    ? gearProficienciesFor(
+        classEntries,
+        rulesVersion,
+        speciesGrant ? { id: state.raceId, ...speciesGrant } : null,
+      )
+    : null;
+  const speciesTraits = state.raceId
+    ? speciesTraitsFor(state.raceId, state.subraceId, rulesVersion)
+    : [];
+  const classLabels = Object.fromEntries([
+    ...classEntries.map((entry) => [
+      entry.classId,
+      entryById("class", rulesVersion, entry.classId)?.label ?? entry.classId,
+    ]),
+    // The species is credited beside the classes, under the name the player
+    // picked it by.
+    ...(state.raceId ? [[state.raceId, race?.label ?? state.raceId]] : []),
+  ]);
   const subclass = entryById("subclass", rulesVersion, state.subclassId, state.sourceBooks[`subclass:${state.subclassId}`]);
   const background = entryById(
     "background",
@@ -84,6 +124,7 @@ export default function LiveSheet({
   // player who has picked an elf and nothing else can still read 30.
   const speed = speedFor(state, rulesVersion);
   const size = sizeLabelFor(state, rulesVersion);
+  const senses = sensesFor(state, rulesVersion);
 
   /**
    * Raw scores while unforged, final scores once derivable.
@@ -206,6 +247,17 @@ export default function LiveSheet({
           dim={speed === null}
           hint="Velocidad en pies: cuanto te moves en tu turno."
         />
+        {/* Vision in the dark, when there is any. Not decoration either: it
+            decides whether the party lights a torch, and a torch decides
+            whether anything in the dungeon can see the party. */}
+        {senses?.darkvision !== null && senses !== null && (
+          <Vital
+            label="V. oscura"
+            value={`${senses.darkvision}`}
+            accent={accent}
+            hint="Vision en la oscuridad, en pies. Ves con poca luz como si fuera clara, y a oscuras como con poca luz — en blanco y negro."
+          />
+        )}
         {/* Not decoration: size sets the square you occupy, what you can
             squeeze through, and in 2024 whether a Heavy weapon costs you
             disadvantage. */}
@@ -217,6 +269,21 @@ export default function LiveSheet({
           hint="Tamano: la casilla que ocupas y por donde pasas."
         />
       </div>
+
+      {/* Flying, swimming, climbing, burrowing — the reason someone picked
+          this species. An Aarakocra's 50 feet of flight was nowhere on the
+          sheet. */}
+      {senses?.otherSpeeds.length ? (
+        <p className="mt-3 font-body text-xs italic leading-relaxed text-bone/40">
+          {senses.otherSpeeds.map((entry, index) => (
+            <span key={entry.mode}>
+              {index > 0 && ", "}
+              {MOVEMENT_LABEL[entry.mode]} <span style={{ color: accent }}>{entry.feet}</span> pies
+            </span>
+          ))}
+          .
+        </p>
+      ) : null}
 
       {/* The purse, once there is one. A player who took the money instead of
           the gear has nothing else on the sheet to show for that choice. */}
@@ -236,6 +303,36 @@ export default function LiveSheet({
           skills={skillChecksFor(snapshot)}
           accent={accent}
         />
+      )}
+
+      {/* What the character may wear and swing. Until now the only place this
+          existed was inside the Foundry exporter, so a player who never
+          exported never learned it. */}
+      {gearProficiencies && (
+        <GearProficienciesPanel
+          proficiencies={gearProficiencies}
+          classLabels={classLabels}
+          accent={accent}
+        />
+      )}
+
+      {/* What the species can do, by name. It is why someone picked a dwarf
+          over a halfling, and it was the one thing about the choice the sheet
+          never showed. */}
+      {speciesTraits.length > 0 && (
+        <div className="mt-6 border-t border-iron/40 pt-5">
+          <p className={LABEL_MB2}>Rasgos de especie</p>
+          <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
+            {speciesTraits.map((trait) => (
+              <li key={trait} className="flex items-baseline gap-1.5">
+                <span className="font-mono text-[9px] leading-none" style={{ color: accent }}>
+                  •
+                </span>
+                <span className="truncate font-body text-xs">{trait}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
 
       {/*

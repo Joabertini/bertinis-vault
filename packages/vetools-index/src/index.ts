@@ -57,6 +57,14 @@ export type ItemRow = IndexRow & {
   versatileDamage: string | null;
   /** Property codes, e.g. "V", "F", "2H". */
   properties: string[];
+  /**
+   * "simple" or "martial". Null for everything that is not a weapon.
+   *
+   * `type` says melee or ranged and nothing about the category, so this is the
+   * only way to answer "which martial weapons have the Light property" — the
+   * shape the 2024 monk's and rogue's proficiencies are printed in.
+   */
+  weaponCategory: string | null;
   /** 2024 weapon mastery names, e.g. "Topple". Null for everything else. */
   mastery: string[] | null;
   /**
@@ -75,19 +83,85 @@ export type ItemRow = IndexRow & {
 
 export type AbilityBonuses = Record<string, number>;
 
+/**
+ * How far a species moves, in every way it moves.
+ *
+ * `walk` is the one every character has. The rest are the reason someone picks
+ * the species: an Aarakocra flies 50 feet, a Sea Elf swims 30. 5etools writes
+ * "as fast as you walk" as `true`; the number is resolved before it lands here.
+ */
+export type SpeedMap = {
+  walk?: number;
+  burrow?: number;
+  climb?: number;
+  fly?: number;
+  swim?: number;
+};
+
+/**
+ * The armour and weapons a species grants, on top of what a class grants.
+ *
+ * A dwarf is proficient with the battleaxe, the handaxe, the light hammer and
+ * the warhammer whatever they take levels in. Split the same three ways as a
+ * class's, because two species state theirs as a rule rather than a list.
+ */
+export type SpeciesProficiencies = {
+  /** "light", "medium". */
+  armor: string[];
+  /** Weapon names as the books print them, e.g. "light hammer". */
+  weaponItems: string[];
+  /** "Firearms", "Choose 2 martial weapons". */
+  weaponClauses: string[];
+};
+
 export type RaceRow = IndexRow & {
   size: string | null;
   /** The fixed part of the species bonus. Null when the player chooses it. */
   ability: AbilityBonuses | null;
   speed: number | null;
+  speeds: SpeedMap | null;
+  /**
+   * How far this species sees in the dark, in feet.
+   *
+   * Null for the ones that see no better than a human. A number here is not a
+   * detail: it decides whether the party needs a torch, and a torch decides
+   * whether anything can see the party.
+   */
+  darkvision: number | null;
+  /** Rarer than darkvision, and not the same thing: sight without light. */
+  blindsight: number | null;
+  /**
+   * What this species can do, by name — "Stonecunning", "Breath Weapon".
+   *
+   * Names only: the full text of every trait is roughly twenty times this
+   * index, and it is what the reference import already brings across. The
+   * headings every species page repeats (Size, Age, Languages, Darkvision) are
+   * left out, because the sheet answers each of them somewhere better.
+   */
+  traits: string[];
+  speciesProficiencies: SpeciesProficiencies | null;
   /** Natural armour: a tortle shell, lizardfolk scales, a loxodon hide. */
   armorClass: ArmorClassOption[];
 };
 
+/**
+ * A subrace states only what it changes.
+ *
+ * Null means "whatever the race said", never "nothing": the hill dwarf prints
+ * no speed because it walks at the dwarf's 25, while the wood elf prints 35
+ * because it does not walk at the elf's 30.
+ */
 export type SubraceRow = IndexRow & {
   raceName: string;
   raceSource: string;
   ability: AbilityBonuses | null;
+  speed: number | null;
+  speeds: SpeedMap | null;
+  darkvision: number | null;
+  blindsight: number | null;
+  /** A subrace *adds* traits: a hill dwarf is a dwarf that is also tough. */
+  traits: string[];
+  speciesProficiencies: SpeciesProficiencies | null;
 };
 
 /**
@@ -342,6 +416,24 @@ export type ExpertiseGrant = {
 };
 
 /** What a second class hands over, which is less than a first one does. */
+/**
+ * The armour and weapons a class grants a character who takes it first.
+ *
+ * Weapons come in three shapes because the books write them three ways, and
+ * flattening them would lose the difference: a category is a checkbox, a named
+ * weapon is a checkbox, and a rule is a sentence nothing can check.
+ */
+export type StartingProficiencies = {
+  /** "light", "medium", "heavy", "shield". */
+  armor: string[];
+  /** Whole categories: "simple", "martial". */
+  weapons: string[];
+  /** Named weapons — the 2014 druid's ten, the bard's four. */
+  weaponItems: string[];
+  /** "Martial weapons that have the Light property", and its like. */
+  weaponClauses: string[];
+};
+
 export type MulticlassGrants = {
   /** "light", "medium", "shield". */
   armor: string[];
@@ -471,6 +563,13 @@ export type ClassRow = IndexRow & {
    * editions state it in different fields and reach the same answer.
    */
   multiclassRequirements: Record<string, number>[];
+  /**
+   * The armour and weapons this class grants as a character's first.
+   *
+   * Null for the entries that state none at all — the sidekicks and the
+   * unfinished prestige class.
+   */
+  startingProficiencies: StartingProficiencies | null;
   /**
    * What taking a level in this class grants someone who already has one.
    *

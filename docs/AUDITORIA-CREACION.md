@@ -142,14 +142,53 @@ la cola. Medido contra el código, no contra las notas viejas:
 
 | Hueco | Dónde muerde |
 | --- | --- |
-| **Sentidos** | El índice no trae visión en la oscuridad. Hueco de datos: hay que sacarlo de otra fuente o escribirlo a mano |
-| **Rasgos raciales** | Viajan como texto libre en `featuresText`, no como items |
 | **Método de PG** | `combat.ts:52` sólo promedia; el contrato no tiene forma de decir "tiré los dados" |
-| **Competencias de armadura y arma en la Forja** | Llegan a Foundry (el exportador tiene su tabla) pero el constructor nunca se las muestra al jugador |
+| **Lo que la especie concede y no se pregunta** | El enano elige una de tres herramientas de artesano, el elfo recibe Percepcion gratis, cada especie trae sus idiomas. El indice ya los trae medidos (`skillProficiencies`, `toolProficiencies`, `languageProficiencies` en crudo); la Forja no los pide ni los suma |
 | **Edad, altura, peso, aspecto** | No se capturan |
 | **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
 
+> **Dónde vive cada cosa.** Hay dos salidas y no hacen lo mismo.
+> `apps/foundry-module` + `to-payload.ts` es la que usa el jugador: manda
+> referencias `{page, source, hash}` y Plutonium importa los documentos reales,
+> así que la raza y la clase traen sus propios sentidos, velocidad y
+> competencias. `packages/foundry-exporter` arma un actor JSON completo y hoy
+> **no lo llama ningún camino de producto** — sólo sus tests y el script de
+> fixtures. Sigue siendo correcto y verificado, pero un arreglo ahí no le llega
+> a nadie hasta que esa salida se ofrezca.
+
 ### Cerrado desde entonces
+
+- **Rasgos de especie.** El renglón decía "viajan como texto libre en
+  `featuresText`". Medido: `featuresText` no está atado a ningún componente y
+  nunca entra al payload del módulo — es un campo vestigial. Lo que faltaba de
+  verdad era que la Forja nunca mostró qué da la especie. Ahora se listan por
+  nombre, sin los encabezados que toda página repite.
+  Con el mismo dato se cerró el hueco que dejé abierto en las competencias:
+  **un enano es competente con cuatro armas tome la clase que tome**, y eso no
+  lo concede ningún documento de clase.
+  La subraza **suma** rasgos y competencias donde **pisa** tamaño, velocidad y
+  visión. Las dos reglas están en los libros; confundirlas parte una especie o
+  duplica un número.
+
+- **Sentidos y velocidades.** El renglón decía "hueco de datos, hay que sacarlo
+  de otra fuente". Los datos crudos de Plutonium sí traen `darkvision`,
+  `blindsight` y los modos de movimiento; el build del índice los tiraba.
+  Al medirlo salió algo peor que el hueco: **la subraza pisa a la raza**, y
+  ninguna de las 98 filas traía velocidad ni visión. El elfo de los bosques
+  caminaba 30 en vez de 35 y el drow veía 60 en vez de 120.
+  Del lado de Foundry no hacía falta nada: Plutonium escribe
+  `senses.ranges.darkvision` al importar el documento de raza.
+
+- **Competencias de armadura y arma.** El renglón decía que llegaban a Foundry
+  y sólo faltaba mostrarlas. Medido contra `dnd5e.mjs`, no llegaban: el
+  exportador escribía `"light"`, `"medium"`, `"heavy"` donde
+  `DND5E.armorProficiencies` sólo acepta `lgt`, `med`, `hvy`, `shl`, y metía
+  las armas en el campo de texto libre en vez de `sim`/`mar`. **Todo personaje
+  exportado llevaba su armadura sin competencia** — desventaja en cada tirada
+  de Fuerza y Destreza, sin lanzar conjuros — y atacaba sin bonificador.
+  La tabla se mudó a `packages/domain/src/class-proficiencies.ts`, partida por
+  edición (2024 le saca la armadura media al druida y le da armas simples al
+  mago), y la Forja ya la muestra con la clase que concedió cada línea.
 
 - **Subraza a Foundry.** No era un string mal puesto: `subrace` no era un
   `VetoolsProp`, así que no había forma de pedirlo. Ninguna de las 98 subrazas

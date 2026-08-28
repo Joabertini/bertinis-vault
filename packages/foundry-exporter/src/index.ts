@@ -17,6 +17,7 @@ import {
   buildPreflightResult,
   getEquipmentEntries,
   getFeatureEntries,
+  classProficienciesFor,
   getHitDieForClass,
   getNormalizedProficiencyLabels,
   getProficiencyLabels,
@@ -62,69 +63,6 @@ function deepClone<T>(obj: T): T {
 // ---------------------------------------------------------------------------
 // Lookup tables
 // ---------------------------------------------------------------------------
-
-const CLASS_PROFS_BY_ID: Record<string, { armor: string[]; weapons: string[] }> = {
-  barbarian: { armor: ["light", "medium", "shields"], weapons: ["simple", "martial"] },
-  bard: { armor: ["light"], weapons: ["simple", "hand crossbow", "longsword", "rapier", "shortsword"] },
-  cleric: { armor: ["light", "medium", "shields"], weapons: ["simple"] },
-  druid: {
-    armor: ["light", "medium", "shields"],
-    weapons: ["clubs", "daggers", "darts", "javelins", "maces", "quarterstaffs", "scimitars", "sickles", "slings", "spears"],
-  },
-  fighter: { armor: ["light", "medium", "heavy", "shields"], weapons: ["simple", "martial"] },
-  monk: { armor: [], weapons: ["simple", "shortswords"] },
-  paladin: { armor: ["light", "medium", "heavy", "shields"], weapons: ["simple", "martial"] },
-  ranger: { armor: ["light", "medium", "shields"], weapons: ["simple", "martial"] },
-  rogue: { armor: ["light"], weapons: ["simple", "hand crossbow", "longsword", "rapier", "shortsword"] },
-  sorcerer: { armor: [], weapons: ["daggers", "darts", "slings", "quarterstaffs", "light crossbows"] },
-  warlock: { armor: ["light"], weapons: ["simple"] },
-  wizard: { armor: [], weapons: ["daggers", "darts", "slings", "quarterstaffs", "light crossbows"] },
-  artificer: { armor: ["light", "medium", "shields"], weapons: ["simple"] },
-};
-
-/**
- * What a class hands over when it is *not* the first one.
- *
- * A second class grants a shorter list than a first: a fighter who dips gets
- * light and medium armour and shields, never heavy. Reading the table above
- * for every class would hand the character proficiencies they do not have.
- *
- * Split by edition because the two genuinely differ — 2024's druid loses
- * medium armour, its barbarian and fighter grant martial weapons without
- * restating simple ones, and its monk has no block at all. Read off the index
- * rather than written from memory. A class with no entry contributes nothing,
- * which is what the book says by printing nothing.
- */
-const CLASS_MULTICLASS_PROFS: Record<
-  "2014" | "2024",
-  Record<string, { armor: string[]; weapons: string[] }>
-> = {
-  "2014": {
-    barbarian: { armor: ["shields"], weapons: ["simple", "martial"] },
-    bard: { armor: ["light"], weapons: [] },
-    cleric: { armor: ["light", "medium", "shields"], weapons: [] },
-    druid: { armor: ["light", "medium", "shields"], weapons: [] },
-    fighter: { armor: ["light", "medium", "shields"], weapons: ["simple", "martial"] },
-    monk: { armor: [], weapons: ["simple", "shortswords"] },
-    paladin: { armor: ["light", "medium", "shields"], weapons: ["simple", "martial"] },
-    ranger: { armor: ["light", "medium", "shields"], weapons: ["simple", "martial"] },
-    rogue: { armor: ["light"], weapons: [] },
-    warlock: { armor: ["light"], weapons: ["simple"] },
-    artificer: { armor: ["light", "medium", "shields"], weapons: [] },
-  },
-  "2024": {
-    barbarian: { armor: ["shields"], weapons: ["martial"] },
-    bard: { armor: ["light"], weapons: [] },
-    cleric: { armor: ["light", "medium", "shields"], weapons: [] },
-    druid: { armor: ["light", "shields"], weapons: [] },
-    fighter: { armor: ["light", "medium", "shields"], weapons: ["martial"] },
-    paladin: { armor: ["light", "medium", "shields"], weapons: ["martial"] },
-    ranger: { armor: ["light", "medium", "shields"], weapons: ["martial"] },
-    rogue: { armor: ["light"], weapons: [] },
-    warlock: { armor: ["light"], weapons: [] },
-    artificer: { armor: ["light", "medium", "shields"], weapons: [] },
-  },
-};
 
 const CLASS_SAVE_PROFS_BY_ID: Record<string, AbilityId[]> = {
   barbarian: ["str", "con"],
@@ -377,41 +315,44 @@ function fillCurrency(actor: Record<string, any>, character: CharacterBuild) {
 }
 
 function fillProficiencies(actor: Record<string, any>, character: CharacterBuild) {
-  const primaryClassId = normalizeClassId(character.classing.classes[0]?.classId ?? "");
-  const primary = CLASS_PROFS_BY_ID[primaryClassId] ?? { armor: [], weapons: [] };
+  // The table is the domain's, not this exporter's: the Forge shows the player
+  // the same lists, and two copies of a table drift. It already speaks dnd5e's
+  // vocabulary, so nothing is translated here.
+  const profs = classProficienciesFor(character.classing.classes, character.meta.rulesVersion);
 
-  // Every class past the first adds its multiclass block. Read only from the
-  // first class, a wizard 4 / fighter 1 exported with no armour proficiency at
-  // all — a character who cannot equip the armour they are wearing.
-  const edition = character.meta.rulesVersion === "5e-2024" ? "2024" : "2014";
-  const extras = character.classing.classes
-    .slice(1)
-    .map(
-      (entry) =>
-        CLASS_MULTICLASS_PROFS[edition][normalizeClassId(entry.classId)] ?? {
-          armor: [],
-          weapons: [],
-        },
-    );
+  // `lgt`, `med`, `hvy`, `shl`. Foundry asks `armorProf.value.has("lgt")` to
+  // decide whether a suit is worn proficiently, so writing "light" here left
+  // every character in armour they count as untrained in — disadvantage on
+  // every Strength and Dexterity roll, and no spellcasting.
+  actor.system.traits.armorProf.value = profs.armor;
+  actor.system.traits.armorProf.custom = "";
 
-  const merge = (lists: string[][]) => {
-    const merged: string[] = [];
-    for (const list of lists) for (const value of list) if (!merged.includes(value)) merged.push(value);
-    return merged;
-  };
+  // Foundry accepts two shapes in the same set: the category keys `sim` and
+  // `mar`, and a weapon's own base-item id. The 2014 bard needs both — every
+  // simple weapon, plus four martial ones by name.
+  // A rule the builder already expanded joins the list as ids. Without it the
+  // 2024 rogue's scimitar is swung without a proficiency bonus, because the
+  // sentence explaining that it should not be is in a field Foundry never
+  // reads. Deduplicated: a rule may name a weapon the class also named.
+  const clauseWeapons = (character.choices.weaponProficiencies ?? []).filter(
+    (id) => !profs.weaponItems.includes(id),
+  );
+  actor.system.traits.weaponProf.value = [
+    ...profs.weaponCategories,
+    ...profs.weaponItems,
+    ...clauseWeapons,
+  ];
 
-  const armor = merge([primary.armor, ...extras.map((entry) => entry.armor)]);
-  const weapons = merge([primary.weapons, ...extras.map((entry) => entry.weapons)]);
-
-  actor.system.traits.weaponProf.custom = weapons.join(", ");
+  // What the book prints as a rule rather than a list stays prose. Foundry has
+  // no way to store "martial weapons with the Light property" as a checkbox,
+  // and inventing a list here would grant weapons the class never did.
+  actor.system.traits.weaponProf.custom = profs.weaponClauses.join("; ");
 
   // Weapon mastery, 2024's own idea. Foundry checks this set with
   // `has(item.type.baseItem)`, so the values are base-item ids — `longsword`,
   // never "Longsword" and never the property "Sap". The builder produces them;
   // anything else here would be a mastery the player chose and never got.
   actor.system.traits.weaponProf.mastery.value = character.choices.weaponMasteries ?? [];
-  actor.system.traits.armorProf.value = armor.filter((type) => ["light", "medium", "heavy"].includes(type));
-  actor.system.traits.armorProf.custom = armor.includes("shields") ? "shields" : "";
 }
 
 // ---------------------------------------------------------------------------

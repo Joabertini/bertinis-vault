@@ -3,7 +3,7 @@
   "label": "Martial with armor and shield",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-27T17:54:37.905Z",
+    "generatedAt": "2026-08-28T01:53:44.310Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -623,8 +623,11 @@
           "communication": {}
         },
         "weaponProf": {
-          "value": [],
-          "custom": "simple, martial",
+          "value": [
+            "sim",
+            "mar"
+          ],
+          "custom": "",
           "mastery": {
             "value": [],
             "bonus": []
@@ -632,11 +635,12 @@
         },
         "armorProf": {
           "value": [
-            "light",
-            "medium",
-            "heavy"
+            "lgt",
+            "med",
+            "hvy",
+            "shl"
           ],
-          "custom": "shields"
+          "custom": ""
         }
       },
       "resources": {
@@ -666,7 +670,7 @@
     },
     "items": [
       {
-        "_id": "IEEb2MgxLF2w5A7g",
+        "_id": "C4J2aTVpaEQPpSIA",
         "name": "fighter",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -726,7 +730,7 @@
         }
       },
       {
-        "_id": "OKyiLuWXSxfNJAiO",
+        "_id": "ZSgmRtbLTZmK7xRh",
         "name": "Tough",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -784,7 +788,7 @@
         }
       },
       {
-        "_id": "15iLE3Xg1Nv2A8cz",
+        "_id": "xVfkG7Zs1oAjXyve",
         "name": "Second Wind",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -842,7 +846,7 @@
         }
       },
       {
-        "_id": "tyMNC0cqyw833fGf",
+        "_id": "sbtjuSHlLBASknJC",
         "name": "Action Surge",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -900,7 +904,7 @@
         }
       },
       {
-        "_id": "TGfC9l8DDq9mWlmm",
+        "_id": "3lqeoF4mepxpNIzU",
         "name": "longsword",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1099,7 +1103,7 @@
         }
       },
       {
-        "_id": "5tdMTxCaAjOGdccc",
+        "_id": "I0Y4Z7Qg2qG7EcXS",
         "name": "Shield",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1165,7 +1169,7 @@
         }
       },
       {
-        "_id": "NsmTOkw5Nn0NzaEv",
+        "_id": "EbD6p73LHl24JuYt",
         "name": "Chain Mail",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1231,7 +1235,7 @@
         }
       },
       {
-        "_id": "as8RcT29aETOyBwB",
+        "_id": "V46dZRC0xvASqkn0",
         "name": "Explorer's Pack",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",

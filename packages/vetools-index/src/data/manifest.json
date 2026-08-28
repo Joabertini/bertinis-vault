@@ -6,8 +6,8 @@
   },
   "item": {
     "count": 2658,
-    "bytes": 728920,
-    "gzip": 36069
+    "bytes": 788868,
+    "gzip": 36924
   },
   "feat": {
     "count": 276,
@@ -16,8 +16,8 @@
   },
   "race": {
     "count": 160,
-    "bytes": 15898,
-    "gzip": 1778
+    "bytes": 38918,
+    "gzip": 4698
   },
   "background": {
     "count": 161,
@@ -26,8 +26,8 @@
   },
   "class": {
     "count": 31,
-    "bytes": 44111,
-    "gzip": 3581
+    "bytes": 47713,
+    "gzip": 3823
   },
   "subclass": {
     "count": 203,
@@ -36,8 +36,8 @@
   },
   "subrace": {
     "count": 98,
-    "bytes": 10729,
-    "gzip": 1458
+    "bytes": 25067,
+    "gzip": 2989
   },
   "optionalfeature": {
     "count": 213,

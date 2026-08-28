@@ -3,7 +3,7 @@
   "label": "Background feat plus chosen feat",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-27T17:54:37.937Z",
+    "generatedAt": "2026-08-28T01:53:44.335Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -615,8 +615,14 @@
           "communication": {}
         },
         "weaponProf": {
-          "value": [],
-          "custom": "daggers, darts, slings, quarterstaffs, light crossbows",
+          "value": [
+            "dagger",
+            "dart",
+            "sling",
+            "quarterstaff",
+            "lightcrossbow"
+          ],
+          "custom": "",
           "mastery": {
             "value": [],
             "bonus": []
@@ -654,7 +660,7 @@
     },
     "items": [
       {
-        "_id": "mJvh70fM35gRtHDq",
+        "_id": "2NrHS2AHHwsw94qp",
         "name": "wizard",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -714,7 +720,7 @@
         }
       },
       {
-        "_id": "rkJMgvbP7I2AZHPy",
+        "_id": "BlpjBu7BJrCqnlEe",
         "name": "Tough",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -772,7 +778,7 @@
         }
       },
       {
-        "_id": "g8XqHPj5kQoh9ukT",
+        "_id": "sSebFCV1rUUbmDrW",
         "name": "Alert",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -830,7 +836,7 @@
         }
       },
       {
-        "_id": "NbxOXP94NdhRq953",
+        "_id": "ckBGe51Y6CekBVvc",
         "name": "Arcane Recovery",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -888,7 +894,7 @@
         }
       },
       {
-        "_id": "dajH5XvvCnAEC5qa",
+        "_id": "Xctn7CiLG5pfqLUu",
         "name": "Mage Hand",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1044,7 +1050,7 @@
         }
       },
       {
-        "_id": "0fRzhu09DaQ6QipO",
+        "_id": "JBqdGveeqRASTggK",
         "name": "Shield",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1200,7 +1206,7 @@
         }
       },
       {
-        "_id": "unMEbxCfI7UNoBkV",
+        "_id": "Dui86Ulr12RbRzYZ",
         "name": "quarterstaff",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1399,7 +1405,7 @@
         }
       },
       {
-        "_id": "FRfkovSgRHeQTnzt",
+        "_id": "wmUMr97c1LDFr65c",
         "name": "Mage Armor",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1465,7 +1471,7 @@
         }
       },
       {
-        "_id": "465bbatoptwlg9cZ",
+        "_id": "olAZjuvJKuoVCgPE",
         "name": "Spellbook",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",
@@ -1516,7 +1522,7 @@
         }
       },
       {
-        "_id": "RNSvvjH4Yhi0Rqmq",
+        "_id": "6J90vTu9dISsbJLl",
         "name": "Component Pouch",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",

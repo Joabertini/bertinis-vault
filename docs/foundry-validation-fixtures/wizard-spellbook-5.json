@@ -3,7 +3,7 @@
   "label": "Wizard spellbook",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-27T17:54:37.948Z",
+    "generatedAt": "2026-08-28T01:53:44.339Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -616,8 +616,14 @@
           "communication": {}
         },
         "weaponProf": {
-          "value": [],
-          "custom": "daggers, darts, slings, quarterstaffs, light crossbows",
+          "value": [
+            "dagger",
+            "dart",
+            "sling",
+            "quarterstaff",
+            "lightcrossbow"
+          ],
+          "custom": "",
           "mastery": {
             "value": [],
             "bonus": []
@@ -655,7 +661,7 @@
     },
     "items": [
       {
-        "_id": "z0DMvvcnsmOt2Lr2",
+        "_id": "3CRVRMlZWbneoK5C",
         "name": "wizard",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -715,7 +721,7 @@
         }
       },
       {
-        "_id": "kCwAhfDb272cfFQM",
+        "_id": "J79dhCHbT3FkS9Cg",
         "name": "Magic Initiate",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -773,7 +779,7 @@
         }
       },
       {
-        "_id": "DDAJcLmNOLxsS70P",
+        "_id": "m9w1ipd2GVW1oeYH",
         "name": "Alert",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -831,7 +837,7 @@
         }
       },
       {
-        "_id": "Ja8oc4CmeobxxJ25",
+        "_id": "YQxjf1mCPmGrBkqd",
         "name": "Arcane Recovery",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -889,7 +895,7 @@
         }
       },
       {
-        "_id": "ogVZxCMa6q81LVU1",
+        "_id": "NDyjbbDvajN5iCVJ",
         "name": "Mage Hand",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1045,7 +1051,7 @@
         }
       },
       {
-        "_id": "OKjPtVzfRpbWhV2L",
+        "_id": "vYIGiLmMaM8ngKqk",
         "name": "Shield",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1201,7 +1207,7 @@
         }
       },
       {
-        "_id": "NGPoLCNVtdLgWKAI",
+        "_id": "Y2q5SRQvzv9gDCsT",
         "name": "Fireball",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1358,7 +1364,7 @@
         }
       },
       {
-        "_id": "SYCABsvBNcV0zL4U",
+        "_id": "NjoUHibFacnuhhU4",
         "name": "quarterstaff",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1557,7 +1563,7 @@
         }
       },
       {
-        "_id": "9JxnTwqNM0TGRPpW",
+        "_id": "MbutGxWWXphbglP1",
         "name": "Spellbook",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",
@@ -1608,7 +1614,7 @@
         }
       },
       {
-        "_id": "BCaxCgdYxogYOFiZ",
+        "_id": "NqOFqLLc8G3JFVz6",
         "name": "Component Pouch",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",

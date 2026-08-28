@@ -5,6 +5,7 @@ import {
   foundrySizeFor,
   initiativeFor,
   passivePerceptionFor,
+  sensesFor,
   sizeFor,
   sizeLabelFor,
   speedFor,
@@ -30,13 +31,17 @@ describe("speed and size come off the race", () => {
     expect(speedFor(mk(), "2014")).toBe(30);
   });
 
-  test("a subrace inherits the base, because the index gives it nothing else", () => {
-    // Measured: 0 of the 98 subrace rows carry a speed — they carry only their
-    // ability increase. So a wood elf reads 30, not the 35 the book gives it.
-    // Pinned so that the day the index grows the field, this fails and says so
-    // rather than quietly staying wrong.
-    expect(speedFor(mk({ subraceId: "elf-wood" }), "2014")).toBe(30);
+  test("a subrace that walks faster walks faster", () => {
+    // The wood elf's 35 is the whole reason people play one, and it read 30
+    // until the index carried the subrace's own speed.
+    expect(speedFor(mk({ subraceId: "elf-wood" }), "2014")).toBe(35);
     expect(sizeFor(mk({ subraceId: "elf-wood" }), "2014")).toBeTruthy();
+  });
+
+  test("a subrace that says nothing about speed keeps its race's", () => {
+    // The hill dwarf prints no speed because it walks at the dwarf's 25. Read
+    // as an answer rather than as a silence, that null took the speed away.
+    expect(speedFor(mk({ raceId: "dwarf", subraceId: "dwarf-hill" }), "2014")).toBe(25);
   });
 
   test("no race yet reads as nothing rather than as a guess", () => {
@@ -100,5 +105,41 @@ describe("el tamano", () => {
   test("llega al payload", () => {
     const snapshot = buildCanonicalSnapshot({ ...at("gnome"), classId: "wizard", level: 1 });
     expect(snapshot.ancestry.size).toBe("sm");
+  });
+});
+
+describe("what the race lets you see and how else you move", () => {
+  test("a drow sees 120 feet where an elf sees 60", () => {
+    // The subrace overrides rather than adds. Reading only the race left every
+    // drow at the elf's 60 — half the distance, in the dark, on a character
+    // whose whole point is the dark.
+    expect(sensesFor(mk(), "2014")?.darkvision).toBe(60);
+    expect(sensesFor(mk({ subraceId: "elf-drow" }), "2014")?.darkvision).toBe(120);
+  });
+
+  test("a human sees nothing special, and says so rather than showing a zero", () => {
+    expect(sensesFor(mk({ raceId: "human", subraceId: "" }), "2014")?.darkvision).toBeNull();
+  });
+
+  test("an aarakocra flies", () => {
+    const senses = sensesFor(mk({ raceId: "aarakocra", subraceId: "" }), "2014");
+
+    expect(senses?.otherSpeeds.some((entry) => entry.mode === "fly")).toBe(true);
+  });
+
+  test("a sea elf swims, and gets it from its subrace", () => {
+    const senses = sensesFor(mk({ subraceId: "elf-sea" }), "2014");
+
+    expect(senses?.otherSpeeds).toContainEqual({ mode: "swim", feet: 30 });
+  });
+
+  test("walking is not listed as an extra way to move", () => {
+    const senses = sensesFor(mk(), "2014");
+
+    expect(senses?.otherSpeeds.map((entry) => entry.mode)).not.toContain("walk");
+  });
+
+  test("no race yet reads as nothing", () => {
+    expect(sensesFor(mk({ raceId: "" }), "2014")).toBeNull();
   });
 });

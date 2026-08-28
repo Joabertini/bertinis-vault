@@ -3,7 +3,7 @@
   "label": "Blocked invalid class case",
   "preflight": {
     "ok": false,
-    "generatedAt": "2026-08-27T17:54:37.959Z",
+    "generatedAt": "2026-08-28T01:53:44.349Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
