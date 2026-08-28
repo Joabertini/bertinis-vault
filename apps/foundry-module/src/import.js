@@ -97,6 +97,7 @@ export function baseActorData(payload) {
       details: {
         alignment: payload.identity.alignment ?? "",
         biography: { value: biographyHtml(payload.identity.biography) },
+        ...appearanceDetails(payload.identity.biography),
       },
     },
     flags: {
@@ -107,6 +108,39 @@ export function baseActorData(payload) {
       },
     },
   };
+}
+
+/**
+ * The boxes the dnd5e sheet already draws for a character's description.
+ *
+ * `age`, `height`, `weight`, `eyes`, `hair`, `skin`, `gender`, `faith` and
+ * `appearance` are fields of `system.details` — measured on a real exported
+ * actor, all nine are there and all nine were empty strings. Writing them into
+ * the biography blob instead would put the words on the sheet in a place no
+ * box reads, which is the same as not filling them in.
+ *
+ * A field the player left blank is left alone rather than written as "", so an
+ * import never blanks something already on the actor.
+ */
+export const APPEARANCE_FIELDS = [
+  "age",
+  "height",
+  "weight",
+  "eyes",
+  "hair",
+  "skin",
+  "gender",
+  "faith",
+  "appearance",
+];
+
+export function appearanceDetails(biography) {
+  const details = {};
+  for (const field of APPEARANCE_FIELDS) {
+    const value = biography?.[field];
+    if (typeof value === "string" && value.trim()) details[field] = value.trim();
+  }
+  return details;
 }
 
 export function biographyHtml(biography) {

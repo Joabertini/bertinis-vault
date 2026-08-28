@@ -2064,6 +2064,49 @@ export default function Forge() {
                       />
                     </Field>
                   </div>
+
+                  {/* The nine boxes the dnd5e sheet already draws. They are
+                      fields of `system.details`, so what is written here lands
+                      in the boxes rather than as prose in the biography blob —
+                      which is where the description used to go, when it went
+                      anywhere at all. */}
+                  <div className="space-y-6 border-t border-iron/40 pt-8">
+                    <p className={LABEL}>Como te ven</p>
+
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3">
+                      {(
+                        [
+                          ["age", "Edad", "27"],
+                          ["height", "Altura", "1,75 m"],
+                          ["weight", "Peso", "70 kg"],
+                          ["eyes", "Ojos", "Grises"],
+                          ["hair", "Pelo", "Negro, corto"],
+                          ["skin", "Piel", "Palida"],
+                          ["gender", "Genero", ""],
+                          ["faith", "Fe", "Ninguna"],
+                        ] as const
+                      ).map(([field, label, placeholder]) => (
+                        <Field key={field} label={label}>
+                          <input
+                            value={draft[field]}
+                            onChange={(event) => patchDraft({ [field]: event.target.value })}
+                            placeholder={placeholder}
+                            className="w-full border-b border-iron bg-transparent pb-2 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                          />
+                        </Field>
+                      ))}
+                    </div>
+
+                    <Field label="Aspecto">
+                      <textarea
+                        value={draft.appearance}
+                        onChange={(event) => patchDraft({ appearance: event.target.value })}
+                        rows={3}
+                        placeholder="Lo primero que nota alguien que te cruza."
+                        className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                      />
+                    </Field>
+                  </div>
                 </div>
               )}
             </motion.section>

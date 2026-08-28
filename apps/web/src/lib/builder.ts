@@ -634,6 +634,18 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         bond: optionalLabel(state.bond),
         flaw: optionalLabel(state.flaw),
         notes: optionalLabel(state.notes),
+        // The nine dnd5e description fields. Blank ones are left out rather
+        // than sent as "", so an import never blanks a box already filled in
+        // on the actor.
+        age: optionalLabel(state.age),
+        height: optionalLabel(state.height),
+        weight: optionalLabel(state.weight),
+        eyes: optionalLabel(state.eyes),
+        hair: optionalLabel(state.hair),
+        skin: optionalLabel(state.skin),
+        gender: optionalLabel(state.gender),
+        faith: optionalLabel(state.faith),
+        appearance: optionalLabel(state.appearance),
       },
     },
     ancestry: {

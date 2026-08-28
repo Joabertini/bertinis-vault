@@ -387,6 +387,21 @@ export function readFoundryActor(raw: unknown): ActorImport | null {
     ideal: details.ideal ?? "",
     bond: details.bond ?? "",
     flaw: details.flaw ?? "",
+
+    /*
+     * The nine description boxes, straight off `system.details`. They are
+     * dnd5e's own fields, so a character described in Foundry comes back
+     * described here rather than blank.
+     */
+    age: details.age ?? "",
+    height: details.height ?? "",
+    weight: details.weight ?? "",
+    eyes: details.eyes ?? "",
+    hair: details.hair ?? "",
+    skin: details.skin ?? "",
+    gender: details.gender ?? "",
+    faith: details.faith ?? "",
+    appearance: details.appearance ?? "",
     notes: "",
   };
 

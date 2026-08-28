@@ -63,7 +63,7 @@ personaje sale sin ella.
 | Rasgo, ideal, vínculo, defecto | ✅ |
 | Alineamiento | ✅ |
 | Nombre | ✅ |
-| Edad, altura, peso, aspecto | ❌ no se capturan |
+| Edad, altura, peso, aspecto | ✅ los nueve campos de `system.details`, preguntados y leidos de vuelta |
 | Prosa del trasfondo | ❌ el índice de 5etools no guarda una línea descriptiva de nada |
 
 ## Paso 5 — Equipo
@@ -153,7 +153,6 @@ la cola. Medido contra el código, no contra las notas viejas:
 
 | Hueco | Dónde muerde |
 | --- | --- |
-| **Edad, altura, peso, aspecto** | No se capturan |
 | **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
 
 > **Dónde vive cada cosa.** Hay dos salidas y no hacen lo mismo.
@@ -166,6 +165,19 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **Edad, altura, peso, aspecto.** No se capturaban, y no era un hueco de
+  formato: `system.details` de dnd5e ya tiene los nueve campos —`age`,
+  `height`, `weight`, `eyes`, `hair`, `skin`, `gender`, `faith`,
+  `appearance`— y en el actor real exportado los nueve estaban vacios. Ahora
+  la camara de descripcion los pregunta y viajan con esos nombres, asi que
+  caen en las casillas que la hoja ya dibuja. Escribirlos dentro del bloque de
+  biografia habria sido ponerlos en la hoja donde ninguna casilla los lee, que
+  es lo mismo que no ponerlos.
+  Una casilla vacia no viaja: mandar `""` borraria lo que el actor ya tuviera.
+  Y la vuelta tambien las lee, asi que un personaje descrito en Foundry vuelve
+  descrito.
+
 
 - **Lo que la especie concede.** Medido sobre las 258 filas de especie y
   subespecie de los datos: **77 conceden una habilidad y 14 una herramienta**, y

@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   baseActorData,
+  appearanceDetails,
   biographyHtml,
   derivedUpdates,
   findByRef,
@@ -326,4 +327,54 @@ test("tool expertise doubles the tool it names", () => {
   // Written after the proficiency, so the doubled value is the one that
   // survives rather than being overwritten by the plain one.
   assert.equal(proficiencyUpdates(build)["system.tools.thief.value"], 2);
+});
+
+test("the description lands in the boxes dnd5e draws, not in the biography blob", () => {
+  /*
+   * `age`, `height`, `weight`, `eyes`, `hair`, `skin`, `gender`, `faith` and
+   * `appearance` are all fields of `system.details` — measured on a real
+   * exported actor, all nine are there. Written into the biography HTML they
+   * would be words on the sheet in a place no box reads, which is the same as
+   * not filling them in.
+   */
+  const details = appearanceDetails({
+    age: "27",
+    height: "1,75 m",
+    eyes: "Grises",
+    appearance: "Una cicatriz que le cruza la ceja.",
+    trait: "Writes everything down.",
+  });
+
+  assert.deepEqual(details, {
+    age: "27",
+    height: "1,75 m",
+    eyes: "Grises",
+    appearance: "Una cicatriz que le cruza la ceja.",
+  });
+});
+
+test("a box the player left blank is left alone rather than blanked", () => {
+  // Writing "" would wipe whatever the actor already had in it.
+  assert.deepEqual(appearanceDetails({ age: "", height: "   ", eyes: "Grises" }), {
+    eyes: "Grises",
+  });
+  assert.deepEqual(appearanceDetails(undefined), {});
+});
+
+test("the actor is built with the description on it", () => {
+  const actor = baseActorData({
+    version: 1,
+    rulesVersion: "5e-2014",
+    identity: {
+      characterName: "Rathma",
+      biography: { trait: "Writes everything down.", eyes: "Grises", age: "27" },
+    },
+    abilities: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+    derived: { hp: 12, ac: 14, proficiencyBonus: 2 },
+  });
+
+  assert.equal(actor.system.details.eyes, "Grises");
+  assert.equal(actor.system.details.age, "27");
+  // And the personality lines still go where they always did.
+  assert.match(actor.system.details.biography.value, /Writes everything down/);
 });

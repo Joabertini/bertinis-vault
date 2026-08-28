@@ -202,6 +202,26 @@ export type BuilderState = {
   bond: string;
   flaw: string;
   notes: string;
+  /**
+   * What the character looks like, in dnd5e's own field names.
+   *
+   * Nine boxes the sheet already draws and nine keys `system.details` already
+   * has, so what the player writes lands where the sheet reads it rather than
+   * as prose inside the biography blob.
+   *
+   * Strings, all of them, including the age and the weight: that is how dnd5e
+   * stores them, and a table that writes "Adulto" or "unos 90 kg" is writing
+   * an answer the game accepts.
+   */
+  age: string;
+  height: string;
+  weight: string;
+  eyes: string;
+  hair: string;
+  skin: string;
+  gender: string;
+  faith: string;
+  appearance: string;
   /** How the raw scores were generated. Recorded, not just used by the UI. */
   statMethod: StatMethod;
   /**
@@ -327,6 +347,15 @@ export const initialState: BuilderState = {
   bond: "Su mentor desaparecido dejo pistas sobre una biblioteca sellada.",
   flaw: "Le cuesta abandonar una pista, incluso cuando pone al grupo en riesgo.",
   notes: "Lleva un grimorio con observaciones sobre portales, constelaciones y runas rotas.",
+  age: "",
+  height: "",
+  weight: "",
+  eyes: "",
+  hair: "",
+  skin: "",
+  gender: "",
+  faith: "",
+  appearance: "",
   kitChoices: {},
   kitAppliedFor: "",
   sourceBooks: {},
@@ -407,6 +436,8 @@ export function coerceBuilderState(value: unknown): BuilderState {
     bond: typeof candidate.bond === "string" ? candidate.bond : initialState.bond,
     flaw: typeof candidate.flaw === "string" ? candidate.flaw : initialState.flaw,
     notes: typeof candidate.notes === "string" ? candidate.notes : initialState.notes,
+    // A draft saved before these existed simply has none of them.
+    ...coerceAppearance(candidate),
     rulesVersion: candidate.rulesVersion === "5e-2024" ? "5e-2024" : "5e-2014",
     statMethod: coerceStatMethod(candidate.statMethod),
     abilityBonuses: coerceAbilityBonuses(candidate.abilityBonuses),
@@ -446,6 +477,36 @@ function coerceHpRolls(value: unknown): Record<string, number> {
   }
 
   return rolls;
+}
+
+/** The nine description boxes, each read as a string or left empty. */
+const APPEARANCE_KEYS = [
+  "age",
+  "height",
+  "weight",
+  "eyes",
+  "hair",
+  "skin",
+  "gender",
+  "faith",
+  "appearance",
+] as const;
+
+function coerceAppearance(candidate: Record<string, unknown>): Pick<BuilderState, (typeof APPEARANCE_KEYS)[number]> {
+  const read = (key: (typeof APPEARANCE_KEYS)[number]) =>
+    typeof candidate[key] === "string" ? (candidate[key] as string) : "";
+
+  return {
+    age: read("age"),
+    height: read("height"),
+    weight: read("weight"),
+    eyes: read("eyes"),
+    hair: read("hair"),
+    skin: read("skin"),
+    gender: read("gender"),
+    faith: read("faith"),
+    appearance: read("appearance"),
+  };
 }
 
 function coerceStatMethod(value: unknown): StatMethod {
