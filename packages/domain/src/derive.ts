@@ -14,7 +14,7 @@ import {
   progressionOf,
   type MulticlassEntry,
 } from "./multiclass.js";
-import { calculateArmorClass, calculateEstimatedHitPoints } from "./combat.js";
+import { calculateArmorClass } from "./combat.js";
 import {
   getHitDieForClass,
   getSpellAbilityForClass,
@@ -33,7 +33,6 @@ export function deriveCharacterBuild(
   const modifiers = abilityModifierMap(parsedInput.abilities.final);
   const primaryClassId = normalizeClassId(parsedInput.classing.classes[0]?.classId ?? "");
   const primaryClassLevel = parsedInput.classing.classes[0]?.level ?? 1;
-  const hitDie = getHitDieForClass(primaryClassId);
   const spellAbility = getSpellAbilityForClass(primaryClassId);
 
   // Every class, in the order they were taken. Where the index has not
@@ -54,16 +53,17 @@ export function deriveCharacterBuild(
 
   const isMulticlass = entries.length > 1;
 
-  // A single class keeps the old calculation exactly. Only the shape of a
-  // multiclass character changes here, and the hit die it uses per level is
-  // the die of the class that level was taken in.
-  const hp = isMulticlass
-    ? multiclassHitPoints({ entries, constitutionModifier: modifiers.con })
-    : calculateEstimatedHitPoints({
-        hitDie,
-        level,
-        constitutionModifier: modifiers.con,
-      });
+  /*
+   * The hit points, from the dice of the classes the levels were taken in and
+   * from what the player rolled if they rolled. A build that says nothing gets
+   * the average, which is what every build written before the field did.
+   */
+  const hp = multiclassHitPoints({
+    entries,
+    constitutionModifier: modifiers.con,
+    ...(parsedInput.hitPoints?.method ? { method: parsedInput.hitPoints.method } : {}),
+    ...(parsedInput.hitPoints?.rolls ? { rolls: parsedInput.hitPoints.rolls } : {}),
+  });
 
   // An armour picked from the index brings its own formula; the catalog is the
   // fallback for builds written before the index carried armour class.

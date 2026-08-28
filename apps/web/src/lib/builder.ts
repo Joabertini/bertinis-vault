@@ -31,6 +31,7 @@ import { speciesProficienciesFor } from "./species";
 import { expertisePlanFor } from "./expertise";
 import { backgroundFeatIdsFor, featIdsFor } from "./feats";
 import { grantedSpellsFor } from "./granted-spells";
+import { hitPointsInputFor } from "./hit-points";
 export { backgroundFeatIdsFor } from "./feats";
 import { foundrySizeFor } from "./table-numbers";
 import { kitCopper, startingKitFor, takenOptions } from "./starting-kit";
@@ -759,6 +760,11 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       },
     },
     ...(Object.keys(state.sourceBooks).length > 0 ? { sourceBooks: state.sourceBooks } : {}),
+    /*
+     * What the player rolled, when they rolled. Absent for a table that takes
+     * the average, which is what every character made before this did.
+     */
+    ...(hitPointsInputFor(state) ? { hitPoints: hitPointsInputFor(state)! } : {}),
   };
 
   return deriveCharacterBuild(buildInput);

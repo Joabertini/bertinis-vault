@@ -1410,17 +1410,17 @@ const actorFaults: string[] = [];
         actorFaults.push(`CA ${draft.snapshot.derived.ac}, esperaba 18 (placa 18)`);
       }
       /*
-       * PG 44 contra los 60 que decia Foundry.
+       * Los 60 PG que decia Foundry, y no los 44 del promedio.
        *
-       * No es un fallo del importador: 44 es el promedio fijo (10 + 4x6 +
-       * 5x2) y 60 es el maximo (10 + 4x10 + 5x2). Rathma se subio con max
-       * roll y el builder siempre promedia, porque todavia no ofrece elegir
-       * el metodo. Queda fijado aca para que el dia que se agregue, esto
-       * falle y obligue a mirarlo.
+       * Rathma se subio con maximo en cada nivel, que Foundry guarda en el
+       * avance `HitPoints` de la clase — y no en `attributes.hp.max`, que en
+       * el archivo real viene en null. Mientras el builder solo promediaba,
+       * este personaje entraba con 44 (10 + 4x6 + 5x2) y perdia dieciseis
+       * puntos sin decir nada. Esta linea era la trampa que lo esperaba.
        */
-      if (draft.snapshot.derived.hp !== 44) {
+      if (draft.snapshot.derived.hp !== 60) {
         actorFaults.push(
-          `PG ${draft.snapshot.derived.hp}: era 44 con promedio fijo. Si ya se elige metodo de PG, actualizar.`,
+          `PG ${draft.snapshot.derived.hp}, esperaba 60 (maximo en cada nivel, como en el avance)`,
         );
       }
     }

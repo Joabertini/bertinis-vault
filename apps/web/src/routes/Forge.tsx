@@ -111,6 +111,8 @@ import {
 } from "@/lib/improvements";
 import { useVault, releasedByPick, rulesVersionOf, type Pace } from "@/lib/vault-store";
 import { chamberOrder, firstChamber, type ChamberKey } from "@/lib/chambers";
+import { hitPointLevelsFor } from "@/lib/hit-points";
+import HitPoints from "@/components/forge/HitPoints";
 import { DIVIDER, DIVIDER_TIGHT, HEADING, ITEM_META, ITEM_NAME, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
 
 const CHAMBER_LABEL: Record<ChamberKey, string> = {
@@ -237,6 +239,18 @@ export default function Forge() {
   );
 
   const multiclassProblems = useMemo(() => unmetMulticlassRequirementsFor(draft), [draft]);
+
+  /*
+   * The levels that have a hit point roll to record, and the die the first
+   * level is granted at. The first is not asked about — it is the die at
+   * maximum — but it is shown, which is what stops the list starting at two
+   * looking like a bug.
+   */
+  const hitPointLevels = useMemo(() => hitPointLevelsFor(draft), [draft]);
+  const firstHitDie = useMemo(
+    () => classesFor(draft)[0]?.hitDie ?? hitDieFor(draft.classId, rulesVersion) ?? 8,
+    [draft, rulesVersion],
+  );
 
   const subclasses = useMemo(
     () => (selectedClass ? subclassesFor(selectedClass.label, rulesVersion) : []),
@@ -887,6 +901,21 @@ export default function Forge() {
     patchDraft({ extraClasses: draft.extraClasses.filter((_, at) => at !== index) });
   };
 
+  /**
+   * What the player rolled for one level.
+   *
+   * Null clears it, and clearing is not the same as writing a zero: a level
+   * with no roll takes the average, which is what a level nobody has rolled
+   * yet honestly is. So the entry is removed rather than stored as a number.
+   */
+  const setHitPointRoll = (level: number, roll: number | null) => {
+    const hpRolls = { ...draft.hpRolls };
+    if (roll === null) delete hpRolls[String(level)];
+    else hpRolls[String(level)] = roll;
+
+    patchDraft({ hpRolls });
+  };
+
   const setLevelChoice = (level: number, choice: (typeof draft.levelChoices)[number]) => {
     patchDraft({ levelChoices: { ...draft.levelChoices, [level]: choice } });
   };
@@ -1280,6 +1309,19 @@ export default function Forge() {
                     onPick={chooseVariant}
                     onPickAbility={chooseSpellAbility}
                   />
+
+                  {draft.classId && (
+                    <HitPoints
+                      method={draft.hpMethod}
+                      levels={hitPointLevels}
+                      firstDie={firstHitDie}
+                      constitutionModifier={Math.floor((snapshot?.abilities.final.con ?? 10) / 2) - 5}
+                      classLabel={(id) => allClasses.find((entry) => entry.id === id)?.label ?? id}
+                      accent={accent}
+                      onPickMethod={(hpMethod) => patchDraft({ hpMethod })}
+                      onRoll={setHitPointRoll}
+                    />
+                  )}
 
                   {draft.classId && (
                     <Multiclass

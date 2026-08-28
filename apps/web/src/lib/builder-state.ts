@@ -107,6 +107,20 @@ export type BuilderState = {
    */
   extraClasses: ExtraClass[];
   /**
+   * Whether the player rolled their hit points, and what they rolled.
+   *
+   * Both editions print two ways on every class page and a table picks one.
+   * A builder that can only average puts a number on the sheet that nobody at
+   * a rolling table ever rolled, and gives them nowhere to correct it.
+   *
+   * `hpRolls` is keyed by character level as a string — `"2"` is the roll for
+   * level 2 — rather than by position in a list, so that inserting a class or
+   * changing the level does not shift every number onto a different level.
+   * Level 1 is not here: it is the die at maximum, which is not a roll.
+   */
+  hpMethod: "average" | "rolled";
+  hpRolls: Record<string, number>;
+  /**
    * The weapons this character has mastery with, as dnd5e base-item ids.
    *
    * 2024 only, and only five classes grant it. Kept as ids rather than names
@@ -298,6 +312,8 @@ export const initialState: BuilderState = {
   featuresText: "Arcane Recovery\nSculpt Spells",
   level: 3,
   extraClasses: [],
+  hpMethod: "average",
+  hpRolls: {},
   weaponMasteryIds: [],
   expertiseChoices: {},
   str: 8,
@@ -404,7 +420,32 @@ export function coerceBuilderState(value: unknown): BuilderState {
       : [],
     featAbilityChoices: coerceFeatAbilityChoices(candidate.featAbilityChoices, candidate.levelChoices),
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
+    // A draft saved before the switch existed took the average, and still does.
+    hpMethod: candidate.hpMethod === "rolled" ? "rolled" : "average",
+    hpRolls: coerceHpRolls(candidate.hpRolls),
   };
+}
+
+/**
+ * What the player rolled, read defensively.
+ *
+ * A draft is a `localStorage` value the player could have edited by hand, and
+ * a level with a nonsense number in it must not reach the rules layer as a
+ * roll. Anything that is not a whole number between 1 and 12 — no die goes
+ * higher — is dropped, and a dropped level takes the average, which is what a
+ * level nobody has rolled yet does anyway.
+ */
+function coerceHpRolls(value: unknown): Record<string, number> {
+  if (typeof value !== "object" || value === null) return {};
+
+  const rolls: Record<string, number> = {};
+  for (const [level, roll] of Object.entries(value as Record<string, unknown>)) {
+    if (!/^\d+$/.test(level)) continue;
+    if (typeof roll !== "number" || !Number.isInteger(roll) || roll < 1 || roll > 12) continue;
+    rolls[level] = roll;
+  }
+
+  return rolls;
 }
 
 function coerceStatMethod(value: unknown): StatMethod {

@@ -35,7 +35,7 @@ personaje sale sin ella.
 | Subclase, al nivel que corresponde | ✅ con el umbral por edición |
 | Puntos de golpe | ✅ `derived.hp` |
 | Dado de golpe | ✅ mostrado |
-| Método de PG (promedio o tirada) | ❌ `combat.ts:52` sólo promedia; el contrato no tiene override |
+| Método de PG (promedio o tirada) | ✅ la cámara de clase pregunta, una fila por nivel con su dado |
 | Competencias de armadura, armas, herramientas | ✅ |
 | Salvaciones | ✅ `savingThrowsForClass` |
 | Pericias, con su cupo | ✅ |
@@ -152,7 +152,6 @@ la cola. Medido contra el código, no contra las notas viejas:
 
 | Hueco | Dónde muerde |
 | --- | --- |
-| **Método de PG** | `combat.ts:52` sólo promedia; el contrato no tiene forma de decir "tiré los dados" |
 | **Lo que la especie concede y no se pregunta** | El enano elige una de tres herramientas de artesano y el elfo recibe Percepcion gratis. El indice trae `skillProficiencies` y `toolProficiencies` en crudo; la Forja no los pide ni los suma. Los idiomas ya se cerraron |
 | **Edad, altura, peso, aspecto** | No se capturan |
 | **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
@@ -167,6 +166,28 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **Metodo de PG.** Las dos ediciones imprimen dos formas en la pagina de cada
+  clase —tirar el dado, o tomar el numero fijo que la clase dice— y cada mesa
+  elige una. El builder solo sabia promediar, asi que un personaje de una mesa
+  que tira llevaba en la ficha un numero que nadie habia tirado, y ningun lugar
+  donde corregirlo. Ahora la camara de clase pregunta, con una fila por nivel:
+  el dado que le toca a ese nivel, cuanto seria el promedio para poder comparar,
+  y lo que salio. El nivel 1 se muestra pero no se pregunta, porque en las dos
+  ediciones es el dado al maximo.
+  Un nivel sin tirar toma el promedio en vez de romper el total: una ficha
+  llenada hasta nivel 4 es una ficha honesta a nivel 7.
+  El minimo pasa a ser por nivel y no sobre el total, que es lo que el propio
+  comentario del codigo ya decia y la cuenta no hacia.
+
+- **Dieciseis PG que se perdian al importar.** Lo encontro la sonda, que tenia
+  la trampa puesta desde antes: Rathma, el paladin 5 de las fixtures, decia 60
+  en Foundry y entraba con 44. Foundry guarda lo que dio cada nivel en el avance
+  `HitPoints` del item de clase (`"1": "max"` y despues un numero por nivel), y
+  no en `system.attributes.hp.max`, que en el archivo real viene en **null**.
+  Nadie leia ese avance, asi que un personaje ya jugado volvia promediado y en
+  silencio. Ahora se lee, y el total derivado da los 60 de su ficha.
+
 
 - **Arcanum Místico.** Los espacios de pacto del brujo se detienen en nivel 5,
   así que los cuatro niveles de conjuro de arriba son inalcanzables por la vía
