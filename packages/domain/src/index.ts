@@ -19,5 +19,6 @@ export * from "./spell-slots-payload.js";
 export * from "./derive.js";
 export * from "./preflight.js";
 export * from "./proficiencies.js";
+export * from "./class-proficiencies.js";
 export * from "./saving-throws.js";
 export * from "./progression.js";

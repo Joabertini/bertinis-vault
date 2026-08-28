@@ -3,7 +3,7 @@
   "label": "Warning-only validation case",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-27T17:54:37.955Z",
+    "generatedAt": "2026-08-28T00:39:27.246Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -656,8 +656,14 @@
           "communication": {}
         },
         "weaponProf": {
-          "value": [],
-          "custom": "daggers, darts, slings, quarterstaffs, light crossbows",
+          "value": [
+            "dagger",
+            "dart",
+            "sling",
+            "quarterstaff",
+            "lightcrossbow"
+          ],
+          "custom": "",
           "mastery": {
             "value": [],
             "bonus": []
@@ -695,7 +701,7 @@
     },
     "items": [
       {
-        "_id": "tiJQjK015bb9Az47",
+        "_id": "EIS2cfZn6sMJVLqU",
         "name": "wizard",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -755,7 +761,7 @@
         }
       },
       {
-        "_id": "IymLXSzNnXSWWwLH",
+        "_id": "aCaKZt7C6KaLOT4R",
         "name": "Magic Initiate",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -813,7 +819,7 @@
         }
       },
       {
-        "_id": "dTYCxdIocc0Adykv",
+        "_id": "4glOeuDLU2CF7XsE",
         "name": "Alert",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -871,7 +877,7 @@
         }
       },
       {
-        "_id": "4xzlDhLm385KgvCp",
+        "_id": "OgmnUhS6UbKcf34G",
         "name": "Arcane Recovery",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -929,7 +935,7 @@
         }
       },
       {
-        "_id": "UQwFE0fgroruUBSB",
+        "_id": "sctfP1Q00heebJeL",
         "name": "Fireball",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1086,7 +1092,7 @@
         }
       },
       {
-        "_id": "iabM6kAdkrlj6n7p",
+        "_id": "zrRV5qyBVxuPet49",
         "name": "Shield",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
