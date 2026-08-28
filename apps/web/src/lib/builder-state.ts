@@ -167,6 +167,14 @@ export type BuilderState = {
    * save DC — they have no spellcasting ability of their own to fall back on.
    */
   spellAbilityChoices: Record<string, string>;
+  /**
+   * The spells picked to answer a grant stated as a filter.
+   *
+   * "Two cantrips of your choice from that class's spell list". The filter
+   * cannot be resolved for the player — choosing would put a spell on the
+   * sheet they never picked — so it is a question, and these are the answers.
+   */
+  grantedSpellChoices: Record<string, string[]>;
   featuresText: string;
   level: number;
   str: number;
@@ -286,6 +294,7 @@ export const initialState: BuilderState = {
   spellbookText: "",
   spellVariantChoices: {},
   spellAbilityChoices: {},
+  grantedSpellChoices: {},
   featuresText: "Arcane Recovery\nSculpt Spells",
   level: 3,
   extraClasses: [],
@@ -358,6 +367,7 @@ export function coerceBuilderState(value: unknown): BuilderState {
         : initialState.spellbookText,
     spellVariantChoices: coerceVariantChoices(candidate.spellVariantChoices),
     spellAbilityChoices: coerceVariantChoices(candidate.spellAbilityChoices),
+    grantedSpellChoices: coerceSpellChoices(candidate.grantedSpellChoices),
     featuresText:
       typeof candidate.featuresText === "string" ? candidate.featuresText : initialState.featuresText,
     level: typeof candidate.level === "number" ? candidate.level : initialState.level,
@@ -537,6 +547,26 @@ function coerceVariantChoices(value: unknown): Record<string, string> {
   const answers: Record<string, string> = {};
   for (const [key, answer] of Object.entries(value as Record<string, unknown>)) {
     if (typeof answer === "string" && answer.length > 0) answers[key] = answer;
+  }
+
+  return answers;
+}
+
+/**
+ * Filter answers from a stored draft, read defensively.
+ *
+ * Same reason as the rest: a draft is a `localStorage` value the player could
+ * have edited. An answer that is not a list of names reads as unanswered,
+ * which the Forge asks again.
+ */
+function coerceSpellChoices(value: unknown): Record<string, string[]> {
+  if (typeof value !== "object" || value === null) return {};
+
+  const answers: Record<string, string[]> = {};
+  for (const [key, names] of Object.entries(value as Record<string, unknown>)) {
+    if (!Array.isArray(names)) continue;
+    const clean = names.filter((name): name is string => typeof name === "string" && name.length > 0);
+    if (clean.length) answers[key] = clean;
   }
 
   return answers;

@@ -77,7 +77,15 @@ import {
   toLines,
 } from "@/lib/grants";
 import { formatSpellLine, spellPlan } from "@/lib/spells";
-import { abilityOptionsOf, spellGrantsFor, type SpellGrantSource } from "@/lib/granted-spells";
+import {
+  abilityOptionsOf,
+  grantedSpellChoicesFor,
+  spellGrantsFor,
+  unansweredAbilities,
+  unansweredSpellChoices,
+  type GrantedSpellChoice,
+  type SpellGrantSource,
+} from "@/lib/granted-spells";
 import BonusEditor from "@/components/forge/BonusEditor";
 import OriginBonus from "@/components/forge/OriginBonus";
 import Improvements from "@/components/forge/Improvements";
@@ -354,6 +362,20 @@ export default function Forge() {
    */
   const chooseSpellAbility = (key: string, ability: string) => {
     patchDraft({ spellAbilityChoices: { ...draft.spellAbilityChoices, [key]: ability } });
+  };
+
+  /** The filter questions: "two cantrips of your choice from that list". */
+  const spellChoices = useMemo(
+    () => grantedSpellChoicesFor(draft, rulesVersion),
+    [draft, rulesVersion],
+  );
+
+  const toggleGrantedSpell = (key: string, name: string) => {
+    const taken = draft.grantedSpellChoices[key] ?? [];
+    const next = taken.includes(name)
+      ? taken.filter((entry) => entry !== name)
+      : [...taken, name];
+    patchDraft({ grantedSpellChoices: { ...draft.grantedSpellChoices, [key]: next } });
   };
 
   /* ---------------- growth ---------------- */
@@ -644,20 +666,47 @@ export default function Forge() {
    */
   const offersSatisfied = offersAreSatisfied(profPlan.offers, chosenProficiencies);
 
+  /**
+   * Whether a chamber's granted-spell questions are all answered.
+   *
+   * A lineage nobody chose grants nothing, and a Magic Initiate with no
+   * cantrips picked is a feat that did nothing. Neither is an error the export
+   * can report — the payload is perfectly valid and simply poorer — so the
+   * chamber that asked holds the player until they answer.
+   */
+  const grantsSettled = (chamber: SpellGrantSource["chamber"]) => {
+    const here = spellGrants.filter((source) => source.chamber === chamber);
+    if (here.some((source) => source.variants.length > 0 && !draft.spellVariantChoices[source.key])) {
+      return false;
+    }
+    if (
+      unansweredAbilities(draft, rulesVersion).some((source) => source.chamber === chamber)
+    ) {
+      return false;
+    }
+
+    return !unansweredSpellChoices(draft, rulesVersion).some(
+      (question) => question.chamber === chamber,
+    );
+  };
+
   const answered: Record<ChamberKey, boolean> = {
-    ancestry: Boolean(draft.raceId),
-    calling: Boolean(draft.classId),
+    ancestry: Boolean(draft.raceId) && grantsSettled("species"),
+    calling: Boolean(draft.classId) && grantsSettled("class"),
     // A background that offers several feats owes an answer; one that grants a
     // single one has already been recorded above.
     origin:
       Boolean(draft.backgroundId) &&
-      (backgroundFeatIds.length < 2 || Boolean(draft.backgroundFeatId)),
+      (backgroundFeatIds.length < 2 || Boolean(draft.backgroundFeatId)) &&
+      grantsSettled("origin"),
     attributes: bound.size === ABILITY_IDS.length,
     // Every reached improvement must be answered, and every pool filled: an
     // unspent one exports a character weaker than the rules make them.
     growth:
-      growth.unanswered.length === 0 && talentsSatisfied(pools, draft.optionalFeatureIds),
-    gifts: offersSatisfied && languagesSatisfied(langPlan, chosenLanguages),
+      growth.unanswered.length === 0 &&
+      talentsSatisfied(pools, draft.optionalFeatureIds) &&
+      grantsSettled("growth"),
+    gifts: offersSatisfied && languagesSatisfied(langPlan, chosenLanguages) && grantsSettled("gifts"),
     // Optional: an unarmoured wizard is a legal character.
     gear: true,
     spells: true,
@@ -1136,6 +1185,9 @@ export default function Forge() {
                     sources={spellGrants.filter((source) => source.chamber === "species")}
                     chosen={draft.spellVariantChoices}
                     chosenAbilities={draft.spellAbilityChoices}
+                    questions={spellChoices}
+                    answers={draft.grantedSpellChoices}
+                    onToggleSpell={toggleGrantedSpell}
                     accent={VAULT_GOLD}
                     onPick={chooseVariant}
                     onPickAbility={chooseSpellAbility}
@@ -1221,6 +1273,9 @@ export default function Forge() {
                     sources={spellGrants.filter((source) => source.chamber === "class")}
                     chosen={draft.spellVariantChoices}
                     chosenAbilities={draft.spellAbilityChoices}
+                    questions={spellChoices}
+                    answers={draft.grantedSpellChoices}
+                    onToggleSpell={toggleGrantedSpell}
                     accent={accent}
                     onPick={chooseVariant}
                     onPickAbility={chooseSpellAbility}
@@ -1277,6 +1332,18 @@ export default function Forge() {
                       </div>
                     </div>
                   )}
+                  <VariantChoices
+                    sources={spellGrants.filter((source) => source.chamber === "origin")}
+                    chosen={draft.spellVariantChoices}
+                    chosenAbilities={draft.spellAbilityChoices}
+                    questions={spellChoices}
+                    answers={draft.grantedSpellChoices}
+                    onToggleSpell={toggleGrantedSpell}
+                    accent={accent}
+                    onPick={chooseVariant}
+                    onPickAbility={chooseSpellAbility}
+                  />
+
                 </div>
               )}
 
@@ -1433,6 +1500,18 @@ export default function Forge() {
                     onSetChoice={setLevelChoice}
                     onSetFeatAbilities={setFeatAbilities}
                   />
+                  <VariantChoices
+                    sources={spellGrants.filter((source) => source.chamber === "growth")}
+                    chosen={draft.spellVariantChoices}
+                    chosenAbilities={draft.spellAbilityChoices}
+                    questions={spellChoices}
+                    answers={draft.grantedSpellChoices}
+                    onToggleSpell={toggleGrantedSpell}
+                    accent={accent}
+                    onPick={chooseVariant}
+                    onPickAbility={chooseSpellAbility}
+                  />
+
                 </div>
               )}
 
@@ -1602,6 +1681,18 @@ export default function Forge() {
                       </div>
                     ))}
                   </div>
+                  <VariantChoices
+                    sources={spellGrants.filter((source) => source.chamber === "gifts")}
+                    chosen={draft.spellVariantChoices}
+                    chosenAbilities={draft.spellAbilityChoices}
+                    questions={spellChoices}
+                    answers={draft.grantedSpellChoices}
+                    onToggleSpell={toggleGrantedSpell}
+                    accent={accent}
+                    onPick={chooseVariant}
+                    onPickAbility={chooseSpellAbility}
+                  />
+
                 </div>
               )}
 
@@ -1926,20 +2017,28 @@ function VariantChoices({
   sources,
   chosen,
   chosenAbilities,
+  questions,
+  answers,
   accent,
   onPick,
   onPickAbility,
+  onToggleSpell,
 }: {
   sources: SpellGrantSource[];
   chosen: Record<string, string>;
   chosenAbilities: Record<string, string>;
+  questions: GrantedSpellChoice[];
+  answers: Record<string, string[]>;
   accent: string;
   onPick: (key: string, name: string) => void;
   onPickAbility: (key: string, ability: string) => void;
+  onToggleSpell: (key: string, name: string) => void;
 }) {
+  const chambers = new Set(sources.map((source) => source.chamber));
   const asking = sources.filter((source) => source.variants.length > 0);
   const asary = sources.filter((source) => abilityOptionsOf(source).length > 0);
-  if (!asking.length && !asary.length) return null;
+  const asked = questions.filter((question) => chambers.has(question.chamber));
+  if (!asking.length && !asary.length && !asked.length) return null;
 
   return (
     <>
@@ -1974,6 +2073,18 @@ function VariantChoices({
           selectedId={chosenAbilities[source.key] ?? ""}
           onPick={(entry) => onPickAbility(source.key, entry.id)}
           accent={accent}
+        />
+      ))}
+
+      {asked.map((question) => (
+        <PickList
+          key={question.key}
+          title={`${question.label} — elegi ${question.count}`}
+          options={question.options}
+          selected={answers[question.key] ?? []}
+          limit={question.count}
+          accent={accent}
+          onToggle={(name) => onToggleSpell(question.key, name)}
         />
       ))}
     </>

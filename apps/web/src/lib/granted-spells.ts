@@ -19,7 +19,9 @@
 
 import {
   grantedSpellsAt,
+  parseSpellFilter,
   preparationForKind,
+  spellMatchesFilter,
   spellVariantsOf,
   warlockPactSlotLevelByClassLevel,
   type GrantedSpellEntry,
@@ -27,7 +29,11 @@ import {
 import {
   collections,
   forRulesVersion,
+  type BackgroundRow,
+  type FeatRow,
+  type OptionalFeatureRow,
   type RaceRow,
+  type SpellRow,
   type SubclassRow,
   type SubraceRow,
 } from "@bertinis-vault/vetools-index";
@@ -36,6 +42,7 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder-state";
 import { classEntriesFor } from "./classing";
+import { featIdsFor } from "./feats";
 import { slugOf, subclassInfoFor } from "./index-options";
 
 /** One thing that grants spells, and everything needed to read what it grants. */
@@ -51,7 +58,14 @@ export type SpellGrantSource = {
   /** What the player is looking at when they answer: "Elf", "Circle of the Land". */
   label: string;
   /** Which chamber asks. A species question does not belong beside the spells. */
-  chamber: "species" | "class";
+  /**
+   * Which chamber asks its question.
+   *
+   * A species question does not belong beside the spells: a fighter elf never
+   * opens the spell chamber and has a lineage all the same. The same holds for
+   * a feat and for a warlock's invocation.
+   */
+  chamber: "species" | "class" | "origin" | "growth" | "gifts";
   entries: GrantedSpellEntry[];
   /** The named alternatives, or empty when the grant simply applies. */
   variants: string[];
@@ -109,6 +123,62 @@ export function spellGrantsFor(
         pactSlotLevel: 0,
       });
     }
+  }
+
+  const backgrounds = forRulesVersion(
+    collections.background ?? [],
+    rulesVersion,
+  ) as BackgroundRow[];
+  const background = pickRow(
+    backgrounds,
+    state.backgroundId,
+    state.sourceBooks[`background:${state.backgroundId}`],
+  );
+  if (background?.spells?.length) {
+    sources.push({
+      key: "background",
+      label: background.name,
+      chamber: "origin",
+      entries: background.spells,
+      variants: spellVariantsOf(background.spells),
+      level,
+      pactSlotLevel: 0,
+    });
+  }
+
+  const feats = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
+  for (const featId of featIdsFor(state)) {
+    const feat = pickRow(feats, featId, state.sourceBooks[`feat:${featId}`]);
+    if (!feat?.spells?.length) continue;
+
+    sources.push({
+      key: `feat:${featId}`,
+      label: feat.name,
+      chamber: "growth",
+      entries: feat.spells,
+      variants: spellVariantsOf(feat.spells),
+      level,
+      pactSlotLevel: 0,
+    });
+  }
+
+  const optionalFeatures = forRulesVersion(
+    collections.optionalfeature ?? [],
+    rulesVersion,
+  ) as OptionalFeatureRow[];
+  for (const featureId of state.optionalFeatureIds) {
+    const feature = pickRow(optionalFeatures, featureId, undefined);
+    if (!feature?.spells?.length) continue;
+
+    sources.push({
+      key: `optionalfeature:${featureId}`,
+      label: feature.name,
+      chamber: "gifts",
+      entries: feature.spells,
+      variants: spellVariantsOf(feature.spells),
+      level,
+      pactSlotLevel: 0,
+    });
   }
 
   for (const entry of classEntriesFor(
@@ -218,11 +288,32 @@ export function grantedSpellsFor(
   const out: GrantedSpell[] = [];
 
   for (const { source, entries } of reachedGrantsFor(state, rulesVersion)) {
-    for (const entry of entries) {
+    for (const [index, entry] of entries.entries()) {
       const preparation = preparationForKind(entry.kind);
       if (!preparation) continue;
 
       const ability = castingAbilityOf(entry, state.spellAbilityChoices[source.key]);
+
+      /*
+       * A spell picked to answer this entry's filter is granted on the same
+       * terms as one it named outright. Magic Initiate's chosen cantrip is
+       * cast with the same ability and known just as freely as if the feat had
+       * printed its name.
+       */
+      const answered = [
+        ...entry.filters.map((_, at) => `${source.key}:${index}:${at}`),
+        ...entry.choices.map((_, at) => `${source.key}:${index}:list${at}`),
+      ].flatMap((key) => state.grantedSpellChoices[key] ?? []);
+
+      for (const name of answered) {
+        out.push({
+          label: name.toLowerCase(),
+          source: null,
+          preparation,
+          ...(ability ? { ability } : {}),
+          grantedBy: source.label,
+        });
+      }
 
       for (const ref of entry.names) {
         out.push({
@@ -319,4 +410,81 @@ export function abilityOptionsOf(source: SpellGrantSource): string[] {
   }
 
   return [];
+}
+
+/**
+ * A choice a grant states as a filter rather than as a name.
+ *
+ * "Two cantrips of your choice from that class's spell list", "one 1st-level
+ * divination or enchantment spell". The filter is not a grant and cannot be
+ * resolved for the player: choosing one would put a spell on the sheet they
+ * never picked. It is a question, and this is the question.
+ */
+export type GrantedSpellChoice = {
+  /** Where the answer lives. Stable across a redraw of the same draft. */
+  key: string;
+  /** What is asking, and for what: "Magic Initiate · Wizard Spells". */
+  label: string;
+  chamber: SpellGrantSource["chamber"];
+  count: number;
+  /** The spells that match, by name, as the index writes them. */
+  options: string[];
+};
+
+/**
+ * Every filter question this draft has reached, with what answers it.
+ *
+ * A filter with no count takes everything it matches, which is a widening of
+ * the pool rather than a question — the warlock patron's expanded list works
+ * that way. Only the bounded ones are asked.
+ */
+export function grantedSpellChoicesFor(
+  state: BuilderState,
+  rulesVersion: RulesVersion,
+): GrantedSpellChoice[] {
+  const spells = forRulesVersion(collections.spell ?? [], rulesVersion) as SpellRow[];
+  const questions: GrantedSpellChoice[] = [];
+
+  for (const { source, entries } of reachedGrantsFor(state, rulesVersion)) {
+    for (const [index, entry] of entries.entries()) {
+      for (const [at, filter] of entry.filters.entries()) {
+        if (filter.count === null) continue;
+
+        const parsed = parseSpellFilter(filter.filter);
+        const options = spells.filter((row) => spellMatchesFilter(row, parsed)).map((row) => row.name);
+        if (!options.length) continue;
+
+        questions.push({
+          key: `${source.key}:${index}:${at}`,
+          label: entry.variant ? `${source.label} · ${entry.variant}` : source.label,
+          chamber: source.chamber,
+          count: filter.count,
+          options: [...new Set(options)].sort((a, b) => a.localeCompare(b)),
+        });
+      }
+
+      // A named shortlist is the same question with the list already written.
+      for (const [at, choice] of entry.choices.entries()) {
+        questions.push({
+          key: `${source.key}:${index}:list${at}`,
+          label: entry.variant ? `${source.label} · ${entry.variant}` : source.label,
+          chamber: source.chamber,
+          count: choice.count,
+          options: choice.from.map((ref) => ref.name),
+        });
+      }
+    }
+  }
+
+  return questions;
+}
+
+/** The filter questions this draft still owes an answer to. */
+export function unansweredSpellChoices(
+  state: BuilderState,
+  rulesVersion: RulesVersion,
+): GrantedSpellChoice[] {
+  return grantedSpellChoicesFor(state, rulesVersion).filter(
+    (question) => (state.grantedSpellChoices[question.key] ?? []).length < question.count,
+  );
 }

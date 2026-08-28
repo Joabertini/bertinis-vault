@@ -50,7 +50,54 @@ test("a filter says which classes, levels, schools and books it means", () => {
     levels: [0, 1, 2],
     schools: [],
     sources: [],
+    ritual: null,
+    attacks: [],
   });
+});
+
+test("a ritual filter is read, where it used to be dropped in silence", () => {
+  /*
+   * Ritual Caster grants "a 1st-level spell from that class's list that has
+   * the ritual tag". Fourteen filters say this, and dropping the clause read
+   * it as "a 1st-level bard spell" — a hundred choices where the feat offers
+   * ten.
+   */
+  assert.equal(parseSpellFilter("level=1|class=Bard|components & miscellaneous=ritual").ritual, true);
+  // The data is not consistent about the case of its own key.
+  assert.equal(parseSpellFilter("level=1|Components & Miscellaneous=ritual").ritual, true);
+  assert.equal(parseSpellFilter("level=1|class=Bard").ritual, null);
+});
+
+test("an attack filter is read too", () => {
+  // Spell Sniper: "a cantrip that requires an attack roll". Melee, ranged or
+  // other — which is to say any of them.
+  assert.deepEqual(parseSpellFilter("level=0|class=Wizard|spell attack=m;r;o").attacks, [
+    "m",
+    "r",
+    "o",
+  ]);
+});
+
+test("a spell is matched on both of them", () => {
+  const ritualFilter = parseSpellFilter("level=1|components & miscellaneous=ritual");
+  const detectMagic = { name: "Detect Magic", level: 1, source: "PHB", classes: [], ritual: 1 };
+  const magicMissile = { name: "Magic Missile", level: 1, source: "PHB", classes: [], ritual: 0 };
+
+  assert.equal(spellMatchesFilter(detectMagic, ritualFilter), true);
+  assert.equal(spellMatchesFilter(magicMissile, ritualFilter), false);
+
+  const attackFilter = parseSpellFilter("level=0|spell attack=m;r;o");
+  const fireBolt = { name: "Fire Bolt", level: 0, source: "PHB", classes: [], attack: ["r"] };
+  const guidance = { name: "Guidance", level: 0, source: "PHB", classes: [], attack: [] };
+
+  assert.equal(spellMatchesFilter(fireBolt, attackFilter), true);
+  assert.equal(spellMatchesFilter(guidance, attackFilter), false);
+});
+
+test("a spell that says nothing still matches a filter that asks nothing", () => {
+  // Most rows carry neither field, and most filters ask for neither.
+  const plain = parseSpellFilter("level=1|class=Bard");
+  assert.equal(spellMatchesFilter({ name: "Bless", level: 1, source: "PHB", classes: ["Bard|PHB"] }, plain), true);
 });
 
 test("a key nothing knows how to read is left out rather than guessed at", () => {

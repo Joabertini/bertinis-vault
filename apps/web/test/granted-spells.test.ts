@@ -1,9 +1,11 @@
 import { describe, expect, test } from "vitest";
 
 import {
+  grantedSpellChoicesFor,
   grantedSpellsFor,
   spellGrantsFor,
   unansweredAbilities,
+  unansweredSpellChoices,
   unansweredVariants,
 } from "../src/lib/granted-spells";
 import { initialState } from "../src/lib/builder";
@@ -22,6 +24,13 @@ const draft = (over: Record<string, unknown> = {}) => ({
   level: 3,
   spellVariantChoices: {},
   spellAbilityChoices: {},
+  // The demo draft ships a feat and a background of its own, and both grant
+  // spells now. Cleared so each test names what it is about.
+  featId: "",
+  backgroundId: "",
+  optionalFeatureIds: [],
+  levelChoices: {},
+  grantedSpellChoices: {},
   cantripsText: "",
   spellsText: "",
   spellbookText: "",
@@ -204,5 +213,169 @@ describe("with what a granted spell is cast", () => {
     // An elf who has not chosen a lineage has nothing yet, and asking which
     // ability casts nothing is a question with no subject.
     expect(unansweredAbilities(draft(), "2024")).toEqual([]);
+  });
+});
+
+/** The one source a test is about, found by the chamber that asks for it. */
+const pickChamber = (
+  chamber: string,
+  state: Parameters<typeof spellGrantsFor>[0],
+  rulesVersion: Parameters<typeof spellGrantsFor>[1],
+) => spellGrantsFor(state, rulesVersion).find((source) => source.chamber === chamber);
+
+describe("everything else that grants spells", () => {
+  test("a feat grants its spells, and says which feat", () => {
+    // Fey Touched: Misty Step plus one 1st-level divination or enchantment
+    // spell. The named half arrives; the choice is a choice.
+    const spells = grantedSpellsFor(
+      draft({
+        rulesVersion: "5e-2014",
+        featId: slugOf("Fey Touched"),
+        sourceBooks: { [`feat:${slugOf("Fey Touched")}`]: "TCE" },
+      }),
+      "2014",
+    );
+
+    expect(spells.map((entry) => entry.label)).toContain("misty step");
+    expect(spells.every((entry) => entry.grantedBy === "Fey Touched")).toBe(true);
+  });
+
+  test("a feat that offers named lists asks which one", () => {
+    // Magic Initiate's six classes, Ritual Caster's five. Same machine as a
+    // 2024 species lineage, asked in the chamber that took the feat.
+    const magicInitiate = pickChamber("growth", 
+      draft({
+        rulesVersion: "5e-2014",
+        featId: slugOf("Magic Initiate"),
+        sourceBooks: { [`feat:${slugOf("Magic Initiate")}`]: "PHB" },
+      }),
+      "2014",
+    );
+
+    expect(magicInitiate?.chamber).toBe("growth");
+    expect(magicInitiate?.variants).toContain("Wizard Spells");
+  });
+
+  test("a background widens a caster's list", () => {
+    const witherbloom = pickChamber("origin", 
+      draft({
+        rulesVersion: "5e-2014",
+        backgroundId: slugOf("Witherbloom Student"),
+        sourceBooks: { [`background:${slugOf("Witherbloom Student")}`]: "SCC" },
+      }),
+      "2014",
+    );
+
+    expect(witherbloom?.chamber).toBe("origin");
+    expect(witherbloom?.entries.length).toBeGreaterThan(0);
+  });
+
+  test("a warlock's invocation is read where its list stops being the class's", () => {
+    const invocation = pickChamber("gifts", 
+      draft({
+        rulesVersion: "5e-2014",
+        classId: "warlock",
+        level: 5,
+        optionalFeatureIds: [slugOf("Mask of Many Faces")],
+      }),
+      "2014",
+    );
+
+    expect(invocation?.chamber).toBe("gifts");
+    expect(invocation?.label).toBe("Mask of Many Faces");
+  });
+});
+
+describe("a filter is a question, and the answer is a grant", () => {
+  const initiate = (over: Record<string, unknown> = {}) =>
+    draft({
+      rulesVersion: "5e-2014" as const,
+      featId: slugOf("Magic Initiate"),
+      sourceBooks: { [`feat:${slugOf("Magic Initiate")}`]: "PHB" },
+      spellVariantChoices: { [`feat:${slugOf("Magic Initiate")}`]: "Wizard Spells" },
+      ...over,
+    });
+
+  /** Magic Initiate asks twice: two cantrips, and one 1st-level spell. */
+  const cantripQuestion = (state: Parameters<typeof grantedSpellChoicesFor>[0]) =>
+    grantedSpellChoicesFor(state, "2014").find((question) => question.count === 2);
+
+  test("a bounded filter becomes a question with the spells that match", () => {
+    const cantrips = cantripQuestion(initiate());
+
+    expect(cantrips?.count).toBe(2);
+    expect(cantrips?.chamber).toBe("growth");
+    expect(cantrips?.options).toContain("Fire Bolt");
+    // It is the wizard list and not every list.
+    expect(cantrips?.options).not.toContain("Sacred Flame");
+  });
+
+  test("the same feat asks twice, because it grants two different things", () => {
+    // Two cantrips, and one 1st-level spell cast once a day. Folding them into
+    // one question would let a player take three cantrips.
+    const questions = grantedSpellChoicesFor(initiate(), "2014");
+
+    expect(questions.map((question) => question.count).sort()).toEqual([1, 2]);
+    expect(new Set(questions.map((question) => question.key)).size).toBe(2);
+  });
+
+  test("an unbounded filter is not a question, because it takes everything", () => {
+    // The Eldritch Knight's "every wizard cantrip" widens the pool; there is
+    // nothing to answer.
+    const questions = grantedSpellChoicesFor(
+      draft({ rulesVersion: "5e-2014", classId: "fighter", subclassId: "eldritch-knight", level: 7 }),
+      "2014",
+    );
+
+    expect(questions).toEqual([]);
+  });
+
+  test("nothing is chosen until the player chooses", () => {
+    expect(grantedSpellsFor(initiate(), "2014")).toEqual([]);
+    expect(unansweredSpellChoices(initiate(), "2014").length).toBeGreaterThan(0);
+  });
+
+  test("the answer arrives on the same terms the grant states", () => {
+    const cantrips = cantripQuestion(initiate());
+    const answered = initiate({
+      grantedSpellChoices: { [cantrips!.key]: ["Fire Bolt", "Mage Hand"] },
+    });
+
+    const spells = grantedSpellsFor(answered, "2014");
+
+    expect(spells.map((entry) => entry.label).sort()).toEqual(["fire bolt", "mage hand"]);
+    expect(spells.every((entry) => entry.grantedBy === "Magic Initiate")).toBe(true);
+    expect(spells.every((entry) => entry.preparation === "prepared")).toBe(true);
+  });
+
+  test("a ritual filter offers rituals, not the whole class list", () => {
+    /*
+     * Ritual Caster grants "a 1st-level spell that has the ritual tag". The
+     * clause used to be dropped, so the feat offered every 1st-level bard
+     * spell — a hundred where the rules offer ten.
+     */
+    const [rituals] = grantedSpellChoicesFor(
+      draft({
+        rulesVersion: "5e-2014",
+        featId: slugOf("Ritual Caster"),
+        sourceBooks: { [`feat:${slugOf("Ritual Caster")}`]: "PHB" },
+        spellVariantChoices: { [`feat:${slugOf("Ritual Caster")}`]: "Bard Spells" },
+      }),
+      "2014",
+    );
+
+    expect(rituals?.options).toContain("Detect Magic");
+    expect(rituals?.options).not.toContain("Cure Wounds");
+  });
+
+  test("the high elf's wizard cantrip is finally somewhere to choose", () => {
+    const [cantrip] = grantedSpellChoicesFor(
+      draft({ spellVariantChoices: { race: "High Elf" } }),
+      "2024",
+    );
+
+    expect(cantrip?.chamber).toBe("species");
+    expect(cantrip?.count).toBe(1);
+    expect(cantrip?.options).toContain("Fire Bolt");
   });
 });

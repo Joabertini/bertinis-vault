@@ -37,6 +37,15 @@ export type SpellRow = IndexRow & {
   concentration: 0 | 1;
   ritual: 0 | 1;
   /**
+   * The attack roll the spell needs, if any: `"m"` melee, `"r"` ranged.
+   *
+   * Empty for the great majority — 70 spells have one. It is read because a
+   * feat asks for it: Spell Sniper grants "a cantrip that requires an attack
+   * roll", and without this that filter reads as "a cantrip" and offers three
+   * hundred.
+   */
+  attack: string[];
+  /**
    * The class lists this spell is on, as `"Wizard|PHB"`.
    *
    * A spell belongs to a class list by the class's say-so, not its own, and

@@ -29,7 +29,9 @@ import { collapseGearLines } from "./gear-lines";
 import { gearProficienciesFor } from "./gear-proficiencies";
 import { speciesProficienciesFor } from "./species";
 import { expertisePlanFor } from "./expertise";
+import { backgroundFeatIdsFor, featIdsFor } from "./feats";
 import { grantedSpellsFor } from "./granted-spells";
+export { backgroundFeatIdsFor } from "./feats";
 import { foundrySizeFor } from "./table-numbers";
 import { kitCopper, startingKitFor, takenOptions } from "./starting-kit";
 import { masteryPlanFor } from "./weapon-mastery";
@@ -336,15 +338,7 @@ export function proficiencyBonus(level: number) {
  * background granted it, or the variant human did.
  */
 export function takenFeatsFor(state: BuilderState): TakenFeat[] {
-  const featIds = uniqueEntries(
-    [
-      ...backgroundFeatIdsFor(state),
-      state.featId,
-      ...featsFromChoices(state.levelChoices),
-    ].filter(Boolean),
-  );
-
-  return featIds.map((featId) => ({
+  return featIdsFor(state).map((featId) => ({
     featId,
     grants: featAbilityGrantsFor(featId, state.rulesVersion === "5e-2024" ? "2024" : "2014"),
     bonuses: state.featAbilityChoices[featId] ?? {},
@@ -362,29 +356,6 @@ export function pendingFeatAbilitiesFor(state: BuilderState) {
   return unansweredFeatAbilities(takenFeatsFor(state));
 }
 
-export function backgroundFeatIdsFor(state: BuilderState): string[] {
-  if (!state.backgroundId) return [];
-
-  const rulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
-  const choice = featChoiceForBackground(
-    state.backgroundId,
-    rulesVersion,
-    state.sourceBooks[`background:${state.backgroundId}`],
-  );
-
-  if (choice) {
-    if (choice.options.length === 1 && !choice.isOpen) {
-      return [slugOf((choice.options[0] as { name: string }).name)];
-    }
-
-    return state.backgroundFeatId ? [state.backgroundFeatId] : [];
-  }
-
-  // Backgrounds the index does not cover fall back to the hand-written
-  // catalog, which is still the source for everything but the feat.
-  const entry = getBackgroundCatalogEntry(state.backgroundId);
-  return uniqueEntries(entry?.grantedFeatIds ?? []);
-}
 
 /** The rules version of a draft, in the vocabulary the index speaks. */
 function rulesVersionOf(state: BuilderState): "2014" | "2024" {
