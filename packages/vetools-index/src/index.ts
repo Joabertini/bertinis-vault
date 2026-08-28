@@ -114,6 +114,30 @@ export type SpeciesProficiencies = {
   weaponClauses: string[];
 };
 
+/**
+ * The languages a species, subspecies or background grants.
+ *
+ * Four shapes, because the books use four and flattening them loses the
+ * question each one asks:
+ *
+ * - `fixed` is settled — the dwarf speaks Common and Dwarvish, no choice
+ * - `anyStandard` is N picks from the eight standard languages
+ * - `choose` is N picks from a named list, which is how a background offers
+ *   "Celestial, Draconic or Goblin"
+ * - `other` is the one that cannot be a dropdown: "any one language that you
+ *   and your DM agree is appropriate". It is a count, and it is asked in
+ *   words. Offering the standard eight for it would be inventing a rule.
+ *
+ * `"other"` also appears as an option inside a `choose` list, and is left
+ * there as the marker it is rather than resolved into a language.
+ */
+export type LanguageGrant = {
+  fixed: string[];
+  anyStandard: number;
+  other: number;
+  choose: { from: string[]; count: number }[];
+};
+
 export type RaceRow = IndexRow & {
   size: string | null;
   /** The fixed part of the species bonus. Null when the player chooses it. */
@@ -140,6 +164,13 @@ export type RaceRow = IndexRow & {
    */
   traits: string[];
   speciesProficiencies: SpeciesProficiencies | null;
+  /**
+   * The languages the species grants. Null for 85 of the 160.
+   *
+   * Every 2024 species is among the nulls, and that is the rule rather than a
+   * hole: 2024 moved languages off the species and onto the background.
+   */
+  languages: LanguageGrant | null;
   /** Natural armour: a tortle shell, lizardfolk scales, a loxodon hide. */
   armorClass: ArmorClassOption[];
 };
@@ -162,6 +193,8 @@ export type SubraceRow = IndexRow & {
   /** A subrace *adds* traits: a hill dwarf is a dwarf that is also tough. */
   traits: string[];
   speciesProficiencies: SpeciesProficiencies | null;
+  /** Added to the species', like traits and unlike speed. */
+  languages: LanguageGrant | null;
 };
 
 /**
@@ -293,6 +326,14 @@ export type BackgroundRow = IndexRow & {
    * pre-fill, and the free-text proficiency field takes whatever is typed.
    */
   toolsGranted: string[];
+  /**
+   * The languages the background grants. Null for 105 of the 161.
+   *
+   * The single largest source of them: 46 backgrounds grant two of the
+   * player's own choosing, which for a 2024 character is every language they
+   * have beyond the one their species never gave them.
+   */
+  languages: LanguageGrant | null;
   /**
    * What the background hands over, structured rather than as prose.
    *

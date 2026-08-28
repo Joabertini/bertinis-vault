@@ -15,7 +15,12 @@
  */
 
 import { collections, forRulesVersion } from "@bertinis-vault/vetools-index";
-import type { RaceRow, SpeciesProficiencies, SubraceRow } from "@bertinis-vault/vetools-index";
+import type {
+  LanguageGrant,
+  RaceRow,
+  SpeciesProficiencies,
+  SubraceRow,
+} from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import { slugOf } from "./index-options";
@@ -80,4 +85,33 @@ export function speciesProficienciesFor(
   }
 
   return merged;
+}
+
+/**
+ * The languages the species grants, race and subrace together.
+ *
+ * Added, not replaced — the same rule as traits. A deep gnome speaks
+ * Undercommon on top of the Common and Gnomish every gnome speaks, and 5etools
+ * merges the two lists exactly this way when it builds the subspecies.
+ *
+ * Null when neither grants any, which is every 2024 species: that edition moved
+ * languages off the species and onto the background.
+ */
+export function speciesLanguagesFor(
+  raceId: string,
+  subraceId: string,
+  rulesVersion: RulesVersion,
+): LanguageGrant | null {
+  const { race, subrace } = rowsFor(raceId, subraceId, rulesVersion);
+  const grants = [race?.languages, subrace?.languages].filter(
+    (grant): grant is LanguageGrant => Boolean(grant),
+  );
+  if (!grants.length) return null;
+
+  return {
+    fixed: Array.from(new Set(grants.flatMap((grant) => grant.fixed))),
+    anyStandard: grants.reduce((total, grant) => total + grant.anyStandard, 0),
+    other: grants.reduce((total, grant) => total + grant.other, 0),
+    choose: grants.flatMap((grant) => grant.choose),
+  };
 }

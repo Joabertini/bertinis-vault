@@ -6,13 +6,16 @@
  * bounded choice from a named list, and a species grants languages with
  * sometimes a free pick on top.
  *
+ * Languages used to live here too, from a hand-written table of 25 species
+ * against the 160 the index carries. They moved to `languages.ts`, where they
+ * are read from the data — see the note at the top of that file.
+ *
  * The distinction matters to the UI. A granted skill is not a checkbox — it is
  * already true, and rendering it as an unticked option invites a player to
  * "choose" something they cannot decline. So granted and offered are kept
  * apart here rather than merged into one list of options.
  */
 
-import { getRaceLanguageRule } from "@bertinis-vault/data-engine";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder";
@@ -176,48 +179,6 @@ export function offersAreSatisfied(offers: SkillOffer[], chosen: string[]): bool
   const assigned = assignOffers(offers, chosen);
   return offers.every((offer, at) => (assigned[at] as string[]).length >= offer.count);
 }
-
-export type LanguagePlan = {
-  fixed: string[];
-  choiceCount: number;
-  choiceOptions: string[];
-};
-
-/**
- * The languages a species knows, and how many more it may pick.
- *
- * Comes from the hand-written rules rather than the index, which carries no
- * language data. A species with no rule falls back to Common, which is what
- * every species in the game knows.
- */
-export function languagePlan(state: BuilderState): LanguagePlan {
-  const rule = getRaceLanguageRule(state.raceId);
-
-  return {
-    fixed: dedupe(rule.fixed ?? ["Common"]),
-    choiceCount: rule.choiceCount ?? 0,
-    choiceOptions: rule.choiceOptions ?? COMMON_LANGUAGES,
-  };
-}
-
-/** The languages a free pick usually comes from. */
-const COMMON_LANGUAGES = [
-  "Dwarvish",
-  "Elvish",
-  "Giant",
-  "Gnomish",
-  "Goblin",
-  "Halfling",
-  "Orc",
-  "Abyssal",
-  "Celestial",
-  "Draconic",
-  "Deep Speech",
-  "Infernal",
-  "Primordial",
-  "Sylvan",
-  "Undercommon",
-];
 
 function dedupe(values: string[]): string[] {
   return Array.from(new Set(values.filter(Boolean)));
