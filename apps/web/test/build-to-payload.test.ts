@@ -71,3 +71,54 @@ test("the same picks under 2014 export 2014 documents", () => {
   expect(payload?.rulesVersion).toBe("2014");
   expect(payload?.background.ref.source).toBe("PHB");
 });
+
+/*
+ * Measured on two imported actors before this existed: `traits.armorProf.value`
+ * and `traits.weaponProf.value` both arrived empty, so the character was
+ * proficient with nothing.
+ *
+ * The fix travels through three packages, and only the last of them had a test.
+ * This is the one that asks the question the actor asked: does what the player
+ * built actually carry its proficiencies out the door?
+ */
+test("a character carries its weapon and armour proficiencies to the payload", () => {
+  const snapshot = buildCanonicalSnapshot({
+    ...initialState,
+    raceId: "human",
+    subraceId: "",
+    classId: "fighter",
+    subclassId: "",
+    sourceBooks: {},
+  });
+
+  expect(snapshot.choices.armorProficiencies).toEqual(["lgt", "med", "hvy", "shl"]);
+  expect(snapshot.choices.weaponProficiencies).toEqual(["sim", "mar"]);
+
+  const { payload } = buildToPayload(snapshot, resolver);
+
+  expect(payload?.proficiencies.armor).toEqual(["lgt", "med", "hvy", "shl"]);
+  expect(payload?.proficiencies.weapons).toEqual(["sim", "mar"]);
+});
+
+test("a wizard has no armour and five named weapons, not nothing", () => {
+  // The actor that prompted this was a wizard, and an empty armour set is the
+  // right answer for one — which is exactly why the empty weapon set beside it
+  // was easy to miss.
+  const snapshot = buildCanonicalSnapshot({
+    ...initialState,
+    raceId: "human",
+    subraceId: "",
+    classId: "wizard",
+    subclassId: "",
+    sourceBooks: {},
+  });
+
+  expect(snapshot.choices.armorProficiencies ?? []).toEqual([]);
+  expect(snapshot.choices.weaponProficiencies).toEqual([
+    "dagger",
+    "dart",
+    "sling",
+    "quarterstaff",
+    "lightcrossbow",
+  ]);
+});
