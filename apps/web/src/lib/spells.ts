@@ -33,6 +33,7 @@ import {
   classInfoFor,
   isConcentration,
   spellPoolFor,
+  subclassInfoFor,
 } from "./index-options";
 
 /** A list of levelled spells to pick from, grouped the way the books print them. */
@@ -120,7 +121,19 @@ export function spellPlan(input: {
 }): SpellPlan {
   const { classId, className, classSource, subclassId, level, rulesVersion, snapshot } = input;
 
-  if (!classId || getSpellProgressionForClass(classId) === "none") return NONE;
+  /*
+   * A subclass can be the whole reason a character casts.
+   *
+   * The eldritch knight and the arcane trickster are the only two, and the
+   * class says nothing: a fighter's progression is "none", which used to end
+   * this function before it started. They had spell slots on the sheet and no
+   * picker to fill them with.
+   */
+  const subclass = subclassId ? subclassInfoFor(subclassId, classId, rulesVersion) : null;
+  const castsFromSubclass = Boolean(subclass?.casterProgression && subclass.spellTable);
+
+  if (!classId) return NONE;
+  if (getSpellProgressionForClass(classId) === "none" && !castsFromSubclass) return NONE;
 
   const spellcasting = snapshot?.derived.spellcasting;
   const slots = spellcasting?.slots ?? {};
@@ -148,8 +161,18 @@ export function spellPlan(input: {
    * `preparedSpells` and `spellcastingLevel` per edition — so this is read from
    * data rather than from a table written here.
    */
-  const row = classInfoFor(classId, rulesVersion);
-  const counts = spellCountsFor({ classId, level, rulesVersion, abilityModifier });
+  /*
+   * The table to read: the class's, or the subclass's where the class has
+   * none. A third-caster's numbers are printed on the subclass and nowhere
+   * else, and they are its own — an eldritch knight of 7 knows five spells,
+   * which is not any row of the fighter's table because the fighter has none.
+   */
+  const row = castsFromSubclass
+    ? { spellTable: subclass!.spellTable, spellcastingLevel: subclass!.spellcastingLevel }
+    : classInfoFor(classId, rulesVersion);
+  const counts = row
+    ? { cantrips: cantripsKnownAt(row, level), spells: spellsAvailableAt(row, level, abilityModifier) }
+    : null;
   const profile: SpellSelectionProfile =
     row && counts
       ? { mode: spellCountLabel(row), cantripLimit: counts.cantrips, spellLimit: counts.spells }
@@ -198,6 +221,9 @@ export function spellPlan(input: {
     profile,
     cantripOptionCount: cantripOptions.length,
     spellOptions: preparable.map((row) => ({ label: row.name, level: row.level })),
+    // A warlock's slots are kept under "pact" and carry their level apart from
+    // the map, so the picker is told what they are worth.
+    pactSlotLevel: spellcasting?.pactLevel ?? 0,
   });
 
   /*

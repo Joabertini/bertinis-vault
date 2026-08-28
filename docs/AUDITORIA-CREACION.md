@@ -105,6 +105,8 @@ lo primero que se pide en una sesión, y hoy no están en ningún lado.
 | Cuántos trucos y conjuros, por clase y nivel | ✅ **arreglado en esta auditoría** — servía cuentas de 2014 a personajes 2024 |
 | Lista ampliada por subclase | ✅ **arreglado en esta auditoría** — 50 de 135 subclases 2014 y 42 de 68 de 2024 la perdían |
 | Espacios por nivel | ✅ |
+| **El brujo podía elegir conjuros** | ✅ **arreglado en esta auditoría** — sus espacios se llaman `pact` y el techo se leía `NaN`: cero conjuros de nivel, a cualquier nivel |
+| **Caballero Arcano y Pícaro Arcano** | ✅ **arreglado en esta auditoría** — tenían espacios en la ficha y ningún selector |
 | Preparados contra conocidos | ✅ sale de la tabla de la clase |
 | **Libro de conjuros del mago** | ✅ **arreglado en esta auditoría** — el mago preparaba de la lista de clase, sin libro |
 | **Estado de preparación en Foundry** | ✅ **arreglado en esta auditoría** — se escribía en un campo que dnd5e no tiene desde 5.1 |
@@ -112,6 +114,7 @@ lo primero que se pide en una sesión, y hoy no están en ningún lado.
 | **Lo que concede la especie** | ✅ **arreglado en esta auditoría** — un tiefling llegaba sin Taumaturgia |
 | **El linaje 2024** | ✅ **arreglado en esta auditoría** — XPHB no trae subrazas: el elfo y el tiefling eligen ahí y en ningún otro lado |
 | Lo que conceden dotes, trasfondos y dones | ❌ leídos ya en el índice; falta preguntarlos en la Forja |
+| Arcanum Místico del brujo | ❌ un conjuro de nivel 6 a 9, 1/día, fuera de los espacios de pacto. Niveles 11, 13, 15 y 17 |
 | **Elegir de un filtro concedido** | ❌ el elfo alto elige *un* truco de mago y todavía no hay dónde. Es la misma máquina que necesitan Iniciado Mágico y Lanzador de Rituales, así que va con ellos |
 | Filtros de ritual y de tipo de ataque | ❌ `parseSpellFilter` lee class/level/school/source y descarta en silencio los otros dos |
 
@@ -164,6 +167,28 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **Cada lanzador tiene su regla, y dos no la tenían.** Al pasar los diez
+  lanzadores por el mismo camino que usa la Forja aparecieron dos que no
+  funcionaban.
+  El **brujo** no podía elegir un solo conjuro de nivel, a ningún nivel. La
+  magia de pacto se guarda bajo su propia clave —`{ pact: 2 }` son dos
+  espacios, no uno de nivel 2—, así que el nivel no está en el mapa; leerlo
+  como si estuviera daba `NaN` y el techo quedaba en cero. Los trucos sí
+  llegaban, que es lo que hacía que no se notara.
+  El **Caballero Arcano** y el **Pícaro Arcano** tenían espacios en la ficha y
+  ningún selector: la progresión del guerrero es "ninguna" y eso cortaba el
+  plan antes de empezar. Sus números están impresos en la subclase y en ningún
+  otro lado —un Caballero Arcano de 7 conoce cinco conjuros, que no es ninguna
+  fila de la tabla del guerrero porque el guerrero no tiene tabla—. Ahora se
+  leen de ahí, incluido el renombre de 2024 de "Spells Known" a
+  "Spells Prepared".
+  Lo demás se midió y estaba bien: el paladín 2014 empieza a nivel 2 y el 2024
+  a nivel 1; el artificiero redondea **para abajo** los preparados y **para
+  arriba** los espacios, que son dos redondeos distintos en la misma clase; el
+  explorador conoce cero a nivel 1; ni el paladín ni el explorador reciben
+  trucos en ninguna edición; y el nivel de lanzador multiclase suma un tercio
+  hacia abajo, la mitad hacia abajo y la del artificiero hacia arriba.
 
 - **Lo que concede la especie, y el linaje que lo decide.** 5etools guarda todo
   esto en un solo campo, `additionalSpells`, y la Forja lo leía sólo en las

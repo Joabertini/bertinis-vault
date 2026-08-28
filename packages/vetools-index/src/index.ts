@@ -807,6 +807,17 @@ export type SubclassRow = IndexRow & {
    */
   casterProgression: string | null;
   spellcastingAbility: string | null;
+  /**
+   * The subclass's own cantrip and spell counts, when the class has none.
+   *
+   * Four rows in the game: the eldritch knight and the arcane trickster, in
+   * two editions. Null for every other subclass, whose class carries the
+   * table. 2024 renamed the column from "Spells Known" to "Spells Prepared"
+   * here as it did everywhere else, so both keys appear.
+   */
+  spellTable: SpellTable | null;
+  /** The class level the subclass starts casting at. Three, for all four. */
+  spellcastingLevel: number | null;
   /** Expertise the subclass grants on top of its class's. */
   expertise: ExpertiseGrant[];
   /** The draconic sorcerer's scales, and the 2024 dancing bard's defence. */

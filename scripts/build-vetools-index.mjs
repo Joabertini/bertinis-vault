@@ -581,6 +581,50 @@ function spellTableOf(entity) {
 }
 
 /**
+ * A third-caster subclass's own table.
+ *
+ * The eldritch knight and the arcane trickster are the only four rows in the
+ * game — two subclasses, two editions — and they are the reason a spell table
+ * cannot always be read off the class: a fighter has none, and the subclass
+ * that gave them magic carries the numbers instead.
+ *
+ * Two shapes, because 2024 changed the column. 2014 states the counts as bare
+ * arrays on the subclass; 2024 dropped `spellsKnownProgression` and prints
+ * "Spells Prepared" in a table group, the same rename every other caster got.
+ * Both are read rather than picking one and hand-writing the other.
+ */
+function subclassSpellTableOf(entity) {
+  if (!entity.casterProgression) return null;
+
+  const fromGroups = spellTableOf({ ...entity, classTableGroups: entity.subclassTableGroups ?? [] });
+  const columns = fromGroups ?? { cantrips: null, known: null, prepared: null };
+
+  if (entity.cantripProgression) columns.cantrips = [...entity.cantripProgression];
+  if (entity.spellsKnownProgression) columns.known = [...entity.spellsKnownProgression];
+
+  if (!columns.cantrips && !columns.known && !columns.prepared) return null;
+  return columns;
+}
+
+/**
+ * The class level a third-caster subclass starts casting at.
+ *
+ * Read off its own table rather than assumed: both start at 3 today, and both
+ * state it as a run of zeroes at the front of every column. A subclass that
+ * started somewhere else would be read correctly instead of silently.
+ */
+function subclassSpellcastingLevelOf(table) {
+  if (!table) return null;
+
+  const columns = [table.cantrips, table.known, table.prepared].filter(Boolean);
+  const firsts = columns
+    .map((counts) => counts.findIndex((count) => count > 0))
+    .filter((index) => index >= 0);
+
+  return firsts.length ? Math.min(...firsts) + 1 : null;
+}
+
+/**
  * The level a class starts casting at, read from its own feature list.
  *
  * Not a constant: 2024 moved the paladin's and the ranger's Spellcasting from
@@ -1942,6 +1986,10 @@ const BUILDERS = {
       // caster level instead of five.
       casterProgression: c.casterProgression ?? null,
       spellcastingAbility: c.spellcastingAbility ?? null,
+      // Their own numbers, because the class has none to lend them. Null for
+      // every subclass whose class already carries a table.
+      spellTable: subclassSpellTableOf(c),
+      spellcastingLevel: subclassSpellcastingLevelOf(subclassSpellTableOf(c)),
       // A subclass grants its own choices on top of the class's: the battle
       // master's maneuvers, the arcane archer's shots, the rune knight's runes.
       optionalFeatureProgression: optionalFeatureProgressionOf(c),
