@@ -217,6 +217,16 @@ export const normalizedSpellEntrySchema = z.object({
    * rather than translating a vocabulary of its own.
    */
   uses: z.object({ max: z.number().int().min(1), period: z.string().min(1) }).optional(),
+  /**
+   * The ability it is cast with, where that is not the character's.
+   *
+   * A species grants its spells with an ability of its own — the 2024 elf
+   * casts them with Intelligence, Wisdom or Charisma, chosen by the player.
+   * dnd5e keeps this on the spell itself as `system.ability` and prefers it
+   * over the class's, which is the only way a fighter's species cantrip gets
+   * a save DC at all: a fighter has no spellcasting ability to fall back on.
+   */
+  ability: abilityIdSchema.optional(),
   /** What granted it, for the player to read on a sheet they did not build. */
   grantedBy: z.string().min(1).optional(),
 });

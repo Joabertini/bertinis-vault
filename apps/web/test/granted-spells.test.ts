@@ -1,6 +1,11 @@
 import { describe, expect, test } from "vitest";
 
-import { grantedSpellsFor, spellGrantsFor, unansweredVariants } from "../src/lib/granted-spells";
+import {
+  grantedSpellsFor,
+  spellGrantsFor,
+  unansweredAbilities,
+  unansweredVariants,
+} from "../src/lib/granted-spells";
 import { initialState } from "../src/lib/builder";
 import { slugOf } from "../src/lib/index-options";
 
@@ -16,6 +21,7 @@ const draft = (over: Record<string, unknown> = {}) => ({
   subclassId: "",
   level: 3,
   spellVariantChoices: {},
+  spellAbilityChoices: {},
   cantripsText: "",
   spellsText: "",
   spellbookText: "",
@@ -146,5 +152,57 @@ describe("what a subclass grants, as opposed to offers", () => {
 
     expect(land?.chamber).toBe("class");
     expect(land?.variants).toContain("Arctic");
+  });
+});
+
+describe("with what a granted spell is cast", () => {
+  const elf = (over: Record<string, unknown> = {}) =>
+    draft({ spellVariantChoices: { race: "Drow" }, ...over });
+
+  test("an ability the grant fixes needs no question", () => {
+    // The 2014 tiefling casts with Charisma and says so.
+    const spells = grantedSpellsFor(
+      draft({
+        rulesVersion: "5e-2014",
+        raceId: slugOf("Tiefling"),
+        sourceBooks: { [`race:${slugOf("Tiefling")}`]: "PHB" },
+        level: 5,
+      }),
+      "2014",
+    );
+
+    expect(spells.every((entry) => entry.ability === "cha")).toBe(true);
+    expect(unansweredAbilities(draft(), "2024")).toEqual([]);
+  });
+
+  test("an unanswered choice leaves the spell without one, rather than guessing", () => {
+    /*
+     * Picking one would set a save DC the player never chose. Left unanswered
+     * the spell has none, which shows on the sheet instead of being wrong on
+     * it.
+     */
+    expect(grantedSpellsFor(elf(), "2024").every((entry) => entry.ability === undefined)).toBe(true);
+    expect(unansweredAbilities(elf(), "2024").map((source) => source.key)).toEqual(["race"]);
+  });
+
+  test("the answer reaches the spell", () => {
+    const spells = grantedSpellsFor(elf({ spellAbilityChoices: { race: "int" } }), "2024");
+
+    expect(spells.every((entry) => entry.ability === "int")).toBe(true);
+    expect(unansweredAbilities(elf({ spellAbilityChoices: { race: "int" } }), "2024")).toEqual([]);
+  });
+
+  test("an answer the grant never offered is not taken", () => {
+    // The species offers Intelligence, Wisdom or Charisma. A draft edited by
+    // hand does not get to cast Faerie Fire with Strength.
+    const spells = grantedSpellsFor(elf({ spellAbilityChoices: { race: "str" } }), "2024");
+
+    expect(spells.every((entry) => entry.ability === undefined)).toBe(true);
+  });
+
+  test("nothing is asked before there is a spell to cast", () => {
+    // An elf who has not chosen a lineage has nothing yet, and asking which
+    // ability casts nothing is a question with no subject.
+    expect(unansweredAbilities(draft(), "2024")).toEqual([]);
   });
 });

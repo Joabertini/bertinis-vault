@@ -117,6 +117,7 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
         ...(entry.preparation ? { preparation: entry.preparation } : {}),
         ...(entry.method ? { method: entry.method } : {}),
         ...(entry.uses ? { uses: entry.uses } : {}),
+        ...(entry.ability ? { ability: entry.ability } : {}),
         ...(entry.grantedBy ? { grantedBy: entry.grantedBy } : {}),
       };
     })

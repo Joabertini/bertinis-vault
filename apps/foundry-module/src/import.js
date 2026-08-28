@@ -413,12 +413,21 @@ async function applyItemState(actor, payload) {
  *
  * dnd5e sets `uses.max` from a formula string rather than a number, which is
  * why the count is written as one.
+ *
+ * And `system.ability`, where the grant states one of its own. A species
+ * casts its spells with an ability the class may not have at all; measured in
+ * dnd5e 5.3.3, `SpellData#availableAbilities` returns the spell's own where
+ * it has one and falls back to the class's only otherwise.
  */
 export function spellUpdates(entry) {
   const updates = {};
 
   if (entry.preparation) updates["system.prepared"] = preparationState(entry.preparation);
   if (entry.method) updates["system.method"] = entry.method;
+  // dnd5e prefers the spell's own ability over the class's, which is the only
+  // thing that gives a fighter's species cantrip a save DC: a fighter has no
+  // spellcasting ability to fall back on.
+  if (entry.ability) updates["system.ability"] = entry.ability;
   if (entry.uses) {
     updates["system.uses.max"] = String(entry.uses.max);
     updates["system.uses.spent"] = 0;

@@ -1,4 +1,5 @@
 import type {
+  AbilityId,
   CharacterBuild,
   CharacterBuildInput,
   ClassEntry,
@@ -562,6 +563,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
     preparation?: SpellPreparation;
     method?: SpellMethod;
     uses?: { max: number; period: string };
+    ability?: AbilityId;
     grantedBy?: string;
   }> = [
     ...parseLineList(state.cantripsText).map((entry) => ({ label: entry, level: 0 })),
@@ -589,6 +591,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       preparation: granted.preparation,
       ...(granted.method ? { method: granted.method } : {}),
       ...(granted.uses ? { uses: granted.uses } : {}),
+      ...(granted.ability ? { ability: granted.ability } : {}),
       grantedBy: granted.grantedBy,
     })),
   ];
@@ -607,6 +610,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       ...(entry.preparation ? { preparation: entry.preparation } : {}),
       ...(entry.method ? { method: entry.method } : {}),
       ...(entry.uses ? { uses: entry.uses } : {}),
+      ...(entry.ability ? { ability: entry.ability } : {}),
       ...(entry.grantedBy ? { grantedBy: entry.grantedBy } : {}),
     };
   });

@@ -73,6 +73,14 @@ export const spellRefSchema = z.object({
   method: spellMethodSchema.optional(),
   /** Casts before it comes back, and when. `period` is a dnd5e period key. */
   uses: z.object({ max: z.number().int().min(1), period: z.string().min(1) }).optional(),
+  /**
+   * The ability it is cast with, where the grant states one of its own.
+   *
+   * dnd5e keeps this on the spell as `system.ability` and prefers it over the
+   * class's. Without it a fighter's species cantrip has no save DC, because a
+   * fighter has no spellcasting ability to fall back on.
+   */
+  ability: abilityIdSchema.optional(),
   /** Set when a feature grants the spell outside the class list. */
   grantedBy: z.string().optional(),
 });

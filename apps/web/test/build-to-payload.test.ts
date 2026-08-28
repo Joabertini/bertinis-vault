@@ -244,3 +244,27 @@ test("a spell both granted and written is one spell", () => {
 
   expect(found).toHaveLength(1);
 });
+
+test("a species spell carries the ability it is cast with", () => {
+  /*
+   * dnd5e keeps this on the spell and prefers it over the class's, which is
+   * the only thing that gives a fighter's species cantrip a save DC: a fighter
+   * has no spellcasting ability to fall back on.
+   */
+  const { payload } = buildToPayload(
+    buildCanonicalSnapshot({
+      ...initialState,
+      raceId: slugOf("Tiefling"),
+      sourceBooks: { [`race:${slugOf("Tiefling")}`]: "PHB" },
+      classId: "fighter",
+      level: 5,
+      cantripsText: "",
+      spellsText: "",
+    }),
+    resolver,
+  );
+
+  const thaumaturgy = payload?.spells.find((entry) => entry.ref.hash === "thaumaturgy_phb");
+
+  expect(thaumaturgy?.ability).toBe("cha");
+});

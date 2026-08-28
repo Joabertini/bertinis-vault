@@ -33,7 +33,7 @@ import ScryPicker from "@/components/forge/ScryPicker";
 import PickList from "@/components/forge/PickList";
 import LiveSheet from "@/components/forge/LiveSheet";
 
-import { ABILITY_IDS, type AbilityId } from "@/lib/abilities";
+import { ABILITY_IDS, abilityLabels, type AbilityId } from "@/lib/abilities";
 import {
   allOptions,
   entryById,
@@ -77,7 +77,7 @@ import {
   toLines,
 } from "@/lib/grants";
 import { formatSpellLine, spellPlan } from "@/lib/spells";
-import { spellGrantsFor, type SpellGrantSource } from "@/lib/granted-spells";
+import { abilityOptionsOf, spellGrantsFor, type SpellGrantSource } from "@/lib/granted-spells";
 import BonusEditor from "@/components/forge/BonusEditor";
 import OriginBonus from "@/components/forge/OriginBonus";
 import Improvements from "@/components/forge/Improvements";
@@ -343,6 +343,17 @@ export default function Forge() {
 
   const chooseVariant = (key: string, name: string) => {
     patchDraft({ spellVariantChoices: { ...draft.spellVariantChoices, [key]: name } });
+  };
+
+  /*
+   * Which ability the granted spells are cast with.
+   *
+   * Not a flavour question. dnd5e keeps the ability on the spell itself, and
+   * for a fighter or a rogue it is the only thing that gives a species cantrip
+   * a save DC — they have no spellcasting ability of their own.
+   */
+  const chooseSpellAbility = (key: string, ability: string) => {
+    patchDraft({ spellAbilityChoices: { ...draft.spellAbilityChoices, [key]: ability } });
   };
 
   /* ---------------- growth ---------------- */
@@ -1124,8 +1135,10 @@ export default function Forge() {
                   <VariantChoices
                     sources={spellGrants.filter((source) => source.chamber === "species")}
                     chosen={draft.spellVariantChoices}
+                    chosenAbilities={draft.spellAbilityChoices}
                     accent={VAULT_GOLD}
                     onPick={chooseVariant}
+                    onPickAbility={chooseSpellAbility}
                   />
 
                   {/* Only 2014 has these; 2024 folded them into the species. */}
@@ -1207,8 +1220,10 @@ export default function Forge() {
                   <VariantChoices
                     sources={spellGrants.filter((source) => source.chamber === "class")}
                     chosen={draft.spellVariantChoices}
+                    chosenAbilities={draft.spellAbilityChoices}
                     accent={accent}
                     onPick={chooseVariant}
+                    onPickAbility={chooseSpellAbility}
                   />
 
                   {draft.classId && (
@@ -1910,16 +1925,21 @@ export default function Forge() {
 function VariantChoices({
   sources,
   chosen,
+  chosenAbilities,
   accent,
   onPick,
+  onPickAbility,
 }: {
   sources: SpellGrantSource[];
   chosen: Record<string, string>;
+  chosenAbilities: Record<string, string>;
   accent: string;
   onPick: (key: string, name: string) => void;
+  onPickAbility: (key: string, ability: string) => void;
 }) {
   const asking = sources.filter((source) => source.variants.length > 0);
-  if (!asking.length) return null;
+  const asary = sources.filter((source) => abilityOptionsOf(source).length > 0);
+  if (!asking.length && !asary.length) return null;
 
   return (
     <>
@@ -1936,6 +1956,23 @@ function VariantChoices({
           }))}
           selectedId={chosen[source.key] ?? ""}
           onPick={(entry) => onPick(source.key, entry.id)}
+          accent={accent}
+        />
+      ))}
+
+      {asary.map((source) => (
+        <SubChoice
+          key={`${source.key}:ability`}
+          title="Con que lanza esos conjuros"
+          hint={`${source.label} deja elegir. Decide la CD de salvacion y el bonificador de ataque.`}
+          options={abilityOptionsOf(source).map((ability) => ({
+            id: ability,
+            label: abilityLabels[ability as AbilityId] ?? ability,
+            source: "",
+            shared: false,
+          }))}
+          selectedId={chosenAbilities[source.key] ?? ""}
+          onPick={(entry) => onPickAbility(source.key, entry.id)}
           accent={accent}
         />
       ))}

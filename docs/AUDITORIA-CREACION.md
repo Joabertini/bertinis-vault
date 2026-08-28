@@ -217,6 +217,18 @@ la cola. Medido contra el código, no contra las notas viejas:
   *puede* aprender Fuego Feérico, y nada dice que lo haya hecho. Esa sigue
   ensanchando la lista.
 
+- **Con qué se lanza lo que concede la especie.** Un guerrero elfo no tiene
+  característica de lanzamiento: la clase no le da ninguna, así que su truco de
+  especie llegaba sin CD de salvación y sin bonificador de ataque. Medido en
+  dnd5e 5.3.3: `SpellData#availableAbilities` devuelve la del **conjuro** si la
+  tiene y recién después cae en la de la clase. O sea que el campo existe y es
+  `system.ability`.
+  El dato lo trae de dos formas. El tiefling 2014 la fija —Carisma— y no hay
+  nada que preguntar. Las especies 2024 ofrecen Inteligencia, Sabiduría o
+  Carisma, y eso se pregunta: elegir por el jugador sería fijarle una CD que no
+  eligió. Sin responder el conjuro queda sin característica, que se ve en la
+  ficha en vez de estar mal en la ficha.
+
 - **Innato no es preparado.** Un conjuro que la especie da 1/día se lanza sin
   gastar espacio. Importarlo como conjuro común le cobraba a un tiefling un
   espacio de nivel 1 por un Represalia Infernal que las reglas regalan. Ahora

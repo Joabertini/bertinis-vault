@@ -157,6 +157,16 @@ export type BuilderState = {
    * else in the data.
    */
   spellVariantChoices: Record<string, string>;
+  /**
+   * Which ability a grant's spells are cast with, per thing that offers a
+   * choice of one.
+   *
+   * The 2024 species offer Intelligence, Wisdom or Charisma. It is not a
+   * flavour question: dnd5e keeps the ability on the spell itself, and for a
+   * fighter or a rogue it is the only thing that gives a species cantrip a
+   * save DC — they have no spellcasting ability of their own to fall back on.
+   */
+  spellAbilityChoices: Record<string, string>;
   featuresText: string;
   level: number;
   str: number;
@@ -275,6 +285,7 @@ export const initialState: BuilderState = {
   spellsText: "Nv1: Shield\nNv1: Magic Missile\nNv2: Misty Step",
   spellbookText: "",
   spellVariantChoices: {},
+  spellAbilityChoices: {},
   featuresText: "Arcane Recovery\nSculpt Spells",
   level: 3,
   extraClasses: [],
@@ -346,6 +357,7 @@ export function coerceBuilderState(value: unknown): BuilderState {
         ? candidate.spellbookText
         : initialState.spellbookText,
     spellVariantChoices: coerceVariantChoices(candidate.spellVariantChoices),
+    spellAbilityChoices: coerceVariantChoices(candidate.spellAbilityChoices),
     featuresText:
       typeof candidate.featuresText === "string" ? candidate.featuresText : initialState.featuresText,
     level: typeof candidate.level === "number" ? candidate.level : initialState.level,

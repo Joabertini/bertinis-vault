@@ -31,6 +31,7 @@ import {
   type SubclassRow,
   type SubraceRow,
 } from "@bertinis-vault/vetools-index";
+import type { AbilityId } from "@bertinis-vault/contracts";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder-state";
@@ -190,6 +191,14 @@ export type GrantedSpell = {
   preparation: "prepared" | "always";
   method?: "innate" | "atwill";
   uses?: { max: number; period: string };
+  /**
+   * The ability it is cast with, where the grant states one of its own.
+   *
+   * dnd5e keeps this on the spell, and prefers it over the class's. For a
+   * fighter or a rogue it is the only thing that gives a species cantrip a
+   * save DC, because they have no spellcasting ability to fall back on.
+   */
+  ability?: AbilityId;
   /** What handed it over, for a player reading a sheet they did not build. */
   grantedBy: string;
 };
@@ -213,11 +222,14 @@ export function grantedSpellsFor(
       const preparation = preparationForKind(entry.kind);
       if (!preparation) continue;
 
+      const ability = castingAbilityOf(entry, state.spellAbilityChoices[source.key]);
+
       for (const ref of entry.names) {
         out.push({
           label: ref.name,
           source: ref.source,
           preparation,
+          ...(ability ? { ability } : {}),
           ...(entry.kind === "innate"
             ? { method: entry.recharge === "will" ? ("atwill" as const) : ("innate" as const) }
             : {}),
@@ -254,4 +266,57 @@ function pickRow<Row extends { name: string; source: string }>(
   if (!named.length) return null;
 
   return named.find((row) => row.source === book) ?? named[0] ?? null;
+}
+
+/**
+ * The ability a grant's spells are cast with, once the player has answered.
+ *
+ * Two forms in the data and they are two questions. A fixed ability is stated
+ * outright and needs nothing. A choice — the 2024 species offer Intelligence,
+ * Wisdom or Charisma — is unanswerable until the player answers it, and
+ * picking one for them would set a save DC they never chose. Unanswered leaves
+ * the spell without one, which is visible on the sheet rather than wrong on it.
+ */
+function castingAbilityOf(
+  entry: GrantedSpellEntry,
+  chosen: string | undefined,
+): AbilityId | null {
+  const fixed = entry.ability?.fixed;
+  if (fixed && ABILITY_IDS.includes(fixed as AbilityId)) return fixed as AbilityId;
+
+  const offered = entry.ability?.choose ?? [];
+  if (chosen && offered.includes(chosen)) return chosen as AbilityId;
+
+  return null;
+}
+
+const ABILITY_IDS: AbilityId[] = ["str", "dex", "con", "int", "wis", "cha"];
+
+/**
+ * The ability questions this draft still owes an answer to.
+ *
+ * Only where the grant offers a choice *and* actually hands over a spell: a
+ * lineage that has been asked for but not chosen has nothing to cast yet, and
+ * asking which ability casts nothing is a question with no subject.
+ */
+export function unansweredAbilities(
+  state: BuilderState,
+  rulesVersion: RulesVersion,
+): SpellGrantSource[] {
+  return reachedGrantsFor(state, rulesVersion)
+    .filter(
+      ({ source, entries }) =>
+        !state.spellAbilityChoices[source.key] &&
+        entries.some((entry) => (entry.ability?.choose.length ?? 0) > 0 && entry.names.length > 0),
+    )
+    .map(({ source }) => source);
+}
+
+/** The abilities a grant offers, in the order the data lists them. */
+export function abilityOptionsOf(source: SpellGrantSource): string[] {
+  for (const entry of source.entries) {
+    if (entry.ability?.choose.length) return entry.ability.choose;
+  }
+
+  return [];
 }
