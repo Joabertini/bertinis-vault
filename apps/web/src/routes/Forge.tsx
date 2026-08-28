@@ -65,7 +65,14 @@ import {
 } from "@/lib/stat-methods";
 import { tintFor, VAULT_GOLD } from "@/lib/class-tint";
 import { resolveDraft } from "@/lib/derive";
-import { fromLines, languagePlan, proficiencyPlan, toLines } from "@/lib/grants";
+import {
+  assignOffers,
+  fromLines,
+  languagePlan,
+  offersAreSatisfied,
+  proficiencyPlan,
+  toLines,
+} from "@/lib/grants";
 import { formatSpellLine, spellPlan } from "@/lib/spells";
 import BonusEditor from "@/components/forge/BonusEditor";
 import Improvements from "@/components/forge/Improvements";
@@ -236,6 +243,12 @@ export default function Forge() {
   const chosenProficiencies = useMemo(
     () => toLines(draft.proficienciesText).filter((entry) => !granted.includes(entry)),
     [draft.proficienciesText, granted],
+  );
+
+  /** Which offer paid for each pick, so each picker counts only its own. */
+  const offerPicks = useMemo(
+    () => assignOffers(profPlan.offers, chosenProficiencies),
+    [profPlan.offers, chosenProficiencies],
   );
 
   const chosenLanguages = useMemo(
@@ -520,10 +533,7 @@ export default function Forge() {
    * and the background can both be asking at once and a pick that satisfies
    * one does not satisfy the other.
    */
-  const offersSatisfied = profPlan.offers.every(
-    (offer) =>
-      chosenProficiencies.filter((entry) => offer.options.includes(entry)).length >= offer.count,
-  );
+  const offersSatisfied = offersAreSatisfied(profPlan.offers, chosenProficiencies);
 
   const answered: Record<ChamberKey, boolean> = {
     ancestry: Boolean(draft.raceId),
@@ -1314,8 +1324,19 @@ export default function Forge() {
                           : `Elegi ${offer.count} de esta lista.`
                       }
                       options={offer.options}
-                      selected={chosenProficiencies}
-                      locked={granted}
+                      // Only what this offer paid for. Handed the whole list,
+                      // each picker counted the other's picks against its own
+                      // limit and locked itself before a single choice was
+                      // made in it.
+                      selected={offerPicks[index] ?? []}
+                      // Already proficient, from the background or from
+                      // another offer: shown as had, never as choosable twice.
+                      locked={[
+                        ...granted,
+                        ...chosenProficiencies.filter(
+                          (entry) => !(offerPicks[index] ?? []).includes(entry),
+                        ),
+                      ]}
                       limit={offer.count}
                       accent={accent}
                       onToggle={toggleProficiency}

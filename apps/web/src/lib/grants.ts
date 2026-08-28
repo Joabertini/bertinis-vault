@@ -132,6 +132,51 @@ export function proficiencyPlan(
   };
 }
 
+/**
+ * Which offer paid for each skill the player chose.
+ *
+ * The draft stores proficiencies as one flat list, because that is what the
+ * payload wants and because being proficient in Stealth is one fact however
+ * you came by it. But the *asking* is not flat: a wizard offers two skills
+ * from its list and a background may offer two more from another, and those
+ * are separate budgets.
+ *
+ * Read as one list they are not. Every picker counted the whole list against
+ * its own limit, so two picks from the class filled the background's quota
+ * too — its remaining options went grey, nothing could be chosen there, and
+ * the chamber could never be satisfied because that offer had no picks of its
+ * own. The player could not go back and could not go on.
+ *
+ * Assignment is greedy in the order the offers are presented, which is the
+ * order the books ask in: class first, then background, then a dip. A skill
+ * both lists can pay for is charged to the first that still has room — the
+ * character ends up proficient either way, and the alternative is asking the
+ * player to care about an accounting detail the rules never mention.
+ */
+export function assignOffers(offers: SkillOffer[], chosen: string[]): string[][] {
+  const assigned: string[][] = offers.map(() => []);
+  const taken = new Set<string>();
+
+  for (const skill of chosen) {
+    if (taken.has(skill)) continue;
+    const index = offers.findIndex(
+      (offer, at) =>
+        offer.options.includes(skill) && (assigned[at] as string[]).length < offer.count,
+    );
+    if (index < 0) continue;
+    (assigned[index] as string[]).push(skill);
+    taken.add(skill);
+  }
+
+  return assigned;
+}
+
+/** Whether every offer has been paid in full. */
+export function offersAreSatisfied(offers: SkillOffer[], chosen: string[]): boolean {
+  const assigned = assignOffers(offers, chosen);
+  return offers.every((offer, at) => (assigned[at] as string[]).length >= offer.count);
+}
+
 export type LanguagePlan = {
   fixed: string[];
   choiceCount: number;
