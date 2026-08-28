@@ -99,6 +99,7 @@ export function baseActorData(payload) {
         biography: { value: biographyHtml(payload.identity.biography) },
         ...appearanceDetails(payload.identity.biography),
       },
+      ...startingCurrency(payload.currency),
     },
     flags: {
       "bertinis-vault": {
@@ -133,6 +134,30 @@ export const APPEARANCE_FIELDS = [
   "faith",
   "appearance",
 ];
+
+/**
+ * The purse, as `system.currency`.
+ *
+ * dnd5e keys it `pp`, `gp`, `ep`, `sp`, `cp` and stores whole coins, and the
+ * builder already split the total — the character who chose 150 gold over a
+ * greataxe chose a number, and it belongs in the box the sheet adds up.
+ *
+ * An empty purse writes nothing at all rather than five zeroes: a payload
+ * exported before this field existed carries none, and blanking an actor's
+ * money because an old build said nothing about it would be a loss the player
+ * never asked for.
+ */
+export const CURRENCY_KEYS = ["pp", "gp", "ep", "sp", "cp"];
+
+export function startingCurrency(currency) {
+  const coins = {};
+  for (const key of CURRENCY_KEYS) {
+    const value = currency?.[key];
+    if (Number.isInteger(value) && value > 0) coins[key] = value;
+  }
+
+  return Object.keys(coins).length ? { currency: coins } : {};
+}
 
 export function appearanceDetails(biography) {
   const details = {};
@@ -227,6 +252,14 @@ export function proficiencyUpdates(payload) {
   const weapons = payload.proficiencies.weapons ?? [];
   if (armor.length) updates["system.traits.armorProf.value"] = armor;
   if (weapons.length) updates["system.traits.weaponProf.value"] = weapons;
+
+  // Mastery is not a proficiency, and dnd5e keeps it in its own set beside
+  // one: `weaponProf.mastery.value`, tested with `.has(baseItem)` against the
+  // weapon's id. Writing the mastery property there — "Vex", "Topple" — puts a
+  // string in the set that no weapon will ever match, which looks filled in and
+  // does nothing.
+  const masteries = payload.proficiencies.masteries ?? [];
+  if (masteries.length) updates["system.traits.weaponProf.mastery.value"] = masteries;
 
   // A language the system has a key for goes in the list it validates; one it
   // does not — a setting's own, or a secret like Thieves' Cant — goes in the

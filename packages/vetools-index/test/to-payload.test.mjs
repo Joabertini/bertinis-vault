@@ -233,3 +233,46 @@ test("a build with no source books converts exactly as it did before", () => {
     { ...without.payload, exportedAt: null },
   );
 });
+
+test("the money the kit was worth crosses with the build", () => {
+  /*
+   * It was counted and shown in the wizard since the equipment choices landed,
+   * and had nowhere to go: a fighter who took 150 gp over the greataxe reached
+   * Foundry with neither the greataxe nor the money.
+   */
+  const build = makeBuild();
+  build.choices.startingCopper = 15000;
+
+  const { payload } = buildToPayload(build, resolver);
+
+  assert.deepEqual(payload.currency, { pp: 0, gp: 150, ep: 0, sp: 0, cp: 0 });
+  assert.ok(importPayloadSchema.safeParse(payload).success);
+});
+
+test("a character with no money carries no purse at all", () => {
+  // Five zeroes and no field mean the same thing, and the module treats the
+  // absent one as "leave the actor alone".
+  const { payload } = buildToPayload(makeBuild(), resolver);
+
+  assert.equal(payload.currency, undefined);
+});
+
+test("the weapons named for mastery travel with the build", () => {
+  /*
+   * The actor JSON export has carried them since 2024's mastery landed. This
+   * route had no field, so a 2024 fighter sent by code arrived with the feature
+   * and nothing chosen for it.
+   */
+  const build = makeBuild();
+  build.choices.weaponMasteries = ["longsword", "shortbow"];
+
+  const { payload } = buildToPayload(build, resolver);
+
+  assert.deepEqual(payload.proficiencies.masteries, ["longsword", "shortbow"]);
+});
+
+test("a character with no mastery carries an empty list, not a missing field", () => {
+  const { payload } = buildToPayload(makeBuild(), resolver);
+
+  assert.deepEqual(payload.proficiencies.masteries, []);
+});
