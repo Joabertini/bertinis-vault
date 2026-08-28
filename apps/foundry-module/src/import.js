@@ -12,13 +12,18 @@
  *    opening the Charactermancer anyway. This is the half that was missed for
  *    three attempts, all of them spent on the first one.
  *
- * Class-level features are safe under this: they arrive as data on the class
- * item's own `system.advancement` rather than as separate items.
+ * Features are not safe under this, which took an imported actor to see. A
+ * class item carries them as `ItemGrant` advancements that fire while a
+ * character is levelled through the class, and a direct import levels nothing,
+ * so the Features tab arrived empty. They are built and added alongside their
+ * parent instead.
  */
 
 import {
   getPlutoniumApi,
   documentForRef,
+  featureDocumentsFor,
+  loadEntity,
   markAsDirectImport,
   PROFICIENCY_IMPORT_MODE,
 } from "./plutonium.js";
@@ -35,17 +40,26 @@ import { watchWindows } from "./window-watch.js";
  * the 5e rule and is also what Plutonium prompts for.
  */
 export function orderedRefs(payload) {
-  const entries = [{ ref: payload.race.ref, dataOpts: {} }];
-  if (payload.race.subrace) entries.push({ ref: payload.race.subrace, dataOpts: {} });
+  // A subrace entity is the whole species: 5etools merges the base race's
+  // entries into it, so a hill dwarf carries Darkvision and Dwarven Resilience
+  // as well as Dwarven Toughness. Both documents are still imported — the sheet
+  // names them separately — but only one of them may contribute traits, or the
+  // player gets Darkvision twice.
+  const hasSubrace = Boolean(payload.race.subrace);
+  const entries = [{ ref: payload.race.ref, dataOpts: {}, features: !hasSubrace }];
+  if (hasSubrace) entries.push({ ref: payload.race.subrace, dataOpts: {} });
 
   for (const [index, entry] of payload.classes.entries()) {
     const level = entry.level;
     const proficiencyImportMode =
       index === 0 ? PROFICIENCY_IMPORT_MODE.primary : PROFICIENCY_IMPORT_MODE.multiclass;
 
-    entries.push({ ref: entry.ref, dataOpts: { level, proficiencyImportMode } });
+    entries.push({ ref: entry.ref, dataOpts: { level, proficiencyImportMode }, featureLevel: level });
     // A subclass item carries no level of its own; the class item holds it.
-    if (entry.subclass) entries.push({ ref: entry.subclass, dataOpts: {} });
+    // Its features do need one — a level 3 Evoker has Sculpt Spells and not
+    // Potent Cantrip — so the class's level travels with it separately from
+    // `dataOpts`, which reaches Plutonium's converter untouched.
+    if (entry.subclass) entries.push({ ref: entry.subclass, dataOpts: {}, featureLevel: level });
   }
 
   entries.push({ ref: payload.background.ref, dataOpts: {} });
@@ -295,14 +309,28 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
   const stopWatching = watchWindows({ label: payload.identity.characterName });
 
   try {
-    for (const [index, { ref, dataOpts }] of entries.entries()) {
+    for (const [index, entry] of entries.entries()) {
+      const { ref, dataOpts } = entry;
       onProgress({ index, total: entries.length, ref });
       const result = await documentForRef({ ref, api, dataOpts });
       results.push(result);
 
-      if (result.ok) {
-        const { _id, ...document } = markAsDirectImport(result.document);
-        await actor.createEmbeddedDocuments("Item", [document]);
+      if (!result.ok) continue;
+
+      const { _id, ...document } = markAsDirectImport(result.document);
+      await actor.createEmbeddedDocuments("Item", [document]);
+
+      // Spellcasting, Arcane Recovery, Darkvision: what the player actually
+      // does with the class or species they picked. Added after their parent so
+      // the sheet reads in the order the books do.
+      for (const feature of await featuresFor({ entry, api })) {
+        if (feature.error) {
+          results.push({ ref, ok: false, reason: `${feature.name}: ${feature.error}` });
+          continue;
+        }
+        const { _id: _featureId, ...featureDocument } = markAsDirectImport(feature.document);
+        await actor.createEmbeddedDocuments("Item", [featureDocument]);
+        results.push({ ref, ok: true, name: feature.name });
       }
     }
   } finally {
@@ -318,6 +346,26 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
     failures: results.filter((r) => !r.ok),
     windows,
   };
+}
+
+/**
+ * The features one imported document grants.
+ *
+ * Reloading the entity costs nothing: `DataLoader` caches, so this is the same
+ * object the document was built from a moment ago rather than a second fetch.
+ *
+ * A failure here loses the features and not the character, which is the right
+ * way round — a sheet missing Arcane Recovery is worth more than no sheet.
+ */
+async function featuresFor({ entry, api }) {
+  if (entry.features === false) return [];
+
+  try {
+    const entity = await loadEntity(entry.ref);
+    return await featureDocumentsFor({ api, entity, prop: entry.ref.prop, level: entry.featureLevel });
+  } catch {
+    return [];
+  }
 }
 
 /**

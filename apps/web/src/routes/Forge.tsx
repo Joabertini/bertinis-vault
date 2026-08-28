@@ -53,6 +53,10 @@ import {
 } from "@/lib/index-options";
 import ItemFacts from "@/components/forge/ItemFacts";
 import { factsFor } from "@/lib/item-facts";
+import { armorWarningFor, weaponWarningFor } from "@/lib/gear-warnings";
+import { gearProficienciesFor } from "@/lib/gear-proficiencies";
+import { speciesProficienciesFor } from "@/lib/species";
+import { assignLanguages, languagePlanFor, languagesSatisfied } from "@/lib/languages";
 import StartingKit from "@/components/forge/StartingKit";
 import { grantedOptions, kitItemIds, startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
 import PointBuy from "@/components/forge/PointBuy";
@@ -68,7 +72,6 @@ import { resolveDraft } from "@/lib/derive";
 import {
   assignOffers,
   fromLines,
-  languagePlan,
   offersAreSatisfied,
   proficiencyPlan,
   toLines,
@@ -234,7 +237,10 @@ export default function Forge() {
   /* ---------------- grants ---------------- */
 
   const profPlan = useMemo(() => proficiencyPlan(draft, rulesVersion), [draft, rulesVersion]);
-  const langPlan = useMemo(() => languagePlan(draft), [draft]);
+  const langPlan = useMemo(
+    () => languagePlanFor(draft.raceId, draft.subraceId, draft.backgroundId, rulesVersion),
+    [draft.raceId, draft.subraceId, draft.backgroundId, rulesVersion],
+  );
 
   const granted = useMemo(
     () => [...profPlan.grantedSkills, ...profPlan.grantedTools],
@@ -256,6 +262,25 @@ export default function Forge() {
     () => toLines(draft.languagesText).filter((entry) => !langPlan.fixed.includes(entry)),
     [draft.languagesText, langPlan.fixed],
   );
+
+  /**
+   * Which offer paid for each language, and what was written in by hand.
+   *
+   * Same reason the skills needed it: handed the whole list, the species'
+   * picker counted the background's picks against its own limit and locked
+   * itself before a single choice was made in it.
+   */
+  const languagePicks = useMemo(
+    () => assignLanguages(langPlan, chosenLanguages),
+    [langPlan, chosenLanguages],
+  );
+
+  /** A language typed into an open offer, added the way a tick would add it. */
+  const writeLanguage = (value: string) => {
+    const entry = value.trim();
+    if (!entry || chosenLanguages.includes(entry) || langPlan.fixed.includes(entry)) return;
+    patchDraft({ languagesText: fromLines([...langPlan.fixed, ...chosenLanguages, entry]) });
+  };
 
   /**
    * Keep what the background grants present in the text.
@@ -471,6 +496,33 @@ export default function Forge() {
     [draft.armorId, draft.sourceBooks, rulesVersion],
   );
 
+  /*
+   * What this character is trained to wear and swing.
+   *
+   * The same answer the live sheet shows, computed here for a different
+   * question: the sheet lists what you have, this chamber has to say what
+   * happens when you pick something outside it. A player found the gap by
+   * putting a wizard in armour and getting no word about it — in Foundry that
+   * is disadvantage on half their rolls and no spells at all.
+   */
+  const gearProficiencies = useMemo(() => {
+    const classEntries = draft.classId ? classesFor(draft) : [];
+    if (!classEntries.length) return null;
+
+    const speciesGrant = draft.raceId
+      ? speciesProficienciesFor(draft.raceId, draft.subraceId, rulesVersion)
+      : null;
+
+    return gearProficienciesFor(
+      classEntries,
+      rulesVersion,
+      speciesGrant ? { id: draft.raceId, ...speciesGrant } : null,
+    );
+  }, [draft, rulesVersion]);
+
+  const weaponWarning = weaponFacts && weaponWarningFor(weaponFacts.row, gearProficiencies);
+  const armorWarning = armorFacts && armorWarningFor(armorFacts.row, gearProficiencies);
+
   const addGear = (entry: CatalogEntry) => {
     if (carried.includes(entry.id)) return;
     patchDraft({
@@ -568,7 +620,7 @@ export default function Forge() {
     // unspent one exports a character weaker than the rules make them.
     growth:
       growth.unanswered.length === 0 && talentsSatisfied(pools, draft.optionalFeatureIds),
-    gifts: offersSatisfied && chosenLanguages.length >= langPlan.choiceCount,
+    gifts: offersSatisfied && languagesSatisfied(langPlan, chosenLanguages),
     // Optional: an unarmoured wizard is a legal character.
     gear: true,
     spells: true,
@@ -1397,19 +1449,84 @@ export default function Forge() {
                       ))}
                     </div>
 
-                    {langPlan.choiceCount > 0 && (
-                      <PickList
-                        title="Idiomas adicionales"
-                        options={langPlan.choiceOptions}
-                        selected={chosenLanguages}
-                        // Human's option list repeats Common, which they
-                        // already speak; locking it stops a wasted pick.
-                        locked={langPlan.fixed}
-                        limit={langPlan.choiceCount}
-                        accent={accent}
-                        onToggle={toggleLanguage}
-                      />
-                    )}
+                    {langPlan.offers.map((offer, index) => (
+                      <div key={`${offer.from}-${index}`} className="mb-6">
+                        {offer.options.length > 0 && (
+                          <PickList
+                            title={
+                              offer.from === "especie"
+                                ? "Idiomas de tu especie"
+                                : "Idiomas de tu trasfondo"
+                            }
+                            hint={`Elegi ${offer.count} de esta lista.`}
+                            options={offer.options}
+                            // Only what this offer paid for. Handed the whole
+                            // list, each picker counted the other's picks
+                            // against its own limit and locked itself before a
+                            // single choice was made in it.
+                            selected={languagePicks[index] ?? []}
+                            locked={[
+                              ...langPlan.fixed,
+                              ...chosenLanguages.filter(
+                                (entry) => !(languagePicks[index] ?? []).includes(entry),
+                              ),
+                            ]}
+                            limit={offer.count}
+                            accent={accent}
+                            onToggle={toggleLanguage}
+                          />
+                        )}
+
+                        {/*
+                          The slot the book refuses to turn into a list: "any
+                          language that you and your DM agree is appropriate".
+                          Offering the standard eight for it would be inventing
+                          a rule, so it is written by hand.
+                        */}
+                        {offer.isOpen && (
+                          <div className={offer.options.length > 0 ? "mt-4" : ""}>
+                            <p className={LABEL_MB2}>
+                              {offer.options.length > 0
+                                ? "O uno que acuerdes con tu DM"
+                                : offer.count === 1
+                                  ? "Un idioma a convenir con tu DM"
+                                  : `${offer.count} idiomas a convenir con tu DM`}
+                            </p>
+                            <p className={WHISPER_MB4}>
+                              {offer.from === "especie" ? "Tu especie" : "Tu trasfondo"} no dice
+                              cual. Escribilo y viaja a la ficha como cualquier otro.
+                            </p>
+                            <div className="mb-3 flex flex-wrap gap-2">
+                              {(languagePicks[index] ?? [])
+                                .filter((entry) => !offer.options.includes(entry))
+                                .map((entry) => (
+                                  <button
+                                    key={entry}
+                                    type="button"
+                                    onClick={() => toggleLanguage(entry)}
+                                    className="border px-3 py-1.5 font-body text-sm"
+                                    style={{ borderColor: `${accent}55`, color: accent }}
+                                  >
+                                    {entry} ×
+                                  </button>
+                                ))}
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Escribilo y presiona Enter"
+                              onKeyDown={(event) => {
+                                if (event.key !== "Enter") return;
+                                event.preventDefault();
+                                writeLanguage(event.currentTarget.value);
+                                event.currentTarget.value = "";
+                              }}
+                              className="w-full border bg-transparent px-3 py-2 font-body text-sm text-bone/80 outline-none"
+                              style={{ borderColor: `${accent}33` }}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1444,6 +1561,9 @@ export default function Forge() {
                       accent={accent}
                     />
                     {weaponFacts && <ItemFacts facts={weaponFacts} accent={accent} />}
+                    {weaponWarning && (
+                      <p className="mt-3 font-body text-xs italic text-ember/70">{weaponWarning}</p>
+                    )}
                   </div>
 
                   <div className={DIVIDER}>
@@ -1462,6 +1582,9 @@ export default function Forge() {
                       accent={accent}
                     />
                     {armorFacts && <ItemFacts facts={armorFacts} accent={accent} />}
+                    {armorWarning && (
+                      <p className="mt-3 font-body text-xs italic text-ember/70">{armorWarning}</p>
+                    )}
                   </div>
 
                   {masteryPlan.count > 0 && (

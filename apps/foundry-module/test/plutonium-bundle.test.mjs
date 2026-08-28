@@ -258,3 +258,89 @@ test("`DataLoader` caches classes and subclasses under their prop, not their pag
   assert.match(bundle, /UrlUtil\.URL_TO_HASH_BUILDER\["class"\] = UrlUtil\.URL_TO_HASH_BUILDER\[UrlUtil\.PG_CLASSES\];/);
   assert.match(bundle, /\{name: sc\.className, source: sc\.classSource\}/);
 });
+
+/* ------------------------------------------------------- feature items -- */
+
+test("the feature importers exist, and carry the converters this module calls", { skip }, () => {
+  // `featureDocumentsFor` reaches a converter the same way `documentForRef`
+  // does: `pGetImporter({prop})`, then `_DataConverter` off the class. These
+  // three props are the ones it asks for.
+  const props = {
+    ImporterClassSubclassFeature: "DataConverterClassSubclassFeature",
+    ImporterRaceFeature: "DataConverterRaceFeature",
+  };
+
+  for (const [importer, converter] of Object.entries(props)) {
+    assert.match(
+      classBody(importer),
+      new RegExp(`static _DataConverter = ${converter};`),
+      `${importer} no longer points at ${converter}`,
+    );
+  }
+
+  // One importer serves both class and subclass features, and is registered
+  // under both props — which is what makes asking for either one work.
+  const both = classBody("ImporterClassSubclassFeature");
+  assert.match(both, /_initCreateSheetItemHook\(\{\s*\n\s*prop: "classFeature",/);
+  assert.match(both, /_initCreateSheetItemHook\(\{\s*\n\s*prop: "subclassFeature",/);
+  assert.match(classBody("ImportListRaceFeature"), /static get PROPS \(\) \{ return \["raceFeature"\]; \}/);
+});
+
+test("the feature converters take `pGetDocumentJson`, like every prop but class", { skip }, () => {
+  for (const converter of ["DataConverterClassSubclassFeature", "DataConverterRaceFeature"]) {
+    assert.match(
+      classBody(converter),
+      /static async pGetDocumentJson \(/,
+      `${converter} no longer implements pGetDocumentJson`,
+    );
+  }
+});
+
+test("`DataLoader` hands back class features already dereferenced, with their level on them", { skip }, () => {
+  // This is why the module filters rather than fetches. The raw data holds
+  // `"Arcane Recovery|Wizard||1"` strings; by the time an entity comes out of
+  // `pCacheAndGet` they are whole objects, grouped by level.
+  assert.match(bundle, /cls\.classFeatures = \[\.\.\.new Array\(Math\.max\(0, \.\.\.Object\.keys\(byLevel\)\.map\(Number\)\)\)\]/);
+  assert.match(bundle, /sc\.subclassFeatures = Object\.keys\(byLevel\)/);
+
+  // The two arrays are indexed differently — a class's densely from level 1, a
+  // subclass's only over the levels that grant something — so neither index is
+  // read. `feature.level` is, and this is where it is set.
+  assert.match(bundle, /\(byLevel\[feature\.level \|\| 1\] = byLevel\[feature\.level \|\| 1\] \|\| \[\]\)\.push\(feature\);/);
+});
+
+test("the features this module skips are the ones Plutonium skips", { skip }, () => {
+  // `Charactermancer_Util.getImportableFeatures`. "Arcane Tradition feature" is
+  // a pointer at the subclass feature imported right beside it, and an ASI is
+  // on the sheet as the scores themselves.
+  const body = classBody("Charactermancer_Util");
+  assert.match(body, /if \(f\.gainSubclassFeature && !f\.gainSubclassFeatureHasContent\) return false;/);
+  assert.match(body, /case "proficiency versatility": return false;/);
+  assert.match(
+    classBody("DataPrimerClassSubclassFeature"),
+    /_BLOCKLISTED_NAMES_LOWER = new Set\(\[\s*\n\s*"ability score improvement",/,
+  );
+});
+
+test("a species trait becomes a race feature through `getFauxRaceFeature`", { skip }, () => {
+  // A species has no feature list of its own: its traits are the named entries
+  // of its own entry list, and this is the call that gives them the `raceName`
+  // and `raceSource` the converter reads. 5etools builds its own species
+  // feature page the same way, with the same filter.
+  assert.match(bundle, /static getFauxRaceFeature \(race, entry\) \{/);
+  assert.match(bundle, /\.filter\(ent => ent\.name && ent\.entries\)\s*\n\s*\.map\(ent => DataUtil\.raceFeature\.getFauxRaceFeature\(race, ent\)\)/);
+  assert.match(bundle, /^globalThis\.DataUtil = class/m);
+
+  // And the converter reads exactly those two fields back off it.
+  assert.match(classBody("DataConverterRaceFeature"), /\$\{feature\.raceName\}\|\$\{feature\.raceSource\}/);
+});
+
+test("a subrace entity carries its base race's traits, so the base must not repeat them", { skip }, () => {
+  // `_getMergedSubrace` copies the race and appends the subrace's entries to
+  // it, overwriting by name where the subrace says so. A hill dwarf entity is
+  // therefore the whole dwarf: importing traits from both documents would give
+  // the player Darkvision twice.
+  const merged = bundle.slice(bundle.indexOf("static _getMergedSubrace"));
+  assert.match(merged, /cpySr\.entries\.forEach\(ent => \{/);
+  assert.match(merged, /if \(!ent\.data\?\.overwrite\) return cpy\.entries\.push\(ent\);/);
+});

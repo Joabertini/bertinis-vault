@@ -21,8 +21,8 @@ personaje sale sin ella.
 | Raza | ✅ las 160, con buscador |
 | Subraza (sólo 2014) | ✅ `subrace: "races.html"` en `PROP_TO_PAGE`; 5etools fusiona las subrazas en la lista de razas, así que hashea como una raza |
 | Aumento de característica (2014) | ✅ sembrado desde el índice, editable |
-| Rasgos raciales | ⚠️ como texto libre en `featuresText`, no como items |
-| Idiomas | ✅ con la regla de la raza |
+| Rasgos raciales | ✅ como items en la ficha, uno por rasgo con nombre |
+| Idiomas | ✅ de la especie, la subespecie y el trasfondo, medidos del índice |
 | Tamaño | ✅ del índice al actor (`foundrySizeFor`). Una especie de 2014 imprime `"V"` —variable— y se lee como nada en vez de adivinarse |
 | Velocidad | ✅ `speedFor`, en la ficha viva. Límite fijado en el test: **ninguna de las 98 subrazas trae velocidad**, así que un elfo del bosque lee 30 y no 35 |
 | Sentidos (visión en la oscuridad) | ❌ **el índice no lo trae**: una fila de especie sólo tiene `name, source, size, ability, speed, armorClass`. Hueco de datos, no de código |
@@ -143,7 +143,7 @@ la cola. Medido contra el código, no contra las notas viejas:
 | Hueco | Dónde muerde |
 | --- | --- |
 | **Método de PG** | `combat.ts:52` sólo promedia; el contrato no tiene forma de decir "tiré los dados" |
-| **Lo que la especie concede y no se pregunta** | El enano elige una de tres herramientas de artesano, el elfo recibe Percepcion gratis, cada especie trae sus idiomas. El indice ya los trae medidos (`skillProficiencies`, `toolProficiencies`, `languageProficiencies` en crudo); la Forja no los pide ni los suma |
+| **Lo que la especie concede y no se pregunta** | El enano elige una de tres herramientas de artesano y el elfo recibe Percepcion gratis. El indice trae `skillProficiencies` y `toolProficiencies` en crudo; la Forja no los pide ni los suma. Los idiomas ya se cerraron |
 | **Edad, altura, peso, aspecto** | No se capturan |
 | **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
 
@@ -197,3 +197,43 @@ la cola. Medido contra el código, no contra las notas viejas:
   `race:<id>` y la Forja guarda `subrace:<id>`, así que las **10 subrazas que
   existen en más de un libro** (el Eladrin está en el DMG y en Mordenkainen's,
   con rasgos distintos) se rechazaban por ambiguas sin que la pista llegara.
+
+- **Rasgos de clase, subclase y especie.** La pestaña Features llegaba vacía.
+  El comentario del módulo decía que estaban a salvo porque viajaban dentro del
+  documento de clase, en `system.advancement`. Medido sobre dos actores
+  importados: ni un solo `ItemGrant` en ningún documento. La razón es la misma
+  que dejaba al personaje sin competencias — **un advancement se aplica cuando
+  el personaje sube de nivel a través de él**, y una importación directa no
+  sube ningún nivel.
+  Ahora se construyen y se cuelgan junto a su documento padre. El nivel filtra:
+  un mago de 3 no lleva lo que tiene uno de 10. Se saltean los renglones que no
+  son habilidades — "Arcane Tradition feature" apunta al rasgo de subclase que
+  se importa al lado, y el ASI ya está en la ficha como los puntos mismos —
+  con la misma regla que usa Plutonium (`getImportableFeatures`).
+  Y cuando hay subraza, la raza base no aporta rasgos: 5etools fusiona las
+  entradas de la raza dentro de la subraza, así que un enano de las colinas
+  llevaría Visión en la Oscuridad dos veces.
+
+- **Idiomas.** El renglón decía "con la regla de la raza". La regla era una
+  tabla escrita a mano de **25 razas contra las 160** del índice, y todo lo que
+  quedaba afuera —cinco de cada seis especies, las 98 subrazas y los 161
+  trasfondos— caía en Común y nada más. El gnomo de las profundidades llegaba
+  sin Infracomún; el Acólito, sin los dos idiomas de los que su trasfondo está
+  hecho en buena parte.
+  Ahora salen del dato. Son cuatro formas y no una: idiomas fijos, N a elección
+  entre los ocho estándar, N de una lista con nombre, y el que **no puede ser
+  una lista** — "el que vos y tu DM acuerden". Ese último se cuenta y se
+  escribe a mano; ofrecer los ocho estándar en su lugar sería inventar una
+  regla que el libro se negó a escribir.
+  La subespecie **suma**, como los rasgos. El trasfondo se pregunta aparte de
+  la especie, por la misma razón que las habilidades: leídos como una sola
+  lista, las elecciones de uno llenaban el cupo del otro y la cámara no se
+  podía cerrar.
+
+- **Armadura sin competencia.** Lo encontró el jugador: la cámara de equipo lo
+  dejaba ponerle armadura a un mago sin decir nada. Ponérsela es legal —y a
+  veces es lo que uno quiere— pero la penalización viaja a Foundry con el
+  personaje: desventaja en toda tirada de Fuerza y Destreza y ningún conjuro
+  mientras la lleve puesta. Ahora avisa, y avisa qué pasa en vez de qué falta.
+  El arma mágica no se juzga: la fila se llama "Scimitar of Speed" y dnd5e mide
+  la competencia contra la cimitarra que tiene debajo, que desde ahí no se ve.

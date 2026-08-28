@@ -435,6 +435,65 @@ function speciesProficienciesOf(entity) {
   return { armor, weaponItems, weaponClauses };
 }
 
+/**
+ * The languages an entity grants, in the four shapes the books write them.
+ *
+ * Measured over every species, subspecies and background in the data:
+ *
+ * - a named language as a key set to `true` — `{common: true, dwarvish: true}`
+ * - `anyStandard: N`, N picks from the eight standard languages
+ * - `choose: {from: [...], count}`, N picks from a named list
+ * - `other: true`, one language the player and the DM agree on
+ *
+ * The last one is the reason this is not a list of strings. There is no set of
+ * options to offer for it: the book says "any one language that you and your
+ * DM agree is appropriate", and printing a dropdown of the standard eight
+ * would be inventing a rule. It travels as a count and is asked as a sentence.
+ *
+ * `"other"` also turns up *inside* a `choose` list, so it is left in `from`
+ * as the marker it is rather than being resolved here.
+ */
+function languagesOf(entity) {
+  const fixed = [];
+  const choose = [];
+  let anyStandard = 0;
+  let other = 0;
+
+  for (const group of entity.languageProficiencies ?? []) {
+    for (const [key, value] of Object.entries(group)) {
+      if (!value) continue;
+
+      if (key === "anyStandard") {
+        anyStandard += Number(value) || 0;
+        continue;
+      }
+      if (key === "other") {
+        other += 1;
+        continue;
+      }
+      if (key === "choose") {
+        const from = (value.from ?? []).map((name) => (name === "other" ? "other" : languageLabel(name)));
+        if (from.length) choose.push({ from, count: value.count ?? 1 });
+        continue;
+      }
+
+      fixed.push(languageLabel(key));
+    }
+  }
+
+  if (!fixed.length && !choose.length && !anyStandard && !other) return null;
+  return { fixed, anyStandard, other, choose };
+}
+
+/** `"deep speech"` as the sheet prints it. The data keys are all lower case. */
+function languageLabel(key) {
+  return String(key)
+    .split("|")[0]
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+}
+
 function abilityOf(entity) {
   const ability = entity.ability?.[0];
   if (!ability) return null;
@@ -1682,6 +1741,10 @@ const BUILDERS = {
       traits: traitsOf(r),
       // Armour and weapons a species grants whatever class it takes.
       speciesProficiencies: speciesProficienciesOf(r),
+      // The languages the species itself grants. Null for the 85 of 160 that
+      // grant none — every 2024 species among them, because 2024 moved
+      // languages onto the background.
+      languages: languagesOf(r),
       // Natural armour: the tortle's shell, the lizardfolk's scales. Six
       // species have it and it beats leather for most of them.
       armorClass: context.armorClasses.forRace.get(`${r.name}|${sourceOf(r)}`) ?? [],
@@ -1707,6 +1770,10 @@ const BUILDERS = {
       // dwarf that is also tough, so both lists are shown.
       traits: traitsOf(r),
       speciesProficiencies: speciesProficienciesOf(r),
+      // A subspecies *adds* languages, like traits and unlike speed: the deep
+      // gnome speaks Undercommon on top of Common and Gnomish. That is how
+      // 5etools merges them, and it is what the books print.
+      languages: languagesOf(r),
     })),
 
   background: (entities) =>
@@ -1719,6 +1786,10 @@ const BUILDERS = {
         skillsGranted: grant.skillsGranted,
         skillChoice: grant.skillChoice,
         toolsGranted: grant.toolsGranted,
+        // 56 of 161 backgrounds grant languages, and 46 of those grant two of
+        // the player's choosing. Without this a wizard of the Sage arrived
+        // knowing only what their species taught them.
+        languages: languagesOf(b),
         startingEquipment: startingEquipmentOf(b),
         // 2024 moved the ability increase off the species and onto the
         // background. Null for every 2014 background, which grants none.
