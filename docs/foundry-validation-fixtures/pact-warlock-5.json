@@ -3,7 +3,7 @@
   "label": "Pact caster warlock",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-27T17:54:37.932Z",
+    "generatedAt": "2026-08-28T00:39:27.230Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -625,8 +625,10 @@
           "communication": {}
         },
         "weaponProf": {
-          "value": [],
-          "custom": "simple",
+          "value": [
+            "sim"
+          ],
+          "custom": "",
           "mastery": {
             "value": [],
             "bonus": []
@@ -634,7 +636,7 @@
         },
         "armorProf": {
           "value": [
-            "light"
+            "lgt"
           ],
           "custom": ""
         }
@@ -666,7 +668,7 @@
     },
     "items": [
       {
-        "_id": "u5KN6wUQ2uPwSFT0",
+        "_id": "KWLxzQT3EXUjlL8M",
         "name": "warlock",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -726,7 +728,7 @@
         }
       },
       {
-        "_id": "zzU8sQ3XB21ngY38",
+        "_id": "Is4eJa0uUV4whbF8",
         "name": "Pact Magic",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -784,7 +786,7 @@
         }
       },
       {
-        "_id": "Ky0U0wc6QnVOWi6b",
+        "_id": "vx6W5hc59fplEpsw",
         "name": "Eldritch Blast",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -940,7 +942,7 @@
         }
       },
       {
-        "_id": "wCICvKh3rb4749Qm",
+        "_id": "ggErhHmwYNCCKZi5",
         "name": "Hunger of Hadar",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1096,7 +1098,7 @@
         }
       },
       {
-        "_id": "NbTPt4HedHUIzipT",
+        "_id": "h5eXPXKGJmS5dE1A",
         "name": "dagger",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1295,7 +1297,7 @@
         }
       },
       {
-        "_id": "05LLWdW9bps0P1dt",
+        "_id": "0EwU4ZWc3a1MWqli",
         "name": "Leather Armor",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1361,7 +1363,7 @@
         }
       },
       {
-        "_id": "BQgWHJlEEi3a9QdD",
+        "_id": "EjqGWGUMh4R3pJbs",
         "name": "Arcane Focus",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",

@@ -3,7 +3,7 @@
   "label": "Prepared caster cleric",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-27T17:54:37.925Z",
+    "generatedAt": "2026-08-28T00:39:27.223Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -603,8 +603,10 @@
           "communication": {}
         },
         "weaponProf": {
-          "value": [],
-          "custom": "simple",
+          "value": [
+            "sim"
+          ],
+          "custom": "",
           "mastery": {
             "value": [],
             "bonus": []
@@ -612,10 +614,11 @@
         },
         "armorProf": {
           "value": [
-            "light",
-            "medium"
+            "lgt",
+            "med",
+            "shl"
           ],
-          "custom": "shields"
+          "custom": ""
         }
       },
       "resources": {
@@ -645,7 +648,7 @@
     },
     "items": [
       {
-        "_id": "JQ54C5xPP08pn9zT",
+        "_id": "iy7CqIM3BDYcJPPA",
         "name": "cleric",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -705,7 +708,7 @@
         }
       },
       {
-        "_id": "EiFzmnsxivUfmELo",
+        "_id": "EqIj3nmqz09JaukY",
         "name": "Channel Divinity",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -763,7 +766,7 @@
         }
       },
       {
-        "_id": "kgaXhvsuNVPVceyM",
+        "_id": "xlKwhItmEISjGNnn",
         "name": "Sacred Flame",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -919,7 +922,7 @@
         }
       },
       {
-        "_id": "vWoAbT4K8Afb6q5J",
+        "_id": "y3CBtHrymXQ68eHh",
         "name": "Spirit Guardians",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1075,7 +1078,7 @@
         }
       },
       {
-        "_id": "oJ8BWOsUhWSbiQrJ",
+        "_id": "lTCw4CWgujdJdJRx",
         "name": "mace",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1274,7 +1277,7 @@
         }
       },
       {
-        "_id": "qqauEorN7jsYYfqA",
+        "_id": "ict4nSUVOgDPC0rJ",
         "name": "Shield",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1340,7 +1343,7 @@
         }
       },
       {
-        "_id": "R9dzxdHVSiPHcAHu",
+        "_id": "ggNnqtAO4CVtZ29o",
         "name": "Chain Mail",
         "type": "equipment",
         "img": "icons/svg/shield.svg",
@@ -1406,7 +1409,7 @@
         }
       },
       {
-        "_id": "8PUVWklj3aXB0rfR",
+        "_id": "JGY0A4aQpdjBjdTu",
         "name": "Holy Symbol",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",

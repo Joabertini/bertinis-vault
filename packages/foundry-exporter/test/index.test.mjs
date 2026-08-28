@@ -302,22 +302,28 @@ test("a second class adds its multiclass proficiencies, not its starting ones", 
 
   const payload = buildFoundryActorPayload(build);
 
-  assert.deepEqual(payload.system.traits.armorProf.value, ["light", "medium"]);
-  assert.equal(payload.system.traits.armorProf.custom, "shields");
+  // The shield is a proficiency Foundry checks, not a note: `shl` belongs in
+  // the set beside the armour, never in the free-text field.
+  assert.deepEqual(payload.system.traits.armorProf.value, ["lgt", "med", "shl"]);
+  assert.equal(payload.system.traits.armorProf.custom, "");
   // The fighter's multiclass block stops at medium armour: a fighter dip
   // never grants heavy, which is the whole difference from its starting list.
-  assert.equal(payload.system.traits.armorProf.value.includes("heavy"), false);
-  assert.equal(payload.system.traits.weaponProf.custom.includes("martial"), true);
+  assert.equal(payload.system.traits.armorProf.value.includes("hvy"), false);
+  assert.equal(payload.system.traits.weaponProf.value.includes("mar"), true);
 });
 
-test("a single class exports exactly the proficiencies it always did", () => {
+test("proficiencies use the keys Foundry checks, not the words the book prints", () => {
+  // `armorProf.value.has("lgt")` is how dnd5e decides a suit is worn
+  // proficiently. Writing "light" left every exported character untrained in
+  // their own armour: disadvantage on Strength and Dexterity, no spellcasting.
   const build = makeCharacterBuild();
   build.classing.classes = [{ classId: "fighter", level: 5 }];
 
   const payload = buildFoundryActorPayload(build);
 
-  assert.deepEqual(payload.system.traits.armorProf.value, ["light", "medium", "heavy"]);
-  assert.equal(payload.system.traits.weaponProf.custom, "simple, martial");
+  assert.deepEqual(payload.system.traits.armorProf.value, ["lgt", "med", "hvy", "shl"]);
+  assert.deepEqual(payload.system.traits.weaponProf.value, ["sim", "mar"]);
+  assert.equal(payload.system.traits.weaponProf.custom, "");
 });
 
 test("a class with no multiclass block contributes nothing rather than throwing", () => {
@@ -329,7 +335,74 @@ test("a class with no multiclass block contributes nothing rather than throwing"
 
   const payload = buildFoundryActorPayload(build);
 
-  assert.deepEqual(payload.system.traits.armorProf.value, ["light", "medium", "heavy"]);
+  assert.deepEqual(payload.system.traits.armorProf.value, ["lgt", "med", "hvy", "shl"]);
+});
+
+test("a class that names its weapons exports them as base-item ids", () => {
+  // Foundry checks `weaponProf.value` against `item.type.baseItem` too, so a
+  // 2014 bard's four martial weapons are proficiencies the sheet honours —
+  // not a sentence in a text box the character sheet never reads.
+  const build = makeCharacterBuild();
+  build.meta.rulesVersion = "5e-2014";
+  build.classing.classes = [{ classId: "bard", level: 3 }];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.weaponProf.value, [
+    "sim",
+    "handcrossbow",
+    "longsword",
+    "rapier",
+    "shortsword",
+  ]);
+});
+
+test("2024 grants a wizard every simple weapon, where 2014 named five", () => {
+  const build = makeCharacterBuild();
+  build.classing.classes = [{ classId: "wizard", level: 3 }];
+
+  build.meta.rulesVersion = "5e-2014";
+  const older = buildFoundryActorPayload(build);
+  assert.deepEqual(older.system.traits.weaponProf.value, [
+    "dagger",
+    "dart",
+    "sling",
+    "quarterstaff",
+    "lightcrossbow",
+  ]);
+
+  build.meta.rulesVersion = "5e-2024";
+  const newer = buildFoundryActorPayload(build);
+  assert.deepEqual(newer.system.traits.weaponProf.value, ["sim"]);
+});
+
+test("2024 takes medium armour off the druid", () => {
+  const build = makeCharacterBuild();
+  build.classing.classes = [{ classId: "druid", level: 3 }];
+
+  build.meta.rulesVersion = "5e-2014";
+  assert.deepEqual(buildFoundryActorPayload(build).system.traits.armorProf.value, [
+    "lgt",
+    "med",
+    "shl",
+  ]);
+
+  build.meta.rulesVersion = "5e-2024";
+  assert.deepEqual(buildFoundryActorPayload(build).system.traits.armorProf.value, ["lgt", "shl"]);
+});
+
+test("a proficiency the book prints as a rule stays a rule", () => {
+  // "Martial weapons that have the Finesse or Light property" is not a list
+  // Foundry can store. Writing an invented list here would hand the rogue
+  // weapons the class never granted them.
+  const build = makeCharacterBuild();
+  build.meta.rulesVersion = "5e-2024";
+  build.classing.classes = [{ classId: "rogue", level: 3 }];
+
+  const payload = buildFoundryActorPayload(build);
+
+  assert.deepEqual(payload.system.traits.weaponProf.value, ["sim"]);
+  assert.match(payload.system.traits.weaponProf.custom, /Finesse or Light/);
 });
 
 test("weapon mastery reaches the actor as base-item ids", () => {
