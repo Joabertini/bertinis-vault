@@ -75,7 +75,7 @@ personaje sale sin ella.
 | Alternativa de oro inicial | ✅ `startingCopper` en el contrato, repartido en po/pp/pc en el exportador. No se sube a platino: el libro dice 150 po, la ficha dice 150 po |
 | Arma y armadura equipadas | ✅ la armadura mueve la CA real |
 | Mochila | ✅ buscador sobre 2658 objetos |
-| Peso y capacidad de carga | ❌ |
+| Peso y capacidad de carga | ✅ mochila, arma y armadura contra Fuerza × 15 ajustada por tamaño; la variante de carga se marca, no se aplica |
 
 ## Paso 6 — Los números de la mesa
 
@@ -148,12 +148,14 @@ revisar con esa sospecha cualquier panel que sólo pinte chips.
 
 ## Lo que queda, después de la migración (2026-08-27)
 
-La lista de `MIGRACION-FRONT.md` quedó sin pendientes, así que ésta pasa a ser
-la cola. Medido contra el código, no contra las notas viejas:
+La lista de `MIGRACION-FRONT.md` quedó sin pendientes, así que ésta pasó a ser
+la cola. Medido contra el código, no contra las notas viejas.
 
-| Hueco | Dónde muerde |
-| --- | --- |
-| **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
+**La cola quedó vacía el 2026-08-28.** Los cuatro huecos que tenía —método de
+PG, lo que la especie concede, edad/altura/peso/aspecto, y peso contra
+capacidad de carga— están cerrados y anotados abajo. Lo que se agregue acá de
+ahora en más sale de probar el builder contra una mesa, no de esta auditoría:
+la auditoría ya midió lo que sabía preguntar.
 
 > **Dónde vive cada cosa.** Hay dos salidas y no hacen lo mismo.
 > `apps/foundry-module` + `to-payload.ts` es la que usa el jugador: manda
@@ -165,6 +167,23 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **Peso y capacidad de carga.** `GearBag` pesaba la mochila y nadie comparaba
+  el total contra nada, asi que un personaje podia salir de la Forja bajo el
+  triple de lo que las reglas permiten sin que la pagina dijera nada. Y pesaba
+  **solo la mochila**: el arma y la armadura son elecciones sueltas con peso
+  real, y una armadura de placas son 65 lb por si sola — mas de la mitad de lo
+  que puede cargar un mago de Fuerza 8.
+  La regla es una y esta impresa igual en las dos ediciones: capacidad es la
+  Fuerza por 15, y se puede empujar, arrastrar o levantar el doble. El tamaño
+  la cambia — Diminuto la parte al medio, de Grande para arriba la duplica por
+  paso; Pequeño y Mediano son iguales, que es el error facil.
+  Los umbrales de carga son una **variante** y estan marcados, no aplicados. Es
+  una regla opcional que la mayoria de las mesas no usa: la hoja dice cuanto
+  pesa la carga y la mesa decide cuanto cuesta. Lo unico que se dice en voz
+  alta es lo que las reglas si afirman — pasada la capacidad, no lo podes
+  llevar.
+
 
 - **Edad, altura, peso, aspecto.** No se capturaban, y no era un hueco de
   formato: `system.details` de dnd5e ya tiene los nueve campos —`age`,

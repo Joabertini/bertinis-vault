@@ -112,6 +112,9 @@ import {
 import { useVault, releasedByPick, rulesVersionOf, type Pace } from "@/lib/vault-store";
 import { chamberOrder, firstChamber, type ChamberKey } from "@/lib/chambers";
 import { hitPointLevelsFor } from "@/lib/hit-points";
+import { carriedLoadFor } from "@/lib/carrying";
+import { foundrySizeFor } from "@/lib/table-numbers";
+import CarryingLoad from "@/components/forge/CarryingLoad";
 import HitPoints from "@/components/forge/HitPoints";
 import { DIVIDER, DIVIDER_TIGHT, HEADING, ITEM_META, ITEM_NAME, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
 
@@ -518,6 +521,22 @@ export default function Forge() {
   );
 
   const carried = useMemo(() => toLines(draft.extraEquipmentText), [draft.extraEquipmentText]);
+
+  /*
+   * What all of it weighs, against what this character can carry. Read from
+   * the derived Strength rather than the typed one: a half-orc's +2 and a
+   * feat that raises Strength both change what they can carry.
+   */
+  const load = useMemo(
+    () =>
+      carriedLoadFor(
+        draft,
+        rulesVersion,
+        snapshot?.abilities.final.str ?? draft.str,
+        foundrySizeFor(draft, rulesVersion) ?? undefined,
+      ),
+    [draft, rulesVersion, snapshot],
+  );
 
   /* ---------------- gear ---------------- */
 
@@ -1897,6 +1916,10 @@ export default function Forge() {
                       onAdd={addGear}
                       onRemove={removeGear}
                     />
+
+                    <div className={DIVIDER}>
+                      <CarryingLoad load={load} accent={accent} />
+                    </div>
                   </div>
                 </div>
               )}
