@@ -392,12 +392,39 @@ async function applyItemState(actor, payload) {
   }
 
   for (const entry of payload.spells ?? []) {
-    if (entry.prepared == null) continue;
+    if (!entry.preparation) continue;
     const item = findByRef(byName, entry.ref);
-    if (item) updates.push({ _id: item.id, "system.preparation.prepared": entry.prepared });
+    if (item) updates.push({ _id: item.id, "system.prepared": preparationState(entry.preparation) });
   }
 
   if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+}
+
+/**
+ * Whether a spell is prepared, as dnd5e records it.
+ *
+ * This was written to `system.preparation.prepared` as a boolean, which is
+ * where dnd5e kept it before 5.1 and nowhere at all since. An exported actor
+ * has no `preparation` key on any spell — the field is `system.prepared`, and
+ * it is a number rather than a flag because there are three states and not two:
+ * `DND5E.spellPreparationStates` is `unprepared: 0`, `prepared: 1`,
+ * `always: 2`. The third is what a domain or patron spell gets, and it is the
+ * difference between a cleric's domain spells costing them preparations and
+ * not.
+ *
+ * So nothing landed. Every imported spell arrived unprepared, including on a
+ * wizard whose whole class is deciding which ones are.
+ *
+ * The names are dnd5e's own, copied from `DND5E.spellPreparationStates` rather
+ * than invented here, so a state that stops matching the system is a state
+ * that fails to resolve instead of one that quietly writes the wrong number.
+ * An unrecognised one reads as prepared, because a spell nobody can cast is a
+ * worse wrong answer than one that is available a day early.
+ */
+export const PREPARATION_STATE = { unprepared: 0, prepared: 1, always: 2 };
+
+export function preparationState(preparation) {
+  return PREPARATION_STATE[preparation] ?? PREPARATION_STATE.prepared;
 }
 
 /**

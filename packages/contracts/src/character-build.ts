@@ -156,10 +156,35 @@ export const normalizedProficiencyEntrySchema = z.object({
   label: canonicalLabelSchema,
 });
 
+/**
+ * How a spell sits on the sheet, in dnd5e's own vocabulary.
+ *
+ * These are the keys of `DND5E.spellPreparationStates`, spelled the same so
+ * the module can map them to the numbers the system stores without a table of
+ * invented names in between: `unprepared: 0`, `prepared: 1`, `always: 2`.
+ *
+ * Three states and not two, because a wizard's book holds spells that are not
+ * prepared today but are still on the character, and a cleric's domain spells
+ * are prepared without costing a preparation. A boolean cannot say either.
+ */
+export const spellPreparationSchema = z.enum(["unprepared", "prepared", "always"]);
+
+export type SpellPreparation = z.infer<typeof spellPreparationSchema>;
+
 export const normalizedSpellEntrySchema = z.object({
   spellId: canonicalIdSchema.optional(),
   label: canonicalLabelSchema,
   level: z.number().int().min(0).max(9),
+  /**
+   * How the spell sits on the sheet, in dnd5e's vocabulary.
+   *
+   * Absent means prepared: for every caster but one, a spell on the list is a
+   * spell that can be cast. The exception is the wizard, whose book holds
+   * spells that are on the character and not prepared today — those carry
+   * `unprepared`, which is what keeps the book a book rather than a list of
+   * spells the wizard has all at once.
+   */
+  preparation: spellPreparationSchema.optional(),
 });
 
 export const normalizedEquipmentEntrySchema = z.object({

@@ -15,7 +15,12 @@
 
 import { z } from "zod";
 
-import { abilityIdSchema, abilityScoreMapSchema, biographySchema } from "./character-build.js";
+import {
+  abilityIdSchema,
+  abilityScoreMapSchema,
+  biographySchema,
+  spellPreparationSchema,
+} from "./character-build.js";
 
 /** Bumped when the module can no longer read an older payload. */
 export const IMPORT_PAYLOAD_VERSION = 1;
@@ -53,10 +58,10 @@ export const classRefSchema = z.object({
 export const spellRefSchema = z.object({
   ref: vetoolsRefSchema,
   /**
-   * Whether the spell is prepared. Meaningless for classes that know their
-   * spells, so it is optional rather than defaulted.
+   * How the spell sits on the sheet. Omitted for a cantrip, which dnd5e marks
+   * prepared itself on creation and which no rule ever unprepares.
    */
-  prepared: z.boolean().optional(),
+  preparation: spellPreparationSchema.optional(),
   /** Set when a feature grants the spell outside the class list. */
   grantedBy: z.string().optional(),
 });

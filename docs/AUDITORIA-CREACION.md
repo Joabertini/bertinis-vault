@@ -106,7 +106,11 @@ lo primero que se pide en una sesión, y hoy no están en ningún lado.
 | Lista ampliada por subclase | ✅ **arreglado en esta auditoría** — 50 de 135 subclases 2014 y 42 de 68 de 2024 la perdían |
 | Espacios por nivel | ✅ |
 | Preparados contra conocidos | ✅ sale de la tabla de la clase |
+| **Libro de conjuros del mago** | ✅ **arreglado en esta auditoría** — el mago preparaba de la lista de clase, sin libro |
+| **Estado de preparación en Foundry** | ✅ **arreglado en esta auditoría** — se escribía en un campo que dnd5e no tiene desde 5.1 |
 | Ritual y concentración | ✅ en la Visión |
+| Lo que conceden dotes, trasfondos, especies y dones | ❌ 350 entidades tienen `additionalSpells`; sólo se leen las 128 subclases |
+| Filtros de ritual y de tipo de ataque | ❌ `parseSpellFilter` lee class/level/school/source y descarta en silencio los otros dos |
 
 ## Progresión y dotes
 
@@ -157,6 +161,32 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **El libro del mago.** El mago preparaba directo de la lista de clase, que es
+  la clase de otro: un mago prepara **de su libro**, y el libro es lo que la
+  clase es. Lo dice la misma prosa en las dos ediciones —"seis conjuros de
+  nivel 1 a nivel 1" y "dos más por cada nivel de mago después"—, y no está en
+  ninguna columna de ninguna tabla, así que se escribe una vez con la cita.
+  Ahora son dos pistas: el libro se llena de la lista de mago, y los preparados
+  salen del libro. Borrar un conjuro del libro lo despreparara también, porque
+  no se puede preparar lo que no está escrito. El tope de preparados sigue
+  siendo el de la clase: seis escritos no son seis preparados.
+  Los trucos quedan afuera a propósito — "excepto tus trucos, que están fijos
+  en tu mente".
+
+- **Dónde vive "preparado".** El módulo lo escribía en
+  `system.preparation.prepared` como booleano. Ese campo es de dnd5e anterior a
+  5.1 y no existe en ninguna parte desde entonces: en un actor exportado no hay
+  clave `preparation` en ningún conjuro. El campo es `system.prepared` y es
+  número, porque los estados son tres y no dos —
+  `DND5E.spellPreparationStates`: `unprepared: 0`, `prepared: 1`, `always: 2`.
+  El tercero es el de los conjuros de dominio o de patrón, que se preparan sin
+  gastar una preparación.
+  El contrato ahora los nombra con las palabras de dnd5e y no con inventadas,
+  así que un renombre del sistema rompe un test en vez de escribir el número
+  equivocado en silencio. Y nada además del libro dice `unprepared`: la
+  ausencia se lee como preparado, que es lo que quiere decir toda ficha escrita
+  antes de que el campo existiera.
 
 - **Rasgos de especie.** El renglón decía "viajan como texto libre en
   `featuresText`". Medido: `featuresText` no está atado a ningún componente y

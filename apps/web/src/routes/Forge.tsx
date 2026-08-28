@@ -312,12 +312,22 @@ export default function Forge() {
         level: draft.level,
         rulesVersion,
         snapshot,
+        spellbook: toLines(draft.spellbookText),
       }),
-    [draft.classId, draft.subclassId, draft.level, selectedClass, rulesVersion, snapshot],
+    [
+      draft.classId,
+      draft.subclassId,
+      draft.level,
+      draft.spellbookText,
+      selectedClass,
+      rulesVersion,
+      snapshot,
+    ],
   );
 
   const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
   const chosenSpells = useMemo(() => toLines(draft.spellsText), [draft.spellsText]);
+  const chosenBook = useMemo(() => toLines(draft.spellbookText), [draft.spellbookText]);
 
   /* ---------------- growth ---------------- */
 
@@ -727,6 +737,25 @@ export default function Forge() {
       ? chosenSpells.filter((entry) => entry !== line)
       : [...chosenSpells, line];
     patchDraft({ spellsText: fromLines(next) });
+  };
+
+  /**
+   * Erasing a spell from the book unprepares it too.
+   *
+   * A wizard cannot prepare what is not written down, so leaving the prepared
+   * list alone would leave a spell selected that the picker no longer offers —
+   * invisible on the page and still in the export.
+   */
+  const toggleBookSpell = (line: string) => {
+    if (!chosenBook.includes(line)) {
+      patchDraft({ spellbookText: fromLines([...chosenBook, line]) });
+      return;
+    }
+
+    patchDraft({
+      spellbookText: fromLines(chosenBook.filter((entry) => entry !== line)),
+      spellsText: fromLines(chosenSpells.filter((entry) => entry !== line)),
+    });
   };
 
   /* ---------------- multiclass ---------------- */
@@ -1643,6 +1672,42 @@ export default function Forge() {
                     />
                   )}
 
+                  {plan.book && (
+                    <div className="space-y-8 border-t border-iron/40 pt-8">
+                      <div className="flex items-baseline justify-between">
+                        <span className={LABEL}>Libro de conjuros</span>
+                        <span
+                          className={META}
+                          style={{
+                            color:
+                              chosenBook.length >= plan.book.limit
+                                ? accent
+                                : "rgba(230,223,206,0.35)",
+                          }}
+                        >
+                          {chosenBook.length} / {plan.book.limit}
+                        </span>
+                      </div>
+
+                      <p className={WHISPER_MB4}>
+                        Seis a nivel 1 y dos por cada nivel despues. Lo que copies queda escrito
+                        aunque hoy no lo prepares; de aca salen los preparados.
+                      </p>
+
+                      {plan.book.options.map(({ level, names }) => (
+                        <PickList
+                          key={level}
+                          title={`Nivel ${level}`}
+                          options={names.map((name) => formatSpellLine(level, name))}
+                          selected={chosenBook}
+                          limit={plan.book!.limit}
+                          accent={accent}
+                          onToggle={toggleBookSpell}
+                        />
+                      ))}
+                    </div>
+                  )}
+
                   {plan.picker.spellLimit > 0 ? (
                     <div className="space-y-8 border-t border-iron/40 pt-8">
                       <div className="flex items-baseline justify-between">
@@ -1676,7 +1741,9 @@ export default function Forge() {
                     </div>
                   ) : (
                     <p className="border-t border-iron/40 pt-8 font-body italic text-bone/35">
-                      A nivel {draft.level} esta clase no prepara conjuros todavia.
+                      {plan.book
+                        ? "Sin nada escrito en el libro no hay de donde preparar."
+                        : `A nivel ${draft.level} esta clase no prepara conjuros todavia.`}
                     </p>
                   )}
                 </div>

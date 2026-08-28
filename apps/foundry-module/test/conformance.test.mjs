@@ -18,7 +18,14 @@ import assert from "node:assert/strict";
 import { deriveCharacterBuild } from "@bertinis-vault/domain";
 import { RefResolver, buildToPayload, collections } from "@bertinis-vault/vetools-index";
 
-import { baseActorData, derivedUpdates, equipmentUpdates, proficiencyUpdates } from "../src/import.js";
+import {
+  baseActorData,
+  derivedUpdates,
+  equipmentUpdates,
+  PREPARATION_STATE,
+  preparationState,
+  proficiencyUpdates,
+} from "../src/import.js";
 
 const now = new Date().toISOString();
 
@@ -316,4 +323,47 @@ test("the payload carries them where the module looks", () => {
 
   assert.deepEqual(payload.proficiencies.armor, ["lgt"]);
   assert.deepEqual(payload.proficiencies.weapons, ["sim"]);
+});
+
+/* ------------------------------------------------- prepared spells -- */
+
+test("a prepared spell is written where dnd5e keeps it", () => {
+  /*
+   * It was written to `system.preparation.prepared` as a boolean, which is
+   * where dnd5e kept it before 5.1 and nowhere at all since. An exported actor
+   * has no `preparation` key on any spell: the field is `system.prepared`,
+   * and it is a number because there are three states and not two —
+   * `DND5E.spellPreparationStates` is unprepared 0, prepared 1, always 2.
+   *
+   * So nothing landed. Every imported spell arrived unprepared, on a wizard
+   * whose entire class is deciding which ones are not.
+   */
+  assert.equal(preparationState("unprepared"), 0);
+  assert.equal(preparationState("prepared"), 1);
+  assert.equal(preparationState("always"), 2);
+});
+
+test("the state names are dnd5e's own, not names invented here", () => {
+  // Copied from `DND5E.spellPreparationStates` in dnd5e 5.3.3. A rename in the
+  // system should break this rather than silently write the wrong number.
+  assert.deepEqual(PREPARATION_STATE, { unprepared: 0, prepared: 1, always: 2 });
+});
+
+test("a spell that says nothing is castable", () => {
+  /*
+   * Absence is not `unprepared`. Every build written before the field existed
+   * carries no state at all, and every one of its spells is meant to be
+   * castable — a sheet that silently unprepared them would be worse than one
+   * that offers a spell a day early.
+   */
+  assert.equal(preparationState(undefined), 1);
+  assert.equal(preparationState("nonsense"), 1);
+});
+
+test("the wizard's book is the reason there are three states", () => {
+  // A spell in the book and not prepared today is still on the character.
+  // With a boolean there was nowhere to put it but "not prepared", which on
+  // an actor means "not there at all".
+  assert.notEqual(preparationState("unprepared"), preparationState("prepared"));
+  assert.notEqual(preparationState("always"), preparationState("prepared"));
 });

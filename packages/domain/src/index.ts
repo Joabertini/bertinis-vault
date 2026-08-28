@@ -22,3 +22,4 @@ export * from "./proficiencies.js";
 export * from "./class-proficiencies.js";
 export * from "./saving-throws.js";
 export * from "./progression.js";
+export * from "./spellbook.js";

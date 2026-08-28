@@ -24,6 +24,7 @@
  * one that says it could not place it.
  */
 
+import { hasSpellbook } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder";
@@ -210,13 +211,32 @@ export function readFoundryActor(raw: unknown): ActorImport | null {
   }
 
   /* ---- spells ---- */
+  /*
+   * Three lists, because the sheet keeps three.
+   *
+   * `system.prepared` is 0, 1 or 2 — unprepared, prepared, always. An
+   * unprepared spell on a wizard is one that is in the book and not prepared
+   * today, which is why it goes to the book and not to the prepared list:
+   * reading everything as prepared would import a wizard with a dozen spells
+   * ready to cast and no book at all.
+   */
   const cantrips: string[] = [];
   const spells: string[] = [];
+  const book: string[] = [];
   for (const item of items) {
     if (item.type !== "spell" || !item.name) continue;
-    const spellLevel = (item.system as { level?: number } | undefined)?.level ?? 0;
-    if (spellLevel === 0) cantrips.push(item.name);
-    else spells.push(`Nv${spellLevel}: ${item.name}`);
+    const system = item.system as { level?: number; prepared?: number } | undefined;
+    const spellLevel = system?.level ?? 0;
+    if (spellLevel === 0) {
+      cantrips.push(item.name);
+      continue;
+    }
+
+    const line = `Nv${spellLevel}: ${item.name}`;
+    // A spell in the book is on the character either way, so it is written
+    // down whether or not it is prepared today.
+    book.push(line);
+    if (system?.prepared !== 0) spells.push(line);
   }
 
   /* ---- gear ---- */
@@ -293,6 +313,9 @@ export function readFoundryActor(raw: unknown): ActorImport | null {
     languagesText: "",
     cantripsText: cantrips.join("\n"),
     spellsText: spells.join("\n"),
+    // Only a wizard has a book to fill; for anyone else this would be a copy
+    // of the prepared list under a second name.
+    spellbookText: hasSpellbook(classId) ? book.join("\n") : "",
     featuresText: "",
 
     alignment: details.alignment ?? "",

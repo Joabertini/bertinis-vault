@@ -17,6 +17,8 @@ import {
   cantripsKnownAt,
   getSpellProgressionForClass,
   getSpellSelectionProfileForClassLevel,
+  hasSpellbook,
+  spellbookSizeAt,
   spellCountLabel,
   spellsAvailableAt,
   type SpellPickerState,
@@ -33,16 +35,46 @@ import {
   spellPoolFor,
 } from "./index-options";
 
+/** A list of levelled spells to pick from, grouped the way the books print them. */
+export type SpellsByLevel = Array<{ level: number; names: string[] }>;
+
+/**
+ * The book a wizard writes in, which no other class has.
+ *
+ * `options` is the whole class list the wizard could copy from; `limit` is
+ * how many the class guarantees at this level. The prepared picker then draws
+ * on what the player actually wrote down, which is the rule the sheet exists
+ * to enforce: a wizard prepares *from their spellbook*, not from the wizard
+ * list.
+ */
+export type SpellbookPlan = {
+  limit: number;
+  options: SpellsByLevel;
+};
+
 export type SpellPlan = {
   caster: boolean;
   /** Absent for a non-caster, or before the draft can be derived. */
   picker: SpellPickerState | null;
   cantripOptions: string[];
-  /** Levelled spells, grouped by their level. */
-  spellsByLevel: Array<{ level: number; names: string[] }>;
+  /**
+   * The levelled spells the player may prepare, grouped by level.
+   *
+   * For a wizard this is their book and not the wizard list — everyone else
+   * prepares straight from the class list, so the two are the same.
+   */
+  spellsByLevel: SpellsByLevel;
+  /** Null for every class but the wizard. */
+  book: SpellbookPlan | null;
 };
 
-const NONE: SpellPlan = { caster: false, picker: null, cantripOptions: [], spellsByLevel: [] };
+const NONE: SpellPlan = {
+  caster: false,
+  picker: null,
+  cantripOptions: [],
+  spellsByLevel: [],
+  book: null,
+};
 
 /**
  * How many cantrips and how many spells this class has at this level, in this
@@ -83,6 +115,8 @@ export function spellPlan(input: {
   rulesVersion: RulesVersion;
   /** Null until the draft has enough to derive. */
   snapshot: CharacterBuild | null;
+  /** What the wizard has written down, as `"Nv1: Shield"` lines. Ignored otherwise. */
+  spellbook?: string[];
 }): SpellPlan {
   const { classId, className, classSource, subclassId, level, rulesVersion, snapshot } = input;
 
@@ -143,28 +177,65 @@ export function spellPlan(input: {
   const cantripOptions = rows.filter((row) => row.level === 0).map((row) => row.name);
   const levelled = rows.filter((row) => row.level > 0);
 
+  /*
+   * The wizard prepares out of a book, and every other caster out of the class
+   * list. So the options the picker is given differ per class, and the picker
+   * itself does not need to know why.
+   *
+   * The book is written before this: `spellbook` holds what the player copied
+   * in, and a wizard who has written nothing down has nothing to prepare. That
+   * is the honest answer rather than an empty-book special case that quietly
+   * hands them the whole wizard list — which is what this replaces.
+   */
+  const book = hasSpellbook(classId)
+    ? new Set((input.spellbook ?? []).map((line) => parseSpellLine(line)?.name ?? line.trim()))
+    : null;
+
+  const preparable = book ? levelled.filter((row) => book.has(row.name)) : levelled;
+
   const picker = buildSpellPickerState({
     slots,
     profile,
     cantripOptionCount: cantripOptions.length,
-    spellOptions: levelled.map((row) => ({ label: row.name, level: row.level })),
+    spellOptions: preparable.map((row) => ({ label: row.name, level: row.level })),
   });
 
-  const byLevel = new Map<number, string[]>();
-  for (const entry of picker.filteredSpellOptions) {
-    const bucket = byLevel.get(entry.level) ?? [];
-    bucket.push(entry.label);
-    byLevel.set(entry.level, bucket);
-  }
+  /*
+   * The book is bounded by the slots too, and by the same sentence in both
+   * editions: an added spell "must be of a level for which you have spell
+   * slots". A level 3 wizard writes down 1st and 2nd level spells, and a
+   * builder that offered 9th would be offering something no table allows.
+   */
+  const bookPlan: SpellbookPlan | null = book
+    ? {
+        limit: spellbookSizeAt(level),
+        options: groupByLevel(levelled.filter((row) => row.level <= picker.maxSpellLevel)),
+      }
+    : null;
 
   return {
     caster: true,
     picker,
     cantripOptions,
-    spellsByLevel: [...byLevel.entries()]
-      .sort((a, b) => a[0] - b[0])
-      .map(([level, names]) => ({ level, names })),
+    spellsByLevel: groupByLevel(
+      picker.filteredSpellOptions.map((entry) => ({ name: entry.label, level: entry.level })),
+    ),
+    book: bookPlan,
   };
+}
+
+/** Spells in the order the books print them: by level, then as the pool gave them. */
+function groupByLevel(rows: Array<{ name: string; level: number }>): SpellsByLevel {
+  const byLevel = new Map<number, string[]>();
+  for (const row of rows) {
+    const bucket = byLevel.get(row.level) ?? [];
+    bucket.push(row.name);
+    byLevel.set(row.level, bucket);
+  }
+
+  return [...byLevel.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([level, names]) => ({ level, names }));
 }
 
 /* ---------------- the "Nv1: Shield" format ---------------- */

@@ -122,3 +122,57 @@ test("a wizard has no armour and five named weapons, not nothing", () => {
     "lightcrossbow",
   ]);
 });
+
+/* ------------------------------------------------- the wizard's book -- */
+
+const wizardDraft = {
+  ...initialState,
+  classId: "wizard",
+  cantripsText: "Mage Hand",
+  spellsText: "Nv1: Shield",
+  spellbookText: "Nv1: Shield\nNv1: Magic Missile",
+};
+
+test("a spell in the book but not prepared travels as unprepared", () => {
+  /*
+   * The two tracks have to survive to the payload or the wizard arrives in
+   * Foundry with either a book they cannot cast from or a list of everything
+   * ready to go — and the second is the one that used to happen.
+   */
+  const { payload } = buildToPayload(buildCanonicalSnapshot(wizardDraft), resolver);
+  const byHash = new Map(payload?.spells.map((entry) => [entry.ref.hash, entry.preparation]));
+
+  expect(byHash.get("shield_phb")).toBe("prepared");
+  expect(byHash.get("magic%20missile_phb")).toBe("unprepared");
+});
+
+test("a spell written in both places is one spell, and it is prepared", () => {
+  const { payload } = buildToPayload(buildCanonicalSnapshot(wizardDraft), resolver);
+  const shields = payload?.spells.filter((entry) => entry.ref.hash === "shield_phb") ?? [];
+
+  expect(shields).toHaveLength(1);
+  expect(shields[0]?.preparation).toBe("prepared");
+});
+
+test("a cantrip carries no state, because dnd5e prepares it itself", () => {
+  const { payload } = buildToPayload(buildCanonicalSnapshot(wizardDraft), resolver);
+  const cantrip = payload?.spells.find((entry) => entry.ref.hash === "mage%20hand_phb");
+
+  expect(cantrip).toBeDefined();
+  expect(cantrip?.preparation).toBeUndefined();
+});
+
+test("a caster with no book has every spell prepared", () => {
+  const { payload } = buildToPayload(
+    buildCanonicalSnapshot({
+      ...initialState,
+      classId: "cleric",
+      cantripsText: "",
+      spellsText: "Nv1: Bless\nNv1: Cure Wounds",
+      spellbookText: "",
+    }),
+    resolver,
+  );
+
+  expect(payload?.spells.map((entry) => entry.preparation)).toEqual(["prepared", "prepared"]);
+});
