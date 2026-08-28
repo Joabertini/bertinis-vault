@@ -128,12 +128,23 @@ function applyToolAbility(updates, tool) {
 }
 
 /**
- * Proficiencies the player chose from a list.
+ * Proficiencies the actor carries as flags rather than as documents.
  *
- * Skills, tools and saves are flags on the actor rather than documents, so
- * they are written directly. Weapon and armour proficiencies are absent by
- * design: they come from the class and race documents, and writing our own
- * over them would fight with what Plutonium just imported.
+ * Skills, tools, saves and languages are fields on the actor, so they are
+ * written directly.
+ *
+ * Weapon and armour proficiencies used to be left out "by design", on the
+ * belief that they came from the class and race documents Plutonium imports.
+ * An imported actor disproved it: `traits.armorProf.value` and
+ * `traits.weaponProf.value` both came back empty, and the character was
+ * proficient with nothing — every attack short its proficiency bonus, and
+ * every suit of armour worn at disadvantage on Strength and Dexterity with
+ * spellcasting blocked.
+ *
+ * The reason is in the documents. A class item carries its grants as `Trait`
+ * advancements, and an advancement applies when a character is levelled
+ * through it. A direct import is precisely what does not do that — which is
+ * the same reason the class features never arrive as items.
  */
 export function proficiencyUpdates(payload) {
   const updates = {};
@@ -159,6 +170,15 @@ export function proficiencyUpdates(payload) {
   for (const ability of payload.proficiencies.savingThrows ?? []) {
     updates[`system.abilities.${ability}.proficient`] = 1;
   }
+
+  // dnd5e checks armour with `armorProf.value.has("lgt")` and weapons with
+  // `weaponProf.value` against either the category key or the weapon's own
+  // base-item id. Both sets are already in those keys when they arrive; the
+  // builder speaks Foundry's vocabulary rather than the book's.
+  const armor = payload.proficiencies.armor ?? [];
+  const weapons = payload.proficiencies.weapons ?? [];
+  if (armor.length) updates["system.traits.armorProf.value"] = armor;
+  if (weapons.length) updates["system.traits.weaponProf.value"] = weapons;
 
   // A language the system has a key for goes in the list it validates; one it
   // does not — a setting's own, or a secret like Thieves' Cant — goes in the

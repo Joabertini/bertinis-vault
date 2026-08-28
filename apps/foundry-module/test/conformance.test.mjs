@@ -44,6 +44,12 @@ function payloadFor(overrides = {}) {
       spells: [],
       equipment: [],
       features: [],
+      ...(overrides.weaponProficiencies
+        ? { weaponProficiencies: overrides.weaponProficiencies }
+        : {}),
+      ...(overrides.armorProficiencies
+        ? { armorProficiencies: overrides.armorProficiencies }
+        : {}),
       normalized: {
         feats: [],
         spells: [],
@@ -250,4 +256,64 @@ test("the module's copy of the language keys matches the contract's", async () =
       `${name} should key the same on both sides`,
     );
   }
+});
+
+/* ------------------------------------------- armour and weapon profs -- */
+
+test("armour and weapon proficiencies reach the actor", () => {
+  /*
+   * Measured on an imported actor, not guessed: `traits.armorProf.value` and
+   * `traits.weaponProf.value` both came back empty, so the character was
+   * proficient with nothing — every attack short its proficiency bonus, and
+   * every suit of armour worn at disadvantage on Strength and Dexterity with
+   * spellcasting blocked.
+   *
+   * They were left out on the belief that Plutonium's class and race documents
+   * carried them. Those documents hold the grants as `Trait` advancements, and
+   * an advancement applies when a character is levelled through it — which a
+   * direct import is exactly what does not do.
+   */
+  const updates = proficiencyUpdates(
+    payloadFor({
+      classId: "fighter",
+      armorProficiencies: ["lgt", "med", "hvy", "shl"],
+      weaponProficiencies: ["sim", "mar"],
+    }),
+  );
+
+  assert.deepEqual(updates["system.traits.armorProf.value"], ["lgt", "med", "hvy", "shl"]);
+  assert.deepEqual(updates["system.traits.weaponProf.value"], ["sim", "mar"]);
+});
+
+test("a weapon named one by one travels as its base-item id", () => {
+  // A dwarf wizard swings a warhammer at their proficiency bonus, and no class
+  // document knows that. Foundry checks `weaponProf.value` against the
+  // category keys *and* against `item.type.baseItem`, so both fit in one set.
+  const updates = proficiencyUpdates(
+    payloadFor({
+      classId: "wizard",
+      weaponProficiencies: ["dagger", "quarterstaff", "warhammer"],
+    }),
+  );
+
+  assert.ok(updates["system.traits.weaponProf.value"].includes("warhammer"));
+});
+
+test("a character granted nothing writes nothing rather than an empty set", () => {
+  // Writing an empty array would erase whatever the sheet already had, which
+  // is worse than leaving it alone.
+  const updates = proficiencyUpdates(payloadFor({}));
+
+  assert.equal(updates["system.traits.armorProf.value"], undefined);
+  assert.equal(updates["system.traits.weaponProf.value"], undefined);
+});
+
+test("the payload carries them where the module looks", () => {
+  const payload = payloadFor({
+    armorProficiencies: ["lgt"],
+    weaponProficiencies: ["sim"],
+  });
+
+  assert.deepEqual(payload.proficiencies.armor, ["lgt"]);
+  assert.deepEqual(payload.proficiencies.weapons, ["sim"]);
 });

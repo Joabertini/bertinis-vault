@@ -69,6 +69,16 @@ export type GearProficiencies = {
    * reach Foundry from here.
    */
   speciesWeaponIds: string[];
+  /**
+   * Everything Foundry can check, in one set: `sim`, `mar`, and base-item ids.
+   *
+   * The lines above are for reading — one of them is a whole sentence, because
+   * a rule is not a list. This is for writing, so the sentence is left out and
+   * what it expands to is included.
+   */
+  foundryWeaponIds: string[];
+  /** `lgt`, `med`, `hvy`, `shl`. */
+  foundryArmorIds: string[];
 };
 
 const ARMOR_LABEL: Record<string, string> = {
@@ -332,5 +342,14 @@ export function gearProficienciesFor(
     // need to repeat the battleaxe to a dwarf fighter, but Foundry writes the
     // set from ids and a redundant one costs nothing there.
     speciesWeaponIds,
+    foundryWeaponIds: Array.from(
+      new Set([
+        ...resolved.weaponCategories,
+        ...weaponItemIds,
+        ...clauseWeaponIds,
+        ...speciesWeaponIds,
+      ]),
+    ),
+    foundryArmorIds: armorIds,
   };
 }

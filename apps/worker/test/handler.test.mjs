@@ -46,6 +46,8 @@ function payload(overrides = {}) {
       savingThrows: [],
       expertise: [],
       toolExpertise: [],
+      armor: [],
+      weapons: [],
     },
     feats: [],
     optionalFeatures: [],

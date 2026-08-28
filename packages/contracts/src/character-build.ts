@@ -248,18 +248,34 @@ export const choicesSchema = z.object({
    */
   weaponMasteries: z.array(z.string().min(1)).optional(),
   /**
-   * Weapons a printed rule grants that no category names, as base-item ids.
+   * Every weapon this character is proficient with, in dnd5e's vocabulary.
    *
-   * The 2024 monk and rogue are proficient with "martial weapons that have the
-   * Light property" — a rule, not a list. Foundry has nowhere to store a rule:
-   * `traits.weaponProf.value` is checked with `has(item.type.baseItem)`, so a
-   * sentence there matches nothing and the character swings their scimitar
-   * without their proficiency bonus. The list the rule comes to is worked out
-   * where the weapon table lives and carried here.
+   * The category keys `sim` and `mar`, plus base-item ids for the weapons a
+   * class or species names one by one and for what a printed rule expands to —
+   * the 2024 rogue's "martial weapons that have the Finesse or Light property"
+   * is a rule Foundry has nowhere to store, so the list it comes to is worked
+   * out where the weapon table lives and carried here.
+   *
+   * The whole set, not the leftovers. It used to carry only what no class
+   * document would grant, on the belief that Plutonium's class and race
+   * documents brought the rest. Measured against an imported actor, they do
+   * not: `traits.weaponProf.value` arrived empty and the character swung every
+   * weapon without their proficiency bonus.
    *
    * Optional so every build written before this field stays valid.
    */
   weaponProficiencies: z.array(z.string().min(1)).optional(),
+  /**
+   * Armour this character may wear, as `lgt`, `med`, `hvy`, `shl`.
+   *
+   * The keys `DND5E.armorProficiencies` accepts, not the words the books
+   * print. Wearing armour you are not proficient with means disadvantage on
+   * every Strength and Dexterity roll and no spellcasting, so an empty set here
+   * is not a cosmetic gap.
+   *
+   * Optional so every build written before this field stays valid.
+   */
+  armorProficiencies: z.array(z.string().min(1)).optional(),
   /**
    * The coins the character starts with, counted in copper.
    *
