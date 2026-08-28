@@ -142,13 +142,30 @@ la cola. Medido contra el código, no contra las notas viejas:
 
 | Hueco | Dónde muerde |
 | --- | --- |
-| **Sentidos** | El índice no trae visión en la oscuridad. Hueco de datos: hay que sacarlo de otra fuente o escribirlo a mano |
 | **Rasgos raciales** | Viajan como texto libre en `featuresText`, no como items |
 | **Método de PG** | `combat.ts:52` sólo promedia; el contrato no tiene forma de decir "tiré los dados" |
 | **Edad, altura, peso, aspecto** | No se capturan |
 | **Peso y capacidad de carga** | `GearBag` pesa la mochila; nadie compara contra la capacidad |
 
+> **Dónde vive cada cosa.** Hay dos salidas y no hacen lo mismo.
+> `apps/foundry-module` + `to-payload.ts` es la que usa el jugador: manda
+> referencias `{page, source, hash}` y Plutonium importa los documentos reales,
+> así que la raza y la clase traen sus propios sentidos, velocidad y
+> competencias. `packages/foundry-exporter` arma un actor JSON completo y hoy
+> **no lo llama ningún camino de producto** — sólo sus tests y el script de
+> fixtures. Sigue siendo correcto y verificado, pero un arreglo ahí no le llega
+> a nadie hasta que esa salida se ofrezca.
+
 ### Cerrado desde entonces
+
+- **Sentidos y velocidades.** El renglón decía "hueco de datos, hay que sacarlo
+  de otra fuente". Los datos crudos de Plutonium sí traen `darkvision`,
+  `blindsight` y los modos de movimiento; el build del índice los tiraba.
+  Al medirlo salió algo peor que el hueco: **la subraza pisa a la raza**, y
+  ninguna de las 98 filas traía velocidad ni visión. El elfo de los bosques
+  caminaba 30 en vez de 35 y el drow veía 60 en vez de 120.
+  Del lado de Foundry no hacía falta nada: Plutonium escribe
+  `senses.ranges.darkvision` al importar el documento de raza.
 
 - **Competencias de armadura y arma.** El renglón decía que llegaban a Foundry
   y sólo faltaba mostrarlas. Medido contra `dnd5e.mjs`, no llegaban: el
