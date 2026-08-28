@@ -174,6 +174,8 @@ function freshDraft(rulesVersion: BuilderRulesVersion): BuilderState {
     cantripsText: "",
     spellsText: "",
     spellbookText: "",
+    spellVariantChoices: {},
+    spellAbilityChoices: {},
     featuresText: "",
   };
 }

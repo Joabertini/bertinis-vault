@@ -33,7 +33,7 @@ import ScryPicker from "@/components/forge/ScryPicker";
 import PickList from "@/components/forge/PickList";
 import LiveSheet from "@/components/forge/LiveSheet";
 
-import { ABILITY_IDS, type AbilityId } from "@/lib/abilities";
+import { ABILITY_IDS, abilityLabels, type AbilityId } from "@/lib/abilities";
 import {
   allOptions,
   entryById,
@@ -77,6 +77,7 @@ import {
   toLines,
 } from "@/lib/grants";
 import { formatSpellLine, spellPlan } from "@/lib/spells";
+import { abilityOptionsOf, spellGrantsFor, type SpellGrantSource } from "@/lib/granted-spells";
 import BonusEditor from "@/components/forge/BonusEditor";
 import OriginBonus from "@/components/forge/OriginBonus";
 import Improvements from "@/components/forge/Improvements";
@@ -328,6 +329,32 @@ export default function Forge() {
   const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
   const chosenSpells = useMemo(() => toLines(draft.spellsText), [draft.spellsText]);
   const chosenBook = useMemo(() => toLines(draft.spellbookText), [draft.spellbookText]);
+
+  /*
+   * The named alternatives a species or a subclass offers.
+   *
+   * In 2024 this is the lineage itself and not a spell detail: XPHB ships no
+   * subraces at all, so an elf's Drow, High Elf and Wood Elf exist nowhere in
+   * the data but as the names on its spell blocks. The question is asked in
+   * the chamber that raised it — a species question next to the species —
+   * because a fighter elf never opens the spell chamber and still has one.
+   */
+  const spellGrants = useMemo(() => spellGrantsFor(draft, rulesVersion), [draft, rulesVersion]);
+
+  const chooseVariant = (key: string, name: string) => {
+    patchDraft({ spellVariantChoices: { ...draft.spellVariantChoices, [key]: name } });
+  };
+
+  /*
+   * Which ability the granted spells are cast with.
+   *
+   * Not a flavour question. dnd5e keeps the ability on the spell itself, and
+   * for a fighter or a rogue it is the only thing that gives a species cantrip
+   * a save DC — they have no spellcasting ability of their own.
+   */
+  const chooseSpellAbility = (key: string, ability: string) => {
+    patchDraft({ spellAbilityChoices: { ...draft.spellAbilityChoices, [key]: ability } });
+  };
 
   /* ---------------- growth ---------------- */
 
@@ -1105,6 +1132,15 @@ export default function Forge() {
                     noteFor={(entry) => entry.source}
                   />
 
+                  <VariantChoices
+                    sources={spellGrants.filter((source) => source.chamber === "species")}
+                    chosen={draft.spellVariantChoices}
+                    chosenAbilities={draft.spellAbilityChoices}
+                    accent={VAULT_GOLD}
+                    onPick={chooseVariant}
+                    onPickAbility={chooseSpellAbility}
+                  />
+
                   {/* Only 2014 has these; 2024 folded them into the species. */}
                   {subraces.length > 0 && (
                     <SubChoice
@@ -1180,6 +1216,15 @@ export default function Forge() {
                         </p>
                       </div>
                     ))}
+
+                  <VariantChoices
+                    sources={spellGrants.filter((source) => source.chamber === "class")}
+                    chosen={draft.spellVariantChoices}
+                    chosenAbilities={draft.spellAbilityChoices}
+                    accent={accent}
+                    onPick={chooseVariant}
+                    onPickAbility={chooseSpellAbility}
+                  />
 
                   {draft.classId && (
                     <Multiclass
@@ -1867,6 +1912,74 @@ export default function Forge() {
  * one class offers four sendas and the 2014 cleric offers nineteen — and a
  * grid that is sometimes two tiles and sometimes twenty reads as a mistake.
  */
+/**
+ * The named alternatives something offers, one question each.
+ *
+ * Six subclasses ask this — Circle of the Land's terrain, the Genie's four
+ * patrons — and in 2024 two species do, which is not a spell question at all:
+ * XPHB has no subraces, so an elf's Drow, High Elf and Wood Elf live only as
+ * the names on its spell blocks. Until it is answered the character has none
+ * of them, which is the honest reading: three lineages at once is three
+ * characters.
+ */
+function VariantChoices({
+  sources,
+  chosen,
+  chosenAbilities,
+  accent,
+  onPick,
+  onPickAbility,
+}: {
+  sources: SpellGrantSource[];
+  chosen: Record<string, string>;
+  chosenAbilities: Record<string, string>;
+  accent: string;
+  onPick: (key: string, name: string) => void;
+  onPickAbility: (key: string, ability: string) => void;
+}) {
+  const asking = sources.filter((source) => source.variants.length > 0);
+  const asary = sources.filter((source) => abilityOptionsOf(source).length > 0);
+  if (!asking.length && !asary.length) return null;
+
+  return (
+    <>
+      {asking.map((source) => (
+        <SubChoice
+          key={source.key}
+          title="Linaje"
+          hint={`${source.label} se divide en ${source.variants.length}. Decide que conjuros trae.`}
+          options={source.variants.map((name) => ({
+            id: name,
+            label: name,
+            source: "",
+            shared: false,
+          }))}
+          selectedId={chosen[source.key] ?? ""}
+          onPick={(entry) => onPick(source.key, entry.id)}
+          accent={accent}
+        />
+      ))}
+
+      {asary.map((source) => (
+        <SubChoice
+          key={`${source.key}:ability`}
+          title="Con que lanza esos conjuros"
+          hint={`${source.label} deja elegir. Decide la CD de salvacion y el bonificador de ataque.`}
+          options={abilityOptionsOf(source).map((ability) => ({
+            id: ability,
+            label: abilityLabels[ability as AbilityId] ?? ability,
+            source: "",
+            shared: false,
+          }))}
+          selectedId={chosenAbilities[source.key] ?? ""}
+          onPick={(entry) => onPickAbility(source.key, entry.id)}
+          accent={accent}
+        />
+      ))}
+    </>
+  );
+}
+
 function SubChoice({
   title,
   hint,

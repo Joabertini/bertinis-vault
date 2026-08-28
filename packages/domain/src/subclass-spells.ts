@@ -1,3 +1,5 @@
+import { grantedSpellsAt, type GrantedSpellEntry } from "./granted-spells.js";
+
 /**
  * The spells a subclass adds, and when.
  *
@@ -19,30 +21,14 @@
  * list and baking 300 names into a subclass row would be large and stale.
  */
 
-export type SubclassSpellEntry = {
-  kind: "expanded" | "known" | "prepared" | "innate";
-  /** The class level it arrives at, or null when another gate applies. */
-  level: number | null;
-  /**
-   * The *spell* level it arrives with, for the warlock patrons.
-   *
-   * A warlock gains its patron's expanded spells when its pact slots reach
-   * that level, not at a fixed class level. Reading an "s3" as class level 3
-   * would hand a level 3 warlock third-level spells five levels early.
-   */
-  spellLevel: number | null;
-  names: string[];
-  /** A filter to evaluate, e.g. "level=0|class=Wizard". Null count = all. */
-  filters: { filter: string; count: number | null }[];
-  /**
-   * A choice from a named shortlist rather than from a filter.
-   *
-   * One subclass states its choice this way, and it is a different rule:
-   * there is nothing to evaluate, only a list to pick from.
-   */
-  choices: { from: string[]; count: number }[];
-};
-
+/**
+ * What a subclass grants, which is the same shape everything else grants.
+ *
+ * Kept as a name because that is what the subclass rows call it, and because
+ * the gate a subclass states is a *class* level where a species states the
+ * character's.
+ */
+export type SubclassSpellEntry = GrantedSpellEntry;
 /** What a 5etools spell filter asks for. Absent means "anything". */
 export type SpellFilter = {
   classes: string[];
@@ -127,17 +113,18 @@ export function spellMatchesFilter(spell: FilterableSpell, filter: SpellFilter):
  * worth, and a warlock with no pact slots reaches none of them.
  *
  * An entry gated by neither arrives with the subclass itself.
+ *
+ * Six subclasses state a third gate — Circle of the Land's terrain, the
+ * Genie's four patrons — where the choice is a name and not a threshold.
  */
 export function subclassSpellsAt(
   entries: SubclassSpellEntry[] | null | undefined,
-  { classLevel, pactSlotLevel = 0 }: { classLevel: number; pactSlotLevel?: number },
+  {
+    classLevel,
+    pactSlotLevel = 0,
+    variant = null,
+  }: { classLevel: number; pactSlotLevel?: number; variant?: string | null },
 ): SubclassSpellEntry[] {
-  return (entries ?? []).filter((entry) => {
-    if (entry.spellLevel !== null) return pactSlotLevel >= entry.spellLevel;
-    if (entry.level !== null) return classLevel >= entry.level;
-    return true;
-  });
+  return grantedSpellsAt(entries, { level: classLevel, pactSlotLevel, variant });
 }
 
-/** The kinds that widen what a character may prepare, as opposed to grant. */
-export const PREPARABLE_KINDS: SubclassSpellEntry["kind"][] = ["expanded", "prepared"];

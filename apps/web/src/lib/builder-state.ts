@@ -147,6 +147,26 @@ export type BuilderState = {
    * and no book to keep it in.
    */
   spellbookText: string;
+  /**
+   * Which named alternative was chosen, per thing that offers one.
+   *
+   * Keyed by what asks — `"race"`, `"subclass:wizard"` — rather than by the
+   * answer, so changing species does not carry an elf's lineage onto a
+   * tiefling. In 2024 this is the lineage itself and not a spell detail: XPHB
+   * ships no subraces, so an elf's Drow, High Elf and Wood Elf live nowhere
+   * else in the data.
+   */
+  spellVariantChoices: Record<string, string>;
+  /**
+   * Which ability a grant's spells are cast with, per thing that offers a
+   * choice of one.
+   *
+   * The 2024 species offer Intelligence, Wisdom or Charisma. It is not a
+   * flavour question: dnd5e keeps the ability on the spell itself, and for a
+   * fighter or a rogue it is the only thing that gives a species cantrip a
+   * save DC — they have no spellcasting ability of their own to fall back on.
+   */
+  spellAbilityChoices: Record<string, string>;
   featuresText: string;
   level: number;
   str: number;
@@ -264,6 +284,8 @@ export const initialState: BuilderState = {
   cantripsText: "Mage Hand\nPrestidigitation",
   spellsText: "Nv1: Shield\nNv1: Magic Missile\nNv2: Misty Step",
   spellbookText: "",
+  spellVariantChoices: {},
+  spellAbilityChoices: {},
   featuresText: "Arcane Recovery\nSculpt Spells",
   level: 3,
   extraClasses: [],
@@ -334,6 +356,8 @@ export function coerceBuilderState(value: unknown): BuilderState {
       typeof candidate.spellbookText === "string"
         ? candidate.spellbookText
         : initialState.spellbookText,
+    spellVariantChoices: coerceVariantChoices(candidate.spellVariantChoices),
+    spellAbilityChoices: coerceVariantChoices(candidate.spellAbilityChoices),
     featuresText:
       typeof candidate.featuresText === "string" ? candidate.featuresText : initialState.featuresText,
     level: typeof candidate.level === "number" ? candidate.level : initialState.level,
@@ -494,6 +518,25 @@ function coerceExpertiseChoices(value: unknown): Record<string, ExpertiseAnswer>
       skills: list(candidate.skills),
       tools: list(candidate.tools),
     };
+  }
+
+  return answers;
+}
+
+/**
+ * Variant answers from a stored draft, read defensively.
+ *
+ * A draft is a `localStorage` value the player could have edited by hand, and
+ * an answer that is not a string would reach the grant reader as a shape it
+ * does not check for. Anything that is not a plain answer is dropped: the
+ * question simply reads as unanswered, which the Forge asks again.
+ */
+function coerceVariantChoices(value: unknown): Record<string, string> {
+  if (typeof value !== "object" || value === null) return {};
+
+  const answers: Record<string, string> = {};
+  for (const [key, answer] of Object.entries(value as Record<string, unknown>)) {
+    if (typeof answer === "string" && answer.length > 0) answers[key] = answer;
   }
 
   return answers;

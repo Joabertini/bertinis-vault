@@ -112,7 +112,14 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
     .map((entry) => {
       const ref = tryResolve(resolver, "spell", entry.spellId ?? entry.label, failures, books);
       if (!ref) return null;
-      return entry.preparation ? { ref, preparation: entry.preparation } : { ref };
+      return {
+        ref,
+        ...(entry.preparation ? { preparation: entry.preparation } : {}),
+        ...(entry.method ? { method: entry.method } : {}),
+        ...(entry.uses ? { uses: entry.uses } : {}),
+        ...(entry.ability ? { ability: entry.ability } : {}),
+        ...(entry.grantedBy ? { grantedBy: entry.grantedBy } : {}),
+      };
     })
     .filter((entry) => entry !== null);
 

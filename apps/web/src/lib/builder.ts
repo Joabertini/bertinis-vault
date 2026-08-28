@@ -1,7 +1,9 @@
 import type {
+  AbilityId,
   CharacterBuild,
   CharacterBuildInput,
   ClassEntry,
+  SpellMethod,
   SpellPreparation,
 } from "@bertinis-vault/contracts";
 import { multiclassRequirementProblems, type ExpertiseAnswer } from "@bertinis-vault/domain";
@@ -27,6 +29,7 @@ import { collapseGearLines } from "./gear-lines";
 import { gearProficienciesFor } from "./gear-proficiencies";
 import { speciesProficienciesFor } from "./species";
 import { expertisePlanFor } from "./expertise";
+import { grantedSpellsFor } from "./granted-spells";
 import { foundrySizeFor } from "./table-numbers";
 import { kitCopper, startingKitFor, takenOptions } from "./starting-kit";
 import { masteryPlanFor } from "./weapon-mastery";
@@ -552,7 +555,17 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const languages = languageEntries.map((entry) => `Language: ${entry}`);
   const normalizedWeapon = normalizeEquipmentEntry(state.weaponId);
   const normalizedArmor = normalizeArmorEntry(state);
-  const writtenSpells: Array<{ label: string; level: number; preparation?: SpellPreparation }> = [
+  const writtenSpells: Array<{
+    label: string;
+    /** Null where the source did not say and the catalog has to. */
+    level: number | null;
+    source?: string | null;
+    preparation?: SpellPreparation;
+    method?: SpellMethod;
+    uses?: { max: number; period: string };
+    ability?: AbilityId;
+    grantedBy?: string;
+  }> = [
     ...parseLineList(state.cantripsText).map((entry) => ({ label: entry, level: 0 })),
     ...leveledSpells.map((entry) => ({
       ...parseSpellEntry(entry),
@@ -561,6 +574,25 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
     ...unpreparedSpells.map((entry) => ({
       ...parseSpellEntry(entry),
       preparation: "unprepared" as const,
+    })),
+    /*
+     * What the species, the subspecies and the subclass hand over without
+     * being asked. A tiefling has Thaumaturgy whether or not anyone typed it,
+     * and until now nobody did: 222 entities outside the subclasses grant
+     * spells and not one of them reached a character.
+     */
+    ...grantedSpellsFor(state, rulesVersionOf(state)).map((granted) => ({
+      label: granted.label,
+      // A grant names a spell and never states its level, so this is a
+      // placeholder the catalog corrects below. Leaving it at zero would file
+      // Faerie Fire as a cantrip.
+      level: null,
+      source: granted.source,
+      preparation: granted.preparation,
+      ...(granted.method ? { method: granted.method } : {}),
+      ...(granted.uses ? { uses: granted.uses } : {}),
+      ...(granted.ability ? { ability: granted.ability } : {}),
+      grantedBy: granted.grantedBy,
     })),
   ];
 
@@ -571,10 +603,28 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
     return {
       spellId,
       label: catalogEntry?.label ?? entry.label,
-      level: entry.level,
+      // A written line states its own level; a granted spell does not, and the
+      // catalog is the only thing that knows. First level is the fallback for
+      // a name nothing recognises, which is what a bare line already got.
+      level: entry.level ?? catalogEntry?.level ?? 1,
       ...(entry.preparation ? { preparation: entry.preparation } : {}),
+      ...(entry.method ? { method: entry.method } : {}),
+      ...(entry.uses ? { uses: entry.uses } : {}),
+      ...(entry.ability ? { ability: entry.ability } : {}),
+      ...(entry.grantedBy ? { grantedBy: entry.grantedBy } : {}),
     };
   });
+
+  /*
+   * One item per spell, however many places put it there.
+   *
+   * A tiefling who also typed Thaumaturgy into the picker would otherwise
+   * export it twice and end up with two of them on the sheet. The first entry
+   * wins because the written ones come first: a spell the player chose to
+   * prepare stays prepared, and the grant only adds what was not already
+   * there.
+   */
+  const spells = [...new Map(spellEntries.map((entry) => [entry.spellId, entry])).values()];
   const backgroundGrantedFeatIds = backgroundFeatIdsFor(state);
   // A feat can arrive two ways: chosen at a level in place of an improvement,
   // or granted outside the levels entirely — the variant human's, and in 2024
@@ -712,7 +762,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
               label: abilityLabels[ability] ?? ability,
             })),
           ],
-        spells: spellEntries,
+        spells,
         // Both weapon and armour are optional — a wizard may carry neither.
         // An unguarded entry here normalizes to `itemId: ""`, which the
         // schema rejects outright, so skipping the Gear chamber used to throw

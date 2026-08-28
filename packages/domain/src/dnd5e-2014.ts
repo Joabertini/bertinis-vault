@@ -333,8 +333,21 @@ export function buildSpellPickerState(input: {
   profile: SpellSelectionProfile;
   cantripOptionCount: number;
   spellOptions: SpellChoiceEntry[];
+  /**
+   * The level a warlock's pact slots are worth.
+   *
+   * Pact magic is kept under its own key — `{ pact: 2 }` is two slots, not a
+   * second-level one — so the level is not in the map at all and reading it as
+   * one gives `NaN`. That left every warlock at a maximum spell level of zero
+   * and a picker with nothing in it: cantrips arrived, and not one levelled
+   * spell, at any level of the class.
+   */
+  pactSlotLevel?: number;
 }): SpellPickerState {
-  const maxSpellLevel = getMaxSpellLevelFromSlots(input.slots);
+  const maxSpellLevel = Math.max(
+    getMaxSpellLevelFromSlots(input.slots),
+    input.pactSlotLevel ?? 0,
+  );
   const filteredSpellOptions = input.spellOptions.filter((entry) => entry.level <= maxSpellLevel);
 
   return {

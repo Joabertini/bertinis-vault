@@ -171,6 +171,19 @@ export const spellPreparationSchema = z.enum(["unprepared", "prepared", "always"
 
 export type SpellPreparation = z.infer<typeof spellPreparationSchema>;
 
+/**
+ * How a spell is cast, in dnd5e's own vocabulary.
+ *
+ * The keys of `DND5E.spellcasting`. `spell` is the ordinary way —
+ * prepare it, spend a slot. `innate` is cast without a slot, usually a fixed
+ * number of times a day, which is how a species grants one. `atwill` has no
+ * limit at all, `ritual` only as a ritual, and `pact` spends a warlock's
+ * slots instead.
+ */
+export const spellMethodSchema = z.enum(["spell", "innate", "atwill", "ritual", "pact"]);
+
+export type SpellMethod = z.infer<typeof spellMethodSchema>;
+
 export const normalizedSpellEntrySchema = z.object({
   spellId: canonicalIdSchema.optional(),
   label: canonicalLabelSchema,
@@ -185,6 +198,37 @@ export const normalizedSpellEntrySchema = z.object({
    * spells the wizard has all at once.
    */
   preparation: spellPreparationSchema.optional(),
+  /**
+   * How the spell is cast, in dnd5e's vocabulary.
+   *
+   * The keys of `DND5E.spellcasting`, and the only one that changes
+   * anything here is `innate`: a tiefling's Faerie Fire is cast once a day
+   * without a slot, and importing it as an ordinary spell would charge them a
+   * level 1 slot for something the species gives free. Absent means the
+   * ordinary way, which is what nearly every spell is.
+   */
+  method: spellMethodSchema.optional(),
+  /**
+   * How many times it can be cast before it comes back, and when it does.
+   *
+   * Only innate spells state this. `period` is one of
+   * `DND5E.limitedUsePeriods` — `day` for "1/day", `lr` for "once per
+   * long rest" — spelled as dnd5e spells it so the module writes it through
+   * rather than translating a vocabulary of its own.
+   */
+  uses: z.object({ max: z.number().int().min(1), period: z.string().min(1) }).optional(),
+  /**
+   * The ability it is cast with, where that is not the character's.
+   *
+   * A species grants its spells with an ability of its own — the 2024 elf
+   * casts them with Intelligence, Wisdom or Charisma, chosen by the player.
+   * dnd5e keeps this on the spell itself as `system.ability` and prefers it
+   * over the class's, which is the only way a fighter's species cantrip gets
+   * a save DC at all: a fighter has no spellcasting ability to fall back on.
+   */
+  ability: abilityIdSchema.optional(),
+  /** What granted it, for the player to read on a sheet they did not build. */
+  grantedBy: z.string().min(1).optional(),
 });
 
 export const normalizedEquipmentEntrySchema = z.object({

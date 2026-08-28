@@ -406,10 +406,10 @@ export function spellPoolFor({
   for (const entry of subclassSpellsAt(subclass?.spells, { classLevel, pactSlotLevel })) {
     if (!PREPARABLE_KINDS.includes(entry.kind)) continue;
 
-    const named = new Set(entry.names.map((name) => name.toLowerCase()));
+    const named = new Set(entry.names.map((ref) => ref.name));
     const parsed = entry.filters.map((filter) => parseSpellFilter(filter.filter));
     for (const choice of entry.choices) {
-      for (const name of choice.from) named.add(name.toLowerCase());
+      for (const ref of choice.from) named.add(ref.name);
     }
 
     for (const row of all) {

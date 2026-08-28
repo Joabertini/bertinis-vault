@@ -24,6 +24,7 @@ import {
   equipmentUpdates,
   PREPARATION_STATE,
   preparationState,
+  spellUpdates,
   proficiencyUpdates,
 } from "../src/import.js";
 
@@ -366,4 +367,33 @@ test("the wizard's book is the reason there are three states", () => {
   // an actor means "not there at all".
   assert.notEqual(preparationState("unprepared"), preparationState("prepared"));
   assert.notEqual(preparationState("always"), preparationState("prepared"));
+});
+
+test("a granted spell carries the ability it is cast with", () => {
+  /*
+   * Measured in dnd5e 5.3.3: `SpellData#availableAbilities` returns the
+   * spell's own ability where it has one and falls back to the class's only
+   * otherwise. A fighter has none, so without this a species cantrip on a
+   * fighter has no save DC and no attack bonus at all.
+   */
+  assert.deepEqual(spellUpdates({ ability: "cha" }), { "system.ability": "cha" });
+});
+
+test("an innate spell says how it is cast and how often it comes back", () => {
+  assert.deepEqual(
+    spellUpdates({ preparation: "prepared", method: "innate", uses: { max: 1, period: "day" } }),
+    {
+      "system.prepared": 1,
+      "system.method": "innate",
+      "system.uses.max": "1",
+      "system.uses.spent": 0,
+      "system.uses.recovery": [{ period: "day", type: "recoverAll" }],
+    },
+  );
+});
+
+test("a spell with nothing to say produces no update at all", () => {
+  // An empty update would still be sent, and `updateEmbeddedDocuments` on a
+  // document that needs nothing is a write for its own sake.
+  assert.deepEqual(spellUpdates({}), {});
 });

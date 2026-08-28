@@ -117,5 +117,8 @@ test("a subclass with no spells contributes none rather than failing", () => {
 test("preparing and knowing are different rules, and only two widen the list", () => {
   // An innate spell is cast without preparing it. Folding it into the prepared
   // pool would let the character prepare it a second time, at a slot's cost.
-  assert.deepEqual(PREPARABLE_KINDS, ["expanded", "prepared"]);
+  // One, not two. A domain's "prepared" list is always prepared: the cleric
+  // has it without spending a preparation, so it is handed over rather than
+  // offered — and offering it as well spent a preparation on a free spell.
+  assert.deepEqual(PREPARABLE_KINDS, ["expanded"]);
 });

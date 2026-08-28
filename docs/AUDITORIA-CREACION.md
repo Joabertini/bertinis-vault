@@ -105,11 +105,17 @@ lo primero que se pide en una sesión, y hoy no están en ningún lado.
 | Cuántos trucos y conjuros, por clase y nivel | ✅ **arreglado en esta auditoría** — servía cuentas de 2014 a personajes 2024 |
 | Lista ampliada por subclase | ✅ **arreglado en esta auditoría** — 50 de 135 subclases 2014 y 42 de 68 de 2024 la perdían |
 | Espacios por nivel | ✅ |
+| **El brujo podía elegir conjuros** | ✅ **arreglado en esta auditoría** — sus espacios se llaman `pact` y el techo se leía `NaN`: cero conjuros de nivel, a cualquier nivel |
+| **Caballero Arcano y Pícaro Arcano** | ✅ **arreglado en esta auditoría** — tenían espacios en la ficha y ningún selector |
 | Preparados contra conocidos | ✅ sale de la tabla de la clase |
 | **Libro de conjuros del mago** | ✅ **arreglado en esta auditoría** — el mago preparaba de la lista de clase, sin libro |
 | **Estado de preparación en Foundry** | ✅ **arreglado en esta auditoría** — se escribía en un campo que dnd5e no tiene desde 5.1 |
 | Ritual y concentración | ✅ en la Visión |
-| Lo que conceden dotes, trasfondos, especies y dones | ❌ 350 entidades tienen `additionalSpells`; sólo se leen las 128 subclases |
+| **Lo que concede la especie** | ✅ **arreglado en esta auditoría** — un tiefling llegaba sin Taumaturgia |
+| **El linaje 2024** | ✅ **arreglado en esta auditoría** — XPHB no trae subrazas: el elfo y el tiefling eligen ahí y en ningún otro lado |
+| Lo que conceden dotes, trasfondos y dones | ❌ leídos ya en el índice; falta preguntarlos en la Forja |
+| Arcanum Místico del brujo | ❌ un conjuro de nivel 6 a 9, 1/día, fuera de los espacios de pacto. Niveles 11, 13, 15 y 17 |
+| **Elegir de un filtro concedido** | ❌ el elfo alto elige *un* truco de mago y todavía no hay dónde. Es la misma máquina que necesitan Iniciado Mágico y Lanzador de Rituales, así que va con ellos |
 | Filtros de ritual y de tipo de ataque | ❌ `parseSpellFilter` lee class/level/school/source y descarta en silencio los otros dos |
 
 ## Progresión y dotes
@@ -161,6 +167,82 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **Cada lanzador tiene su regla, y dos no la tenían.** Al pasar los diez
+  lanzadores por el mismo camino que usa la Forja aparecieron dos que no
+  funcionaban.
+  El **brujo** no podía elegir un solo conjuro de nivel, a ningún nivel. La
+  magia de pacto se guarda bajo su propia clave —`{ pact: 2 }` son dos
+  espacios, no uno de nivel 2—, así que el nivel no está en el mapa; leerlo
+  como si estuviera daba `NaN` y el techo quedaba en cero. Los trucos sí
+  llegaban, que es lo que hacía que no se notara.
+  El **Caballero Arcano** y el **Pícaro Arcano** tenían espacios en la ficha y
+  ningún selector: la progresión del guerrero es "ninguna" y eso cortaba el
+  plan antes de empezar. Sus números están impresos en la subclase y en ningún
+  otro lado —un Caballero Arcano de 7 conoce cinco conjuros, que no es ninguna
+  fila de la tabla del guerrero porque el guerrero no tiene tabla—. Ahora se
+  leen de ahí, incluido el renombre de 2024 de "Spells Known" a
+  "Spells Prepared".
+  Lo demás se midió y estaba bien: el paladín 2014 empieza a nivel 2 y el 2024
+  a nivel 1; el artificiero redondea **para abajo** los preparados y **para
+  arriba** los espacios, que son dos redondeos distintos en la misma clase; el
+  explorador conoce cero a nivel 1; ni el paladín ni el explorador reciben
+  trucos en ninguna edición; y el nivel de lanzador multiclase suma un tercio
+  hacia abajo, la mitad hacia abajo y la del artificiero hacia arriba.
+
+- **Lo que concede la especie, y el linaje que lo decide.** 5etools guarda todo
+  esto en un solo campo, `additionalSpells`, y la Forja lo leía sólo en las
+  subclases. Medido: 128 subclases lo tienen, y también **66 dotes, 54 dones,
+  50 subrazas, 30 razas, 15 trasfondos y 7 clases**. Ninguna de esas 222 le
+  llegaba a un personaje. Un tiefling llegaba sin Taumaturgia.
+  Y en 2024 no es un detalle de conjuros: **XPHB no trae ni una subraza**. Los
+  tres linajes del elfo —Drow, High Elf, Wood Elf— y los tres del tiefling
+  existen únicamente como el nombre de estos bloques, así que hasta ahora la
+  elección no se podía hacer. Se pregunta en la cámara que la levanta, no en la
+  de conjuros: un guerrero elfo nunca abre esa cámara y tiene linaje igual.
+  Sin responder no concede nada. Tres linajes a la vez son tres personajes.
+  El nivel que abre la puerta es el **del personaje** y no el de una clase: el
+  tiefling recibe su conjuro de nivel 3 al nivel 3 aunque multiclasee.
+  Un filtro no es una concesión. El elfo alto elige *un* truco de mago; elegirlo
+  por él sería poner en la ficha un conjuro que nadie eligió, así que eso
+  ensancha la lista y no la llena.
+
+- **Los conjuros de dominio se cobraban dos veces.** `prepared` en el dato
+  quiere decir *siempre preparado*: un clérigo del Dominio de la Vida tiene
+  Bendecir y Curar Heridas listos sin gastar una de las preparaciones del día.
+  La Forja los metía en el selector, así que el clérigo pagaba una preparación
+  por un conjuro que el dominio regala. Ahora se conceden con
+  `prepared: 2` y salen del selector.
+  `expanded` es la otra regla y sí es una oferta: un brujo del Archihada
+  *puede* aprender Fuego Feérico, y nada dice que lo haya hecho. Esa sigue
+  ensanchando la lista.
+
+- **Con qué se lanza lo que concede la especie.** Un guerrero elfo no tiene
+  característica de lanzamiento: la clase no le da ninguna, así que su truco de
+  especie llegaba sin CD de salvación y sin bonificador de ataque. Medido en
+  dnd5e 5.3.3: `SpellData#availableAbilities` devuelve la del **conjuro** si la
+  tiene y recién después cae en la de la clase. O sea que el campo existe y es
+  `system.ability`.
+  El dato lo trae de dos formas. El tiefling 2014 la fija —Carisma— y no hay
+  nada que preguntar. Las especies 2024 ofrecen Inteligencia, Sabiduría o
+  Carisma, y eso se pregunta: elegir por el jugador sería fijarle una CD que no
+  eligió. Sin responder el conjuro queda sin característica, que se ve en la
+  ficha en vez de estar mal en la ficha.
+
+- **Innato no es preparado.** Un conjuro que la especie da 1/día se lanza sin
+  gastar espacio. Importarlo como conjuro común le cobraba a un tiefling un
+  espacio de nivel 1 por un Represalia Infernal que las reglas regalan. Ahora
+  viaja con `system.method: "innate"` y sus usos —`system.uses.max` y una
+  `recovery` con el período de dnd5e (`day`, `lr`)—, con los nombres de
+  `DND5E.spellcasting` y `DND5E.limitedUsePeriods` y no con inventados.
+
+- **Tres sufijos, no uno.** Una referencia se escribe `nombre|libro#marca`.
+  El libro importa donde el mismo nombre está impreso dos veces —al tiefling
+  2024 le dan `faerie fire|xphb`, y el conjuro 2014 de ese nombre es otro
+  documento—. `#c` marca truco, que es una nota para un lector y no para
+  nosotros. Y `#2` a `#9` son **el nivel al que se lanza**: el
+  `hellish rebuke#2` del tiefling 2014 se lanza como conjuro de nivel 2, y
+  dejarlo pegado al nombre hacía que ese conjuro no resolviera a nada.
 
 - **El libro del mago.** El mago preparaba directo de la lista de clase, que es
   la clase de otro: un mago prepara **de su libro**, y el libro es lo que la

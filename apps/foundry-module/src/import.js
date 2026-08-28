@@ -392,12 +392,51 @@ async function applyItemState(actor, payload) {
   }
 
   for (const entry of payload.spells ?? []) {
-    if (!entry.preparation) continue;
     const item = findByRef(byName, entry.ref);
-    if (item) updates.push({ _id: item.id, "system.prepared": preparationState(entry.preparation) });
+    if (!item) continue;
+
+    const update = { _id: item.id, ...spellUpdates(entry) };
+    if (Object.keys(update).length > 1) updates.push(update);
   }
 
   if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+}
+
+/**
+ * What has to change on a spell that Plutonium has already imported.
+ *
+ * Three things, and only one of them is about preparation. A species grants
+ * its spells cast `innate`ly, a fixed number of times a day and without a
+ * slot: importing one as an ordinary spell charges a tiefling a level 1 slot
+ * for a Faerie Fire the rules hand over free. `system.method` is where dnd5e
+ * keeps that, and `system.uses` is how many and how they come back.
+ *
+ * dnd5e sets `uses.max` from a formula string rather than a number, which is
+ * why the count is written as one.
+ *
+ * And `system.ability`, where the grant states one of its own. A species
+ * casts its spells with an ability the class may not have at all; measured in
+ * dnd5e 5.3.3, `SpellData#availableAbilities` returns the spell's own where
+ * it has one and falls back to the class's only otherwise.
+ */
+export function spellUpdates(entry) {
+  const updates = {};
+
+  if (entry.preparation) updates["system.prepared"] = preparationState(entry.preparation);
+  if (entry.method) updates["system.method"] = entry.method;
+  // dnd5e prefers the spell's own ability over the class's, which is the only
+  // thing that gives a fighter's species cantrip a save DC: a fighter has no
+  // spellcasting ability to fall back on.
+  if (entry.ability) updates["system.ability"] = entry.ability;
+  if (entry.uses) {
+    updates["system.uses.max"] = String(entry.uses.max);
+    updates["system.uses.spent"] = 0;
+    // `recoverAll` rather than a formula: a spell that comes back once a day
+    // comes back entirely, and dnd5e's own default for a recovery is this.
+    updates["system.uses.recovery"] = [{ period: entry.uses.period, type: "recoverAll" }];
+  }
+
+  return updates;
 }
 
 /**
