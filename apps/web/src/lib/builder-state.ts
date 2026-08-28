@@ -162,6 +162,19 @@ export type BuilderState = {
    */
   abilityBonuses: AbilityBonusMap;
   /**
+   * Whether this character uses Tasha's Customizing Your Origin.
+   *
+   * An **optional** rule, which is why it is a switch and not a behaviour. A
+   * table that does not use it wants the dwarf's +2 Constitution exactly where
+   * the book prints it; one that does wants to move it. The builder used to
+   * apply the rule always and without its restriction, so it offered both a
+   * distribution some tables forbid and shapes the rule itself forbids.
+   *
+   * 2014 only. 2024 moved the increase to the background and made it movable
+   * by default, so there is nothing to opt into.
+   */
+  customOrigin: boolean;
+  /**
    * What the character chose at each level that asked, keyed by that level.
    *
    * Keyed by level rather than held as a list because the question belongs to
@@ -218,6 +231,7 @@ export const initialState: BuilderState = {
   rulesVersion: "5e-2014",
   statMethod: "manual",
   abilityBonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
+  customOrigin: false,
   levelChoices: {},
   optionalFeatureIds: [],
   featAbilityChoices: {},
@@ -332,6 +346,9 @@ export function coerceBuilderState(value: unknown): BuilderState {
     rulesVersion: candidate.rulesVersion === "5e-2024" ? "5e-2024" : "5e-2014",
     statMethod: coerceStatMethod(candidate.statMethod),
     abilityBonuses: coerceAbilityBonuses(candidate.abilityBonuses),
+    // A draft saved before the switch existed kept the printed spread or a
+    // moved one; either way it opened with the rule on, so it stays on.
+    customOrigin: typeof candidate.customOrigin === "boolean" ? candidate.customOrigin : true,
     levelChoices: coerceLevelChoices(candidate.levelChoices, legacy.asiPoints),
     // A draft saved before level-up picks existed simply has none.
     optionalFeatureIds: Array.isArray(candidate.optionalFeatureIds)

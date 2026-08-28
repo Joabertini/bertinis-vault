@@ -22,6 +22,14 @@ export default mergeConfig(
       include: ["test/**/*.test.{ts,tsx}"],
       exclude: [...configDefaults.exclude, "test/pending/**"],
       restoreMocks: true,
+      /*
+       * Cinco segundos alcanzan en CI y no en una maquina cargada.
+       * El recorrido de camaras pinta la Forja entera nueve veces y tarda
+       * ocho segundos de trabajo real; con el default fallaba de a ratos por
+       * la maquina y no por el codigo, que es la clase de test que despues
+       * nadie cree cuando se pone rojo de verdad.
+       */
+      testTimeout: 30000,
     },
   }),
 );
