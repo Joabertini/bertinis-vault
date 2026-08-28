@@ -324,6 +324,39 @@ function rangeOf(spell) {
 }
 
 /** The species ability bonus, flattened. Null when the player chooses it. */
+/**
+ * How far a species moves, in every way it moves.
+ *
+ * 5etools writes one number when walking is all there is, and an object when
+ * there is more. Inside that object `true` is not a boolean: it means "the
+ * same as your walking speed", which is how the Dhampir's climb and the
+ * Aarakocra's fly are printed. Kept as numbers here so nothing downstream has
+ * to know that.
+ *
+ * The walk speed is returned separately because it is the one every character
+ * has and the one the sheet shows first.
+ */
+function speedsOf(entity) {
+  const raw = entity.speed;
+  if (raw === undefined || raw === null) return null;
+  if (typeof raw === "number") return { walk: raw };
+
+  const walk = typeof raw.walk === "number" ? raw.walk : null;
+  const speeds = {};
+  if (walk !== null) speeds.walk = walk;
+
+  for (const mode of ["burrow", "climb", "fly", "swim"]) {
+    const value = raw[mode];
+    if (value === undefined || value === null || value === false) continue;
+    // `true` is "as fast as you walk". With no walk speed to match it there is
+    // no number to write, and a guess would be a speed nobody printed.
+    const resolved = value === true ? walk : typeof value === "number" ? value : null;
+    if (resolved !== null) speeds[mode] = resolved;
+  }
+
+  return Object.keys(speeds).length ? speeds : null;
+}
+
 function abilityOf(entity) {
   const ability = entity.ability?.[0];
   if (!ability) return null;
@@ -1560,6 +1593,13 @@ const BUILDERS = {
       size: r.size?.[0] ?? null,
       ability: abilityOf(r),
       speed: typeof r.speed === "number" ? r.speed : r.speed?.walk ?? null,
+      // Flying, swimming, climbing and burrowing, for the species that do.
+      // The Aarakocra's 50-foot fly speed is the whole point of playing one.
+      speeds: speedsOf(r),
+      // How far this species sees in the dark, in feet. Null for the ones that
+      // see no better than a human, which is most of them.
+      darkvision: r.darkvision ?? null,
+      blindsight: r.blindsight ?? null,
       // Natural armour: the tortle's shell, the lizardfolk's scales. Six
       // species have it and it beats leather for most of them.
       armorClass: context.armorClasses.forRace.get(`${r.name}|${sourceOf(r)}`) ?? [],
@@ -1574,6 +1614,13 @@ const BUILDERS = {
       raceName: r.raceName,
       raceSource: r.raceSource,
       ability: abilityOf(r),
+      // A subrace overrides its race rather than adding to it: the wood elf
+      // walks 35 where the elf walks 30, and the drow sees 120 feet where the
+      // elf sees 60. Null means "whatever the race said", not "nothing".
+      speed: typeof r.speed === "number" ? r.speed : r.speed?.walk ?? null,
+      speeds: speedsOf(r),
+      darkvision: r.darkvision ?? null,
+      blindsight: r.blindsight ?? null,
     })),
 
   background: (entities) =>
