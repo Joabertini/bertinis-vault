@@ -19,6 +19,7 @@
 
 import {
   grantedSpellsAt,
+  mysticArcanaAt,
   parseSpellFilter,
   preparationForKind,
   spellMatchesFilter,
@@ -186,12 +187,32 @@ export function spellGrantsFor(
     state.extraClasses,
     rulesVersion,
   )) {
+    /*
+     * The warlock's Mystic Arcanum, which is not in the data at all: neither
+     * edition's table has a column for it and it is not an `additionalSpells`
+     * block, so the rule is written in the domain package with its citation.
+     *
+     * It has to be a grant rather than a picker entry because no pact slot
+     * ever reaches sixth level — the whole point of the feature is casting
+     * above what the slots allow.
+     */
+    const arcana = mysticArcanaAt(entry.classId, entry.level);
+    if (arcana.length) {
+      sources.push({
+        key: `arcanum:${entry.classId}`,
+        label: "Arcanum Mistico",
+        chamber: "class",
+        entries: arcana,
+        variants: [],
+        level: entry.level,
+        pactSlotLevel: 0,
+      });
+    }
+
     if (!entry.subclassId) continue;
-    const subclass: SubclassRow | null = subclassInfoFor(
-      entry.subclassId,
-      entry.classId,
-      rulesVersion,
-    );
+    const subclass: SubclassRow | null = entry.subclassId
+      ? subclassInfoFor(entry.subclassId, entry.classId, rulesVersion)
+      : null;
     if (!subclass?.spells?.length) continue;
 
     sources.push({
@@ -292,43 +313,39 @@ export function grantedSpellsFor(
       const preparation = preparationForKind(entry.kind);
       if (!preparation) continue;
 
-      const ability = castingAbilityOf(entry, state.spellAbilityChoices[source.key]);
-
       /*
-       * A spell picked to answer this entry's filter is granted on the same
-       * terms as one it named outright. Magic Initiate's chosen cantrip is
-       * cast with the same ability and known just as freely as if the feat had
-       * printed its name.
+       * How the entry is cast, which is the same however the spell was named.
+       *
+       * A spell picked to answer this entry's filter is granted on exactly the
+       * terms the entry states — Magic Initiate's chosen 1st-level spell is
+       * cast once a day, and the warlock's chosen arcanum once per long rest,
+       * as surely as if the feature had printed a name.
        */
+      const terms = {
+        preparation,
+        ...(castingAbilityOf(entry, state.spellAbilityChoices[source.key])
+          ? { ability: castingAbilityOf(entry, state.spellAbilityChoices[source.key])! }
+          : {}),
+        ...(entry.kind === "innate"
+          ? { method: entry.recharge === "will" ? ("atwill" as const) : ("innate" as const) }
+          : {}),
+        ...(entry.uses && entry.recharge && RECOVERY_PERIOD[entry.recharge]
+          ? { uses: { max: entry.uses, period: RECOVERY_PERIOD[entry.recharge]! } }
+          : {}),
+        grantedBy: source.label,
+      };
+
       const answered = [
         ...entry.filters.map((_, at) => `${source.key}:${index}:${at}`),
         ...entry.choices.map((_, at) => `${source.key}:${index}:list${at}`),
       ].flatMap((key) => state.grantedSpellChoices[key] ?? []);
 
       for (const name of answered) {
-        out.push({
-          label: name.toLowerCase(),
-          source: null,
-          preparation,
-          ...(ability ? { ability } : {}),
-          grantedBy: source.label,
-        });
+        out.push({ label: name.toLowerCase(), source: null, ...terms });
       }
 
       for (const ref of entry.names) {
-        out.push({
-          label: ref.name,
-          source: ref.source,
-          preparation,
-          ...(ability ? { ability } : {}),
-          ...(entry.kind === "innate"
-            ? { method: entry.recharge === "will" ? ("atwill" as const) : ("innate" as const) }
-            : {}),
-          ...(entry.uses && entry.recharge && RECOVERY_PERIOD[entry.recharge]
-            ? { uses: { max: entry.uses, period: RECOVERY_PERIOD[entry.recharge]! } }
-            : {}),
-          grantedBy: source.label,
-        });
+        out.push({ label: ref.name, source: ref.source, ...terms });
       }
     }
   }

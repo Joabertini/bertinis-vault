@@ -115,7 +115,7 @@ lo primero que se pide en una sesión, y hoy no están en ningún lado.
 | **El linaje 2024** | ✅ **arreglado en esta auditoría** — XPHB no trae subrazas: el elfo y el tiefling eligen ahí y en ningún otro lado |
 | **Lo que conceden dotes, trasfondos y dones** | ✅ **arreglado en esta auditoría** — las 222 entidades que faltaban |
 | **Elegir de un filtro concedido** | ✅ **arreglado en esta auditoría** — Iniciado Mágico, Lanzador de Rituales, el truco de mago del elfo alto |
-| Arcanum Místico del brujo | ❌ un conjuro de nivel 6 a 9, 1/día, fuera de los espacios de pacto. Niveles 11, 13, 15 y 17 |
+| **Arcanum Místico del brujo** | ✅ **arreglado en esta auditoría** — no está en el dato: ni columna ni `additionalSpells`, sólo prosa |
 | Filtros de ritual y de tipo de ataque | ❌ `parseSpellFilter` lee class/level/school/source y descarta en silencio los otros dos |
 
 ## Progresión y dotes
@@ -167,6 +167,23 @@ la cola. Medido contra el código, no contra las notas viejas:
 > a nadie hasta que esa salida se ofrezca.
 
 ### Cerrado desde entonces
+
+- **Arcanum Místico.** Los espacios de pacto del brujo se detienen en nivel 5,
+  así que los cuatro niveles de conjuro de arriba son inalcanzables por la vía
+  normal. El arcanum es cómo la clase llega, y no es un espacio: una lanzada de
+  cada uno, que vuelve con un descanso largo.
+  No está en el dato. No es un bloque de `additionalSpells` y ninguna de las
+  dos ediciones tiene columna en la tabla — las dos lo dicen en la prosa del
+  rasgo, y con las mismas palabras. Así que se escribe una vez en el paquete de
+  dominio con la cita, como el libro del mago.
+  Se expresa con la misma máquina que todo lo demás: un filtro con cuenta 1,
+  `innate`, un uso por descanso largo. El nivel que lo abre es el **del brujo**
+  y no el del personaje: un guerrero 11 / brujo 5 no tiene ninguno.
+
+- **Los términos son de la entrada, no de cómo se nombró el conjuro.** Lo
+  encontró el test del arcanum: un conjuro elegido para contestar un filtro
+  llegaba como conjuro común. El conjuro de nivel 1 de Iniciado Mágico, que se
+  lanza una vez por día, habría costado un espacio que el personaje no tiene.
 
 - **Un filtro es una pregunta, no una concesión.** "Dos trucos a tu elección de
   la lista de esa clase" no se puede resolver por el jugador: elegir sería
