@@ -379,3 +379,98 @@ describe("a filter is a question, and the answer is a grant", () => {
     expect(cantrip?.options).toContain("Fire Bolt");
   });
 });
+
+describe("the warlock's Mystic Arcanum", () => {
+  const warlock = (level: number, over: Record<string, unknown> = {}) =>
+    draft({ rulesVersion: "5e-2014" as const, classId: "warlock", level, ...over });
+
+  test("a warlock of 11 is asked for a 6th-level spell no slot of theirs reaches", () => {
+    /*
+     * Pact slots stop at fifth level, so the top four spell levels are
+     * unreachable by the usual route. This is how the class reaches them, and
+     * it is why the arcanum cannot ride on the ordinary picker.
+     */
+    const question = grantedSpellChoicesFor(warlock(11), "2014").find(
+      (found) => found.label === "Arcanum Mistico",
+    );
+
+    expect(question?.count).toBe(1);
+    expect(question?.chamber).toBe("class");
+    expect(question?.options).toContain("Circle of Death");
+    // Sixth level and only sixth: the seventh arrives at 13.
+    expect(question?.options).not.toContain("Finger of Death");
+  });
+
+  test("one more at 13, 15 and 17", () => {
+    const count = (level: number) =>
+      grantedSpellChoicesFor(warlock(level), "2014").filter(
+        (found) => found.label === "Arcanum Mistico",
+      ).length;
+
+    expect(count(10)).toBe(0);
+    expect(count(11)).toBe(1);
+    expect(count(13)).toBe(2);
+    expect(count(17)).toBe(4);
+  });
+
+  test("the chosen spell is cast innately, once per long rest", () => {
+    const [question] = grantedSpellChoicesFor(warlock(11), "2014").filter(
+      (found) => found.label === "Arcanum Mistico",
+    );
+    const answered = warlock(11, {
+      grantedSpellChoices: { [question!.key]: ["Circle of Death"] },
+    });
+
+    const arcanum = grantedSpellsFor(answered, "2014").find(
+      (entry) => entry.label === "circle of death",
+    );
+
+    expect(arcanum?.method).toBe("innate");
+    expect(arcanum?.uses).toEqual({ max: 1, period: "lr" });
+    expect(arcanum?.grantedBy).toBe("Arcanum Mistico");
+  });
+
+  test("the level counted is the warlock's own, not the character's", () => {
+    // A fighter 11 / warlock 5 has no arcanum; a warlock 11 / fighter 5 has one.
+    const dip = warlock(5, {
+      extraClasses: [{ classId: "fighter", subclassId: "", level: 6 }],
+    });
+
+    expect(
+      grantedSpellChoicesFor(dip, "2014").filter((found) => found.label === "Arcanum Mistico"),
+    ).toEqual([]);
+  });
+
+  test("no other class has one", () => {
+    const sorcerer = draft({ rulesVersion: "5e-2014", classId: "sorcerer", level: 20 });
+
+    expect(
+      grantedSpellChoicesFor(sorcerer, "2014").filter((f) => f.label === "Arcanum Mistico"),
+    ).toEqual([]);
+  });
+});
+
+test("Iniciado Magico's 1st-level spell is cast once a day, chosen or not", () => {
+  /*
+   * The terms belong to the entry and not to how the spell was named. Before
+   * this, a spell picked to answer a filter arrived as an ordinary spell: the
+   * feat's once-a-day 1st-level spell would have cost a slot the character
+   * does not have.
+   */
+  const state = draft({
+    rulesVersion: "5e-2014",
+    featId: slugOf("Magic Initiate"),
+    sourceBooks: { [`feat:${slugOf("Magic Initiate")}`]: "PHB" },
+    spellVariantChoices: { [`feat:${slugOf("Magic Initiate")}`]: "Wizard Spells" },
+  });
+
+  const levelled = grantedSpellChoicesFor(state, "2014").find((found) => found.count === 1);
+  const answered = { ...state, grantedSpellChoices: { [levelled!.key]: ["Magic Missile"] } };
+
+  const spell = grantedSpellsFor(answered, "2014").find((entry) => entry.label === "magic missile");
+
+  expect(spell?.method).toBe("innate");
+  expect(spell?.uses).toEqual({ max: 1, period: "day" });
+  // And with Intelligence, which the feat fixes for the wizard list.
+  expect(spell?.ability).toBe("int");
+});
