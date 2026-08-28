@@ -1018,6 +1018,60 @@ function abilityMinimumsOf(raw, where) {
  * your choice"). A sentence is a choice, and the thing being chosen from is
  * the tool category the tag names — which the tool table already resolves.
  */
+/**
+ * What a class hands a character who takes it *first*.
+ *
+ * Three different things share one list in 5etools, and telling them apart is
+ * the whole job: "simple" is a category, "{@item rapier|phb|rapiers}" is one
+ * named weapon, and "Martial weapons that have the Light property" is a rule
+ * the 2024 books print in place of a list. A category can be a checkbox on a
+ * sheet, a named weapon can be one too, and a rule can only be a sentence.
+ *
+ * The armour half is the same shape as the multiclass block: a string, or an
+ * object carrying prose the table does not need — the druid's refusal of metal
+ * is a caveat, not a proficiency.
+ */
+function startingProficienciesOf(entity) {
+  const starting = entity.startingProficiencies;
+  if (!starting) return null;
+
+  const weapons = [];
+  const weaponItems = [];
+  const weaponClauses = [];
+
+  for (const raw of starting.weapons ?? []) {
+    if (raw && typeof raw === "object") {
+      // The artificer's firearms are an optional rule the DM turns on, not a
+      // proficiency the class grants. Reading it as one would arm every
+      // artificer at a table that never allowed guns.
+      if (raw.optional) continue;
+      if (raw.proficiency) weapons.push(String(raw.proficiency));
+      continue;
+    }
+
+    const text = stripTags(String(raw)).trim();
+    if (text === "simple" || text === "martial") {
+      weapons.push(text);
+      continue;
+    }
+    // A sentence about weapons is a rule. A weapon's name never says the word.
+    if (/weapon|propert/i.test(text)) {
+      weaponClauses.push(text);
+      continue;
+    }
+    weaponItems.push(text);
+  }
+
+  return {
+    armor: (starting.armor ?? [])
+      .map((entry) => (typeof entry === "string" ? entry : (entry.proficiency ?? "")))
+      .filter(Boolean),
+    weapons,
+    weaponItems,
+    weaponClauses,
+  };
+}
+
 function multiclassGrantsOf(entity) {
   const gained = entity.multiclassing?.proficienciesGained;
   if (!gained) return null;
@@ -1469,6 +1523,12 @@ const BUILDERS = {
       damageType: i.dmgType ?? null,
       versatileDamage: i.dmg2 ?? null,
       properties: (i.property ?? []).map((entry) => String(entry).split("|")[0]),
+      // Simple or martial. `type` says melee or ranged and nothing about the
+      // category, so without this there is no way to answer "which martial
+      // weapons have the Light property" — which is how the 2024 monk's and
+      // rogue's proficiencies are printed. Null for everything that is not a
+      // weapon, which is most of the table.
+      weaponCategory: i.weaponCategory ?? null,
       mastery: masteryOf(i)?.names ?? null,
       // The one property that costs no slot. Only the Psychic Blade has one,
       // and it is a rule rather than a footnote.
@@ -1553,6 +1613,9 @@ const BUILDERS = {
         // What a character needs before they may take a level in this class.
         // Empty for the handful of classes that state none.
         multiclassRequirements: multiclassRequirementsOf(c),
+        // The armour and weapons a first class grants. Split three ways
+        // because the books write them three ways.
+        startingProficiencies: startingProficienciesOf(c),
         // What a second class grants, which is not what a first one does.
         multiclassGrants: multiclassGrantsOf(c),
         // The A-or-B list, structured. The prose form says the same thing and

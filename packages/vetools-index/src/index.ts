@@ -57,6 +57,14 @@ export type ItemRow = IndexRow & {
   versatileDamage: string | null;
   /** Property codes, e.g. "V", "F", "2H". */
   properties: string[];
+  /**
+   * "simple" or "martial". Null for everything that is not a weapon.
+   *
+   * `type` says melee or ranged and nothing about the category, so this is the
+   * only way to answer "which martial weapons have the Light property" — the
+   * shape the 2024 monk's and rogue's proficiencies are printed in.
+   */
+  weaponCategory: string | null;
   /** 2024 weapon mastery names, e.g. "Topple". Null for everything else. */
   mastery: string[] | null;
   /**
@@ -342,6 +350,24 @@ export type ExpertiseGrant = {
 };
 
 /** What a second class hands over, which is less than a first one does. */
+/**
+ * The armour and weapons a class grants a character who takes it first.
+ *
+ * Weapons come in three shapes because the books write them three ways, and
+ * flattening them would lose the difference: a category is a checkbox, a named
+ * weapon is a checkbox, and a rule is a sentence nothing can check.
+ */
+export type StartingProficiencies = {
+  /** "light", "medium", "heavy", "shield". */
+  armor: string[];
+  /** Whole categories: "simple", "martial". */
+  weapons: string[];
+  /** Named weapons — the 2014 druid's ten, the bard's four. */
+  weaponItems: string[];
+  /** "Martial weapons that have the Light property", and its like. */
+  weaponClauses: string[];
+};
+
 export type MulticlassGrants = {
   /** "light", "medium", "shield". */
   armor: string[];
@@ -471,6 +497,13 @@ export type ClassRow = IndexRow & {
    * editions state it in different fields and reach the same answer.
    */
   multiclassRequirements: Record<string, number>[];
+  /**
+   * The armour and weapons this class grants as a character's first.
+   *
+   * Null for the entries that state none at all — the sidekicks and the
+   * unfinished prestige class.
+   */
+  startingProficiencies: StartingProficiencies | null;
   /**
    * What taking a level in this class grants someone who already has one.
    *

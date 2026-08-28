@@ -16,9 +16,11 @@ import { motion } from "framer-motion";
 
 import type { ResolvedDraft } from "@/lib/derive";
 import type { BuilderState } from "@/lib/builder";
-import { characterLevelFor, classingLabelFor } from "@/lib/builder";
+import { characterLevelFor, classesFor, classingLabelFor } from "@/lib/builder";
 import Checks from "@/components/forge/Checks";
+import GearProficienciesPanel from "@/components/forge/GearProficiencies";
 import { savingThrowChecksFor, skillChecksFor } from "@/lib/checks";
+import { gearProficienciesFor } from "@/lib/gear-proficiencies";
 import { coinLabel } from "@/lib/starting-kit";
 import { ABILITY_IDS, abilityLabels } from "@/lib/abilities";
 import { entryById, hitDieFor } from "@/lib/catalog";
@@ -67,6 +69,20 @@ export default function LiveSheet({
   );
 
   const hitDie = state.classId ? hitDieFor(state.classId, rulesVersion) : null;
+
+  // Armour and weapons, from the class alone. Deliberately not waiting for the
+  // draft to derive: a player choosing between a rapier and a greatsword is
+  // choosing before they have a background, and this is the answer.
+  const classEntries = state.classId ? classesFor(state) : [];
+  const gearProficiencies = classEntries.length
+    ? gearProficienciesFor(classEntries, rulesVersion)
+    : null;
+  const classLabels = Object.fromEntries(
+    classEntries.map((entry) => [
+      entry.classId,
+      entryById("class", rulesVersion, entry.classId)?.label ?? entry.classId,
+    ]),
+  );
   const subclass = entryById("subclass", rulesVersion, state.subclassId, state.sourceBooks[`subclass:${state.subclassId}`]);
   const background = entryById(
     "background",
@@ -234,6 +250,17 @@ export default function LiveSheet({
         <Checks
           saves={savingThrowChecksFor(snapshot)}
           skills={skillChecksFor(snapshot)}
+          accent={accent}
+        />
+      )}
+
+      {/* What the character may wear and swing. Until now the only place this
+          existed was inside the Foundry exporter, so a player who never
+          exported never learned it. */}
+      {gearProficiencies && (
+        <GearProficienciesPanel
+          proficiencies={gearProficiencies}
+          classLabels={classLabels}
           accent={accent}
         />
       )}

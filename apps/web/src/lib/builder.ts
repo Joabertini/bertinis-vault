@@ -19,6 +19,7 @@ export { abilityLabels, coerceBuilderState, initialState };
 
 import { characterLevel, classEntriesFor, classingLabel, coerceExtraClasses } from "./classing";
 import { collapseGearLines } from "./gear-lines";
+import { gearProficienciesFor } from "./gear-proficiencies";
 import { expertisePlanFor } from "./expertise";
 import { foundrySizeFor } from "./table-numbers";
 import { kitCopper, startingKitFor, takenOptions } from "./starting-kit";
@@ -496,6 +497,12 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const masteryIds = state.weaponMasteryIds
     .filter((id) => masteryPlan.options.some((option) => option.id === id))
     .slice(0, masteryPlan.count);
+  // The weapons a printed rule names, worked out here because this is where
+  // the weapon table is. The exporter has no way to expand a sentence, and
+  // Foundry has no way to store one.
+  const clauseWeaponIds = state.classId
+    ? gearProficienciesFor(classesFor(state), rulesVersionOf(state)).clauseWeaponIds
+    : [];
   const proficiencies = uniqueEntries(parseLineList(state.proficienciesText));
   const languageEntries = uniqueEntries(parseLineList(state.languagesText));
   const languages = languageEntries.map((entry) => `Language: ${entry}`);
@@ -615,6 +622,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       // mastery from a class the player has since left would export a
       // proficiency the sheet never granted.
       ...(masteryIds.length > 0 ? { weaponMasteries: masteryIds } : {}),
+      ...(clauseWeaponIds.length > 0 ? { weaponProficiencies: clauseWeaponIds } : {}),
       ...(startingCopper > 0 ? { startingCopper } : {}),
       normalized: {
           feats: chosenFeatIds,
