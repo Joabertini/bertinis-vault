@@ -250,3 +250,108 @@ export const PROFICIENCY_IMPORT_MODE = {
   primary: 1,
   none: 2,
 };
+
+/**
+ * The features a class, subclass or species grants, as items.
+ *
+ * A dnd5e class item carries what it grants as `ItemGrant` advancements, and an
+ * advancement applies while a character is *levelled through* it. A direct
+ * import levels nothing, so none of them fire: two imported actors came back
+ * with an empty Features tab and no `ItemGrant` on the class item at all. So
+ * the features are built here and put on the actor alongside their parent.
+ *
+ * `DataLoader` returns a class with its `classFeatures` already dereferenced
+ * into whole objects grouped by level, which is why this is a filter and a
+ * conversion rather than a second fetch.
+ */
+export async function featureDocumentsFor({ api, entity, prop, level }) {
+  const featureProp = FEATURE_PROP_BY_PROP[prop];
+  if (!featureProp) return [];
+
+  const features = collectFeatures({ entity, prop, level });
+  if (!features.length) return [];
+
+  const importer = await api.importer.pGetImporter({ prop: featureProp });
+  const converter = importer?.constructor?._DataConverter;
+  if (!converter?.pGetDocumentJson) return [];
+
+  const documents = [];
+
+  for (const feature of features) {
+    try {
+      const document = await converter.pGetDocumentJson(feature, { isActorItem: true });
+      if (!document) continue;
+      const data = typeof document.toObject === "function" ? document.toObject() : document;
+      documents.push({ name: feature.name, document: data });
+    } catch (error) {
+      // One feature that will not convert is not worth the other twelve, nor
+      // the character. It is reported and the rest continue.
+      documents.push({ name: feature.name, error: error?.message ?? String(error) });
+    }
+  }
+
+  return documents;
+}
+
+/** Which importer builds the features of each kind of document. */
+const FEATURE_PROP_BY_PROP = {
+  class: "classFeature",
+  subclass: "subclassFeature",
+  race: "raceFeature",
+  subrace: "raceFeature",
+};
+
+/**
+ * Features that are scaffolding rather than abilities.
+ *
+ * `Charactermancer_Util.getImportableFeatures` drops the same ones, for the
+ * same reason: none of them is a thing a player does at the table. "Arcane
+ * Tradition feature" is a pointer to the subclass feature imported right below
+ * it, and "Ability Score Improvement" is a choice the builder already made — it
+ * is on the sheet as the scores themselves.
+ */
+const SCAFFOLDING_FEATURE_NAMES = new Set([
+  "ability score improvement",
+  "proficiency versatility",
+]);
+
+function isRealFeature(feature) {
+  if (!feature?.name) return false;
+  if (feature.gainSubclassFeature && !feature.gainSubclassFeatureHasContent) return false;
+  return !SCAFFOLDING_FEATURE_NAMES.has(feature.name.toLowerCase());
+}
+
+/**
+ * The feature objects to convert, filtered to what the character has.
+ *
+ * A class holds its features as a list of lists — the shape `DataLoader` leaves
+ * once it has dereferenced the `Name|Class||Level` strings the raw data uses.
+ * The two shapes differ: a class's list is dense and indexed by level minus
+ * one, a subclass's is only the levels that grant something, in order. Neither
+ * index is read; each feature carries its own `level`, which is what is
+ * filtered on.
+ *
+ * A species has no levels. Its traits are the named entries of its own entry
+ * list, which `getFauxRaceFeature` turns into the shape the raceFeature
+ * converter expects — the same call 5etools makes to build its species-feature
+ * page.
+ */
+function collectFeatures({ entity, prop, level }) {
+  if (prop === "race" || prop === "subrace") {
+    const dataUtil = globalThis.DataUtil?.raceFeature;
+    if (!dataUtil?.getFauxRaceFeature) return [];
+
+    return (entity.entries ?? [])
+      .filter((entry) => entry?.name && entry.entries)
+      .map((entry) => dataUtil.getFauxRaceFeature(entity, entry))
+      .filter(isRealFeature);
+  }
+
+  const grouped = prop === "class" ? entity.classFeatures : entity.subclassFeatures;
+  if (!Array.isArray(grouped)) return [];
+
+  return grouped
+    .flat()
+    .filter(isRealFeature)
+    .filter((feature) => (feature.level ?? 1) <= (level ?? 1));
+}
