@@ -32,13 +32,55 @@ export const generationMethodSchema = z.enum([
   "manual",
 ]);
 
+/**
+ * Who the character is, beyond their numbers.
+ *
+ * The four personality lines are the ones the books print on the sheet. The
+ * rest is what the character *looks like*, and every one of these is a field
+ * `dnd5e` already has under `system.details` — `age`, `height`, `weight`,
+ * `eyes`, `hair`, `skin`, `gender`, `faith`, `appearance`. They travel under
+ * those names so they land in the boxes the sheet already draws, rather than
+ * as prose inside the biography blob where no box reads them.
+ *
+ * All of them strings, including the age and the weight: dnd5e stores them as
+ * strings, and a table that writes "Adult" or "about 200 lb." is writing what
+ * the sheet asks for. Turning them into numbers would refuse an answer the
+ * game accepts.
+ *
+ * Every one optional, because a character with none of them filled in is a
+ * character — and because every build written before these fields stays valid.
+ */
 export const biographySchema = z.object({
   trait: canonicalLabelSchema.optional(),
   ideal: canonicalLabelSchema.optional(),
   bond: canonicalLabelSchema.optional(),
   flaw: canonicalLabelSchema.optional(),
   notes: canonicalLabelSchema.optional(),
+  age: canonicalLabelSchema.optional(),
+  height: canonicalLabelSchema.optional(),
+  weight: canonicalLabelSchema.optional(),
+  eyes: canonicalLabelSchema.optional(),
+  hair: canonicalLabelSchema.optional(),
+  skin: canonicalLabelSchema.optional(),
+  gender: canonicalLabelSchema.optional(),
+  faith: canonicalLabelSchema.optional(),
+  appearance: canonicalLabelSchema.optional(),
 });
+
+/** The `system.details` keys that are a plain string the player writes. */
+export const APPEARANCE_FIELDS = [
+  "age",
+  "height",
+  "weight",
+  "eyes",
+  "hair",
+  "skin",
+  "gender",
+  "faith",
+  "appearance",
+] as const;
+
+export type AppearanceField = (typeof APPEARANCE_FIELDS)[number];
 
 export const characterMetaSchema = z.object({
   rulesVersion: rulesVersionSchema,
