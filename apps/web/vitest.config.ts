@@ -30,6 +30,15 @@ export default mergeConfig(
        * nadie cree cuando se pone rojo de verdad.
        */
       testTimeout: 30000,
+      /*
+       * Dos procesos, no uno por nucleo.
+       * Con el default, vitest levanta ocho forks a la vez sobre un disco que
+       * da 18 IOPS y siete de ellos no llegan a arrancar: "Failed to start
+       * forks worker", con las 264 pruebas en verde igual. Un verify que se
+       * pone rojo por la maquina ensena a ignorarlo, que es exactamente lo que
+       * no queremos el dia que se ponga rojo de verdad.
+       */
+      maxWorkers: 2,
     },
   }),
 );
