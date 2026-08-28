@@ -22,6 +22,7 @@
 
 import type { AbilityId } from "@bertinis-vault/contracts";
 
+import { hitDiceByLevel, hitPointsFor, type HitPointMethod } from "./combat.js";
 import { spellSlotsFullCasterTable, warlockPactSlotCountByLevel, warlockPactSlotLevelByClassLevel } from "./dnd5e-2014.js";
 
 /**
@@ -132,12 +133,14 @@ export function multiclassSpellSlots(entries: MulticlassEntry[]): MulticlassSlot
 }
 
 /**
- * The hit points a multiclass character has, at the builder's fixed average.
+ * The hit points a multiclass character has.
  *
- * The first class level is its die at maximum; every level after that is the
- * die's average rounded up, which is the number the rules offer instead of
- * rolling. Which die depends on the class the level was taken in, so a
- * barbarian 1 / wizard 4 is 12 + three d6 levels + one d6 level, not five d12s.
+ * Which die a level uses depends on the class it was taken in, so a barbarian
+ * 1 / wizard 4 is a d12 at maximum plus four d6 levels, not five d12s. That
+ * list of dice is the only thing this adds to the rule, which lives in
+ * `hitPointsFor` — including the choice between rolling and taking the
+ * average, and the fact that only the character's very first level is a
+ * maximum.
  *
  * The first class in the list is the one taken at level 1. That is a fact
  * about the character rather than something to derive, and it is also what
@@ -147,26 +150,21 @@ export function multiclassHitPoints({
   entries,
   constitutionModifier,
   defaultHitDie = 8,
+  method,
+  rolls,
 }: {
   entries: MulticlassEntry[];
   constitutionModifier: number;
   defaultHitDie?: number;
+  method?: HitPointMethod;
+  rolls?: Array<number | null | undefined>;
 }): number {
-  let total = 0;
-  let isFirstLevel = true;
-
-  for (const entry of entries) {
-    const die = entry.hitDie ?? defaultHitDie;
-
-    for (let taken = 0; taken < entry.level; taken += 1) {
-      total += (isFirstLevel ? die : Math.floor(die / 2) + 1) + constitutionModifier;
-      isFirstLevel = false;
-    }
-  }
-
-  // A character with a bad Constitution still has hit points; the rules floor
-  // a level's contribution at 1 rather than letting a total go negative.
-  return Math.max(total, entries.reduce((sum, entry) => sum + entry.level, 0));
+  return hitPointsFor({
+    dice: hitDiceByLevel(entries, defaultHitDie),
+    constitutionModifier,
+    ...(method ? { method } : {}),
+    ...(rolls ? { rolls } : {}),
+  });
 }
 
 /**

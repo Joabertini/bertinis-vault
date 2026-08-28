@@ -50,6 +50,8 @@ type ActorItem = {
     level?: number;
     type?: { value?: string };
     source?: { rules?: string };
+    hd?: { denomination?: string };
+    advancement?: unknown;
   };
 };
 
@@ -84,6 +86,56 @@ function editionOf(items: ActorItem[]): RulesVersion {
     else if (rules === "2014") older++;
   }
   return newer > older ? "2024" : "2014";
+}
+
+/* ---- hit points ---- */
+/**
+ * What each level actually gave, out of Foundry's own record of it.
+ *
+ * dnd5e keeps it on the class item as a `HitPoints` advancement: `"1": "max"`
+ * and then one entry per level, either a number that was rolled or `"max"`
+ * where the table hands out maximums. It is the only place the answer exists —
+ * measured on a real paladin 5, `system.attributes.hp.max` is **null** and only
+ * `hp.value` carries the current total.
+ *
+ * Without this an imported character was rebuilt at the average, which for that
+ * paladin is 44 against the 60 on their sheet: sixteen hit points lost on the
+ * way in, silently, on a character the player had already played.
+ *
+ * The level keys are the class's levels, and this reads a single class — which
+ * is what the rest of this importer reads — so they are the character's levels
+ * too. `"max"` is stored as the die's maximum: not a roll, but what happened.
+ */
+function hitPointsFromClass(classItem: ActorItem | undefined): {
+  hpMethod: "average" | "rolled";
+  hpRolls: Record<string, number>;
+} {
+  const system = classItem?.system as
+    | { hd?: { denomination?: string }; advancement?: unknown }
+    | undefined;
+  const advancement = Array.isArray(system?.advancement)
+    ? system.advancement
+    : Object.values((system?.advancement ?? {}) as Record<string, unknown>);
+  const entry = advancement.find(
+    (row): row is { type?: string; value?: Record<string, unknown> } =>
+      typeof row === "object" && row !== null && (row as { type?: string }).type === "HitPoints",
+  );
+  if (!entry?.value) return { hpMethod: "average", hpRolls: {} };
+
+  const die = Number(String(system?.hd?.denomination ?? "").replace(/^d/i, ""));
+  const hpRolls: Record<string, number> = {};
+
+  for (const [level, gained] of Object.entries(entry.value)) {
+    // Level 1 is the die at maximum in both editions and is not a roll.
+    if (level === "1") continue;
+    const roll = gained === "max" ? die : Number(gained);
+    if (!Number.isInteger(roll) || roll < 1 || roll > 12) continue;
+    hpRolls[level] = roll;
+  }
+
+  return Object.keys(hpRolls).length
+    ? { hpMethod: "rolled", hpRolls }
+    : { hpMethod: "average", hpRolls: {} };
 }
 
 export function readFoundryActor(raw: unknown): ActorImport | null {
@@ -291,6 +343,13 @@ export function readFoundryActor(raw: unknown): ActorImport | null {
     featId: freeFeatId,
     level,
     statMethod: "roll",
+
+    /*
+     * The hit points each level gave, out of the class item. A character
+     * levelled at a table that rolls comes back with the numbers they rolled
+     * rather than with an average nobody at that table ever used.
+     */
+    ...hitPointsFromClass(classItem),
 
     /*
      * Foundry's scores are already final — species bonus, improvements and

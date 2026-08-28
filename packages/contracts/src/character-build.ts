@@ -398,6 +398,29 @@ export const derivedSchema = z.object({
  */
 export const sourceBooksSchema = z.record(z.string(), z.string());
 
+/**
+ * Where the character's hit points came from.
+ *
+ * Both editions print two ways on every class page — roll the hit die, or take
+ * the fixed number the class states — and a table picks one. Without this the
+ * builder could only ever say "average", so every character at a table that
+ * rolls had a wrong number on their sheet and no way to correct it.
+ *
+ * `rolls` is one entry per level after the first, in the order the levels were
+ * taken: `rolls[0]` is level 2. A null, or an entry off the end of the list,
+ * is a level nobody has rolled yet and takes the average — which is what a
+ * sheet filled in as far as level 4 means at level 7.
+ *
+ * The first level is not here because it is not a choice: it is the die at
+ * maximum in both editions.
+ *
+ * Optional so every build written before this field stays valid.
+ */
+export const hitPointsSchema = z.object({
+  method: z.enum(["average", "rolled"]).default("average"),
+  rolls: z.array(z.number().int().min(1).max(12).nullable()).default([]),
+});
+
 export const characterBuildInputSchema = z.object({
   meta: characterMetaSchema,
   identity: identitySchema,
@@ -407,6 +430,7 @@ export const characterBuildInputSchema = z.object({
   abilities: abilitiesSchema,
   choices: choicesSchema,
   sourceBooks: sourceBooksSchema.optional(),
+  hitPoints: hitPointsSchema.optional(),
 });
 
 export const characterBuildSchema = characterBuildInputSchema.extend({
@@ -422,6 +446,7 @@ export type ClassEntry = z.infer<typeof classEntrySchema>;
 export type Classing = z.infer<typeof classingSchema>;
 export type Background = z.infer<typeof backgroundSchema>;
 export type Abilities = z.infer<typeof abilitiesSchema>;
+export type HitPointsInput = z.infer<typeof hitPointsSchema>;
 export type NormalizedProficiencyKind = z.infer<typeof normalizedProficiencyKindSchema>;
 export type NormalizedProficiencyEntry = z.infer<typeof normalizedProficiencyEntrySchema>;
 export type NormalizedSpellEntry = z.infer<typeof normalizedSpellEntrySchema>;
