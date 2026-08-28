@@ -19,6 +19,7 @@
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder";
+import { speciesProficienciesFor } from "./species";
 import {
   multiclassGrantsFor,
   proficiencyGrantForBackground,
@@ -30,8 +31,23 @@ export type SkillOffer = {
   count: number;
   /** True when the list is "any skill", not a named set. */
   isOpen: boolean;
+  /**
+   * Whether this offer buys a skill or a tool.
+   *
+   * They land in the same list on the sheet — being proficient with thieves
+   * tools is one fact — but they are not the same question, and a picker
+   * labelled "Competencias" over three artisan tools reads as a bug.
+   */
+  kind: "skill" | "tool";
+  /**
+   * The kind of tool, where the data names a kind and not a list.
+   *
+   * Absent unless the offer is one of those. There is no list to pick from,
+   * so the sheet says what is owed and the player writes what they took.
+   */
+  scope?: "artisan" | "instrument";
   /** Who is asking, for the label. */
-  from: "clase" | "trasfondo" | "multiclase";
+  from: "clase" | "trasfondo" | "multiclase" | "especie";
 };
 
 export type ProficiencyPlan = {
@@ -80,11 +96,53 @@ export function proficiencyPlan(
 
   const offers: SkillOffer[] = [];
 
+  /*
+   * What the species hands over, and what it asks.
+   *
+   * 77 of the 258 species rows grant a skill and 14 grant a tool, and until
+   * this block existed not one of them reached a character: the half-orc's
+   * Intimidation, the elf's choice of three, the 2024 human's free skill and
+   * the 2014 dwarf's three artisan's tools were all read off the page and
+   * typed in by hand, or lost.
+   */
+  const species = state.raceId
+    ? speciesProficienciesFor(state.raceId, state.subraceId, rulesVersion, state.sourceBooks)
+    : null;
+
+  for (const choice of species?.skills.choices ?? []) {
+    if (choice.count <= 0) continue;
+    offers.push({
+      // "Any skill" has no list in the data, and the whole skill list is what
+      // it means rather than a guess at what it means.
+      options: choice.scope === "any" ? [...ALL_SKILLS] : choice.options,
+      count: choice.count,
+      isOpen: choice.scope === "any",
+      kind: "skill",
+      from: "especie",
+    });
+  }
+
+  for (const choice of species?.tools.choices ?? []) {
+    if (choice.count <= 0) continue;
+    offers.push({
+      options: choice.options,
+      count: choice.count,
+      // A kind of tool with no list — "any artisan's tools". Written down
+      // rather than picked, because the list is not in the data and making
+      // one up here would be making up a rule.
+      isOpen: choice.scope !== null,
+      ...(choice.scope && choice.scope !== "any" ? { scope: choice.scope } : {}),
+      kind: "tool",
+      from: "especie",
+    });
+  }
+
   if (classChoice && classChoice.count > 0) {
     offers.push({
       options: classChoice.isOpen ? [...ALL_SKILLS] : classChoice.options,
       count: classChoice.count,
       isOpen: Boolean(classChoice.isOpen),
+      kind: "skill",
       from: "clase",
     });
   }
@@ -96,6 +154,7 @@ export function proficiencyPlan(
         : background.skillChoice.options,
       count: background.skillChoice.count,
       isOpen: Boolean(background.skillChoice.isOpen),
+      kind: "skill",
       from: "trasfondo",
     });
   }
@@ -124,13 +183,18 @@ export function proficiencyPlan(
       options: multiclass.skillChoice.options,
       count: multiclass.skillChoice.count,
       isOpen: false,
+      kind: "skill",
       from: "multiclase",
     });
   }
 
   return {
-    grantedSkills: dedupe(background.skillsGranted),
-    grantedTools: dedupe([...background.toolsGranted, ...multiclass.tools]),
+    grantedSkills: dedupe([...(species?.skills.granted ?? []), ...background.skillsGranted]),
+    grantedTools: dedupe([
+      ...(species?.tools.granted ?? []),
+      ...background.toolsGranted,
+      ...multiclass.tools,
+    ]),
     offers,
   };
 }
@@ -174,10 +238,19 @@ export function assignOffers(offers: SkillOffer[], chosen: string[]): string[][]
   return assigned;
 }
 
-/** Whether every offer has been paid in full. */
+/**
+ * Whether every offer has been paid in full.
+ *
+ * An offer that names a kind and not a list is left out. There is nothing to
+ * pick from, so nothing can ever be assigned to it, and counting it would hold
+ * the player in the chamber forever over a question with no answer on screen —
+ * the sheet says what the species owes and the player writes it in by hand.
+ */
 export function offersAreSatisfied(offers: SkillOffer[], chosen: string[]): boolean {
   const assigned = assignOffers(offers, chosen);
-  return offers.every((offer, at) => (assigned[at] as string[]).length >= offer.count);
+  return offers.every(
+    (offer, at) => offer.scope !== undefined || (assigned[at] as string[]).length >= offer.count,
+  );
 }
 
 function dedupe(values: string[]): string[] {

@@ -261,13 +261,38 @@ export default function Forge() {
 
   const profPlan = useMemo(() => proficiencyPlan(draft, rulesVersion), [draft, rulesVersion]);
   const langPlan = useMemo(
-    () => languagePlanFor(draft.raceId, draft.subraceId, draft.backgroundId, rulesVersion),
-    [draft.raceId, draft.subraceId, draft.backgroundId, rulesVersion],
+    () =>
+      languagePlanFor(
+        draft.raceId,
+        draft.subraceId,
+        draft.backgroundId,
+        rulesVersion,
+        draft.sourceBooks,
+      ),
+    [draft.raceId, draft.subraceId, draft.backgroundId, rulesVersion, draft.sourceBooks],
   );
 
   const granted = useMemo(
     () => [...profPlan.grantedSkills, ...profPlan.grantedTools],
     [profPlan],
+  );
+
+  /*
+   * The species half of that, so the panel can name who gave what. Read from
+   * the same source the plan reads, rather than by subtracting one list from
+   * another and hoping the two stay in step.
+   */
+  const speciesGrant = useMemo(
+    () => (draft.raceId ? speciesProficienciesFor(draft.raceId, draft.subraceId, rulesVersion, draft.sourceBooks) : null),
+    [draft.raceId, draft.subraceId, rulesVersion],
+  );
+  const speciesGranted = useMemo(
+    () => [...(speciesGrant?.skills.granted ?? []), ...(speciesGrant?.tools.granted ?? [])],
+    [speciesGrant],
+  );
+  const otherGranted = useMemo(
+    () => granted.filter((entry) => !speciesGranted.includes(entry)),
+    [granted, speciesGranted],
   );
 
   const chosenProficiencies = useMemo(
@@ -306,9 +331,9 @@ export default function Forge() {
   };
 
   /**
-   * Keep what the background grants present in the text.
+   * Keep what the species and the background grant present in the text.
    *
-   * Changing background changes what is granted, and the previous grants would
+   * Changing either changes what is granted, and the previous grants would
    * otherwise linger as if the player had chosen them.
    */
   useEffect(() => {
@@ -582,16 +607,12 @@ export default function Forge() {
     const classEntries = draft.classId ? classesFor(draft) : [];
     if (!classEntries.length) return null;
 
-    const speciesGrant = draft.raceId
-      ? speciesProficienciesFor(draft.raceId, draft.subraceId, rulesVersion)
-      : null;
-
     return gearProficienciesFor(
       classEntries,
       rulesVersion,
       speciesGrant ? { id: draft.raceId, ...speciesGrant } : null,
     );
-  }, [draft, rulesVersion]);
+  }, [draft, rulesVersion, speciesGrant]);
 
   const weaponWarning = weaponFacts && weaponWarningFor(weaponFacts.row, gearProficiencies);
   const armorWarning = armorFacts && armorWarningFor(armorFacts.row, gearProficiencies);
@@ -1560,13 +1581,22 @@ export default function Forge() {
               {/* ---------- Gifts ---------- */}
               {chamberKey === "gifts" && (
                 <div className="space-y-10">
-                  {granted.length > 0 && (
+                  {/*
+                    * Who gave it, and not one heap.
+                    *
+                    * The species and the background both hand things over, and
+                    * they are not interchangeable: a player checking whether
+                    * they wrote their elf's Perception down needs to see it
+                    * under the elf. Naming the background over a species grant
+                    * was worse than saying nothing.
+                    */}
+                  {speciesGranted.length > 0 && (
                     <div>
                       <p className={LABEL_MB4}>
-                        Otorgado por {selectedBackground?.label ?? "el trasfondo"}
+                        Otorgado por {selectedRace?.label ?? "la especie"}
                       </p>
                       <div className="flex flex-wrap gap-2">
-                        {granted.map((entry) => (
+                        {speciesGranted.map((entry) => (
                           <span
                             key={entry}
                             className="border px-3 py-1.5 font-body text-sm"
@@ -1579,34 +1609,76 @@ export default function Forge() {
                     </div>
                   )}
 
-                  {profPlan.offers.map((offer, index) => (
-                    <PickList
-                      key={`${offer.from}-${index}`}
-                      title={`Competencias — ${offer.from}`}
-                      hint={
-                        offer.isOpen
-                          ? "Cualquier habilidad."
-                          : `Elegi ${offer.count} de esta lista.`
-                      }
-                      options={offer.options}
-                      // Only what this offer paid for. Handed the whole list,
-                      // each picker counted the other's picks against its own
-                      // limit and locked itself before a single choice was
-                      // made in it.
-                      selected={offerPicks[index] ?? []}
-                      // Already proficient, from the background or from
-                      // another offer: shown as had, never as choosable twice.
-                      locked={[
-                        ...granted,
-                        ...chosenProficiencies.filter(
-                          (entry) => !(offerPicks[index] ?? []).includes(entry),
-                        ),
-                      ]}
-                      limit={offer.count}
-                      accent={accent}
-                      onToggle={toggleProficiency}
-                    />
-                  ))}
+                  {otherGranted.length > 0 && (
+                    <div>
+                      <p className={LABEL_MB4}>
+                        Otorgado por {selectedBackground?.label ?? "el trasfondo"}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {otherGranted.map((entry) => (
+                          <span
+                            key={entry}
+                            className="border px-3 py-1.5 font-body text-sm"
+                            style={{ borderColor: `${accent}55`, color: accent }}
+                          >
+                            {entry}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {profPlan.offers.map((offer, index) =>
+                    /*
+                     * An offer the data states as a kind — "any artisan's
+                     * tools", "any musical instrument" — has no list to pick
+                     * from, and inventing one would be inventing a rule. It is
+                     * said instead, next to the field the player writes in.
+                     */
+                    offer.scope ? (
+                      <div key={`${offer.from}-${index}`}>
+                        <p className={LABEL_MB2}>Herramientas — {offer.from}</p>
+                        <p className="font-body italic text-bone/45">
+                          Tu especie te da {offer.count}{" "}
+                          {offer.scope === "artisan"
+                            ? offer.count === 1
+                              ? "herramienta de artesano"
+                              : "herramientas de artesano"
+                            : offer.count === 1
+                              ? "instrumento musical"
+                              : "instrumentos musicales"}{" "}
+                          a eleccion. Escribi cual abajo.
+                        </p>
+                      </div>
+                    ) : (
+                      <PickList
+                        key={`${offer.from}-${index}`}
+                        title={`${offer.kind === "tool" ? "Herramientas" : "Competencias"} — ${offer.from}`}
+                        hint={
+                          offer.isOpen
+                            ? "Cualquier habilidad."
+                            : `Elegi ${offer.count} de esta lista.`
+                        }
+                        options={offer.options}
+                        // Only what this offer paid for. Handed the whole list,
+                        // each picker counted the other's picks against its own
+                        // limit and locked itself before a single choice was
+                        // made in it.
+                        selected={offerPicks[index] ?? []}
+                        // Already proficient, from the background or from
+                        // another offer: shown as had, never as choosable twice.
+                        locked={[
+                          ...granted,
+                          ...chosenProficiencies.filter(
+                            (entry) => !(offerPicks[index] ?? []).includes(entry),
+                          ),
+                        ]}
+                        limit={offer.count}
+                        accent={accent}
+                        onToggle={toggleProficiency}
+                      />
+                    ),
+                  )}
 
                   {profPlan.offers.length === 0 && (
                     <p className="font-body italic text-bone/35">

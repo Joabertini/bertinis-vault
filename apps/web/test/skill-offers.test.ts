@@ -19,6 +19,7 @@ const wizard: SkillOffer = {
   options: ["Arcana", "History", "Insight", "Investigation", "Medicine", "Religion"],
   count: 2,
   isOpen: false,
+  kind: "skill",
   from: "clase",
 };
 
@@ -26,6 +27,7 @@ const background: SkillOffer = {
   options: ["Athletics", "Intimidation", "Survival", "Insight"],
   count: 2,
   isOpen: false,
+  kind: "skill",
   from: "trasfondo",
 };
 
