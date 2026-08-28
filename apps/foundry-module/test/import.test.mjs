@@ -7,6 +7,7 @@ import {
   appearanceDetails,
   biographyHtml,
   derivedUpdates,
+  equipmentUpdates,
   findByRef,
   orderedRefs,
   proficiencyUpdates,
@@ -421,5 +422,14 @@ test("no mastery writes no key, so a sheet that has one keeps it", () => {
   assert.equal(
     "system.traits.weaponProf.mastery.value" in proficiencyUpdates(payload()),
     false,
+  );
+});
+
+test("an attuned item reaches the sheet attuned", () => {
+  // Foundry counts the actor's attunement from the items that say they are
+  // attuned. A Cloak of Protection with the box unticked grants nothing.
+  assert.deepEqual(
+    equipmentUpdates({ ref: ref("item", "items.html", "Cloak of Protection", "DMG"), quantity: 1, attuned: true }),
+    { "system.quantity": 1, "system.attuned": true },
   );
 });

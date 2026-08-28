@@ -137,7 +137,15 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
       // armour that is not equipped leaves the character at AC 10 whatever the
       // builder showed them, so what a character carries to fight with says so.
       const worn = isWorn(entry.category);
-      return { ref, quantity: entry.quantity, ...(worn ? { equipped: true } : {}) };
+      // Attunement is a per-item state on the character's copy, and dnd5e keeps
+      // it there: `system.attuned`. An unattuned Cloak of Protection is a cloak
+      // that grants nothing, which is the same as not importing it.
+      return {
+        ref,
+        quantity: entry.quantity,
+        ...(worn ? { equipped: true } : {}),
+        ...(entry.attuned ? { attuned: true } : {}),
+      };
     })
     .filter((entry): entry is NonNullable<typeof entry> => entry !== null);
 

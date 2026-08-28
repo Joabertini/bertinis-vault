@@ -148,6 +148,15 @@ export type BuilderState = {
   weaponId: string;
   armorId: string;
   extraEquipmentText: string;
+  /**
+   * The items the character is attuned to, by the id the bag stores.
+   *
+   * Three at a time in both editions, and which three is the player's answer:
+   * a character who owns four attunement items owns four and uses three. Kept
+   * as a list rather than derived from the bag, because "the first three
+   * magical things you picked up" is not a rule.
+   */
+  attunedItemIds: string[];
   proficienciesText: string;
   languagesText: string;
   cantripsText: string;
@@ -321,6 +330,7 @@ export const initialState: BuilderState = {
   // and nothing that reads it treated it as "none" either.
   armorId: "",
   extraEquipmentText: "spellbook\ncomponent-pouch",
+  attunedItemIds: [],
   proficienciesText: "Arcana\nInvestigation\nThieves' Tools",
   languagesText: "Common\nElvish\nDraconic",
   cantripsText: "Mage Hand\nPrestidigitation",
@@ -422,6 +432,13 @@ export function coerceBuilderState(value: unknown): BuilderState {
     // weapon, so it reads on the page as a mastery the player cannot remove.
     weaponMasteryIds: Array.isArray(candidate.weaponMasteryIds)
       ? candidate.weaponMasteryIds.filter(
+          (entry): entry is string => typeof entry === "string" && entry.length > 0,
+        )
+      : [],
+    // Same reason: a blank id matches no item and reads on the page as an
+    // attunement the player cannot undo.
+    attunedItemIds: Array.isArray(candidate.attunedItemIds)
+      ? candidate.attunedItemIds.filter(
           (entry): entry is string => typeof entry === "string" && entry.length > 0,
         )
       : [],

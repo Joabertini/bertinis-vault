@@ -1,5 +1,6 @@
 export * from "./abilities.js";
 export * from "./armor-class.js";
+export * from "./attunement.js";
 export * from "./ability-bonuses.js";
 export * from "./choices.js";
 export * from "./carrying.js";

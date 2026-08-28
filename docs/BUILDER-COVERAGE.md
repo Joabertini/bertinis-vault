@@ -212,7 +212,7 @@ carries the mark.
 | **The gold alternative** | done. 2014's "or 4d4 × 10 gp", which replaces every list at once |
 | Quantities | done. Two daggers is one line of two, and an item granted twice adds up |
 | The background's own list | done. It stacks when the class says it does, which is a flag on the class |
-| Attunement, and its three slots | missing |
+| Attunement, and its three slots | done, 2026-08-28. Asked wherever the bag holds something that requires it, marked per item as `system.attuned`, and a fourth is named rather than refused |
 | Carrying capacity | done, 2026-08-27. The bag, the weapon and the armour on one scale, against Strength × 15, with the variant thresholds marked and never enforced |
 | **Currency** | done, 2026-08-28. Counted in copper, split into gold, silver and copper, and written to `system.currency` by both export routes |
 
@@ -386,9 +386,11 @@ Three things are open and are written down rather than left to be rediscovered:
 | ~~Weapon mastery is not written to the actor~~ | Done 2026-08-28. Measured against the installed `dnd5e` 5.3.3: `system.traits.weaponProf.mastery.value`, a set tested with `.has(baseItem)`. The actor JSON export already wrote it; the payload had no field, so a fighter sent by code arrived with the feature and nothing chosen for it |
 | The four manual Foundry validation scenarios | Blocked on the user, not on code: they need a live world and a signature. `release:ready` fails until then, which is correct |
 
-And what remains in this document as genuinely unbuilt is polish rather than
-rules: attunement and its three slots. Carrying capacity landed 2026-08-27 and
-the identity fields — appearance, age, height, weight, deity — on 2026-08-28.
+Nothing in this document is unbuilt any more. The last three were polish
+rather than rules and all three landed: carrying capacity on 2026-08-27, the
+identity fields on 2026-08-28, and attunement with its three slots the same
+day. What gets added here from now on comes from playing a character through
+the builder, not from reading it against the books.
 
 Every slice of this run followed the same method, and it is the part worth
 carrying forward: **find the structured source before writing any table**. Every
