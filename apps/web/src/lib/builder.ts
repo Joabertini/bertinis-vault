@@ -200,6 +200,22 @@ function normalizeArmorEntry(state: BuilderState) {
   };
 }
 
+/**
+ * Mark a normalized entry as attuned, if the player said so.
+ *
+ * Matched on both ids because they are not always the same one: the draft
+ * stores what the player picked and the catalog answers with its own slug, so
+ * a set built from the draft would miss every item the catalog renamed.
+ */
+function withAttunement<T extends { itemId?: string }>(
+  entry: T,
+  draftId: string,
+  attuned: Set<string>,
+): T {
+  const marked = attuned.has(draftId) || (entry.itemId ? attuned.has(entry.itemId) : false);
+  return marked ? { ...entry, attuned: true } : entry;
+}
+
 function normalizeEquipmentEntry(entry: string, quantity = 1) {
   const weaponEntry = getWeaponCatalogEntry(entry);
   if (weaponEntry) {
@@ -461,6 +477,12 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const features = parseLineList(state.featuresText);
   const extraEquipment = collapseGearLines(parseLineList(state.extraEquipmentText));
   /*
+   * The three the player named. An id here that is no longer carried marks
+   * nothing, which is the right outcome: attunement to an item you put down is
+   * not attunement.
+   */
+  const attuned = new Set(state.attunedItemIds);
+  /*
    * The coins the kit is worth, from the rows the character actually took.
    *
    * A player who takes the money instead of the gear picks an option with no
@@ -708,6 +730,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         : {}),
       ...(armorProficiencyIds.length > 0 ? { armorProficiencies: armorProficiencyIds } : {}),
       ...(startingCopper > 0 ? { startingCopper } : {}),
+      ...(state.attunedItemIds.length > 0 ? { attunedItems: state.attunedItemIds } : {}),
       normalized: {
           feats: chosenFeatIds,
           proficiencies: [
@@ -752,9 +775,11 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         // schema rejects outright, so skipping the Gear chamber used to throw
         // rather than produce an unarmed character.
         equipment: [
-            ...(state.weaponId ? [normalizedWeapon] : []),
-            ...(state.armorId ? [normalizedArmor] : []),
-            ...extraEquipment.map((entry) => normalizeEquipmentEntry(entry.id, entry.quantity)),
+            ...(state.weaponId ? [withAttunement(normalizedWeapon, state.weaponId, attuned)] : []),
+            ...(state.armorId ? [withAttunement(normalizedArmor, state.armorId, attuned)] : []),
+            ...extraEquipment.map((entry) =>
+              withAttunement(normalizeEquipmentEntry(entry.id, entry.quantity), entry.id, attuned),
+            ),
         ],
           features: features.map((entry) => normalizeFeatureEntry(entry, state)),
           /*

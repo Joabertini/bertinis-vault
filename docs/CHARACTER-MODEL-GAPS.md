@@ -525,74 +525,27 @@ open question and belongs to the user's machine.
 
 ## Still missing, in the order worth doing
 
-The audit above reorders this. A, B, C and F are wrong answers rather than
-absent ones, and a wrong answer is worse than a gap: nothing about the sheet
-tells the player it happened. They come first, and A comes before all of them,
-because until the two ends of the pipe agree, fixing anything upstream of the
-payload changes nothing the player sees.
+**Nothing on this list is still missing.** It is kept as written because the
+order it argued for turned out to be the right one, and because the reasoning
+is worth more than the checklist: a wrong answer is worse than a gap, since
+nothing about the sheet tells the player it happened.
 
-### ~~0. Make the payload and the module agree, and test that they do~~
+What became of each, in the order they were done:
 
-Done. Findings A and F, and the conformance test that catches their kind.
-Still open from A: whether the builder's armour class should overwrite
-Foundry's, which is a decision rather than a bug.
+| Then | Now |
+| --- | --- |
+| 0. Make the payload and the module agree | Done. Findings A and F, plus the conformance test that catches their kind. Still open from A, and still a decision rather than a bug: whether the builder's armour class should overwrite Foundry's |
+| 1. Multiclassing | Done. The rules, the interface, the 13-in-the-ability requirement, and the short proficiency list a second class actually grants |
+| 2. Expertise | Done. The grants come off 5etools' Foundry companion data rather than a table written here, and skills and tools both reach the actor doubled |
+| 3. Spell text, and prepared versus known | Half done, and deliberately. `spellCountLabel` reads each class's own table, so a 2024 caster sees prepared and a 2014 bard sees known. Spell text is still out: the full text of every spell is roughly twenty times the size of the index, and Plutonium already delivers it inside Foundry |
+| 4. 2024 rules, beyond which books are legal | Done where the editions differ: the origin ability increase, the origin feat, weapon mastery, and the prepared and cantrip counts. The spell slot tables are shared, which is correct rather than outstanding |
+| 5. Equipment as choices | Done, with the gold alternative, quantities, the background's own list, currency, carrying capacity and attunement |
+| 6. Nothing serves optimisation | Partly, and only the honest half. Feat prerequisites and the multiclass requirement are read from the data and **reported, not enforced** — a table that allows one is making a ruling. Nothing compares options or estimates damage, and that is still last on purpose |
 
-### 1. Multiclassing
-
-`classing.classes` is an array and has always been one. The builder writes a
-single entry, and the UI offers one class.
-
-Needs the 13-in-the-ability requirement, per-class levels, the multiclass
-spell slot table (which is not the single-class one), and the rule that only
-the first class grants saving throws and starting equipment.
-
-### 2. Expertise
-
-Absent everywhere. Rogues and bards double proficiency on chosen skills at
-level 1 and again later, and the payload has no way to say so.
-
-Needs `ImportPayload.proficiencies.expertise` filled — the field is already
-there — plus the per-class rules for how many picks and when.
-
-### 3. Spell text, and prepared versus known
-
-The picker offers the class's whole list now. Two things are still missing: the
-index carries no spell description, because the full text of every spell is
-roughly twenty times the size of the index; and the count label does not
-distinguish prepared from known, so a wizard sees the size of their spellbook
-rather than the number of spells they prepare.
-
-The class rows now carry `preparedSpells` (`"<$level$> + <$int_mod$>"`), which
-is the formula that answers the second half.
-
-### 4. 2024 rules, beyond which books are legal
-
-The ruleset switch chooses sources. The rules themselves are still 2014:
-backgrounds do not grant the 2024 ability bonus or origin feat, and the derived
-numbers come from the 2014 tables.
-
-`packages/domain/src/dnd5e-2014.ts` is named honestly. A 2024 sibling is the
-real work here. The data for it is in place — weapon mastery is on the item
-rows, and the class rows carry each edition's progression.
-
-### 5. Equipment as choices
-
-Starting equipment is a fixed list per class. The PHB offers an A-or-B choice
-and a gold alternative, and neither exists. Quantities are always one.
-Attunement and carrying capacity are not modelled.
-
-### 6. Nothing serves optimisation
-
-No prerequisite is checked — not feat prerequisites, not the 13-in-the-ability
-requirement for multiclassing. Nothing compares options, estimates damage, or
-flags a wasted bonus.
-
-The preflight (`packages/domain/src/preflight.ts`) validates the shape of the
-data, not the legality of the character: that an id exists in a catalog, not
-that the build is one the rules allow.
-
-This is last on purpose. It is worth building on top of a model that is
-complete, and worth nothing on top of one that is not.
+Finding H — hit points from class and Constitution only — was closed on
+2026-08-28 by asking the question instead: the method is the player's, per
+level, with each level's own die. Tough and Dwarven Toughness are still not
+modelled, and are the remaining half of it.
 
 ## The index, and what it now carries
 

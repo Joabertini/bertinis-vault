@@ -288,6 +288,14 @@ export const normalizedEquipmentEntrySchema = z.object({
   armorFormula: z.string().min(1).optional(),
   /** Whether this counts as a shield, which stacks its bonus on the formula. */
   grantsShieldBonus: z.boolean().optional(),
+  /**
+   * Whether the character is attuned to it.
+   *
+   * Only ever true for the items that ask — a rope needs no attunement — and
+   * only for the three the player named. Absent means the same as false, which
+   * is what every item that is not magical means.
+   */
+  attuned: z.boolean().optional(),
 });
 
 export const normalizedFeatureEntrySchema = z.object({
@@ -358,6 +366,17 @@ export const choicesSchema = z.object({
    * Optional so every build written before this field stays valid.
    */
   weaponMasteries: z.array(z.string().min(1)).optional(),
+  /**
+   * The items the character is attuned to, by the id the bag stores.
+   *
+   * Three at a time is the sentence both editions print, and which three is a
+   * choice: a character who owns four attunement items owns four and uses
+   * three. Kept as the player's answer rather than derived from the bag,
+   * because "the first three magical things you picked up" is not a rule.
+   *
+   * Optional so every build written before this field stays valid.
+   */
+  attunedItems: z.array(z.string().min(1)).optional(),
   /**
    * Every weapon this character is proficient with, in dnd5e's vocabulary.
    *

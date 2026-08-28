@@ -3,7 +3,7 @@
   "label": "Wizard spellbook",
   "preflight": {
     "ok": true,
-    "generatedAt": "2026-08-28T01:53:44.339Z",
+    "generatedAt": "2026-08-28T19:11:40.997Z",
     "target": {
       "rulesVersion": "5e-2014",
       "sourceProfile": "vault-v1",
@@ -661,7 +661,7 @@
     },
     "items": [
       {
-        "_id": "3CRVRMlZWbneoK5C",
+        "_id": "ACEjkRwgCJRctb6m",
         "name": "wizard",
         "type": "class",
         "img": "systems/dnd5e/icons/svg/items/class.svg",
@@ -721,7 +721,7 @@
         }
       },
       {
-        "_id": "J79dhCHbT3FkS9Cg",
+        "_id": "m0FGQWp17nhRUkOQ",
         "name": "Magic Initiate",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -779,7 +779,7 @@
         }
       },
       {
-        "_id": "m9w1ipd2GVW1oeYH",
+        "_id": "jqW4vmQKGCtFBOZH",
         "name": "Alert",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -837,7 +837,7 @@
         }
       },
       {
-        "_id": "YQxjf1mCPmGrBkqd",
+        "_id": "c5RGNBV6gk9qnlss",
         "name": "Arcane Recovery",
         "type": "feat",
         "img": "icons/svg/item-bag.svg",
@@ -895,7 +895,7 @@
         }
       },
       {
-        "_id": "NDyjbbDvajN5iCVJ",
+        "_id": "F1YyRnin1QruwlGI",
         "name": "Mage Hand",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1051,7 +1051,7 @@
         }
       },
       {
-        "_id": "vYIGiLmMaM8ngKqk",
+        "_id": "cF4Ap9P6xNPmr3P0",
         "name": "Shield",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1207,7 +1207,7 @@
         }
       },
       {
-        "_id": "Y2q5SRQvzv9gDCsT",
+        "_id": "9HjgkkgJq4DYCtwz",
         "name": "Fireball",
         "type": "spell",
         "img": "icons/svg/book.svg",
@@ -1364,7 +1364,7 @@
         }
       },
       {
-        "_id": "NjoUHibFacnuhhU4",
+        "_id": "HULTs9c9DysMeJXv",
         "name": "quarterstaff",
         "type": "weapon",
         "img": "icons/svg/sword.svg",
@@ -1563,7 +1563,7 @@
         }
       },
       {
-        "_id": "MbutGxWWXphbglP1",
+        "_id": "178Y8YZXmVZ628vU",
         "name": "Spellbook",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",
@@ -1614,7 +1614,7 @@
         }
       },
       {
-        "_id": "NqOFqLLc8G3JFVz6",
+        "_id": "KRUiZzICLsT3rEz6",
         "name": "Component Pouch",
         "type": "loot",
         "img": "icons/svg/item-bag.svg",

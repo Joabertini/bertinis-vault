@@ -113,7 +113,9 @@ import { useVault, releasedByPick, rulesVersionOf, type Pace } from "@/lib/vault
 import { chamberOrder, firstChamber, type ChamberKey } from "@/lib/chambers";
 import { hitPointLevelsFor } from "@/lib/hit-points";
 import { carriedLoadFor } from "@/lib/carrying";
+import { attunementStateFor } from "@/lib/attunement";
 import { foundrySizeFor } from "@/lib/table-numbers";
+import Attunement from "@/components/forge/Attunement";
 import CarryingLoad from "@/components/forge/CarryingLoad";
 import HitPoints from "@/components/forge/HitPoints";
 import { DIVIDER, DIVIDER_TIGHT, HEADING, ITEM_META, ITEM_NAME, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
@@ -538,6 +540,17 @@ export default function Forge() {
     [draft, rulesVersion, snapshot],
   );
 
+  /**
+   * What the character is attuned to, out of what asks for it.
+   *
+   * Nothing for most characters: the panel renders nothing at all when the bag
+   * holds no magic item, rather than reading "0 de 3" on every level one.
+   */
+  const attunement = useMemo(
+    () => attunementStateFor(draft, rulesVersion),
+    [draft, rulesVersion],
+  );
+
   /* ---------------- gear ---------------- */
 
   /**
@@ -935,6 +948,14 @@ export default function Forge() {
       ? draft.weaponMasteryIds.filter((entry) => entry !== id)
       : [...draft.weaponMasteryIds, id];
     patchDraft({ weaponMasteryIds: chosen });
+  };
+
+  /** Attuning to a fourth is allowed and named, not refused. */
+  const toggleAttunement = (id: string) => {
+    const attuned = draft.attunedItemIds.includes(id)
+      ? draft.attunedItemIds.filter((entry) => entry !== id)
+      : [...draft.attunedItemIds, id];
+    patchDraft({ attunedItemIds: attuned });
   };
 
   const removeClass = (index: number) => {
@@ -1920,6 +1941,16 @@ export default function Forge() {
                     <div className={DIVIDER}>
                       <CarryingLoad load={load} accent={accent} />
                     </div>
+
+                    {attunement.offered.length > 0 && (
+                      <div className={DIVIDER}>
+                        <Attunement
+                          state={attunement}
+                          accent={accent}
+                          onToggle={toggleAttunement}
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

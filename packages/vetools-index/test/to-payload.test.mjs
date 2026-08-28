@@ -276,3 +276,24 @@ test("a character with no mastery carries an empty list, not a missing field", (
 
   assert.deepEqual(payload.proficiencies.masteries, []);
 });
+
+test("an attuned item says so on the character's copy", () => {
+  /*
+   * dnd5e keeps attunement per item as `system.attuned`. An unattuned Cloak of
+   * Protection is a cloak that grants nothing, which is the same as not
+   * importing it.
+   */
+  const build = makeBuild();
+  build.choices.normalized.equipment = [
+    { itemId: "cloak-of-protection", label: "Cloak of Protection", quantity: 1, category: "other", attuned: true },
+    { itemId: "dagger", label: "Dagger", quantity: 1, category: "weapon" },
+  ];
+
+  const { payload } = buildToPayload(build, resolver);
+
+  const cloak = payload.equipment.find((entry) => /cloak/i.test(entry.ref.hash));
+  const dagger = payload.equipment.find((entry) => /dagger/i.test(entry.ref.hash));
+
+  assert.equal(cloak.attuned, true);
+  assert.equal(dagger.attuned, undefined);
+});
