@@ -143,7 +143,15 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
     classes: resolvedClasses,
     background: { ref: backgroundRef },
     abilities: build.abilities.final,
-    proficiencies: partitionProficiencies(normalized?.proficiencies ?? []),
+    proficiencies: {
+      ...partitionProficiencies(normalized?.proficiencies ?? []),
+      // Armour and weapons are not picks from a list — they are what the class
+      // and species grant — but they still have to be written onto the actor,
+      // because the documents that carry them grant through advancements a
+      // direct import never runs.
+      armor: build.choices.armorProficiencies ?? [],
+      weapons: build.choices.weaponProficiencies ?? [],
+    },
     feats,
     optionalFeatures,
     spells,
@@ -163,9 +171,13 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
  * Split proficiencies by kind.
  *
  * These are picks from a list rather than entities, so they travel as labels
- * the module writes onto the actor. Weapon and armour proficiencies are
- * omitted: they come from the class and race documents Plutonium imports, and
- * sending our own would fight with them.
+ * the module writes onto the actor.
+ *
+ * Armour and weapons are added by the caller rather than found here, because
+ * they are not picks: they are what the class and the species grant. They used
+ * to be left out entirely, on the belief that Plutonium's class and race
+ * documents brought them. An imported actor says otherwise — both sets arrived
+ * empty — so they travel now.
  */
 function partitionProficiencies(
   entries: NonNullable<CharacterBuild["choices"]["normalized"]>["proficiencies"],
@@ -177,6 +189,9 @@ function partitionProficiencies(
     savingThrows: [],
     expertise: [],
     toolExpertise: [],
+    // Filled by the caller: armour and weapons are not picks from a list.
+    armor: [],
+    weapons: [],
   };
 
   for (const entry of entries) {

@@ -519,14 +519,18 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         speciesGrant ? { id: state.raceId, ...speciesGrant } : null,
       )
     : null;
-  const extraWeaponIds = gearProficiencies
-    ? [
-        ...gearProficiencies.clauseWeaponIds,
-        ...gearProficiencies.speciesWeaponIds.filter(
-          (id) => !gearProficiencies.clauseWeaponIds.includes(id),
-        ),
-      ]
-    : [];
+  /*
+   * The whole set, in dnd5e's keys, not the leftovers.
+   *
+   * This used to send only what no class document would grant. That rested on
+   * the class and race documents carrying the rest, which an imported actor
+   * disproved: both `armorProf` and `weaponProf` arrived empty, because the
+   * documents carry their grants as `Trait` advancements and advancements only
+   * apply when a character is levelled through them — which a direct import is
+   * precisely not.
+   */
+  const weaponProficiencyIds = gearProficiencies?.foundryWeaponIds ?? [];
+  const armorProficiencyIds = gearProficiencies?.foundryArmorIds ?? [];
   const proficiencies = uniqueEntries(parseLineList(state.proficienciesText));
   const languageEntries = uniqueEntries(parseLineList(state.languagesText));
   const languages = languageEntries.map((entry) => `Language: ${entry}`);
@@ -646,7 +650,10 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       // mastery from a class the player has since left would export a
       // proficiency the sheet never granted.
       ...(masteryIds.length > 0 ? { weaponMasteries: masteryIds } : {}),
-      ...(extraWeaponIds.length > 0 ? { weaponProficiencies: extraWeaponIds } : {}),
+      ...(weaponProficiencyIds.length > 0
+        ? { weaponProficiencies: weaponProficiencyIds }
+        : {}),
+      ...(armorProficiencyIds.length > 0 ? { armorProficiencies: armorProficiencyIds } : {}),
       ...(startingCopper > 0 ? { startingCopper } : {}),
       normalized: {
           feats: chosenFeatIds,

@@ -91,6 +91,22 @@ export const proficiencyChoicesSchema = z.object({
    * choice travels rather than being dropped at the builder.
    */
   toolExpertise: z.array(z.string()).default([]),
+  /**
+   * Armour and weapon proficiencies, in dnd5e's own keys.
+   *
+   * These used to be left out, on the belief that they arrived with the class
+   * and race documents Plutonium imports and that sending ours would fight
+   * with them. Measured against an imported actor: `traits.armorProf.value`
+   * and `traits.weaponProf.value` both came back empty. The class document
+   * carries the grants as `Trait` advancements, and advancements only apply
+   * when a character is levelled through them — which a direct import is
+   * precisely not.
+   *
+   * `armor` holds `lgt`, `med`, `hvy`, `shl`. `weapons` holds `sim` and `mar`
+   * plus base-item ids, both of which Foundry checks.
+   */
+  armor: z.array(z.string()).default([]),
+  weapons: z.array(z.string()).default([]),
 });
 
 /**

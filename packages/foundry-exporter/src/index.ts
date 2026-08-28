@@ -324,7 +324,11 @@ function fillProficiencies(actor: Record<string, any>, character: CharacterBuild
   // decide whether a suit is worn proficiently, so writing "light" here left
   // every character in armour they count as untrained in — disadvantage on
   // every Strength and Dexterity roll, and no spellcasting.
-  actor.system.traits.armorProf.value = profs.armor;
+  // The species grants armour too — the Duergar's light and medium — and that
+  // is not a class's to know, so what the builder worked out joins the table.
+  actor.system.traits.armorProf.value = Array.from(
+    new Set([...profs.armor, ...(character.choices.armorProficiencies ?? [])]),
+  );
   actor.system.traits.armorProf.custom = "";
 
   // Foundry accepts two shapes in the same set: the category keys `sim` and
@@ -334,14 +338,17 @@ function fillProficiencies(actor: Record<string, any>, character: CharacterBuild
   // 2024 rogue's scimitar is swung without a proficiency bonus, because the
   // sentence explaining that it should not be is in a field Foundry never
   // reads. Deduplicated: a rule may name a weapon the class also named.
-  const clauseWeapons = (character.choices.weaponProficiencies ?? []).filter(
-    (id) => !profs.weaponItems.includes(id),
+  //
+  // `weaponProficiencies` now carries the character's whole set rather than
+  // only what this table could not work out, so the two overlap. A set keeps
+  // the order of first mention and drops the repeats.
+  actor.system.traits.weaponProf.value = Array.from(
+    new Set([
+      ...profs.weaponCategories,
+      ...profs.weaponItems,
+      ...(character.choices.weaponProficiencies ?? []),
+    ]),
   );
-  actor.system.traits.weaponProf.value = [
-    ...profs.weaponCategories,
-    ...profs.weaponItems,
-    ...clauseWeapons,
-  ];
 
   // What the book prints as a rule rather than a list stays prose. Foundry has
   // no way to store "martial weapons with the Light property" as a checkbox,
