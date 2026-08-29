@@ -15,6 +15,7 @@ import AshBurst from "@/components/fx/AshBurst";
 import EmberField from "@/components/fx/EmberField";
 import GrainOverlay from "@/components/fx/GrainOverlay";
 import RuneButton from "@/components/ui/RuneButton";
+import AccountBadge from "@/components/codex/AccountBadge";
 import CodexBackup from "@/components/codex/CodexBackup";
 import { useVault } from "@/lib/vault-store";
 import { PAGE } from "@/styles/recipes";
@@ -59,9 +60,12 @@ export default function Codex() {
           <p className="mt-6 font-mono text-[10px] tracking-[0.6em] uppercase text-gold/60">
             El archivo de abajo
           </p>
-          <h1 className="mt-3 font-display text-5xl font-black tracking-wide text-bone md:text-6xl">
-            EL CODICE
-          </h1>
+          <div className="mt-3 flex flex-wrap items-end justify-between gap-6">
+            <h1 className="font-display text-5xl font-black tracking-wide text-bone md:text-6xl">
+              EL CODICE
+            </h1>
+            <AccountBadge />
+          </div>
         </header>
 
         <div className="mb-14 flex flex-wrap items-end justify-between gap-6 border-b border-iron/40 pb-8">

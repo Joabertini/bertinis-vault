@@ -25,6 +25,8 @@ import {
   type BuilderState,
 } from "./builder-state";
 import type { Pace } from "./chambers";
+import type { Account, StoredCharacter } from "@bertinis-vault/contracts";
+
 import { mergeCodex, type CodexMerge } from "./codex-file";
 
 /** A character sealed in the Codex. */
@@ -99,6 +101,22 @@ type VaultStore = {
    * and the player would have to burn the stale one by hand.
    */
   editingId: string | null;
+  /**
+   * Who is signed in, if anyone.
+   *
+   * Not persisted: the session lives in a cookie the page cannot read, so the
+   * only honest way to know is to ask the store on load. A remembered account
+   * would show somebody's name over a session that expired last month.
+   */
+  account: Account | null;
+  /**
+   * Characters burned on this machine since the last sync, by id.
+   *
+   * A newest-wins merge can only ever add, so a deletion has to be carried
+   * separately — without this the account hands the burned tome straight back
+   * on the next sync and it reads as the app resurrecting it.
+   */
+  burned: string[];
 
   /** Start a fresh draft for an edition. Called when entering the Forge. */
   beginDraft: (rulesVersion: BuilderRulesVersion) => void;
@@ -127,6 +145,14 @@ type VaultStore = {
    * nothing.
    */
   importCharacters: (incoming: SealedCharacter[]) => CodexMerge;
+  setAccount: (account: Account | null) => void;
+  /**
+   * Take the account's answer whole.
+   *
+   * The server already merged, so this replaces rather than merges again — and
+   * it clears the burn list, because those deletions have now been carried.
+   */
+  adoptCharacters: (incoming: StoredCharacter[]) => void;
 };
 
 function freshDraft(rulesVersion: BuilderRulesVersion): BuilderState {
@@ -189,6 +215,8 @@ export const useVault = create<VaultStore>()(
       characters: [],
       pace: null,
       editingId: null,
+      account: null,
+      burned: [],
 
       setPace: (pace) => set({ pace }),
 
@@ -289,6 +317,27 @@ export const useVault = create<VaultStore>()(
           // Burning the tome currently on the anvil turns the edit into a new
           // character rather than leaving `seal` pointing at nothing.
           editingId: s.editingId === id ? null : s.editingId,
+          // Remembered until a sync carries it. A character burned offline is
+          // still burned when the machine comes back.
+          burned: s.burned.includes(id) ? s.burned : [...s.burned, id],
+        })),
+
+      setAccount: (account) => set({ account }),
+
+      adoptCharacters: (incoming) =>
+        set((s) => ({
+          characters: incoming.map((entry) => ({
+            id: entry.id,
+            sealedAt: entry.sealedAt,
+            // Read through the same coercion a stored draft goes through: what
+            // comes back was written by whichever version of the builder sealed
+            // it, which may not be this one.
+            state: coerceBuilderState(entry.state),
+          })),
+          burned: [],
+          // A tome that is no longer on the shelf cannot be the one being
+          // edited, whether it left by burning or by a sync from elsewhere.
+          editingId: incoming.some((entry) => entry.id === s.editingId) ? s.editingId : null,
         })),
     }),
     {
@@ -326,6 +375,11 @@ export const useVault = create<VaultStore>()(
             characters.some((c) => c.id === saved.editingId)
               ? saved.editingId
               : null,
+          // Carried across reloads for the same reason it exists at all: a
+          // machine that burns a tome offline has to be able to say so later.
+          burned: Array.isArray(saved.burned)
+            ? saved.burned.filter((id): id is string => typeof id === "string" && id.length > 0)
+            : [],
         };
       },
     },
