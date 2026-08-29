@@ -11,6 +11,15 @@
 
 import { importPayloadSchema, type ImportPayload } from "@bertinis-vault/contracts";
 
+import { d1Store, type D1Like, type Store } from "./accounts.js";
+import {
+  handleCallback,
+  handleLogout,
+  handleMe,
+  handleStart,
+  handleSync,
+  type AuthEnv,
+} from "./auth-routes.js";
 import { format, generateCode, normalizeCode, storageKey } from "./code.js";
 
 /** The slice of Workers KV this handler uses. */
@@ -23,7 +32,61 @@ export type Env = {
   BUILDS: BuildStore;
   /** Comma-separated origins allowed to call this. `*` in development. */
   ALLOWED_ORIGINS?: string;
+  /** Accounts, sessions and saved characters. Absent until D1 is bound. */
+  DB?: D1Like;
+  DISCORD_CLIENT_ID?: string;
+  DISCORD_CLIENT_SECRET?: string;
+  /** Where the front is served. The only place a sign-in returns to. */
+  APP_ORIGIN?: string;
+  /**
+   * The registrable domain the session cookie belongs to, e.g.
+   * `bertinilabs.xyz`. Left unset in development, where the front and the API
+   * are both on localhost and the cookie needs no domain at all.
+   */
+  COOKIE_DOMAIN?: string;
 };
+
+/**
+ * What a caller may substitute.
+ *
+ * The database and Discord are the two things this Worker talks to that a test
+ * cannot, and both are supplied here rather than smuggled in through `Env` —
+ * a production field that only a test ever sets is a field somebody will
+ * eventually set in production.
+ */
+export type Deps = {
+  store?: Store;
+  fetchImpl?: typeof fetch;
+};
+
+/**
+ * The account routes, or nothing.
+ *
+ * A deploy with no database and no Discord application is a perfectly good
+ * build store, and it should keep being one rather than failing at boot. So
+ * accounts are wired only when everything they need is present, and the routes
+ * answer 501 when they are not — which is the honest answer to "sign me in" on
+ * a Worker with nowhere to put an account.
+ */
+function authEnvFor(env: Env, request: Request, deps: Deps): AuthEnv | null {
+  const store = deps.store ?? (env.DB ? d1Store(env.DB) : null);
+  if (!store || !env.DISCORD_CLIENT_ID || !env.DISCORD_CLIENT_SECRET) return null;
+
+  return {
+    store,
+    ...(deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {}),
+    discord: {
+      clientId: env.DISCORD_CLIENT_ID,
+      clientSecret: env.DISCORD_CLIENT_SECRET,
+      // Derived rather than configured: it has to match what Discord has
+      // registered byte for byte, and a variable that can drift from the
+      // deployed origin is a variable that will.
+      redirectUri: new URL("/auth/discord/callback", new URL(request.url).origin).toString(),
+    },
+    appOrigin: env.APP_ORIGIN ?? new URL(request.url).origin,
+    ...(env.COOKIE_DOMAIN ? { cookieDomain: env.COOKIE_DOMAIN } : {}),
+  };
+}
 
 /** How long a stored build lives. Ninety days, refreshed on each read. */
 export const BUILD_TTL_SECONDS = 90 * 24 * 60 * 60;
@@ -39,15 +102,28 @@ export const MAX_PAYLOAD_BYTES = 256 * 1024;
 /** How many times a code is regenerated before giving up on a collision. */
 const MAX_CODE_ATTEMPTS = 5;
 
+/**
+ * Who may call this, and whether they may bring their cookie.
+ *
+ * A session cookie only reaches a cross-origin request when the response names
+ * the calling origin exactly and allows credentials. `*` is not a name — the
+ * browser refuses the pair outright — so a configured `*` echoes the caller's
+ * own origin instead. That is as permissive as `*` was, and it is honest about
+ * what it permits.
+ */
 function corsHeaders(env: Env, request: Request): Record<string, string> {
   const allowed = (env.ALLOWED_ORIGINS ?? "*").split(",").map((o) => o.trim());
   const origin = request.headers.get("Origin");
 
-  const allowOrigin =
-    allowed.includes("*") ? "*" : origin && allowed.includes(origin) ? origin : allowed[0] ?? "";
+  const allowOrigin = allowed.includes("*")
+    ? (origin ?? "*")
+    : origin && allowed.includes(origin)
+      ? origin
+      : (allowed[0] ?? "");
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Credentials": "true",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
@@ -146,7 +222,7 @@ async function handleRead(code: string, env: Env, headers: Record<string, string
   });
 }
 
-export async function handle(request: Request, env: Env): Promise<Response> {
+export async function handle(request: Request, env: Env, deps: Deps = {}): Promise<Response> {
   const headers = corsHeaders(env, request);
 
   if (request.method === "OPTIONS") {
@@ -163,6 +239,31 @@ export async function handle(request: Request, env: Env): Promise<Response> {
     return handleCreate(request, env, headers);
   }
 
+  if (url.pathname.startsWith("/auth/") || url.pathname === "/codex/sync") {
+    const auth = authEnvFor(env, request, deps);
+    if (!auth) {
+      return error("This deployment stores builds by code and keeps no accounts.", 501, headers);
+    }
+
+    if (url.pathname === "/auth/discord/start" && request.method === "GET") {
+      return handleStart(request, auth, headers);
+    }
+    if (url.pathname === "/auth/discord/callback" && request.method === "GET") {
+      return handleCallback(request, auth, headers);
+    }
+    if (url.pathname === "/auth/me" && request.method === "GET") {
+      return handleMe(request, auth, headers);
+    }
+    if (url.pathname === "/auth/logout" && request.method === "POST") {
+      return handleLogout(request, auth, headers);
+    }
+    if (url.pathname === "/codex/sync" && request.method === "POST") {
+      return handleSync(request, auth, headers);
+    }
+
+    return error("Not found.", 404, headers);
+  }
+
   const match = /^\/builds\/([^/]+)$/.exec(url.pathname);
   if (match && request.method === "GET") {
     return handleRead(decodeURIComponent(match[1] as string), env, headers);
@@ -172,5 +273,7 @@ export async function handle(request: Request, env: Env): Promise<Response> {
 }
 
 export default {
-  fetch: handle,
+  // Wrapped rather than passed directly: the runtime calls `fetch` with an
+  // execution context as its third argument, which is not a set of doubles.
+  fetch: (request: Request, env: Env) => handle(request, env),
 };
