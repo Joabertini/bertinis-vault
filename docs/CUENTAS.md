@@ -98,5 +98,28 @@ Nada de esto lo puede hacer el repositorio por sí solo.
    `api.bertinilabs.xyz` como ruta del Worker. Cuando esos dos existan,
    `ALLOWED_ORIGINS` deja de ser `*` y pasa a ser `https://alba.bertinilabs.xyz`.
 
+5. **`VITE_VAULT_URL` en Vercel** apuntando a `https://api.bertinilabs.xyz`.
+   Es la misma variable que ya usa el código de importación; sin ella el front
+   le pega al Worker de desarrollo y no encuentra ninguna cuenta.
+
 Hasta que estén, el builder funciona como hasta ahora: el Códice local y el
-código de importación de noventa días.
+código de importación de noventa días. La insignia de cuenta directamente no
+aparece — un almacén sin cuentas responde 501 y ofrecer entrar sería ofrecer
+algo que no existe.
+
+## En el front
+
+La insignia vive en la cabecera del Códice, chiquita a propósito. El estante
+funciona deslogueado y siempre funcionó: la cuenta es una oferta —llevate esto
+a otra máquina— y no una puerta.
+
+Sincroniza sola, y ahí está la trampa: adoptar la respuesta del servidor cambia
+el Códice, así que un hook que sincroniza cuando el Códice cambia sincroniza
+para siempre. Lo que se compara es una **firma** —los ids, sus fechas de sellado
+y las bajas pendientes— y se anota con la respuesta, no con lo que se mandó.
+
+Todo falla en silencio a propósito. El Códice es local primero: un jugador sin
+red sigue teniendo sus personajes, y un cartel rojo sobre un estante que
+funciona miente sobre qué está roto. Una sesión vencida tampoco es un error que
+gritar — son treinta días que se terminaron — así que la insignia vuelve a
+ofrecer entrar.
