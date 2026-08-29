@@ -392,14 +392,57 @@ test("a body that is not a Codex is refused with the field that failed", async (
 });
 
 test("the response names the caller so the cookie is allowed to travel", async () => {
-  // A browser refuses `*` together with credentials outright, so a wildcard
-  // configuration echoes the caller instead.
+  const response = await handle(get("/auth/me"), ENV, { store: makeStore() });
+
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://alba.bertinilabs.xyz");
+  assert.equal(response.headers.get("Access-Control-Allow-Credentials"), "true");
+});
+
+test("a wildcard never grants credentials, and says so instead of failing quietly", async () => {
+  /*
+   * `*` is fine for the build store — a code is the credential there — and
+   * exactly wrong for a session: "any origin may send this user's cookie" is
+   * the shape of a cross-site request forgery.
+   *
+   * Refused out loud, because the quiet version is every account route
+   * answering "nobody is signed in" and reading as a broken sign-in rather
+   * than as a variable nobody set.
+   */
   const response = await handle(get("/auth/me"), { ...ENV, ALLOWED_ORIGINS: "*" }, {
     store: makeStore(),
   });
 
-  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "https://alba.bertinilabs.xyz");
-  assert.equal(response.headers.get("Access-Control-Allow-Credentials"), "true");
+  assert.equal(response.status, 403);
+  assert.equal(response.headers.get("Access-Control-Allow-Credentials"), null);
+});
+
+test("a build is still readable from anywhere a wildcard allows", async () => {
+  // Tightening the session did not tighten the store: the import code is meant
+  // to work from whatever page a player pasted it into.
+  const response = await handle(
+    new Request("https://api.bertinilabs.xyz/health", {
+      headers: { Origin: "https://otro-sitio.example" },
+    }),
+    { ...ENV, ALLOWED_ORIGINS: "*" },
+  );
+
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("Access-Control-Allow-Origin"), "*");
+  assert.equal(response.headers.get("Access-Control-Allow-Credentials"), null);
+});
+
+test("the sign-in itself is not refused for having no origin", async () => {
+  // Both halves are top-level navigations — a link out to Discord and a
+  // redirect back — and a navigation carries no `Origin` at all.
+  const response = await handle(
+    new Request("https://api.bertinilabs.xyz/auth/discord/start?redirect=/codex", {
+      redirect: "manual",
+    }),
+    { ...ENV, ALLOWED_ORIGINS: "*" },
+    { store: makeStore() },
+  );
+
+  assert.equal(response.status, 302);
 });
 
 test("a sign-in only ever returns to this application", () => {

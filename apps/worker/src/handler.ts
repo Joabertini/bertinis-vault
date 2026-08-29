@@ -103,27 +103,50 @@ export const MAX_PAYLOAD_BYTES = 256 * 1024;
 const MAX_CODE_ATTEMPTS = 5;
 
 /**
+ * The routes a page reaches with `fetch`, carrying the session cookie.
+ *
+ * The sign-in itself is not here: both halves of it are top-level navigations,
+ * and a navigation carries no `Origin` to check.
+ */
+const CREDENTIALED_ROUTES = new Set(["/auth/me", "/auth/logout", "/codex/sync"]);
+
+/**
+ * Whether this caller is one the configuration names.
+ *
+ * `*` is not a name. It is fine for the build store — a code is the credential
+ * there, and anyone holding one is meant to be able to read it — and it is
+ * exactly wrong for a session: "any origin may send this user's cookie" is the
+ * shape of a cross-site request forgery, and it is the shape a wildcard has.
+ */
+function namesTheCaller(env: Env, request: Request): boolean {
+  const allowed = (env.ALLOWED_ORIGINS ?? "*").split(",").map((o) => o.trim());
+  const origin = request.headers.get("Origin");
+
+  return Boolean(origin && allowed.includes(origin));
+}
+
+/**
  * Who may call this, and whether they may bring their cookie.
  *
  * A session cookie only reaches a cross-origin request when the response names
- * the calling origin exactly and allows credentials. `*` is not a name — the
- * browser refuses the pair outright — so a configured `*` echoes the caller's
- * own origin instead. That is as permissive as `*` was, and it is honest about
- * what it permits.
+ * the calling origin exactly *and* allows credentials — a browser refuses the
+ * pair `*` and credentials outright. So the two are granted together and only
+ * to an origin the configuration actually lists.
+ *
+ * A wildcard still answers, and still answers every build request. What it
+ * does not do is hand a stranger's page the right to act as a signed-in
+ * player.
  */
 function corsHeaders(env: Env, request: Request): Record<string, string> {
   const allowed = (env.ALLOWED_ORIGINS ?? "*").split(",").map((o) => o.trim());
   const origin = request.headers.get("Origin");
+  const named = namesTheCaller(env, request);
 
-  const allowOrigin = allowed.includes("*")
-    ? (origin ?? "*")
-    : origin && allowed.includes(origin)
-      ? origin
-      : (allowed[0] ?? "");
+  const allowOrigin = named ? (origin as string) : allowed.includes("*") ? "*" : (allowed[0] ?? "");
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,
-    "Access-Control-Allow-Credentials": "true",
+    ...(named ? { "Access-Control-Allow-Credentials": "true" } : {}),
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": "Content-Type",
     "Access-Control-Max-Age": "86400",
@@ -243,6 +266,26 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
     const auth = authEnvFor(env, request, deps);
     if (!auth) {
       return error("This deployment stores builds by code and keeps no accounts.", 501, headers);
+    }
+
+    /*
+     * Refused out loud rather than left to fail in the browser.
+     *
+     * Without an origin the configuration names, the response cannot allow
+     * credentials, the cookie never travels, and every account route answers
+     * "nobody is signed in" — which reads as a broken sign-in rather than as an
+     * `ALLOWED_ORIGINS` still set to `*`.
+     *
+     * Only the routes a page calls with `fetch` are checked. The two halves of
+     * the sign-in are top-level navigations — a link out to Discord and a
+     * redirect back — and a navigation carries no `Origin` header at all.
+     */
+    if (CREDENTIALED_ROUTES.has(url.pathname) && !namesTheCaller(env, request)) {
+      return error(
+        "This store does not accept accounts from that origin. Set ALLOWED_ORIGINS.",
+        403,
+        headers,
+      );
     }
 
     if (url.pathname === "/auth/discord/start" && request.method === "GET") {
