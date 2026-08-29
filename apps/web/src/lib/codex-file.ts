@@ -11,6 +11,8 @@
  * state and not a snapshot, since a sheet cannot be edited back into choices.
  */
 
+import { mergeByNewest, type MergeResult } from "@bertinis-vault/contracts";
+
 import { coerceBuilderState } from "./builder-state";
 import type { SealedCharacter } from "./vault-store";
 
@@ -111,15 +113,7 @@ export function readCodexFile(text: string): CodexRead {
   return { ok: true, characters, skipped };
 }
 
-export type CodexMerge = {
-  characters: SealedCharacter[];
-  /** Characters the Codex did not have. */
-  added: number;
-  /** Characters the file had a newer copy of. */
-  updated: number;
-  /** Characters the Codex already had a newer copy of, and kept. */
-  kept: number;
-};
+export type CodexMerge = MergeResult<SealedCharacter>;
 
 /**
  * Fold an imported Codex into the one already here.
@@ -128,42 +122,13 @@ export type CodexMerge = {
  * someone built this morning, and the common case — carrying a Codex to
  * another machine — is one where both sides have real work in them.
  *
- * Where both have the same character, the one sealed later wins. That is the
- * only rule that cannot lose an edit: taking the file always would undo work
- * done since the backup, and keeping local always would make importing an
- * updated character do nothing at all.
+ * The rule itself lives in the contract, because the Worker answers the same
+ * question when an account syncs and a merge rule that exists twice is a merge
+ * rule that will eventually disagree with itself.
  */
 export function mergeCodex(
   existing: SealedCharacter[],
   incoming: SealedCharacter[],
 ): CodexMerge {
-  const merged = [...existing];
-  let added = 0;
-  let updated = 0;
-  let kept = 0;
-
-  for (const character of incoming) {
-    const at = merged.findIndex((entry) => entry.id === character.id);
-
-    if (at < 0) {
-      merged.push(character);
-      added += 1;
-      continue;
-    }
-
-    // String comparison is the right one here: ISO timestamps sort as text,
-    // and a missing one sorts before every real one, which is what an entry
-    // with no seal date should lose to.
-    if (character.sealedAt > (merged[at]?.sealedAt ?? "")) {
-      merged[at] = character;
-      updated += 1;
-    } else {
-      kept += 1;
-    }
-  }
-
-  // Newest first, the way the Codex already reads.
-  merged.sort((left, right) => right.sealedAt.localeCompare(left.sealedAt));
-
-  return { characters: merged, added, updated, kept };
+  return mergeByNewest(existing, incoming);
 }

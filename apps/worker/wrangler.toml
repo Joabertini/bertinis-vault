@@ -8,5 +8,24 @@ compatibility_date = "2026-08-01"
 binding = "BUILDS"
 id = "fee3b01501c04a439392fdaf962659fb"
 
+# Accounts, sessions and saved characters. Create with:
+#   wrangler d1 create alba
+#   wrangler d1 migrations apply alba --remote
+# Until the id below is filled in and the migration applied, the account routes
+# answer 501 and the build store keeps working on its own.
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "alba"
+# database_id = ""
+
 [vars]
 ALLOWED_ORIGINS = "*"
+
+# Filled in when the front moves to its own name. Until then the Worker uses
+# its own origin, which is right for `wrangler dev`.
+# APP_ORIGIN = "https://alba.bertinilabs.xyz"
+# COOKIE_DOMAIN = "bertinilabs.xyz"
+# DISCORD_CLIENT_ID = ""
+
+# The secret is never in this file:
+#   wrangler secret put DISCORD_CLIENT_SECRET
