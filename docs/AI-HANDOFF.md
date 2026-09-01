@@ -29,6 +29,42 @@ log covering the fabricate-the-item approach that was abandoned. It is kept
 because deleting history is worse than keeping it, not because it describes the
 current design.
 
+## The rule that costs the most when it is forgotten
+
+**Change `ImportPayload`, deploy the Worker.**
+
+`importPayloadSchema.safeParse` strips what it does not know and answers 200.
+A Worker older than the contract therefore discards new fields in silence, and
+every layer reports success: the builder computed it, the store accepted it,
+the module wrote what it received.
+
+On 2026-09-01 the deployed Worker was from 23 August while `main` was twenty
+pull requests ahead. It was throwing away **20 of 73 fields** — every
+appearance field, armour and weapon proficiencies, weapon masteries, tool
+expertise, all five currency denominations, and `optionalFeatures`. That last
+one carries fighting styles, invocations, the pact boon, metamagic, maneuvers,
+runes and infusions, so a warlock reached the table with no invocations and
+the sheet looked ordinary. A week of bugs that read as faults in the builder
+and in the module were this.
+
+The guard is `apps/web/probes/store-fidelity.ts`. It round-trips a payload
+through the live store and names every field that does not come back. Run it
+after any change to the payload and after any deploy:
+
+```
+corepack pnpm exec vite build --ssr probes/store-fidelity.ts --outDir .probe
+node .probe/store-fidelity.js
+```
+
+No unit test can see this. They check the builder against the contract in this
+repository, which is current by definition; only a round trip shows that the
+deployment is not.
+
+The same applies to the module. A copy installed in Foundry keeps its version
+number while its code falls behind — one was 234 lines short of `main` and
+still called itself 0.2.2. Compare `apps/foundry-module/src` against
+`Data/modules/bertinis-vault/src`, never the versions.
+
 ## The one thing to understand
 
 Do not build item documents. Reference them.
@@ -75,14 +111,30 @@ Do not delete it before its replacement has run in a live world.
 
 In order, and stated as what blocks each:
 
-1. ~~**Deploy the worker.**~~ Done. It is live at
-   `https://bertinis-vault.bertinisdnd.workers.dev`, backed by the `BUILDS` KV
-   namespace, and a build has round-tripped through it. `ALLOWED_ORIGINS` is
-   still `*`; narrow it once the builder has a public address. The naive fix
-   breaks the module's cross-origin GET from arbitrary Foundry hosts, so it
-   needs per-route CORS: open GET, restricted POST.
-2. **Run the module in a live world.** Four runs, three wrong fixes, all three
-   of them fixing the same wrong half:
+1. ~~**Deploy the worker.**~~ Done, and it answers to two names: its own
+   `api.bertinilabs.xyz`, which is what lets a session cookie exist at all, and
+   `bertinis-vault.bertinisdnd.workers.dev`, which every installed module and
+   the deployed builder still ask for a build. `workers_dev = true` is declared
+   in `wrangler.toml` and is load-bearing — adding a route turns it off by
+   default, and doing so took the store offline for both until it was put back.
+
+   `ALLOWED_ORIGINS` keeps the wildcard **and** names the site:
+   `"*,https://alba.bertinilabs.xyz"`. The two do different jobs. The name is
+   what lets a page hold a session, because a browser sends a cookie
+   cross-origin only when the response names the caller exactly and allows
+   credentials. The wildcard is what lets a Foundry world on any host read a
+   build, where the code is the credential. Dropping the wildcard — which is
+   what "stop using `*`" sounds like it means — leaves `corsHeaders` answering
+   every unnamed origin with the first entry in the list, and every Foundry
+   install stops importing.
+2. ~~**Run the module in a live world.**~~ Done, repeatedly, on Foundry v14.367
+   with `dnd5e` 5.3.3 and Plutonium installed. A character built in the web
+   app, published to the Worker and imported by code arrives with no prompt of
+   any kind, resolves real compendium documents — `system.identifier` populated,
+   real books, spells with working activities — and lands at the payload's
+   level with the right skill and language keys. The history is kept because
+   the three wrong fixes below are still the fastest way to understand why the
+   converter route is the right one:
 
    - `isDataOnly` — read by `ImporterBase` and by no other importer, so
      `class`, `subclass` and `feat` ignored it in silence.
@@ -112,14 +164,11 @@ In order, and stated as what blocks each:
    an import is logged with its class, title and stack and reported to the
    player, so the next surprise names itself on the first run.
 
-   Still unobserved, and the reason this item stays open: a full
-   `importPayload` run with no prompt appearing for any prop, the class item
-   landing at the payload's level, the subclass hash resolving, and whether the
-   `dnd5e` skill and language keys the payload carries are the right ones.
-
    Testing an unmerged branch needs a local install by hand: the module ships
    as a release zip built from `main`, so copy `apps/foundry-module` over
-   `Data/modules/bertinis-vault` and reload the world.
+   `Data/modules/bertinis-vault` and reload the world. Do this before trusting
+   any live result — an installed copy keeps its version number while its code
+   falls behind.
 3. ~~**Findings B and C in `CHARACTER-MODEL-GAPS.md`.**~~ Done. Class skill
    options and background proficiencies now read from the index
    (`ClassRow.skillChoice`, `BackgroundRow.skillsGranted`/`skillChoice`/
@@ -142,27 +191,49 @@ In order, and stated as what blocks each:
    after 5.
 7. **Retire `apps/api`.** The index is bundled; nothing fetches datasets.
 
-### Opened by the 2026-08-26 run, and still open
+### Closed on 2026-09-01
 
-Three things the build order finished *around* rather than through. None is
-large; two of them are blocked on something outside the repo.
+8. ~~**Carry starting currency to the payload.**~~ Done, and seen on a real
+   sheet: ten gold pieces arrived in the bag. It had been computed correctly
+   all along and discarded by the deployed store — see the rule at the top.
 
-8. **Carry starting currency to the payload.** The builder computes it
-   correctly — a character who takes the gold, or whose background hands over a
-   pouch of 15 gp, has the right number and it is shown. `ImportPayload` has
-   nowhere to put it, so the character reaches Foundry with the items and no
-   coins. Needs a field on the payload and a line in `import.js`.
+9. ~~**Write weapon mastery onto the actor.**~~ Done. `dnd5e` 5.3.3 keeps it at
+   `traits.weaponProf.mastery.value`, a Set consulted with
+   `.has(item.type.baseItem)`, so it holds base-item ids — `longsword`, never
+   "Longsword" and never the mastery property. Read from the installed
+   `dnd5e.mjs`, not inferred.
 
-9. **Write weapon mastery onto the actor.** The picks are on the build and
-   shown in the wizard. **Blocked on a Foundry install**: whether `dnd5e`
-   5.3.3 exposes an actor path for mastery has not been verified against the
-   real system, and guessing a path would write a field that silently does
-   nothing. Check `CONFIG.DND5E` and the actor data model, do not infer.
+10. **The four manual validation scenarios test a path that is being retired.**
+    The fixtures under `docs/foundry-validation-fixtures/` are fabricated
+    actors from the legacy `foundry-exporter`, and they declare
+    `foundryVersion: 13.351`, `systemVersion: 5.2.5`. The module cannot consume
+    one: its only entry is `importByCode`, which fetches a reference payload
+    from the Worker. Running them proves nothing about what ships.
 
-10. **Run the four manual Foundry validation scenarios.** **Blocked on the
-    user**, not on code: they need a live world and a signature.
-    `release:ready` fails on the report being pending, which is correct until
-    then. See `FOUNDRY-MANUAL-VALIDATION.md`.
+    The rehearsal that does is `apps/web/probes/rehearsal.ts` — it builds a
+    character, publishes it, and prints the code to type into a live world.
+    `release:ready` still gates on the pending report, which is now gating on
+    the wrong thing and is worth fixing before it teaches anyone to override it.
+
+### The one bug behind several
+
+An imported actor is **assembled**; a Charactermancer-built one is **levelled**.
+Compared side by side against a hand-built paladin: his class item carries
+`HitPoints` and five `ItemGrant` advancements, his subclass one more, and he
+has twenty-six separate feature items. Ours has none of those, and `import.js`
+writes twelve `system.*` fields by hand instead.
+
+Every open defect of that shape — features arriving as one item instead of
+several, proficiencies that a `Trait` advancement would have applied, hit
+points the class item cannot re-roll on level-up — is the same bug: the
+advancement system is being re-implemented one field per bug report.
+
+`dnd5e` 5.3.3 exposes the machinery: `AdvancementManager.forNewItem(actor,
+itemData, options)`, `.forLevelChange(actor, classId, levelDelta, options)`,
+and `apply(level, data)` on every advancement type. `AdvancementManager` is a
+UI class, so whether it can be driven headlessly is the question — and it is
+one experiment, not a rewrite. Establish it in a live world before believing
+it; the window problem taught that lesson three times.
 
 The wizard interface is its own track. The design is ours, not a reproduction of
 Charactermancer — Plutonium's rules coverage, our interface.
@@ -216,17 +287,29 @@ rather than to a fixture.
 corepack pnpm mvp:verify
 ```
 
-695 tests — 524 under `node --test` and 171 under vitest in the web app — plus
-the Foundry fixtures. It must pass from a clean checkout — verify that by deleting every `dist` first, because two
+508 under vitest in the web app, 90 in the Foundry module, 44 in the Worker,
+plus the rest under `node --test` and the Foundry fixtures. It must pass from a
+clean checkout — verify that by deleting every `dist` first, because two
 separate bugs have hidden behind stale build output.
 
-Two things worth knowing:
+The module's data-backed tests skip without `PLUTONIUM_DIR`. Set it to the
+directory holding `Bundle.js` and they read the real 5etools data rather than a
+fixture, which is the point: a fixture records what we believed the data said.
+
+Four things worth knowing:
 
 - The generated fixtures under `docs/foundry-validation-fixtures/` are not
   deterministic. Each run produces fresh document ids and a timestamp, so the
   working tree goes dirty after every gate run. That diff is noise.
-- `release:ready` fails on the manual validation report being pending. That is
-  correct until step 2 above is done.
+- `release:ready` fails on the manual validation report being pending, and that
+  report covers a path that is being retired. See item 10.
+- The web suite runs on the `threads` pool, set in `apps/web/vitest.config.ts`.
+  `forks` boots a Node process per worker, which on a disk that gives 18 IOPS
+  outran the pool's patience: the gate went red with every test passing and one
+  suite that never started. Threads finished it in half the time.
+- **The gate cannot see a stale deployment.** Everything here checks the
+  builder against the contract in this repository, which is current by
+  definition. Read the rule at the top of this file.
 
 ## Regenerating from Plutonium
 
