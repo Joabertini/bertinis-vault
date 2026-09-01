@@ -319,9 +319,17 @@ const FEATURE_PROP_BY_PROP = {
  * something the class hands over. A wizard was arriving with Cantrip Formulas
  * nobody chose; a cleric would have arrived with twenty.
  *
- * "Proficiency Versatility" was in this set and matched nothing: no class or
- * subclass feature carries that name. It was the by-name attempt at the same
- * problem the flag now answers properly.
+ * "Proficiency Versatility" was in this set, copied from Plutonium's own
+ * `getImportableFeatures`, and matches nothing here: no class or subclass
+ * feature in the data carries that name. Plutonium applies its filter to feat
+ * lists too, where it may well matter; this one runs over class, subclass and
+ * race features only, so the name is dead weight and is gone.
+ *
+ * Plutonium does *not* filter `isClassFeatureVariant` here — it offers the
+ * variants as a choice in the Charactermancer instead. A direct import has no
+ * one to ask, so the honest answer is not to grant them. Letting the builder
+ * offer them is the better answer and is not built: see the note on
+ * `collectFeatures` for the other half of the same gap.
  */
 const SCAFFOLDING_FEATURE_NAMES = new Set(["ability score improvement"]);
 
@@ -348,6 +356,35 @@ function isRealFeature(feature) {
  * list, which `getFauxRaceFeature` turns into the shape the raceFeature
  * converter expects — the same call 5etools makes to build its species-feature
  * page.
+ *
+ * ## Known gap: a level's features arrive as one item, not several
+ *
+ * An imported Evoker gets one "School of Evocation" whose description holds
+ * Evocation Savant and Sculpt Spells as prose. A character built through the
+ * Charactermancer gets three items. Both have the same text; only one can be
+ * pointed at when a player asks why they can do something.
+ *
+ * The data explains it. A subclass lists only the levels that open a feature —
+ * Evocation names four refs, for levels 2, 6, 10 and 14 — and the level's
+ * header feature carries its siblings inside its own `entries` as
+ * `refSubclassFeature` objects:
+ *
+ *     {"type": "refSubclassFeature",
+ *      "subclassFeature": "Sculpt Spells|Wizard||Evocation||2"}
+ *
+ * `DataLoader` dereferences those in place, so the header comes back with the
+ * siblings nested in its text and `subclassFeatures` never grows past four.
+ *
+ * Plutonium splits them with `_pLoadSubEntries`, which walks a dereferenced
+ * feature, lifts each ref out of the parent and returns the pair as
+ * `{entityRoot, subLinkedEntityInfos}` — the parent without its children's
+ * text, and the children as entities of their own. That is where the separate
+ * items on a Charactermancer-built sheet come from, and it is the thing to
+ * reach for when this is fixed.
+ *
+ * Left alone on purpose the day before a beta: nothing is missing from the
+ * sheet, it is grouped, and this is the one path that has been seen working in
+ * a live world.
  */
 export function collectFeatures({ entity, prop, level }) {
   if (prop === "race" || prop === "subrace") {
