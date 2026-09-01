@@ -28,11 +28,18 @@ import { initialState } from "@/lib/builder";
 import { resolveDraft } from "@/lib/derive";
 import { vaultBaseUrl } from "@/lib/vault-client";
 
-/** Every path in an object, so a dropped leaf is named and not just counted. */
+/**
+ * Every path in an object, so a dropped leaf is named and not just counted.
+ *
+ * A key held with an explicit `undefined` is skipped. `Object.entries` lists
+ * it and `JSON.stringify` omits it, so counting it as sent reported nine
+ * appearance fields as discarded by a store that was never offered them.
+ */
 function paths(value: unknown, prefix = "", out: string[] = []): string[] {
   if (!value || typeof value !== "object" || Array.isArray(value)) return out;
 
   for (const [key, child] of Object.entries(value)) {
+    if (child === undefined) continue;
     const path = prefix ? `${prefix}.${key}` : key;
     out.push(path);
     paths(child, path, out);
