@@ -297,3 +297,70 @@ test("an attuned item says so on the character's copy", () => {
   assert.equal(cloak.attuned, true);
   assert.equal(dagger.attuned, undefined);
 });
+
+
+/*
+ * What a character is wearing, and what they are only carrying.
+ *
+ * Measured on a live import of a level 8 ranger: one of ten equipment entries
+ * carried an `equipped` key. The builder's catalog recognised neither
+ * "Longbow" nor "Studded Leather Armor", so nine arrived categorized "other",
+ * and the missing key was not silence — Plutonium equips whatever it imports.
+ * The ranger reached the table wearing two suits of armour.
+ */
+function withEquipment(equipment) {
+  const build = makeBuild();
+  build.choices.normalized.equipment = equipment;
+  const { payload } = buildToPayload(build, resolver);
+  const find = (pattern) => payload.equipment.find((entry) => pattern.test(entry.ref.hash));
+
+  return { payload, find };
+}
+
+test("a weapon the builder's catalog does not know still arrives equipped", () => {
+  const { find } = withEquipment([
+    { itemId: "longbow", label: "Longbow", quantity: 1, category: "other" },
+  ]);
+
+  assert.equal(find(/longbow/).equipped, true);
+});
+
+test("the armour the builder named is the only suit worn", () => {
+  const { find } = withEquipment([
+    { itemId: "studded leather armor", label: "Studded Leather Armor", quantity: 1, category: "armor" },
+    { itemId: "leather armor", label: "Leather Armor", quantity: 1, category: "other" },
+  ]);
+
+  assert.equal(find(/studded/).equipped, true);
+  // The spare suit. Armour class is computed from what is worn, and a
+  // character wearing two suits gets whichever one dnd5e reads first.
+  assert.equal(find(/^leather/).equipped, false);
+});
+
+test("a shield the builder named is worn", () => {
+  const { find } = withEquipment([
+    { itemId: "shield", label: "Shield", quantity: 1, category: "shield" },
+  ]);
+
+  assert.equal(find(/shield/).equipped, true);
+});
+
+test("gear says it is not worn rather than saying nothing", () => {
+  const { find } = withEquipment([
+    { itemId: "iron pot", label: "Iron Pot", quantity: 1, category: "other" },
+    { itemId: "shovel", label: "Shovel", quantity: 1, category: "gear" },
+  ]);
+
+  // Present and false. An absent key is a decision handed to the importer.
+  assert.equal(find(/iron/).equipped, false);
+  assert.equal(find(/shovel/).equipped, false);
+});
+
+test("an item outside the index's item type still follows its category", () => {
+  // Ammunition is type "A": neither weapon nor armour, and nobody wears it.
+  const { find } = withEquipment([
+    { itemId: "arrows (20)", label: "Arrows (20)", quantity: 1, category: "other" },
+  ]);
+
+  assert.equal(find(/arrows/).equipped, false);
+});

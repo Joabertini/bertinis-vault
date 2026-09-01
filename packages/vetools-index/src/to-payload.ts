@@ -24,6 +24,7 @@ import {
 } from "@bertinis-vault/contracts";
 import type { RulesVersion, VetoolsProp } from "@bertinis-vault/vetools-ref";
 
+import type { IndexRow, ItemRow } from "./index.js";
 import type { RefResolver, ResolutionFailure } from "./resolve.js";
 
 export type BuildConversion = {
@@ -130,20 +131,26 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
 
   const equipment = (normalized?.equipment ?? [])
     .map((entry) => {
-      const ref = tryResolve(resolver, "item", entry.itemId ?? entry.label, failures, books);
+      const query = entry.itemId ?? entry.label;
+      const ref = tryResolve(resolver, "item", query, failures, books);
       if (!ref) return null;
 
       // Foundry computes armour class from what is worn. An imported suit of
       // armour that is not equipped leaves the character at AC 10 whatever the
       // builder showed them, so what a character carries to fight with says so.
-      const worn = isWorn(entry.category);
+      //
+      // Said either way round. Leaving the key off for everything else was not
+      // silence, it was a decision handed to Plutonium, which equips whatever
+      // it imports: a ranger who carried studded leather and a spare suit of
+      // leather arrived wearing both.
+      const worn = isWorn(entry.category, resolver.rowFor("item", query, books?.[sourceBookKey("item", query)]));
       // Attunement is a per-item state on the character's copy, and dnd5e keeps
       // it there: `system.attuned`. An unattuned Cloak of Protection is a cloak
       // that grants nothing, which is the same as not importing it.
       return {
         ref,
         quantity: entry.quantity,
-        ...(worn ? { equipped: true } : {}),
+        equipped: worn,
         ...(entry.attuned ? { attuned: true } : {}),
       };
     })
@@ -276,11 +283,56 @@ function partitionProficiencies(
   return result;
 }
 
-/** Categories a character has on their body rather than in their pack. */
-const wornCategories = new Set(["weapon", "armor", "shield"]);
+/**
+ * 5etools' own type code for an item, without the source suffix a 2024 row
+ * carries (`"LA|XPHB"`).
+ *
+ * The resolver indexes every prop into rows of a common shape, and only the
+ * item rows carry a type, so it is read off rather than declared.
+ */
+function itemTypeOf(row: IndexRow | null): string | null {
+  // The resolver indexes every prop into the common row shape, and only the
+  // item rows carry a type, so it is read back here rather than declared on
+  // the way out.
+  const type = (row as ItemRow | null)?.type;
+  if (!type) return null;
 
-function isWorn(category: string | undefined): boolean {
-  return category !== undefined && wornCategories.has(category);
+  return type.split("|")[0] ?? null;
+}
+
+/** Weapon types: melee and ranged. */
+const WEAPON_TYPES = new Set(["M", "R"]);
+/** Armour types: light, medium, heavy, and shields. */
+const ARMOR_TYPES = new Set(["LA", "MA", "HA", "S"]);
+
+/**
+ * Whether a character has this on their body rather than in their pack.
+ *
+ * The builder's category is asked first for armour and shields, because it is
+ * the only thing that knows *which* suit the player chose to wear. Everything
+ * else is settled by the item itself.
+ *
+ * That order is not a preference, it is the fix. Measured on a live export,
+ * nine of ten entries arrived categorized `"other"`: the shared catalog the
+ * builder consults holds a handful of rows and recognises neither "Longbow"
+ * nor "Studded Leather Armor". So the category alone equipped almost nothing,
+ * and the missing key let Plutonium equip everything.
+ *
+ * A second suit of armour is the case that has to come out false. Armour class
+ * in dnd5e is computed from what is worn, and a character wearing two suits
+ * gets whichever one the system reads first — a number that is right by
+ * accident or wrong by accident, and never for a reason the player can see.
+ * The builder names one suit; every other suit is luggage.
+ */
+function isWorn(category: string | undefined, row: IndexRow | null): boolean {
+  if (category === "armor" || category === "shield") return true;
+
+  const type = itemTypeOf(row);
+  // A suit the builder did not name. Carried, not worn.
+  if (type && ARMOR_TYPES.has(type)) return false;
+  if (type && WEAPON_TYPES.has(type)) return true;
+
+  return category === "weapon";
 }
 
 const abilityIds = new Set(["str", "dex", "con", "int", "wis", "cha"]);
