@@ -2,6 +2,15 @@ name = "bertinis-vault"
 main = "src/index.ts"
 compatibility_date = "2026-08-01"
 
+# Declared, and not a default. Adding the route below turns `workers.dev` off
+# unless this says otherwise, and the deployed builder and every installed copy
+# of the Foundry module still ask `bertinis-vault.bertinisdnd.workers.dev` for
+# a build. Dropping it took the store offline for both until this line existed.
+#
+# It stays until no module in the wild is still pointing at that address, which
+# is not a thing this repository can know.
+workers_dev = true
+
 # Builds stored by code. Create with:
 #   wrangler kv namespace create BUILDS
 [[kv_namespaces]]
@@ -34,3 +43,15 @@ DISCORD_CLIENT_ID = "1544171626973892688"
 
 # The secret is never in this file:
 #   wrangler secret put DISCORD_CLIENT_SECRET
+
+# The Worker answers to its own name under the site's domain, which is what
+# lets the session cookie travel: a browser only sends one between addresses
+# that share a registrable domain, and `workers.dev` shares none with the page.
+#
+# A custom domain creates the DNS record and the certificate on deploy. It also
+# has to exist, because the zone carries a wildcard `*` A record pointing at
+# Vercel — without this, `api.bertinilabs.xyz` resolves to the front and
+# answers 404 rather than failing in a way anyone would recognise as DNS.
+[[routes]]
+pattern = "api.bertinilabs.xyz"
+custom_domain = true
