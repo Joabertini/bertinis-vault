@@ -39,6 +39,15 @@ export type Env = {
   /** Where the front is served. The only place a sign-in returns to. */
   APP_ORIGIN?: string;
   /**
+   * This Worker's own address, as Discord has it registered.
+   *
+   * The Worker answers to two names — `api.bertinilabs.xyz` and its
+   * `workers.dev` one — and only the first is registered with Discord and only
+   * the first can hold a cookie scoped to `COOKIE_DOMAIN`. Left unset in
+   * development, where the request's own origin is the only one there is.
+   */
+  AUTH_ORIGIN?: string;
+  /**
    * The registrable domain the session cookie belongs to, e.g.
    * `bertinilabs.xyz`. Left unset in development, where the front and the API
    * are both on localhost and the cookie needs no domain at all.
@@ -68,6 +77,16 @@ export type Deps = {
  * answer 501 when they are not — which is the honest answer to "sign me in" on
  * a Worker with nowhere to put an account.
  */
+/**
+ * The origin a sign-in has to happen on.
+ *
+ * `AUTH_ORIGIN` when it is set, and the request's own origin when it is not,
+ * which is what development is: one name, no registered redirect to match.
+ */
+function authOriginOf(env: Env, request: Request): string {
+  return env.AUTH_ORIGIN ?? new URL(request.url).origin;
+}
+
 function authEnvFor(env: Env, request: Request, deps: Deps): AuthEnv | null {
   const store = deps.store ?? (env.DB ? d1Store(env.DB) : null);
   if (!store || !env.DISCORD_CLIENT_ID || !env.DISCORD_CLIENT_SECRET) return null;
@@ -78,10 +97,16 @@ function authEnvFor(env: Env, request: Request, deps: Deps): AuthEnv | null {
     discord: {
       clientId: env.DISCORD_CLIENT_ID,
       clientSecret: env.DISCORD_CLIENT_SECRET,
-      // Derived rather than configured: it has to match what Discord has
-      // registered byte for byte, and a variable that can drift from the
-      // deployed origin is a variable that will.
-      redirectUri: new URL("/auth/discord/callback", new URL(request.url).origin).toString(),
+      /*
+       * The configured address, not the one this request happened to arrive
+       * at. It was derived from the request until a sign-in started on the
+       * `workers.dev` name and Discord answered "Invalid OAuth2 redirect_uri":
+       * a Worker with two names derives two values and only one of them is
+       * registered. The drift a variable can have is the smaller risk, and
+       * `handleStart` sends the player to this origin before asking Discord
+       * anything, so the two cannot disagree in practice.
+       */
+      redirectUri: new URL("/auth/discord/callback", authOriginOf(env, request)).toString(),
     },
     appOrigin: env.APP_ORIGIN ?? new URL(request.url).origin,
     ...(env.COOKIE_DOMAIN ? { cookieDomain: env.COOKIE_DOMAIN } : {}),
@@ -289,6 +314,28 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
     }
 
     if (url.pathname === "/auth/discord/start" && request.method === "GET") {
+      /*
+       * A sign-in that starts on the wrong name is sent to the right one first.
+       *
+       * Two things break otherwise, and neither says so clearly. Discord
+       * refuses a `redirect_uri` it has not been given, which is the "Invalid
+       * OAuth2 redirect_uri" page; and the state cookie carries
+       * `Domain=COOKIE_DOMAIN`, which a browser discards outright when the
+       * response comes from a host outside that domain — so even a registered
+       * second address would come back to a state mismatch.
+       *
+       * A front deployed against the `workers.dev` name therefore still signs
+       * in, instead of failing in a way that looks like a broken account
+       * system rather than a stale build.
+       */
+      const authOrigin = authOriginOf(env, request);
+      if (url.origin !== authOrigin) {
+        return new Response(null, {
+          status: 302,
+          headers: { ...headers, Location: `${authOrigin}${url.pathname}${url.search}` },
+        });
+      }
+
       return handleStart(request, auth, headers);
     }
     if (url.pathname === "/auth/discord/callback" && request.method === "GET") {

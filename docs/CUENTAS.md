@@ -105,9 +105,15 @@ Nada de esto lo puede hacer el repositorio por sí solo.
    todas contesten "no hay nadie adentro" y parezca un login roto en vez de una
    variable sin poner.
 
-5. **`VITE_VAULT_URL` en Vercel** apuntando a `https://api.bertinilabs.xyz`.
-   Es la misma variable que ya usa el código de importación; sin ella el front
-   le pega al Worker de desarrollo y no encuentra ninguna cuenta.
+5. **`alba.bertinilabs.xyz` en el proyecto de Vercel**, en Settings → Domains.
+   El nombre ya resuelve a Vercel sin agregar nada: la zona lleva un comodín
+   `*` en A hacia Vercel, sin proxear. Por eso hoy contesta 404 y no un error
+   de DNS — es el comodín atendiendo un dominio que el proyecto no reclamó.
+
+   `VITE_VAULT_URL` **no va en Vercel**: vive en `apps/web/.env.production`,
+   porque se hornea en el bundle y es pública por diseño. Una variable en el
+   panel que dijera otra cosa la pisaría en silencio, y entonces a qué almacén
+   le habla el front dependería de dónde se lo construyó.
 
 Hasta que estén, el builder funciona como hasta ahora: el Códice local y el
 código de importación de noventa días. La insignia de cuenta directamente no
@@ -119,6 +125,15 @@ algo que no existe.
 La insignia vive en la cabecera del Códice, chiquita a propósito. El estante
 funciona deslogueado y siempre funcionó: la cuenta es una oferta —llevate esto
 a otra máquina— y no una puerta.
+
+**No aparece cuando no hay cuenta que ofrecer**, y eso son dos casos, no uno.
+Un almacén que sólo reparte códigos contesta 501. Un almacén que sí lleva
+cuentas contesta **403** a una página servida desde un origen que no nombra —
+`bertinis-vault.vercel.app` una vez que la sesión vive en `bertinilabs.xyz` —
+porque la cookie no puede viajar hasta ahí. Los dos se veían iguales mientras
+`fetchAccount` devolvía `Account | null`: nadie adentro y acá no hay cuentas
+son respuestas distintas a preguntas distintas, y colapsarlas dibujaba un botón
+que mandaba a Discord para volver al mismo estante deslogueado.
 
 Sincroniza sola, y ahí está la trampa: adoptar la respuesta del servidor cambia
 el Códice, así que un hook que sincroniza cuando el Códice cambia sincroniza

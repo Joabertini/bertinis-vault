@@ -34,22 +34,31 @@ export function signInUrl(returnPath = "/codex"): string {
 }
 
 /**
- * Who is signed in, or nobody.
+ * Whether this store keeps accounts at all, and who is signed in if it does.
  *
- * Nobody is an ordinary answer and so is a Worker with no accounts wired: a
- * deployment that only stores builds by code answers 501, and the page should
- * simply not offer to sign anyone in rather than show an error over it.
+ * Two different answers that a single `Account | null` collapsed into one, and
+ * the collapse was visible: a store with no accounts wired answers 501, a page
+ * served from an origin the store does not name answers 403, and both showed
+ * the player an "Entrar con Discord" button that could not work. Nobody signed
+ * in is an ordinary answer; no accounts here is not an answer to that question.
  */
-export async function fetchAccount(): Promise<Account | null> {
+export type AccountStatus =
+  /** The store keeps accounts. `account` is null when nobody is signed in. */
+  | { available: true; account: Account | null }
+  /** The store does not offer accounts to this page. Nothing to offer. */
+  | { available: false };
+
+export async function fetchAccountStatus(): Promise<AccountStatus> {
   try {
     const response = await fetch(`${vaultBaseUrl()}/auth/me`, { credentials: "include" });
-    if (!response.ok) return null;
+    if (!response.ok) return { available: false };
 
     const body = (await response.json()) as { account: Account | null };
-    return body.account ?? null;
+    return { available: true, account: body.account ?? null };
   } catch {
-    // Offline, or no store reachable. The Codex still works; it is local.
-    return null;
+    // Offline, or no store reachable. The Codex still works; it is local, and
+    // an offer to sign in that cannot reach anything is worse than no offer.
+    return { available: false };
   }
 }
 

@@ -16,7 +16,15 @@ import { useCodexSync } from "@/lib/codex-sync";
 import { WHISPER } from "@/styles/recipes";
 
 export default function AccountBadge() {
-  const { account, status, signOut } = useCodexSync();
+  const { account, accountsAvailable, status, signOut } = useCodexSync();
+
+  /*
+   * Nothing while the store has not answered, and nothing when it keeps no
+   * accounts for this page — 501 from a build-only deployment, 403 from an
+   * origin it does not name. Both used to draw a button that led to Discord
+   * and came back to the same signed-out shelf.
+   */
+  if (!account && accountsAvailable !== true) return null;
 
   if (!account) {
     return (
