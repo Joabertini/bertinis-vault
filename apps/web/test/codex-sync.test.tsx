@@ -97,13 +97,49 @@ describe("quien esta adentro", () => {
 
   test("un almacen sin cuentas no ofrece entrar a ningun lado", async () => {
     // Un despliegue que solo reparte codigos de importacion responde 501, y
-    // ofrecer entrar seria ofrecer algo que no existe.
+    // ofrecer entrar seria ofrecer algo que no existe. Este test afirmaba lo
+    // contrario de lo que dice su nombre: la insignia dibujaba el boton igual.
     vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", { status: 501 })));
 
-    render(<AccountBadge />);
+    const { container } = render(<AccountBadge />);
 
-    await waitFor(() => expect(screen.getByText("Entrar con Discord")).toBeTruthy());
+    await waitFor(() => expect(container.firstChild).toBe(null));
+    expect(screen.queryByText("Entrar con Discord")).toBe(null);
     expect(useVault.getState().account).toBe(null);
+  });
+
+  test("un origen que el almacen no nombra tampoco ofrece entrar", async () => {
+    /*
+     * 403, no 501: el almacen lleva cuentas y esta pagina no puede tener una,
+     * porque la cookie de sesion solo viaja hacia un origen que el Worker
+     * nombra. Es el caso de `bertinis-vault.vercel.app` una vez que la sesion
+     * vive en `bertinilabs.xyz`, y dibujar el boton ahi manda al jugador a
+     * Discord para devolverlo al mismo estante deslogueado.
+     */
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ error: "origin" }), { status: 403 })),
+    );
+
+    const { container } = render(<AccountBadge />);
+
+    await waitFor(() => expect(container.firstChild).toBe(null));
+    expect(screen.queryByText("Entrar con Discord")).toBe(null);
+  });
+
+  test("el almacen sin red no ofrece una cuenta que no puede alcanzar", async () => {
+    // El Codice es local primero: sin red el estante sigue entero, y una
+    // oferta que no llega a ningun lado es peor que ninguna oferta.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => {
+        throw new TypeError("Failed to fetch");
+      }),
+    );
+
+    const { container } = render(<AccountBadge />);
+
+    await waitFor(() => expect(container.firstChild).toBe(null));
   });
 
   test("con cuenta muestra el nombre", async () => {

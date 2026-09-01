@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import type { StoredCharacter } from "@bertinis-vault/contracts";
 
-import { fetchAccount, signOut, syncCodex, SyncError } from "./account-client";
+import { fetchAccountStatus, signOut, syncCodex, SyncError } from "./account-client";
 import { useVault, type SealedCharacter } from "./vault-store";
 
 export type SyncStatus =
@@ -47,6 +47,14 @@ function signatureOf(characters: Array<{ id: string; sealedAt: string }>, burned
 export function useCodexSync() {
   const { characters, burned, account, setAccount, adoptCharacters } = useVault();
   const [status, setStatus] = useState<SyncStatus>({ state: "idle" });
+  /**
+   * Whether this store offers accounts. `null` until it has answered.
+   *
+   * Unknown is its own state on purpose: defaulting to "yes" flashes a sign-in
+   * button on a store that has none, and defaulting to "no" hides it for a
+   * moment on every load of the one that does.
+   */
+  const [accountsAvailable, setAccountsAvailable] = useState<boolean | null>(null);
 
   /** The signature as of the last sync that finished. */
   const synced = useRef<string | null>(null);
@@ -98,8 +106,10 @@ export function useCodexSync() {
   useEffect(() => {
     let cancelled = false;
 
-    void fetchAccount().then((found) => {
-      if (!cancelled) setAccount(found);
+    void fetchAccountStatus().then((found) => {
+      if (cancelled) return;
+      setAccountsAvailable(found.available);
+      setAccount(found.available ? found.account : null);
     });
 
     return () => {
@@ -132,5 +142,5 @@ export function useCodexSync() {
     setStatus({ state: "idle" });
   }, [setAccount]);
 
-  return { account, status, sync: run, signOut: leave };
+  return { account, accountsAvailable, status, sync: run, signOut: leave };
 }
