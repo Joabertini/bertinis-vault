@@ -8,24 +8,29 @@ compatibility_date = "2026-08-01"
 binding = "BUILDS"
 id = "fee3b01501c04a439392fdaf962659fb"
 
-# Accounts, sessions and saved characters. Create with:
-#   wrangler d1 create alba
+# Accounts, sessions and saved characters. Apply the schema with:
 #   wrangler d1 migrations apply alba --remote
-# Until the id below is filled in and the migration applied, the account routes
-# answer 501 and the build store keeps working on its own.
-# [[d1_databases]]
-# binding = "DB"
-# database_name = "alba"
-# database_id = ""
+#
+# The binding is `DB`, not the database name. `wrangler d1 create` suggests
+# naming it after the database; the Worker reads `env.DB`.
+[[d1_databases]]
+binding = "DB"
+database_name = "alba"
+database_id = "78d58d4d-bfb8-40e2-ae04-6687d4146b57"
 
 [vars]
-ALLOWED_ORIGINS = "*"
+# The wildcard stays, with the site's own name beside it. Both are needed and
+# they do different jobs: the name is what lets the page hold a session, and
+# the wildcard is what lets a Foundry world on any host read a build.
+#
+# Dropping the wildcard would leave `corsHeaders` answering every other origin
+# with the first entry in this list, which a browser reads as a mismatch — and
+# the module's import would stop working from every Foundry install.
+ALLOWED_ORIGINS = "*,https://alba.bertinilabs.xyz"
 
-# Filled in when the front moves to its own name. Until then the Worker uses
-# its own origin, which is right for `wrangler dev`.
-# APP_ORIGIN = "https://alba.bertinilabs.xyz"
-# COOKIE_DOMAIN = "bertinilabs.xyz"
-# DISCORD_CLIENT_ID = ""
+APP_ORIGIN = "https://alba.bertinilabs.xyz"
+COOKIE_DOMAIN = "bertinilabs.xyz"
+DISCORD_CLIENT_ID = "1544171626973892688"
 
 # The secret is never in this file:
 #   wrangler secret put DISCORD_CLIENT_SECRET
