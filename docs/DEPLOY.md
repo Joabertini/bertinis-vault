@@ -50,15 +50,35 @@ configuration.
 
 A static build. `corepack pnpm web:build` writes `apps/web/dist`.
 
-It needs one variable, the worker's address:
+It needs one variable, the worker's address, and it lives in
+`apps/web/.env.production` rather than in the host's dashboard, because it is
+baked into the bundle at build time and is public by design:
 
 ```
-VITE_VAULT_URL=https://bertinis-vault.bertinisdnd.workers.dev
+VITE_VAULT_URL=https://api.bertinilabs.xyz
 ```
 
 Without it the builder still works — the index is bundled, so browsing and
 building need no server — but generating a code will fail, because that is the
 one thing that talks to the worker.
+
+Its own name under the site's domain, not `workers.dev`: a session cookie only
+travels between addresses that share a registrable domain, so a page talking to
+`workers.dev` can store builds and can never hold an account.
+
+**Every path has to serve `index.html`.** The router is a `BrowserRouter` with
+four paths — `/`, `/forge`, `/codex`, `/ritual` — and none of them is a file in
+`dist`, so a static host answers 404 to anyone who types one, reloads on one,
+or is sent back to one. That last case is not hypothetical: a sign-in returns
+to `/codex`, so accounts cannot work at all without this. On Vercel it is the
+rewrite in `vercel.json`:
+
+```json
+"rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+```
+
+It cannot swallow the assets: the filesystem is matched before rewrites are,
+so `/assets/*` and `/fonts/*` are served as themselves.
 
 ## Foundry module
 

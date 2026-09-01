@@ -70,7 +70,15 @@ export async function identify(
   });
 
   if (!tokenResponse.ok) {
-    throw new Error(`Discord refused the code (${tokenResponse.status}).`);
+    /*
+     * Discord's own words, which are the difference between three problems
+     * that all answer 400 or 401: `invalid_client` is the wrong secret,
+     * `invalid_grant` is a code already spent or a `redirect_uri` that does
+     * not match the one the authorize step sent. The body is an error object
+     * — `{"error":"invalid_client"}` — and carries nothing that was sent.
+     */
+    const said = await tokenResponse.text().catch(() => "");
+    throw new Error(`Discord refused the code (${tokenResponse.status}): ${said.slice(0, 200)}`);
   }
 
   const token = (await tokenResponse.json()) as { access_token?: string };
