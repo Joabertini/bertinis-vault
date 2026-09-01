@@ -95,8 +95,15 @@ Nada de esto lo puede hacer el repositorio por sí solo.
    ```
 
 4. **Los nombres.** `alba.bertinilabs.xyz` apuntando al proyecto de Vercel, y
-   `api.bertinilabs.xyz` como ruta del Worker. Cuando esos dos existan,
-   `ALLOWED_ORIGINS` deja de ser `*` y pasa a ser `https://alba.bertinilabs.xyz`.
+   `api.bertinilabs.xyz` como ruta del Worker.
+
+   **`ALLOWED_ORIGINS` tiene que dejar de ser `*`.** No es cosmético: `*` está
+   bien para el almacén de builds —ahí el código *es* la credencial— y está
+   exactamente mal para una sesión, porque "cualquier origen puede mandar la
+   cookie de este usuario" es la forma de un CSRF. Con `*`, las rutas de cuenta
+   responden 403 en vez de fallar en silencio: la versión callada sería que
+   todas contesten "no hay nadie adentro" y parezca un login roto en vez de una
+   variable sin poner.
 
 5. **`VITE_VAULT_URL` en Vercel** apuntando a `https://api.bertinilabs.xyz`.
    Es la misma variable que ya usa el código de importación; sin ella el front
