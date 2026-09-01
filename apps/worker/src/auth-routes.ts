@@ -145,9 +145,29 @@ export async function handleCallback(
   let user;
   try {
     user = await identify(env.discord, code, env.fetchImpl ?? fetch);
-  } catch {
-    // The reason is Discord's and is not the player's to read. A bad moment for
-    // a stack trace and a good one for "try again".
+  } catch (reason) {
+    /*
+     * The player reads "try again"; the log reads why.
+     *
+     * The message carries Discord's own status and nothing else — no code, no
+     * token, no secret — because the three ways this fails look identical from
+     * the outside: a client secret that was reset after it was stored, a
+     * `redirect_uri` that does not match the one the authorize step sent, and
+     * a code that was already spent. Swallowing the reason turned a
+     * two-minute check into guesswork.
+     */
+    /*
+     * The shape of the credentials, never the credentials. A secret pasted
+     * with a newline, truncated, or taken from the wrong field of the portal —
+     * the Public Key rather than the Client Secret — is rejected exactly like
+     * a wrong one, and only its length tells them apart.
+     */
+    console.error(
+      "discord sign-in failed:",
+      reason instanceof Error ? reason.message : reason,
+      `| client_id ${env.discord.clientId} | secret length ${env.discord.clientSecret.length}`,
+      `| redirect_uri ${env.discord.redirectUri}`,
+    );
     return json({ error: "Discord did not confirm the sign-in." }, 502, headers);
   }
 

@@ -12,6 +12,7 @@ import assert from "node:assert/strict";
 import { handle } from "../dist/handler.js";
 import { SESSION_COOKIE, OAUTH_STATE_COOKIE } from "../dist/session.js";
 import { safeReturnPath, packState, unpackReturnPath } from "../dist/auth-routes.js";
+import { identify } from "../dist/discord.js";
 
 /* ---------------- the doubles ---------------- */
 
@@ -509,6 +510,39 @@ test("without AUTH_ORIGIN the request's own origin is the only one there is", as
   assert.equal(
     sent.searchParams.get("redirect_uri"),
     "http://127.0.0.1:8787/auth/discord/callback",
+  );
+});
+
+test("a refusal from Discord carries its own words, not just a status", async () => {
+  /*
+   * `invalid_client` is a wrong secret; `invalid_grant` is a spent code or a
+   * `redirect_uri` that does not match the authorize step. The two are the
+   * same 401 or 400 from outside, and the player-facing message is the same
+   * "try again" for both — so the difference has to reach the log, or the next
+   * sign-in failure is guesswork again. It was: three deploys were spent on
+   * the wrong suspect because the status was all there was.
+   */
+  const refusing = async (url) => {
+    assert.match(String(url), /oauth2\/token/);
+    return new Response(JSON.stringify({ error: "invalid_client" }), { status: 401 });
+  };
+
+  await assert.rejects(
+    () =>
+      identify(
+        {
+          clientId: "client",
+          clientSecret: "secret",
+          redirectUri: "https://api.bertinilabs.xyz/auth/discord/callback",
+        },
+        "code",
+        refusing,
+      ),
+    (thrown) => {
+      assert.match(thrown.message, /401/);
+      assert.match(thrown.message, /invalid_client/);
+      return true;
+    },
   );
 });
 
