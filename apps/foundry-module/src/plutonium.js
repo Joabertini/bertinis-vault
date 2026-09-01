@@ -309,15 +309,28 @@ const FEATURE_PROP_BY_PROP = {
  * Tradition feature" is a pointer to the subclass feature imported right below
  * it, and "Ability Score Improvement" is a choice the builder already made — it
  * is on the sheet as the scores themselves.
+ *
+ * The set holds one name, and only because the data offers nothing better:
+ * all 145 "Ability Score Improvement" entries look like ordinary features.
+ *
+ * Tasha's optional features are *not* in here, and used to be. They carry
+ * `isClassFeatureVariant`, which is read below — 49 of them across the twelve
+ * classes, and every one of them an offer the player accepts rather than
+ * something the class hands over. A wizard was arriving with Cantrip Formulas
+ * nobody chose; a cleric would have arrived with twenty.
+ *
+ * "Proficiency Versatility" was in this set and matched nothing: no class or
+ * subclass feature carries that name. It was the by-name attempt at the same
+ * problem the flag now answers properly.
  */
-const SCAFFOLDING_FEATURE_NAMES = new Set([
-  "ability score improvement",
-  "proficiency versatility",
-]);
+const SCAFFOLDING_FEATURE_NAMES = new Set(["ability score improvement"]);
 
 function isRealFeature(feature) {
   if (!feature?.name) return false;
   if (feature.gainSubclassFeature && !feature.gainSubclassFeatureHasContent) return false;
+  // A variant is an offer the player has to accept, not something the class
+  // grants. See the note above `SCAFFOLDING_FEATURE_NAMES`.
+  if (feature.isClassFeatureVariant) return false;
   return !SCAFFOLDING_FEATURE_NAMES.has(feature.name.toLowerCase());
 }
 
@@ -336,7 +349,7 @@ function isRealFeature(feature) {
  * converter expects — the same call 5etools makes to build its species-feature
  * page.
  */
-function collectFeatures({ entity, prop, level }) {
+export function collectFeatures({ entity, prop, level }) {
   if (prop === "race" || prop === "subrace") {
     const dataUtil = globalThis.DataUtil?.raceFeature;
     if (!dataUtil?.getFauxRaceFeature) return [];
