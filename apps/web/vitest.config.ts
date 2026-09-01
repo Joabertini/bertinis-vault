@@ -39,6 +39,17 @@ export default mergeConfig(
        * no queremos el dia que se ponga rojo de verdad.
        */
       maxWorkers: 2,
+      /*
+       * Hilos, no procesos.
+       * Bajar a dos forks no alcanzo: el fallo no es de contencion sino de
+       * arranque — "Timeout waiting for worker to respond" mientras el fork
+       * todavia levantaba un Node entero desde un disco de 18 IOPS. Un hilo
+       * comparte el proceso que ya esta en memoria y no paga ese arranque.
+       * Medido en esta maquina: 219s con dos forks y una suite que nunca
+       * arranco, contra 111s con las 38 en verde. Ningun test depende de
+       * aislamiento de proceso.
+       */
+      pool: "threads",
     },
   }),
 );
