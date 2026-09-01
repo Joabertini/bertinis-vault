@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  addItem,
   baseActorData,
   startingCurrency,
   appearanceDetails,
@@ -432,4 +433,43 @@ test("an attuned item reaches the sheet attuned", () => {
     equipmentUpdates({ ref: ref("item", "items.html", "Cloak of Protection", "DMG"), quantity: 1, attuned: true }),
     { "system.quantity": 1, "system.attuned": true },
   );
+});
+
+/*
+ * A document dnd5e refuses is dropped, not thrown.
+ *
+ * Measured on a live import: thirty-four entries announced, thirty-three on
+ * the actor, and no message anywhere. The weapon carried a damage part whose
+ * formula dnd5e could not evaluate, the system reported it through Foundry's
+ * error handler, and `createEmbeddedDocuments` answered with the rest of the
+ * batch as if nothing had happened.
+ */
+test("a document Foundry refuses is reported rather than lost", async () => {
+  const actor = { createEmbeddedDocuments: async () => [] };
+
+  const result = await addItem(actor, { name: "Longbow" });
+
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /console/);
+});
+
+test("a document Foundry accepts says so", async () => {
+  const actor = { createEmbeddedDocuments: async (_type, [doc]) => [doc] };
+
+  assert.deepEqual(await addItem(actor, { name: "Longbow" }), { ok: true });
+});
+
+test("a validation mode that throws does not end the import", async () => {
+  // Foundry can be configured to throw instead of reporting. The player's
+  // character is worth more than the one item that failed, either way.
+  const actor = {
+    createEmbeddedDocuments: async () => {
+      throw new Error("Unresolved StringTerm p requested for evaluation");
+    },
+  };
+
+  const result = await addItem(actor, { name: "Longbow" });
+
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /StringTerm p/);
 });

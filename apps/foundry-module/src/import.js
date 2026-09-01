@@ -353,6 +353,38 @@ export function equipmentUpdates(entry) {
 }
 
 /**
+ * Put one resolved document on the actor, and say whether it landed.
+ *
+ * The return value is the whole point. `createEmbeddedDocuments` does not
+ * throw when a document fails the system's validation: dnd5e reports the
+ * failure through Foundry's error handler, drops that entry from the batch,
+ * and answers with the documents it did create. So an import could announce
+ * thirty-four entries, write thirty-three, and say nothing — which is what
+ * happened to a longbow-carrying ranger whose weapon carried a damage part
+ * dnd5e refused (`Unresolved StringTerm p requested for evaluation`).
+ *
+ * A silent drop is the worst shape a failure can have here. The player has no
+ * reason to count items, the sheet looks ordinary, and the thing they will
+ * notice is that an attack they expected is not there — at the table, mid
+ * session, with nothing to point at.
+ */
+export async function addItem(actor, document) {
+  try {
+    const [created] = await actor.createEmbeddedDocuments("Item", [document]);
+    if (created) return { ok: true };
+
+    return {
+      ok: false,
+      reason: "Foundry refused the document. The console has the validation error.",
+    };
+  } catch (error) {
+    // Some validation modes throw rather than report. Both mean the same thing
+    // to the player, and neither should end the import.
+    return { ok: false, reason: error?.message ?? String(error) };
+  }
+}
+
+/**
  * Import a payload as a new actor.
  *
  * `onProgress` is called per reference so a long import can show what it is
@@ -380,12 +412,23 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
       const { ref, dataOpts } = entry;
       onProgress({ index, total: entries.length, ref });
       const result = await documentForRef({ ref, api, dataOpts });
-      results.push(result);
 
-      if (!result.ok) continue;
+      if (!result.ok) {
+        results.push(result);
+        continue;
+      }
 
       const { _id, ...document } = markAsDirectImport(result.document);
-      await actor.createEmbeddedDocuments("Item", [document]);
+      const written = await addItem(actor, document);
+
+      if (!written.ok) {
+        // Named by what the player asked for, not by the document that failed:
+        // "Longbow" is a thing they chose, and the document is an id.
+        results.push({ ref, ok: false, reason: `${result.document?.name ?? ref.name}: ${written.reason}` });
+        continue;
+      }
+
+      results.push(result);
 
       // Spellcasting, Arcane Recovery, Darkvision: what the player actually
       // does with the class or species they picked. Added after their parent so
@@ -396,7 +439,13 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
           continue;
         }
         const { _id: _featureId, ...featureDocument } = markAsDirectImport(feature.document);
-        await actor.createEmbeddedDocuments("Item", [featureDocument]);
+        const featureWritten = await addItem(actor, featureDocument);
+
+        if (!featureWritten.ok) {
+          results.push({ ref, ok: false, reason: `${feature.name}: ${featureWritten.reason}` });
+          continue;
+        }
+
         results.push({ ref, ok: true, name: feature.name });
       }
     }
