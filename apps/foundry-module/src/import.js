@@ -368,7 +368,91 @@ export function equipmentUpdates(entry) {
  * notice is that an attack they expected is not there — at the table, mid
  * session, with nothing to point at.
  */
+/**
+ * A formula Foundry can actually roll.
+ *
+ * dnd5e keeps a custom damage part as a string and rolls it. Foundry parses a
+ * bare word into a `StringTerm`, which parses cleanly and then refuses to
+ * evaluate — so the document looks fine until dnd5e validates it on the way
+ * in, and then the whole item is thrown out.
+ *
+ * The test is by elimination: take out the dice, the `@` references, the roll
+ * functions and the arithmetic, and anything still standing is a word with no
+ * business in a formula.
+ */
+const REFERENCE = /@[\w.[\]]+/g;
+const DICE_TERM = /\d*d\d+(?:[a-z]+[\d<>=]*)*/gi;
+const ROLL_FUNCTIONS = /\b(?:floor|ceil|round|abs|min|max|clamp|pow|sqrt)\b/gi;
+const ONLY_ARITHMETIC = /^[\s\d+\-*/%^(),.[\]]*$/;
+
+export function isRollableFormula(formula) {
+  const text = `${formula ?? ""}`.trim();
+  if (!text) return false;
+
+  const remainder = text
+    .replace(REFERENCE, "")
+    .replace(DICE_TERM, "")
+    .replace(ROLL_FUNCTIONS, "");
+
+  return ONLY_ARITHMETIC.test(remainder);
+}
+
+/**
+ * The same document without the damage parts Foundry cannot roll.
+ *
+ * Returns null when there is nothing to take out, so the caller can tell "I
+ * repaired it" from "I have no idea what is wrong with this".
+ *
+ * This exists because of Plutonium's own `foundry-items.json`, where the
+ * Oversized Longbow (WDH) carries `{formula: "2", types: ["d"]}` and
+ * `{formula: "p", types: ["i"]}` — the string `2d6 piercing` sliced into
+ * characters by whatever generated the entry. dnd5e refuses the second part
+ * and takes the weapon with it. Dropping a rider we could never have rolled
+ * costs the player nothing; losing the bow costs them an attack, at the table,
+ * with nothing to point at.
+ */
+export function withoutUnrollableDamage(document) {
+  const activities = document?.system?.activities;
+  if (!activities || typeof activities !== "object") return null;
+
+  const dropped = [];
+  const copy = structuredClone(document);
+
+  for (const activity of Object.values(copy.system.activities)) {
+    const parts = activity?.damage?.parts;
+    if (!Array.isArray(parts)) continue;
+
+    activity.damage.parts = parts.filter((part) => {
+      if (!part?.custom?.enabled) return true;
+      if (isRollableFormula(part.custom.formula)) return true;
+
+      dropped.push(part.custom.formula);
+      return false;
+    });
+  }
+
+  return dropped.length ? { document: copy, dropped } : null;
+}
+
 export async function addItem(actor, document) {
+  const attempt = await writeItem(actor, document);
+  if (attempt.ok) return attempt;
+
+  // Refused. Before giving up on the whole item, try it again without the
+  // damage parts nothing could have rolled: the refusal is usually one bad
+  // rider on an otherwise ordinary weapon.
+  const repaired = withoutUnrollableDamage(document);
+  if (!repaired) return attempt;
+
+  const retry = await writeItem(actor, repaired.document);
+  // Still refused, for some reason we did not guess. Report the first refusal:
+  // the second one is about a document the player never asked for.
+  if (!retry.ok) return attempt;
+
+  return { ok: true, repaired: repaired.dropped };
+}
+
+async function writeItem(actor, document) {
   try {
     const [created] = await actor.createEmbeddedDocuments("Item", [document]);
     if (created) return { ok: true };
@@ -402,6 +486,9 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
 
   const entries = orderedRefs(payload);
   const results = [];
+  // Documents that only landed because we took something out of them. Not a
+  // failure and not a success worth staying quiet about.
+  const repairs = [];
 
   // The import is meant to be silent. If it is not, the window says so itself.
   let windows = [];
@@ -429,6 +516,9 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
       }
 
       results.push(result);
+      if (written.repaired) {
+        repairs.push({ name: result.document?.name ?? ref.name, dropped: written.repaired });
+      }
 
       // Spellcasting, Arcane Recovery, Darkvision: what the player actually
       // does with the class or species they picked. Added after their parent so
@@ -447,6 +537,9 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
         }
 
         results.push({ ref, ok: true, name: feature.name });
+        if (featureWritten.repaired) {
+          repairs.push({ name: feature.name, dropped: featureWritten.repaired });
+        }
       }
     }
   } finally {
@@ -460,6 +553,7 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
     actor,
     imported: results.filter((r) => r.ok).length,
     failures: results.filter((r) => !r.ok),
+    repairs,
     windows,
   };
 }

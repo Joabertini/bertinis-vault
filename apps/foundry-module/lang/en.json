@@ -13,6 +13,7 @@
   "bertinis-vault.notifications.plutoniumMissing": "Bertini's Vault needs Plutonium to import characters. Install and enable it, then reload.",
   "bertinis-vault.notifications.importing": "Importing {name}...",
   "bertinis-vault.notifications.imported": "Imported {name} with {count} entries.",
+  "bertinis-vault.notifications.droppedDamage": "{name}: dropped a damage part Foundry cannot roll ({formulas}). The rest of the item imported.",
   "bertinis-vault.notifications.importedWithFailures": "Imported {name}, but {count} entries could not be resolved. See the console.",
   "bertinis-vault.errors.notFound": "No build found for code {code}. It may have expired.",
   "bertinis-vault.errors.badCode": "{code} is not a valid build code.",

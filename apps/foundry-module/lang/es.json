@@ -13,6 +13,7 @@
   "bertinis-vault.notifications.plutoniumMissing": "Bertini's Vault necesita Plutonium para importar personajes. Instalalo y activalo, después recargá.",
   "bertinis-vault.notifications.importing": "Importando {name}...",
   "bertinis-vault.notifications.imported": "{name} importado con {count} entradas.",
+  "bertinis-vault.notifications.droppedDamage": "{name}: se descartó una parte de daño que Foundry no puede tirar ({formulas}). El resto del ítem entró igual.",
   "bertinis-vault.notifications.importedWithFailures": "{name} importado, pero {count} entradas no se pudieron resolver. Mirá la consola.",
   "bertinis-vault.errors.notFound": "No hay ningún personaje con el código {code}. Puede haber vencido.",
   "bertinis-vault.errors.badCode": "{code} no es un código válido.",

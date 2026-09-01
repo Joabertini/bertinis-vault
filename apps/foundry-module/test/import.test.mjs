@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 
 import {
   addItem,
+  isRollableFormula,
+  withoutUnrollableDamage,
   baseActorData,
   startingCurrency,
   appearanceDetails,
@@ -472,4 +474,112 @@ test("a validation mode that throws does not end the import", async () => {
 
   assert.equal(result.ok, false);
   assert.match(result.reason, /StringTerm p/);
+});
+
+
+/*
+ * The Oversized Longbow (WDH), copied out of Plutonium's `foundry-items.json`
+ * exactly as it ships. Two custom parts, and the second one is the string "p"
+ * with a damage type of "i" — `2d6 piercing` cut into characters by whatever
+ * generated the entry. dnd5e refuses the part and the bow goes with it.
+ */
+const oversizedLongbow = () => ({
+  name: "Oversized Longbow",
+  system: {
+    activities: {
+      dnd5eactivity000: {
+        type: "damage",
+        damage: {
+          parts: [
+            { custom: { enabled: true, formula: "2" }, types: ["d"] },
+            { custom: { enabled: true, formula: "p" }, types: ["i"] },
+          ],
+        },
+      },
+    },
+  },
+});
+
+test("a bare word is not a formula", () => {
+  assert.equal(isRollableFormula("p"), false);
+  assert.equal(isRollableFormula("piercing"), false);
+  assert.equal(isRollableFormula(""), false);
+  assert.equal(isRollableFormula(null), false);
+});
+
+test("dice, references and arithmetic are formulas", () => {
+  for (const formula of [
+    "2d6",
+    "1d8 + 2",
+    "2",
+    "@abilities.dex.mod",
+    "4d6kh3",
+    "floor(@classes.ranger.levels / 2)",
+    "2d6 + @mod - 1",
+  ]) {
+    assert.equal(isRollableFormula(formula), true, formula);
+  }
+});
+
+test("only the unrollable part is taken out", () => {
+  const repaired = withoutUnrollableDamage(oversizedLongbow());
+
+  assert.deepEqual(repaired.dropped, ["p"]);
+  assert.deepEqual(
+    repaired.document.system.activities.dnd5eactivity000.damage.parts,
+    [{ custom: { enabled: true, formula: "2" }, types: ["d"] }],
+  );
+});
+
+test("repairing does not touch the document it was handed", () => {
+  const document = oversizedLongbow();
+  withoutUnrollableDamage(document);
+
+  assert.equal(document.system.activities.dnd5eactivity000.damage.parts.length, 2);
+});
+
+test("a document with nothing wrong is left alone", () => {
+  assert.equal(withoutUnrollableDamage({ name: "Longbow" }), null);
+  assert.equal(
+    withoutUnrollableDamage({
+      name: "Longbow",
+      system: {
+        activities: {
+          a: { damage: { parts: [{ custom: { enabled: true, formula: "1d8" } }] } },
+        },
+      },
+    }),
+    null,
+  );
+});
+
+test("a weapon refused for one bad damage part still reaches the sheet", async () => {
+  const written = [];
+  const actor = {
+    createEmbeddedDocuments: async (_type, [doc]) => {
+      const parts = Object.values(doc.system.activities)[0].damage.parts;
+      // Stand in for dnd5e: refuse the whole document over the part it cannot
+      // evaluate, the way it refuses the real one.
+      if (parts.some((part) => part.custom?.formula === "p")) return [];
+      written.push(doc);
+      return [doc];
+    },
+  };
+
+  const result = await addItem(actor, oversizedLongbow());
+
+  assert.deepEqual(result, { ok: true, repaired: ["p"] });
+  assert.equal(written.length, 1);
+  assert.equal(written[0].system.activities.dnd5eactivity000.damage.parts.length, 1);
+});
+
+test("a refusal we cannot explain is still reported as a refusal", async () => {
+  // Repairing is a guess. When the guess is wrong, the player hears about the
+  // refusal itself, not about the document we invented trying to fix it.
+  const actor = { createEmbeddedDocuments: async () => [] };
+
+  const result = await addItem(actor, oversizedLongbow());
+
+  assert.equal(result.ok, false);
+  assert.match(result.reason, /console/);
 });

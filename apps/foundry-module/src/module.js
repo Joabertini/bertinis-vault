@@ -150,6 +150,20 @@ async function runImport(payload) {
       ui.notifications.warn(t("notifications.unexpectedWindows", { names }));
     }
 
+    if (result.repairs?.length) {
+      // The item is on the sheet, minus a damage part nothing could roll. Say
+      // so: the player is the only one who can tell whether they miss it.
+      console.warn(`${MODULE_ID} | damage parts Foundry cannot roll:`, result.repairs);
+      for (const repair of result.repairs.slice(0, 5)) {
+        ui.notifications.warn(
+          t("notifications.droppedDamage", {
+            name: repair.name,
+            formulas: repair.dropped.join(", "),
+          }),
+        );
+      }
+    }
+
     if (result.failures.length) {
       // Naming what failed lets the player fix it in the builder and re-import.
       console.warn(`${MODULE_ID} | unresolved:`, result.failures);
