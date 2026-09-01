@@ -182,22 +182,22 @@ export default function LiveSheet({
       {/* ---- identity ---- */}
       <div className="flex items-start justify-between gap-4 border-b border-iron/50 pb-5">
         <div className="min-w-0">
-          <p className="font-mono text-[9px] tracking-[0.5em] uppercase text-bone/30">
+          <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-bone/60">
             Living Record
           </p>
           <h3 className="mt-2 truncate font-display text-xl font-black text-bone">
             {state.characterName.trim() || "El Innombrado"}
           </h3>
-          <p className="mt-1 font-body text-sm italic leading-snug text-bone/45">
+          <p className="mt-1 font-body text-sm leading-snug text-bone/75">
             Nivel {characterLevelFor(state)} · {race?.label ?? "sin linaje"}
             {subrace ? ` (${stripParent(subrace.label, race?.label)})` : ""}
             {cls ? ` · ${classLine}` : ""}
           </p>
           {subclass && (
-            <p className="mt-0.5 font-body text-xs italic text-bone/40">{subclass.label}</p>
+            <p className="mt-0.5 font-body text-[13px] text-bone/60">{subclass.label}</p>
           )}
           {background && (
-            <p className="mt-0.5 font-body text-xs italic text-bone/30">{background.label}</p>
+            <p className="mt-0.5 font-body text-[13px] text-bone/60">{background.label}</p>
           )}
         </div>
         <Sigil name={state.classId || state.raceId || "fighter"} size={36} className="shrink-0" />
@@ -276,7 +276,7 @@ export default function LiveSheet({
           this species. An Aarakocra's 50 feet of flight was nowhere on the
           sheet. */}
       {senses?.otherSpeeds.length ? (
-        <p className="mt-3 font-body text-xs italic leading-relaxed text-bone/40">
+        <p className="mt-3 font-body text-[13px] leading-relaxed text-bone/60">
           {senses.otherSpeeds.map((entry, index) => (
             <span key={entry.mode}>
               {index > 0 && ", "}
@@ -290,7 +290,7 @@ export default function LiveSheet({
       {/* The purse, once there is one. A player who took the money instead of
           the gear has nothing else on the sheet to show for that choice. */}
       {snapshot?.choices.startingCopper ? (
-        <p className="mt-4 font-body text-xs italic leading-relaxed text-bone/40">
+        <p className="mt-4 font-body text-[13px] leading-relaxed text-bone/60">
           Empezas con{" "}
           <span style={{ color: accent }}>{coinLabel(snapshot.choices.startingCopper)}</span>.
         </p>
@@ -327,7 +327,7 @@ export default function LiveSheet({
           <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
             {speciesTraits.map((trait) => (
               <li key={trait} className="flex items-baseline gap-1.5">
-                <span className="font-mono text-[9px] leading-none" style={{ color: accent }}>
+                <span className="font-mono text-[10px] leading-none" style={{ color: accent }}>
                   •
                 </span>
                 <span className="truncate font-body text-xs">{trait}</span>
@@ -350,11 +350,11 @@ export default function LiveSheet({
           <ul className="space-y-1">
             {grantedSpells.map((granted) => (
               <li key={`${granted.grantedBy}:${granted.label}`} className="flex items-baseline gap-1.5">
-                <span className="font-mono text-[9px] leading-none" style={{ color: accent }}>
+                <span className="font-mono text-[10px] leading-none" style={{ color: accent }}>
                   •
                 </span>
                 <span className="font-body text-xs capitalize">{granted.label}</span>
-                <span className="font-body text-[10px] italic text-bone/35">
+                <span className="font-body text-[10px] text-bone/60">
                   {granted.uses
                     ? `${granted.grantedBy} · ${granted.uses.max}/${periodLabel(granted.uses.period)}`
                     : granted.grantedBy}
@@ -372,9 +372,8 @@ export default function LiveSheet({
         or not a background has been chosen yet.
       */}
       {hitDie && (
-        <p className="mt-2.5 font-body text-xs italic leading-relaxed text-bone/40">
-          Dado de golpe <span style={{ color: accent }}>d{hitDie}</span>. A nivel 1 tenes {hitDie}{" "}
-          puntos de golpe mas tu modificador de Constitucion, y por cada nivel volves a tirarlo.
+        <p className="mt-2.5 font-body text-[13px] leading-relaxed text-bone/60">
+          Dado de golpe <span style={{ color: accent }}>d{hitDie}</span>
         </p>
       )}
 
@@ -401,7 +400,7 @@ export default function LiveSheet({
             <div key={ability}>
               <div className="flex items-center justify-between gap-3">
                 <span
-                  className="font-mono text-[10px] tracking-[0.3em] text-bone/40"
+                  className="font-mono text-[10px] tracking-[0.3em] text-bone/60"
                   title={abilityLabels[ability]}
                 >
                   {ability.toUpperCase()}
@@ -415,7 +414,7 @@ export default function LiveSheet({
                       style={{ background: accent }}
                     />
                   </div>
-                  <span className="w-6 text-right font-mono text-[9px] text-ember/70">
+                  <span className="w-6 text-right font-mono text-[10px] text-ember">
                     {added > 0 ? `+${added}` : ""}
                   </span>
                   <span
@@ -424,7 +423,7 @@ export default function LiveSheet({
                   >
                     {score}
                   </span>
-                  <span className="w-7 text-right font-mono text-[10px] text-bone/35">
+                  <span className="w-7 text-right font-mono text-[10px] text-bone/60">
                     {modifier >= 0 ? `+${modifier}` : modifier}
                   </span>
                 </div>
@@ -439,12 +438,12 @@ export default function LiveSheet({
                 with no bonuses keeps the tight six-row list it had.
               */}
               {added > 0 && (
-                <p className="mt-1 pl-1 font-mono text-[9px] leading-none text-bone/30">
+                <p className="mt-1 pl-1 font-mono text-[10px] leading-none text-bone/60">
                   {source.base} base
                   {source.species > 0 && ` · +${source.species} ${bonusOrigin(rulesVersion)}`}
                   {source.improvements > 0 && ` · +${source.improvements} mejora`}
                   {source.feats > 0 && ` · +${source.feats} dote`}
-                  {source.capped && <span className="text-ember/70"> · tope 20</span>}
+                  {source.capped && <span className="text-ember"> · tope 20</span>}
                 </p>
               )}
             </div>
@@ -468,14 +467,14 @@ export default function LiveSheet({
           className="h-1.5 w-1.5 rounded-full"
           style={{ background: sealed ? "#FF5A1F" : "#4A4640" }}
         />
-        <span className="font-mono text-[9px] tracking-[0.3em] uppercase text-bone/70">
+        <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-bone/70">
           {sealed ? "Sellado" : "Sin sellar"}
         </span>
       </motion.div>
 
       {/* What the seal is waiting on. Named, not implied by a disabled button. */}
       {resolved.missing.length > 0 && (
-        <p className="mt-3 font-body text-xs italic leading-relaxed text-bone/35">
+        <p className="mt-3 font-body text-[13px] leading-relaxed text-bone/60">
           Falta: {resolved.missing.join(", ")}.
         </p>
       )}
@@ -486,17 +485,17 @@ export default function LiveSheet({
       {/* A pick the index could not resolve would be dropped on export. */}
       {problems.length > 0 && (
         <div className="mt-3 border-l-2 border-ember/60 pl-3">
-          <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-ember/80">
+          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-ember">
             {problems.length} sin resolver
           </p>
           <ul className="mt-1.5 space-y-1">
             {problems.slice(0, 3).map((problem) => (
-              <li key={problem} className="font-body text-xs italic leading-snug text-bone/35">
+              <li key={problem} className="font-body text-[13px] leading-snug text-bone/60">
                 {problem}
               </li>
             ))}
             {problems.length > 3 && (
-              <li className="font-mono text-[9px] text-bone/25">y {problems.length - 3} mas</li>
+              <li className="font-mono text-[10px] text-bone/60">y {problems.length - 3} mas</li>
             )}
           </ul>
         </div>
@@ -521,7 +520,7 @@ function Vital({
 }) {
   return (
     <div className="border border-iron/50 bg-void/40 px-2 py-2 text-center" title={hint}>
-      <p className="font-mono text-[8px] uppercase tracking-[0.2em] text-bone/35">{label}</p>
+      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">{label}</p>
       <p
         className="mt-0.5 font-display text-lg font-black"
         style={{ color: dim ? "#4A4640" : accent }}
@@ -545,7 +544,7 @@ function Counsel({ advice, accent }: { advice: Advice[]; accent: string }) {
 
   return (
     <div className="mt-6 border-t border-iron/40 pt-5">
-      <p className="mb-4 font-mono text-[9px] uppercase tracking-[0.35em] text-bone/40">
+      <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
         Como pelea
       </p>
 
@@ -555,7 +554,7 @@ function Counsel({ advice, accent }: { advice: Advice[]; accent: string }) {
             <p className={HEADING} style={{ color: accent }}>
               {entry.title}
             </p>
-            <p className="mt-0.5 font-body text-xs leading-relaxed text-bone/40">{entry.detail}</p>
+            <p className="mt-0.5 font-body text-xs leading-relaxed text-bone/60">{entry.detail}</p>
           </div>
         ))}
       </div>
@@ -576,7 +575,7 @@ function Counsel({ advice, accent }: { advice: Advice[]; accent: string }) {
               >
                 {entry.title}
               </p>
-              <p className="mt-1 font-body text-xs leading-relaxed text-bone/40">{entry.detail}</p>
+              <p className="mt-1 font-body text-xs leading-relaxed text-bone/60">{entry.detail}</p>
             </div>
           ))}
         </div>

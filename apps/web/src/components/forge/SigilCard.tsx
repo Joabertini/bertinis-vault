@@ -74,7 +74,7 @@ export default function SigilCard({
 
       {note && (
         <p
-          className={`font-body italic leading-snug text-bone/35 ${
+          className={`font-body italic leading-snug text-bone/60 ${
             compact ? "mt-0.5 text-[10px]" : "mt-1.5 text-sm"
           }`}
         >

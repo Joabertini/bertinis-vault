@@ -15,7 +15,8 @@
 import type { ExpertiseProblem } from "@bertinis-vault/domain";
 
 import type { ExpertiseSlot } from "@/lib/expertise";
-import { LABEL_MB2, WHISPER } from "@/styles/recipes";
+import RuleNote from "@/components/ui/RuleNote";
+import { LABEL, WHISPER } from "@/styles/recipes";
 
 /** A problem, said the way a player would say it. */
 function problemLine(problem: ExpertiseProblem): string {
@@ -52,11 +53,15 @@ export default function Expertise({
 }) {
   return (
     <div>
-      <p className={LABEL_MB2}>Maestria</p>
-      <p className={`mb-6 ${WHISPER}`}>
-        Doblas el bono de competencia en lo que ya sabes hacer. Es el unico multiplicador sobre una
-        tirada de d20 en todo el juego.
-      </p>
+      <div className="mb-6 flex items-center gap-3">
+        <p className={LABEL}>Maestria</p>
+        <RuleNote title="Maestria">
+          <p>
+            Doblas el bono de competencia en lo que ya sabes hacer. Es el unico multiplicador
+            sobre una tirada de d20 en todo el juego.
+          </p>
+        </RuleNote>
+      </div>
 
       {slots.map((slot) => {
         const answer = slot.answer;
@@ -123,7 +128,7 @@ export default function Expertise({
             )}
 
             {slot.problems.map((problem, index) => (
-              <p key={index} className="mt-3 font-body text-xs italic text-ember/70">
+              <p key={index} className="mt-3 font-body text-[13px] text-ember">
                 {problemLine(problem)}
               </p>
             ))}
@@ -156,7 +161,7 @@ function Picker({
 }) {
   return (
     <div className="mt-4">
-      <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/40">{label}</p>
+      <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60">{label}</p>
       {options.length === 0 ? (
         <p className={WHISPER}>Todavia no tenes nada de esto en lo que doblar.</p>
       ) : (

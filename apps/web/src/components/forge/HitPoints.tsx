@@ -19,7 +19,8 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 
 import type { HitPointLevel } from "@/lib/hit-points";
-import { DIVIDER, LABEL_MB4, WHISPER } from "@/styles/recipes";
+import RuleNote from "@/components/ui/RuleNote";
+import { DIVIDER, LABEL, WHISPER } from "@/styles/recipes";
 
 export default function HitPoints({
   method,
@@ -59,7 +60,16 @@ export default function HitPoints({
 
   return (
     <div className={DIVIDER}>
-      <p className={LABEL_MB4}>Puntos de golpe</p>
+      <div className="mb-4 flex items-center gap-3">
+        <p className={LABEL}>Puntos de golpe</p>
+        <RuleNote title="Puntos de golpe">
+          <p>
+            El nivel 1 es siempre el dado al maximo. Cada nivel despues suma la mitad del dado
+            mas uno, o lo que salga si preferis tirarlo.
+          </p>
+          <p>A todos los niveles se les suma tu modificador de Constitucion.</p>
+        </RuleNote>
+      </div>
 
       <div className="mb-6 flex gap-2">
         {(
@@ -76,38 +86,37 @@ export default function HitPoints({
             className="flex-1 border px-4 py-3 text-left transition-colors"
             style={{
               borderColor: method === value ? accent : "rgba(120,113,108,0.4)",
-              color: method === value ? accent : "rgba(232,226,214,0.5)",
+              color: method === value ? accent : "rgba(230,223,206,0.75)",
             }}
           >
             <span className="font-display text-sm font-bold">{label}</span>
-            <span className="mt-1 block font-body text-xs text-bone/35">{hint}</span>
+            <span className="mt-1 block font-body text-xs text-bone/60">{hint}</span>
           </button>
         ))}
       </div>
 
       {method === "average" ? (
         <p className={WHISPER}>
-          Cada nivel despues del primero suma la mitad del dado mas uno. El primero es el dado al
-          maximo, d{firstDie} {signed(constitutionModifier)}.
+          Nivel 1: d{firstDie} al maximo {signed(constitutionModifier)}.
         </p>
       ) : (
         <div className="space-y-2">
           <div className="flex items-center gap-3 border-b border-iron/30 pb-2">
-            <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/30">
+            <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60">
               Nv 1
             </span>
-            <span className="font-body text-sm text-bone/40">
+            <span className="font-body text-sm text-bone/60">
               d{firstDie} al maximo — no se tira en ninguna de las dos ediciones
             </span>
           </div>
 
           {levels.map((row) => (
             <div key={row.level} className="flex items-center gap-3">
-              <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/30">
+              <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60">
                 Nv {row.level}
               </span>
-              <span className="w-14 shrink-0 font-mono text-[11px] text-bone/45">d{row.die}</span>
-              <span className="min-w-0 flex-1 truncate font-body text-sm text-bone/35">
+              <span className="w-14 shrink-0 font-mono text-[11px] text-bone/75">d{row.die}</span>
+              <span className="min-w-0 flex-1 truncate font-body text-sm text-bone/60">
                 {classLabel(row.classId)}
               </span>
 
@@ -135,7 +144,7 @@ export default function HitPoints({
                 onClick={() => roll(row)}
                 animate={rolling === row.level ? { rotate: [0, 180, 360] } : { rotate: 0 }}
                 transition={{ duration: 0.26 }}
-                className="shrink-0 border border-iron/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/50 hover:text-bone/80"
+                className="shrink-0 border border-iron/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/75 hover:text-bone/80"
               >
                 Tirar
               </motion.button>
@@ -144,8 +153,8 @@ export default function HitPoints({
 
           {unrolled > 0 && (
             <p className={`pt-3 ${WHISPER}`}>
-              {unrolled === 1 ? "Queda un nivel sin tirar" : `Quedan ${unrolled} niveles sin tirar`}
-              . Esos toman el promedio hasta que escribas lo que salio.
+              {unrolled === 1 ? "Queda 1 nivel sin tirar" : `Quedan ${unrolled} niveles sin tirar`}
+              : toman el promedio.
             </p>
           )}
         </div>

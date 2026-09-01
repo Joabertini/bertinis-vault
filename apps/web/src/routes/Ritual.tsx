@@ -69,7 +69,7 @@ export default function Ritual() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-void px-6 text-center">
         <GrainOverlay />
-        <p className="font-body text-xl italic text-bone/50">
+        <p className="font-body text-xl italic text-bone/75">
           Ningun alma esta atada a este ritual.
         </p>
         <Link to="/codex">
@@ -188,18 +188,18 @@ export default function Ritual() {
         <header className="mb-14 text-center">
           <Link
             to="/codex"
-            className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/30 transition-colors hover:text-gold"
+            className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-gold"
           >
             ← El codice
           </Link>
-          <p className="mt-6 font-mono text-[10px] tracking-[0.6em] uppercase text-gold/60">
+          <p className="mt-6 font-mono text-[10px] tracking-[0.6em] uppercase text-gold/85">
             Circulo de teletransportacion
           </p>
           <h1 className="mt-3 font-display text-5xl font-black tracking-wide text-bone">
             EL RITUAL
           </h1>
-          <p className="mx-auto mt-4 max-w-md font-body italic text-bone/45">
-            Elegi un reino de destino. El circulo hace el resto.
+          <p className="mx-auto mt-4 max-w-md font-body italic text-bone/75">
+            Elegi un reino de destino.
           </p>
         </header>
 
@@ -208,7 +208,7 @@ export default function Ritual() {
           <Sigil name={state.classId || state.raceId} size={34} />
           <div className="text-left">
             <p className="font-display text-lg font-bold text-bone">{state.characterName}</p>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-bone/40">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-bone/60">
               Nivel {characterLevelFor(state)} · {classLine || "—"} · reglas {rulesVersion}
             </p>
           </div>
@@ -238,11 +238,11 @@ export default function Ritual() {
                 <motion.p
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-8 text-center font-body italic text-bone/45"
+                  className="mt-8 text-center font-body italic text-bone/75"
                 >
                   {realm.yields}.
                   {realm.status === "dormant" && (
-                    <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ember/70">
+                    <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ember">
                       dormido
                     </span>
                   )}
@@ -324,7 +324,7 @@ export default function Ritual() {
                   transition={{ delay: 0.7 }}
                   className="w-full max-w-md"
                 >
-                  <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-bone/40">
+                  <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-bone/60">
                     Pega esto en el modulo
                   </p>
 
@@ -337,14 +337,13 @@ export default function Ritual() {
                     <span className="block select-all font-mono text-3xl font-bold tracking-[0.35em] text-gold">
                       {phase.code}
                     </span>
-                    <span className="mt-3 block font-mono text-[9px] uppercase tracking-[0.3em] text-bone/35 transition-colors group-hover:text-bone/60">
+                    <span className="mt-3 block font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors group-hover:text-bone/60">
                       {copied ? "✓ copiado" : "click para copiar"}
                     </span>
                   </button>
 
-                  <p className="mt-4 font-body text-sm italic leading-relaxed text-bone/35">
-                    En Foundry: abri el modulo del Faro del Alba y escribi el codigo.
-                    Plutonium resuelve cada referencia contra sus compendios.
+                  <p className="mt-4 font-body text-sm leading-relaxed text-bone/60">
+                    En Foundry, abri el modulo del Faro del Alba y escribi el codigo.
                   </p>
                 </motion.div>
               )}
@@ -352,7 +351,7 @@ export default function Ritual() {
               <div className="mt-2 flex flex-wrap justify-center gap-6">
                 <button
                   onClick={reset}
-                  className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/40 hover:text-bone"
+                  className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 hover:text-bone"
                 >
                   ↻ Lanzar de nuevo
                 </button>
@@ -379,7 +378,7 @@ export default function Ritual() {
                 <p className="font-display text-2xl font-black text-bone">
                   El circulo no se abrio
                 </p>
-                <p className="mt-4 font-body italic leading-relaxed text-bone/50">
+                <p className="mt-4 font-body italic leading-relaxed text-bone/75">
                   {phase.reason}
                 </p>
               </div>
@@ -387,7 +386,7 @@ export default function Ritual() {
               <div className="flex flex-wrap justify-center gap-6">
                 <button
                   onClick={reset}
-                  className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/40 hover:text-bone"
+                  className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 hover:text-bone"
                 >
                   ← Elegir otro reino
                 </button>
@@ -424,7 +423,7 @@ function Unresolved({ problems }: { problems: string[] }) {
     <div className="mx-auto mt-6 max-w-xl">
       <button
         onClick={() => setOpen((value) => !value)}
-        className="mx-auto flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ember/70 transition-colors hover:text-ember"
+        className="mx-auto flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ember transition-colors hover:text-ember"
         aria-expanded={open}
       >
         <span>
@@ -444,13 +443,13 @@ function Unresolved({ problems }: { problems: string[] }) {
             {problems.map((problem) => (
               <li
                 key={problem}
-                className="mt-3 border-l-2 pl-4 font-body text-sm leading-relaxed text-bone/50"
+                className="mt-3 border-l-2 pl-4 font-body text-sm leading-relaxed text-bone/75"
                 style={{ borderColor: "rgba(200, 80, 40, 0.5)" }}
               >
                 {problem}
               </li>
             ))}
-            <li className="mt-5 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/25">
+            <li className="mt-5 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">
               El resto del personaje cruza igual
             </li>
           </motion.ul>
@@ -513,14 +512,14 @@ function PortalRune({
       />
 
       <span
-        className="relative px-1 font-mono text-[9px] uppercase leading-relaxed tracking-[0.15em]"
-        style={{ color: selected ? "#E6DFCE" : "rgba(230,223,206,0.33)" }}
+        className="relative px-1 font-mono text-[10px] uppercase leading-relaxed tracking-[0.15em]"
+        style={{ color: selected ? "#E6DFCE" : "rgba(230,223,206,0.6)" }}
       >
         {realm.name}
       </span>
 
       {dormant && (
-        <span className="absolute bottom-2 font-mono text-[7px] uppercase tracking-[0.2em] text-bone/25">
+        <span className="absolute bottom-2 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">
           dormido
         </span>
       )}

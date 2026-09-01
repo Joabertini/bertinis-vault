@@ -36,7 +36,7 @@ export default function Attunement({
 
       <p className="mb-3 font-body text-sm text-bone/60">
         <span style={{ color: over ? "#ff5a1f" : accent }}>{state.used}</span>
-        <span className="text-bone/35"> de {state.slots}</span>
+        <span className="text-bone/60"> de {state.slots}</span>
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -52,10 +52,10 @@ export default function Attunement({
               className="border px-3 py-1.5 font-body text-sm transition-colors"
               style={{
                 borderColor: on ? accent : "rgba(120,120,120,0.4)",
-                color: on ? accent : "rgba(232,228,220,0.5)",
+                color: on ? accent : "rgba(230,223,206,0.75)",
               }}
             >
-              <span className="mr-1.5 font-mono text-[9px]">{on ? "◆" : "◈"}</span>
+              <span className="mr-1.5 font-mono text-[10px]">{on ? "◆" : "◈"}</span>
               {item.label}
             </button>
           );
@@ -64,7 +64,7 @@ export default function Attunement({
 
       {over && (
         <p className={`mt-3 ${WHISPER}`} style={{ color: "#ff5a1f" }}>
-          Las reglas permiten tres a la vez. Estas sintonizado con {state.used}.
+          Tres es el maximo. Llevas {state.used}.
         </p>
       )}
     </div>

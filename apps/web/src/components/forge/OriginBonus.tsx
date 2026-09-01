@@ -53,11 +53,11 @@ export default function OriginBonus({
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-        <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/40">
+        <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
           Aumento de especie
         </span>
         {custom && (
-          <span className={META} style={{ color: complete ? accent : "rgba(230,223,206,0.35)" }}>
+          <span className={META} style={{ color: complete ? accent : "rgba(230,223,206,0.6)" }}>
             {assignment.filter(Boolean).length} / {blocks.length} bloques
           </span>
         )}
@@ -69,7 +69,7 @@ export default function OriginBonus({
         className="mb-5 flex items-start gap-3 text-left"
       >
         <span
-          className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center border text-[9px]"
+          className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center border text-[10px]"
           style={{
             borderColor: custom ? accent : "#4A4640",
             background: custom ? accent : "transparent",
@@ -78,9 +78,9 @@ export default function OriginBonus({
         >
           {custom ? "✓" : ""}
         </span>
-        <span className="font-body text-xs leading-relaxed text-bone/50">
+        <span className="font-body text-xs leading-relaxed text-bone/75">
           Personalizacion de Origen{" "}
-          <span className="text-bone/30">
+          <span className="text-bone/60">
             (Tasha). Regla opcional: podes mover cada bloque entero a la caracteristica que
             quieras, pero no juntar dos en la misma. Preguntale a tu DM si la usan.
           </span>
@@ -108,7 +108,7 @@ export default function OriginBonus({
         <div className="space-y-4">
           {blocks.map((block, index) => (
             <div key={`${block}-${index}`}>
-              <p className="mb-1.5 font-mono text-[9px] uppercase tracking-wide text-bone/25">
+              <p className="mb-1.5 font-mono text-[10px] uppercase tracking-wide text-bone/60">
                 Bloque de +{block}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -128,7 +128,7 @@ export default function OriginBonus({
                       style={{
                         borderColor: mine ? accent : elsewhere ? "#4A4640" : "#3A3630",
                         background: mine ? `${accent}18` : "transparent",
-                        color: mine ? accent : elsewhere ? "rgba(230,223,206,0.25)" : "#E6DFCE",
+                        color: mine ? accent : elsewhere ? "rgba(230,223,206,0.45)" : "#E6DFCE",
                       }}
                       title={elsewhere ? "Ocupada por otro bloque — cambiarlos de lugar" : undefined}
                     >

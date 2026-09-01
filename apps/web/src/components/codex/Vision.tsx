@@ -111,9 +111,9 @@ export default function Vision({
           <Sigil name={sigilName} size={44} />
           <div className="min-w-0 flex-1">
             <h2 className="font-display text-2xl font-black leading-tight text-bone">{name}</h2>
-            <p className="mt-1 font-body text-sm italic text-bone/50">
+            <p className="mt-1 font-body text-sm text-bone/75">
               {subtitle}
-              {playbook.role && <span className="text-bone/35"> — {playbook.role}</span>}
+              {playbook.role && <span className="text-bone/60"> — {playbook.role}</span>}
             </p>
           </div>
         </div>
@@ -126,7 +126,7 @@ export default function Vision({
                 className="border border-iron/40 bg-void/50 px-3 py-2"
                 title={vital.from}
               >
-                <dt className="font-mono text-[8px] uppercase tracking-[0.18em] text-bone/35">
+                <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone/60">
                   {vital.label}
                 </dt>
                 <dd className="mt-0.5 font-display text-xl font-black" style={{ color: accent }}>
@@ -139,9 +139,8 @@ export default function Vision({
       </header>
 
       {playbook.unwritten ? (
-        <p className="px-8 py-12 font-body text-sm italic leading-relaxed text-bone/40">
-          La hoja de trucos todavia no cubre esta clase. Antes que llenar la pagina con
-          generalidades, queda en blanco.
+        <p className="px-8 py-12 font-body text-sm leading-relaxed text-bone/60">
+          La hoja de trucos todavia no cubre esta clase.
         </p>
       ) : (
         <>
@@ -195,7 +194,7 @@ export default function Vision({
                   {playbook.warnings.map((warning) => (
                     <p
                       key={warning}
-                      className="border-l-2 border-ember/60 pl-4 font-body text-sm leading-relaxed text-bone/55"
+                      className="border-l-2 border-ember/60 pl-4 font-body text-sm leading-relaxed text-bone/75"
                     >
                       {warning}
                     </p>
@@ -231,15 +230,15 @@ export default function Vision({
                       <div key={featName}>
                         <p className={HEADING} style={{ color: accent }}>
                           {note.icon} {featName}
-                          <span className="ml-2 font-mono text-[9px] font-normal uppercase tracking-[0.15em] text-bone/30">
+                          <span className="ml-2 font-mono text-[10px] font-normal uppercase tracking-[0.15em] text-bone/60">
                             {CATEGORY_LABEL[note.category] ?? note.category}
                           </span>
                         </p>
-                        <p className="mt-1 font-body text-sm leading-relaxed text-bone/50">
+                        <p className="mt-1 font-body text-sm leading-relaxed text-bone/75">
                           {note.desc}
                         </p>
                         {note.tip && (
-                          <p className="mt-1.5 font-body text-sm italic leading-relaxed text-gold/55">
+                          <p className="mt-1.5 font-body text-sm leading-relaxed text-gold/85">
                             {note.tip}
                           </p>
                         )}
@@ -263,11 +262,11 @@ export default function Vision({
                         <p className={HEADING} style={{ color: accent }}>
                           {combo.icon} {combo.name}
                         </p>
-                        <p className="mt-1.5 font-body text-sm leading-relaxed text-bone/50">
+                        <p className="mt-1.5 font-body text-sm leading-relaxed text-bone/75">
                           {combo.what}
                         </p>
                         <p className="mt-2 font-body text-sm leading-relaxed text-bone/65">
-                          <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-bone/30">
+                          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">
                             como se juega{" "}
                           </span>
                           {combo.how}
@@ -302,7 +301,7 @@ export default function Vision({
                         >
                           {item.label}
                         </dt>
-                        <dd className="mt-0.5 font-body text-sm leading-relaxed text-bone/50">
+                        <dd className="mt-0.5 font-body text-sm leading-relaxed text-bone/75">
                           {item.desc}
                         </dd>
                       </div>
@@ -317,8 +316,8 @@ export default function Vision({
               {isEmpty(shown) &&
                 !(tab === "core" && playbook.warnings.length > 0) &&
                 !(tab === "combate" && (playbook.combos.length > 0 || playbook.tips.length > 0)) && (
-                  <p className="font-body text-sm italic leading-relaxed text-bone/35">
-                    Este personaje no tiene nada anotado en esta pestana.
+                  <p className="font-body text-sm leading-relaxed text-bone/60">
+                    Nada anotado en esta pestana.
                   </p>
                 )}
             </motion.div>
@@ -370,12 +369,12 @@ function Note({ note, accent }: { note: PlayNote; accent: string }) {
       >
         {note.name}
         {note.resource && (
-          <span className="ml-2 font-mono text-[9px] font-normal uppercase tracking-[0.15em] text-bone/30">
+          <span className="ml-2 font-mono text-[10px] font-normal uppercase tracking-[0.15em] text-bone/60">
             {note.resource}
           </span>
         )}
       </p>
-      <p className="mt-1 font-body text-sm leading-relaxed text-bone/50">{note.desc}</p>
+      <p className="mt-1 font-body text-sm leading-relaxed text-bone/75">{note.desc}</p>
     </div>
   );
 }
@@ -387,7 +386,7 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
     >
-      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.3em] text-gold/50">{title}</p>
+      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.3em] text-gold/85">{title}</p>
       {children}
     </motion.section>
   );

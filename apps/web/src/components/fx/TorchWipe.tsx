@@ -11,7 +11,7 @@ export default function TorchWipe({ trigger }: { trigger: number }) {
         className="pointer-events-none fixed inset-y-0 z-[65] w-[60vw]"
         style={{
           background:
-            "linear-gradient(90deg, transparent 0%, rgba(110,15,15,0.25) 30%, rgba(255,90,31,0.35) 48%, rgba(230,223,206,0.5) 50%, rgba(255,90,31,0.35) 52%, rgba(110,15,15,0.25) 70%, transparent 100%)",
+            "linear-gradient(90deg, transparent 0%, rgba(110,15,15,0.25) 30%, rgba(255,90,31,0.35) 48%, rgba(230,223,206,0.75) 50%, rgba(255,90,31,0.35) 52%, rgba(110,15,15,0.25) 70%, transparent 100%)",
           filter: "blur(6px)",
           mixBlendMode: "screen",
         }}

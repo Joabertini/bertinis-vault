@@ -14,6 +14,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence, useAnimationControls } from "framer-motion";
+import RuleNote from "@/components/ui/RuleNote";
 import { rollStatArray } from "@/lib/dice";
 import { ROLL_ATTEMPTS, spreadWorth } from "@/lib/stat-methods";
 
@@ -71,12 +72,20 @@ export default function DiceTray({
 
       <div className="border border-[#4A4640]/60 bg-[#12100D]/80 p-8 backdrop-blur-sm">
         <div className="mb-6 flex items-center justify-between">
-          <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-[#B08A3E]/80">
+          <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-gold">
             Rito de aptitudes
           </p>
-          <p className="font-mono text-[10px] tracking-widest uppercase text-[#E6DFCE]/30">
-            4d6 · descarta el menor
-          </p>
+          <div className="flex items-center gap-3">
+            <p className="font-mono text-[10px] tracking-widest uppercase text-bone/75">
+              4d6 · descarta el menor
+            </p>
+            <RuleNote title="La suma de modificadores">
+              <p>
+                Compara dos tiradas de un vistazo, pero no dice cual es mejor: un 17 con cinco
+                huecos le gana a un reparto parejo en algunos personajes y le pierde en otros.
+              </p>
+            </RuleNote>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-5">
@@ -133,7 +142,7 @@ export default function DiceTray({
               animate={{ opacity: 1, y: 0 }}
               className="mt-8 border-t border-[#4A4640]/50 pt-6"
             >
-              <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.35em] text-[#E6DFCE]/40">
+              <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
                 Elegi una
               </p>
 
@@ -146,7 +155,7 @@ export default function DiceTray({
                       onClick={() => onKeep(index)}
                       className="flex w-full items-center gap-4 border border-[#4A4640]/50 bg-[#12100D]/60 px-4 py-3 text-left transition-colors hover:border-[#B08A3E]"
                     >
-                      <span className="w-16 shrink-0 font-mono text-[9px] uppercase tracking-[0.2em] text-[#E6DFCE]/30">
+                      <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">
                         Tirada {index + 1}
                       </span>
 
@@ -164,19 +173,14 @@ export default function DiceTray({
                           ))}
                       </span>
 
-                      <span className="ml-auto shrink-0 text-right font-mono text-[10px] text-[#E6DFCE]/35">
-                        suma de modificadores {worth >= 0 ? `+${worth}` : worth}
+                      <span className="ml-auto shrink-0 text-right font-mono text-[10px] text-bone/75">
+                        modificadores {worth >= 0 ? `+${worth}` : worth}
                       </span>
                     </button>
                   );
                 })}
               </div>
 
-              <p className="mt-4 font-body text-xs italic leading-relaxed text-[#E6DFCE]/30">
-                La suma de modificadores compara dos tiradas de un vistazo. No dice cual es mejor:
-                un 17 con cinco huecos le gana a un reparto parejo en algunos personajes y le pierde
-                en otros.
-              </p>
             </motion.div>
           )}
         </AnimatePresence>

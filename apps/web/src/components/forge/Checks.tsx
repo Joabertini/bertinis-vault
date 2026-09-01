@@ -103,7 +103,7 @@ function Row({
         {/* One dot trained, two doubled. Quieter than a word and readable in
             the same glance that reads the number. */}
         <span
-          className="font-mono text-[9px] leading-none"
+          className="font-mono text-[10px] leading-none"
           style={{ color: check.proficient ? accent : "transparent" }}
           title={check.expert ? "Maestria" : check.proficient ? "Competente" : ""}
         >
@@ -116,7 +116,7 @@ function Row({
           {label}
         </span>
         {ability && (
-          <span className="font-mono text-[8px] uppercase tracking-wide text-bone/20">
+          <span className="font-mono text-[10px] uppercase tracking-wide text-bone/60">
             {ability}
           </span>
         )}

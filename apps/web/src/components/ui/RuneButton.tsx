@@ -16,7 +16,7 @@ export function RuneButton({
   const styles = {
     gold: "border-[#B08A3E]/50 text-[#E6DFCE] hover:text-[#B08A3E] shadow-[inset_0_0_20px_rgba(176,138,62,0.08)]",
     blood: "border-[#6E0F0F]/70 text-[#E6DFCE] bg-[#6E0F0F]/15 hover:bg-[#6E0F0F]/35",
-    ghost: "border-[#4A4640] text-[#E6DFCE]/60 hover:text-[#E6DFCE]",
+    ghost: "border-[#4A4640] text-bone/75 hover:text-[#E6DFCE]",
   }[variant];
 
   return (

@@ -67,7 +67,7 @@ export default function BonusEditor({
   return (
     <div>
       <div className="mb-4 flex items-baseline justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/40">
+        <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
           Puntos
         </span>
         <span
@@ -103,7 +103,7 @@ export default function BonusEditor({
                 >
                   {ability.toUpperCase()}
                 </p>
-                <p className="truncate font-mono text-[9px] text-bone/35">
+                <p className="truncate font-mono text-[10px] text-bone/60">
                   {before}
                   {amount > 0 && (
                     <>
