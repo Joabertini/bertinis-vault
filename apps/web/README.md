@@ -1,101 +1,52 @@
-# Bertini's Vault Web
+# Faro del Alba — el front
 
-Frontend del builder de 9 pasos para crear personajes de D&D 5e 2014 y exportarlos a Foundry.
+El builder de personajes. Vite + React 19 + react-router + Tailwind +
+framer-motion + zustand. Todo se resuelve en el cliente contra el índice de
+5etools bundleado; el Worker sólo guarda y devuelve builds por código.
 
-## Estado actual
+## Las cuatro salas
 
-La UI visual ya esta aceptable y la prioridad paso a ser la **funcionalidad guiada del builder**.
+| Ruta | Archivo | Qué hace |
+|---|---|---|
+| `/` | `routes/Gate.tsx` | El umbral. Elegís edición 2014 o 2024, que decide qué libros son legales. |
+| `/forge` | `routes/Forge.tsx` | La Fragua: nueve cámaras. El orden lo arma `lib/chambers.ts` según cuánto D&D sabés. |
+| `/codex` | `routes/Codex.tsx` | El estante de personajes sellados. |
+| `/ritual` | `routes/Ritual.tsx` | El export. Foundry, JSON y hoja imprimible cruzan; D&D Beyond y Roll20 están dormidos y dicen por qué. |
 
-En esta pasada se corrigio lo siguiente:
+## Correrlo
 
-- se mantuvo el frontend oscuro de 9 pasos basado en `vault-character-form-v2.html`;
-- se agrego soporte de **subrazas** en el estado del builder y en el snapshot canonico;
-- las **feats del trasfondo** ahora se aplican automaticamente cuando el background las otorga;
-- se elimino la duplicacion entre `background.grantedFeatIds` y `choices.feats`;
-- el paso de **raza** ahora permite elegir idiomas extra cuando la raza lo habilita;
-- el paso de **skills e idiomas** ya no deja seleccionar libremente cualquier cosa:
-  - el trasfondo aplica sus competencias bloqueadas;
-  - la clase limita la cantidad de picks;
-  - los idiomas quedan gobernados por la regla racial;
-- el paso de **equipo** filtra armas y armaduras por clase;
-- el boton `Tirar 4d6 x6` ahora se puede usar **una sola vez** por borrador;
-- el exporter deduplica feats como segunda red de seguridad para no volver a romper el actor.
-- el bloque de **magia** ya no recorta artificialmente la lista visible de spells por un limite duro del frontend;
-- la seleccion de spells sigue filtrada por clase y nivel maximo disponible, pero muestra todas las opciones que existan en el dataset;
-- el detalle activo de spell ahora intenta mostrar escuela, lanzamiento, alcance, duracion, componentes y descripcion;
-- el loader de datasets de spells ahora rellena esos campos desde el catalogo local si la API responde incompleta o con strings vacios.
-
-## Motivo de estos cambios
-
-El problema principal del producto no era visual sino de **coherencia de decisiones**:
-
-- la UI permitia combinaciones incompatibles;
-- el snapshot canonico repetia feats;
-- el JSON resultante podia salir incoherente y fallar o importar mal en Foundry.
-
-Esta ronda priorizo que el builder responda a:
-
-- raza y subraza;
-- clase y subclase;
-- trasfondo;
-- disponibilidad real de idioma, skill y equipo.
-
-## Archivos clave tocados
-
-- `apps/web/src/App.tsx`
-  - reglas del wizard;
-  - subrazas;
-  - idiomas de raza;
-  - feat automatica de trasfondo;
-  - skills limitadas por clase;
-  - equipo filtrado por clase;
-  - 4d6 x6 de un solo uso.
-- `apps/web/src/builder.ts`
-  - `subraceId` en `BuilderState`;
-  - snapshot canonico sin duplicar feats;
-  - `ancestry.subraceId` cuando exista.
-- `packages/foundry-exporter/src/index.ts`
-  - deduplicacion defensiva de feats exportadas.
-
-## Comandos utiles
-
-```bash
-corepack pnpm install
-corepack pnpm api:dev
-corepack pnpm web:dev
-corepack pnpm web:typecheck
-corepack pnpm web:build
-corepack pnpm --filter @bertinis-vault/foundry-exporter test
+```
+corepack pnpm web:dev        # 127.0.0.1:4173
 ```
 
-## Validacion hecha en esta sesion
+Los paquetes `@bertinis-vault/*` resuelven a su `src/`, así que tocar
+`packages/domain` se ve sin reconstruir nada.
 
-- `corepack pnpm web:typecheck`
-- `corepack pnpm web:build`
-- `corepack pnpm --filter @bertinis-vault/foundry-exporter test`
+Antes de un PR:
 
-## Lo que debe hacer la siguiente instancia
+```
+corepack pnpm web:verify
+corepack pnpm --filter @bertinis-vault/web probe
+```
 
-No rehacer el frontend. Continuar sobre esta base.
+## Tocar el aspecto
 
-Prioridades reales:
+- Un color o una tipografía: `src/styles/`.
+- Una receta que se repite tres veces o más **y** carga una decisión: `src/styles/recipes.ts`.
+  Ahí arriba está el **piso de contraste** medido — leerlo antes de atenuar nada.
+- Lo que aparece una sola vez sigue inline en su componente, que es donde se lee mejor.
+- Una regla de D&D que explica un panel va en un `<RuleNote>`, no en un párrafo
+  debajo del label.
 
-1. convertir los mapas embebidos de `App.tsx` en datasets/versionado compartido;
-2. modelar **subrazas** y **reglas de idioma** desde `packages/data-engine` y `apps/api`;
-3. reemplazar los filtros manuales de equipo por elecciones de loadout mas fieles por clase;
-4. restringir tambien cantrips/spells/features por nivel y por slots/picks, no solo por clase;
-5. ampliar el catalogo de spells y dejarlo alineado con listas reales por clase, porque el dataset actual sigue siendo chico para un wizard completo;
-6. tomar uno o dos JSON reales que importen bien en Foundry y usarlos como baseline automatizado;
-7. agregar test del builder/snapshot para:
-   - feat automatica no duplicada;
-   - idiomas raciales;
-   - picks maximos de skill;
-   - tirada 4d6 bloqueada tras el primer uso.
+## Sondas
 
-## Advertencias para no romperlo otra vez
+Para medir algo contra los datos reales sin montar un test:
 
-- no volver a permitir texto libre como eje para skills, idiomas o feats;
-- no duplicar una feat entre `background.grantedFeatIds` y `choices.feats`;
-- no volver a mostrar todas las armas/armaduras a cualquier clase;
-- no reintroducir rerolls infinitos en `4d6 x6`;
-- si se toca exportacion Foundry, probar siempre contra un actor real importable.
+```
+corepack pnpm exec vite build --ssr probes/X.ts --outDir .probe && node .probe/X.js
+```
+
+## Dónde está lo demás
+
+El estado vivo del proyecto vive en `docs/` del repo: `AI-HANDOFF.md`,
+`AUDITORIA-CREACION.md`, `MIGRACION-FRONT.md`, `CHARACTER-MODEL-GAPS.md`.
