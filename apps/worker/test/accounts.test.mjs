@@ -445,6 +445,73 @@ test("the sign-in itself is not refused for having no origin", async () => {
   assert.equal(response.status, 302);
 });
 
+test("the redirect_uri is the registered name, not the one that was called", async () => {
+  /*
+   * The failure this fixes said "Invalid OAuth2 redirect_uri" on Discord's own
+   * page. This Worker answers to two names — `api.bertinilabs.xyz` and its
+   * `workers.dev` one — and the redirect was derived from whichever one the
+   * request arrived at, so a sign-in started from a front pointing at
+   * `workers.dev` sent Discord an address it had never been given.
+   */
+  const response = await handle(
+    new Request("https://api.bertinilabs.xyz/auth/discord/start?redirect=/codex", {
+      redirect: "manual",
+    }),
+    { ...ENV, AUTH_ORIGIN: "https://api.bertinilabs.xyz" },
+    { store: makeStore() },
+  );
+
+  const sent = new URL(response.headers.get("Location"));
+  assert.equal(
+    sent.searchParams.get("redirect_uri"),
+    "https://api.bertinilabs.xyz/auth/discord/callback",
+  );
+});
+
+test("a sign-in that starts on the other name is sent to the registered one", async () => {
+  /*
+   * Two things break otherwise and neither says so: Discord refuses a
+   * `redirect_uri` it does not have, and the state cookie carries
+   * `Domain=bertinilabs.xyz`, which a browser discards outright coming from a
+   * host outside that domain — so even a second registered address would come
+   * back to a state mismatch. A front built against `workers.dev` still signs
+   * in rather than looking like a broken account system.
+   */
+  const response = await handle(
+    new Request("https://bertinis-vault.bertinisdnd.workers.dev/auth/discord/start?redirect=/codex", {
+      redirect: "manual",
+    }),
+    { ...ENV, AUTH_ORIGIN: "https://api.bertinilabs.xyz" },
+    { store: makeStore() },
+  );
+
+  assert.equal(response.status, 302);
+  assert.equal(
+    response.headers.get("Location"),
+    "https://api.bertinilabs.xyz/auth/discord/start?redirect=/codex",
+  );
+  // Nothing is set on the wrong host: the state cookie belongs to the sign-in
+  // that actually happens, on the name that can hold it.
+  assert.equal(response.headers.get("Set-Cookie"), null);
+});
+
+test("without AUTH_ORIGIN the request's own origin is the only one there is", async () => {
+  // Development: one name, nothing registered, and a redirect to itself would
+  // be a loop.
+  const response = await handle(
+    new Request("http://127.0.0.1:8787/auth/discord/start?redirect=/codex", { redirect: "manual" }),
+    { ...ENV, APP_ORIGIN: undefined, COOKIE_DOMAIN: undefined, AUTH_ORIGIN: undefined },
+    { store: makeStore() },
+  );
+
+  const sent = new URL(response.headers.get("Location"));
+  assert.equal(sent.origin, "https://discord.com");
+  assert.equal(
+    sent.searchParams.get("redirect_uri"),
+    "http://127.0.0.1:8787/auth/discord/callback",
+  );
+});
+
 test("a sign-in only ever returns to this application", () => {
   /*
    * An endpoint that redirects anywhere it is told is an open redirect, and an

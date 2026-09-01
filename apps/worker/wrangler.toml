@@ -38,6 +38,15 @@ database_id = "78d58d4d-bfb8-40e2-ae04-6687d4146b57"
 ALLOWED_ORIGINS = "*,https://alba.bertinilabs.xyz"
 
 APP_ORIGIN = "https://alba.bertinilabs.xyz"
+
+# This Worker's own address, as Discord has it registered.
+#
+# Not derived from the request: the Worker answers to two names and only this
+# one is registered with Discord, so a sign-in that started on `workers.dev`
+# sent a `redirect_uri` Discord had never seen and got "Invalid OAuth2
+# redirect_uri". The same name is the only one that can set a cookie scoped to
+# COOKIE_DOMAIN, so it is where the sign-in has to happen either way.
+AUTH_ORIGIN = "https://api.bertinilabs.xyz"
 COOKIE_DOMAIN = "bertinilabs.xyz"
 DISCORD_CLIENT_ID = "1544171626973892688"
 
