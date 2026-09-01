@@ -152,6 +152,31 @@ export class RefResolver {
     return { ok: true, value: refForRow(prop, only) };
   }
 
+  /**
+   * The indexed row a pick resolves to, rather than a reference to it.
+   *
+   * `resolve` answers with a page, a hash and a source: enough for Foundry to
+   * find the entity and nothing to reason about here. Some decisions need the
+   * entity. Whether an item is a weapon, a suit of armour or a cooking pot is
+   * a fact 5etools already records, and the alternative is asking the
+   * builder's own catalog, which holds a handful of rows and does not know.
+   *
+   * Null on the cases `resolve` reports as failures — nothing found, or more
+   * than one candidate and no book to choose between them — so a caller never
+   * reads a row the resolver would have refused.
+   */
+  rowFor(prop: VetoolsProp, query: string, preferredSource?: string): IndexRow | null {
+    const candidates = this.#byProp.get(prop)?.get(slugKey(query)) ?? [];
+    if (candidates.length === 0) return null;
+
+    if (preferredSource) {
+      const match = candidates.find((row) => row.source === preferredSource);
+      if (match) return match;
+    }
+
+    return candidates.length === 1 ? (candidates[0] as IndexRow) : null;
+  }
+
   /** Whether a pick resolves, without building the reference. */
   has(prop: VetoolsProp, query: string): boolean {
     return (this.#byProp.get(prop)?.get(slugKey(query))?.length ?? 0) > 0;
