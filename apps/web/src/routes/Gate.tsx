@@ -81,7 +81,7 @@ function GateContent() {
       className={PAGE}
     >
       <GrainOverlay />
-      <EmberField density={50} />
+      <EmberField density={60} />
 
       {/* God rays from above */}
       <motion.div

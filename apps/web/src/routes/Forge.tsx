@@ -21,7 +21,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import EmberField from "@/components/fx/EmberField";
 import GrainOverlay from "@/components/fx/GrainOverlay";
-import TorchWipe from "@/components/fx/TorchWipe";
+import StokeEmbers from "@/components/fx/StokeEmbers";
 import Sigil from "@/components/sigils/Sigil";
 import RuneButton from "@/components/ui/RuneButton";
 import RuleNote from "@/components/ui/RuleNote";
@@ -173,7 +173,7 @@ export default function Forge() {
   // The opening chamber of whichever order this player asked for. Read once,
   // on mount: after that the rail decides where they are.
   const [chamberKey, setChamberKey] = useState<ChamberKey>(firstChamber(pace ?? "nuevo"));
-  const [wipeKey, setWipeKey] = useState(0);
+  const [stokeKey, setStokeKey] = useState(0);
   /** What the last species or class change released, named for the player. */
   const [shedByPick, setShedByPick] = useState<string[]>([]);
 
@@ -793,8 +793,12 @@ export default function Forge() {
     if (!next) return;
     // The notice belongs to the chamber that caused it; leaving is reading it.
     setShedByPick([]);
-    setWipeKey((key) => key + 1);
-    setTimeout(() => setChamberKey(next), 350); // the wipe covers the swap
+    setStokeKey((key) => key + 1);
+    // Short, and no longer a curtain: the torch wipe used to cover the swap
+    // for 350ms, but a burst of sparks hides nothing. The chamber's own
+    // cross-fade carries the change, and this beat only lets the surge start
+    // first so the two read as one event rather than as two.
+    setTimeout(() => setChamberKey(next), 160);
   };
 
   /* ---------------- picks ---------------- */
@@ -1085,7 +1089,7 @@ export default function Forge() {
     return (
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-void px-6">
         <GrainOverlay />
-        <EmberField density={18} />
+        <EmberField density={22} />
         <div className="relative z-10 w-full max-w-2xl">
           <p className="font-mono text-[10px] uppercase tracking-[0.6em] text-gold/85">
             Antes de encender la fragua
@@ -1137,8 +1141,8 @@ export default function Forge() {
   return (
     <main className={PAGE}>
       <GrainOverlay />
-      <EmberField density={30} />
-      <TorchWipe trigger={wipeKey} />
+      <EmberField density={36} />
+      <StokeEmbers trigger={stokeKey} />
 
       <motion.div
         animate={{

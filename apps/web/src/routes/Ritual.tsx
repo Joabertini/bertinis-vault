@@ -182,7 +182,7 @@ export default function Ritual() {
   return (
     <main className={PAGE}>
       <GrainOverlay />
-      <EmberField density={35} />
+      <EmberField density={42} />
 
       <div className="relative z-10 mx-auto max-w-4xl px-6 py-16 md:px-10">
         <header className="mb-14 text-center">

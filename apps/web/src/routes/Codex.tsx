@@ -45,7 +45,7 @@ export default function Codex() {
   return (
     <main className={PAGE}>
       <GrainOverlay />
-      <EmberField density={25} />
+      <EmberField density={30} />
 
       {burnOrigin && <AshBurst origin={burnOrigin} onDone={() => setBurnOrigin(null)} />}
 
