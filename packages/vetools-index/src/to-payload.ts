@@ -24,6 +24,7 @@ import {
 } from "@bertinis-vault/contracts";
 import type { RulesVersion, VetoolsProp } from "@bertinis-vault/vetools-ref";
 
+import type { IndexRow, ItemRow } from "./index.js";
 import type { RefResolver, ResolutionFailure } from "./resolve.js";
 
 export type BuildConversion = {
@@ -289,8 +290,11 @@ function partitionProficiencies(
  * The resolver indexes every prop into rows of a common shape, and only the
  * item rows carry a type, so it is read off rather than declared.
  */
-function itemTypeOf(row: { type?: string | null } | null): string | null {
-  const type = row?.type;
+function itemTypeOf(row: IndexRow | null): string | null {
+  // The resolver indexes every prop into the common row shape, and only the
+  // item rows carry a type, so it is read back here rather than declared on
+  // the way out.
+  const type = (row as ItemRow | null)?.type;
   if (!type) return null;
 
   return type.split("|")[0] ?? null;
@@ -320,7 +324,7 @@ const ARMOR_TYPES = new Set(["LA", "MA", "HA", "S"]);
  * accident or wrong by accident, and never for a reason the player can see.
  * The builder names one suit; every other suit is luggage.
  */
-function isWorn(category: string | undefined, row: { type?: string | null } | null): boolean {
+function isWorn(category: string | undefined, row: IndexRow | null): boolean {
   if (category === "armor" || category === "shield") return true;
 
   const type = itemTypeOf(row);
