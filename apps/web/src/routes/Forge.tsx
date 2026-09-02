@@ -98,6 +98,7 @@ import WeaponMastery from "@/components/forge/WeaponMastery";
 import Expertise from "@/components/forge/Expertise";
 import type { ExtraClass } from "@/lib/classing";
 import { classEntriesFor, emptyExtraClass } from "@/lib/classing";
+import { suggestAppearance, type Appearance } from "@/lib/appearance";
 import { masteryPlanFor, masteryProblemsFor } from "@/lib/weapon-mastery";
 import { expertisePlanFor } from "@/lib/expertise";
 import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
@@ -858,6 +859,28 @@ export default function Forge() {
         : undefined,
     [rulesVersion],
   );
+
+  /*
+   * Fills the empty appearance boxes with something the species makes likely.
+   *
+   * A player asked for this and gave the right reason: the species is what
+   * guides the visual, and six blank boxes make every character start as the
+   * same nobody. Only the empty ones are touched — pressing this must never
+   * discard something the player already wrote, and pressing it twice on a
+   * half-filled sheet fills the rest rather than rerolling the lot.
+   */
+  const suggestLooks = () => {
+    const suggestion = suggestAppearance(draft.raceId, draft.subraceId, rulesVersion);
+    if (!suggestion) return;
+
+    const patch: Partial<typeof draft> = {};
+    for (const [field, value] of Object.entries(suggestion)) {
+      const key = field as keyof Appearance;
+      if (value && !draft[key].trim()) patch[key] = value;
+    }
+
+    if (Object.keys(patch).length > 0) patchDraft(patch);
+  };
 
   const pick = (
     prop: "race" | "class" | "background" | "subrace" | "subclass" | "weapon" | "armor",
@@ -2118,7 +2141,18 @@ export default function Forge() {
                       which is where the description used to go, when it went
                       anywhere at all. */}
                   <div className="space-y-6 border-t border-iron/40 pt-8">
-                    <p className={LABEL}>Como te ven</p>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className={LABEL}>Como te ven</p>
+                      {draft.raceId && (
+                        <button
+                          type="button"
+                          onClick={suggestLooks}
+                          className="border border-iron/70 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/70 transition-colors hover:border-gold hover:text-gold"
+                        >
+                          Sugerir por especie
+                        </button>
+                      )}
+                    </div>
 
                     <div className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3">
                       {(
