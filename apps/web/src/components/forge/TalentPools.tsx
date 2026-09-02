@@ -44,14 +44,12 @@ export default function TalentPools({
           <p className={LABEL_MB2}>Ya no cumplen su requisito</p>
           <ul className="space-y-1">
             {stale.map((entry) => (
-              <li key={entry.id} className="font-body text-sm text-ember/80">
+              <li key={entry.id} className="font-body text-sm text-ember">
                 {entry.label} — {entry.reason}
               </li>
             ))}
           </ul>
-          <p className={`mt-2 ${WHISPER}`}>
-            Siguen elegidos: sacarlos es tu decision, no la de la app.
-          </p>
+          <p className={`mt-2 ${WHISPER}`}>Siguen elegidos: sacarlos es tu decision.</p>
         </div>
       )}
       {pools.map((pool) => {
@@ -66,7 +64,7 @@ export default function TalentPools({
               </span>
               <span
                 className={META}
-                style={{ color: full ? accent : "rgba(230,223,206,0.35)" }}
+                style={{ color: full ? accent : "rgba(230,223,206,0.6)" }}
               >
                 {inPool} / {pool.count}
               </span>
@@ -104,7 +102,7 @@ export default function TalentPools({
                     </div>
 
                     {option.blockedBy && (
-                      <span className="font-mono text-[9px] uppercase tracking-[0.15em] text-ember/60">
+                      <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-ember">
                         {option.blockedBy}
                       </span>
                     )}

@@ -51,9 +51,8 @@ export default function Improvements({
 
   if (levels.length === 0) {
     return (
-      <p className="font-body italic text-bone/35">
-        A nivel {state.level} esta clase todavia no otorga mejoras de aptitud. La primera llega a
-        nivel 4.
+      <p className={WHISPER}>
+        A nivel {state.level} todavia no hay mejoras. La primera llega a nivel 4.
       </p>
     );
   }
@@ -212,7 +211,7 @@ function FeatAbilityPlacement({
   return (
     <div className="border-l-2 pl-4" style={{ borderLeftColor: `${accent}66` }}>
       {fixed.map((grant, index) => (
-        <p key={`fixed-${index}`} className="font-body text-sm italic text-bone/45">
+        <p key={`fixed-${index}`} className="font-body text-sm text-bone/75">
           Otorga{" "}
           {Object.entries(grant.bonuses)
             .map(([ability, amount]) => `+${amount} a ${abilityLabels[ability as AbilityId] ?? ability}`)
@@ -227,7 +226,7 @@ function FeatAbilityPlacement({
 
         return (
           <div key={`choice-${index}`} className="mt-4">
-            <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.3em] text-ember/80">
+            <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.3em] text-ember">
               {placed >= grant.count
                 ? "Aumento asignado"
                 : `Falta asignar +${grant.amount} — elegi ${grant.count}`}
@@ -286,7 +285,7 @@ function Tab({
       className="px-5 py-2 font-mono text-[10px] uppercase tracking-[0.25em] transition-colors"
       style={{
         background: active ? `${accent}18` : "transparent",
-        color: active ? accent : "rgba(230,223,206,0.4)",
+        color: active ? accent : "rgba(230,223,206,0.6)",
       }}
     >
       {children}
@@ -325,7 +324,7 @@ function FeatPrerequisiteNote({ state, featId }: { state: BuilderState; featId: 
           <p className={LABEL_MB2}>Le falta</p>
           <ul className="space-y-1">
             {unmet.map((reason) => (
-              <li key={reason} className="font-body text-sm text-ember/80">
+              <li key={reason} className="font-body text-sm text-ember">
                 {reason}
               </li>
             ))}

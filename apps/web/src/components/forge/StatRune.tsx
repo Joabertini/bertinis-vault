@@ -69,7 +69,7 @@ export default function StatRune({
     <div className="grid gap-8 lg:grid-cols-2">
       {/* ---- the loose scores ---- */}
       <div>
-        <p className="mb-4 font-mono text-[10px] tracking-[0.4em] uppercase text-bone/40">
+        <p className="mb-4 font-mono text-[10px] tracking-[0.4em] uppercase text-bone/60">
           Puntajes sueltos
         </p>
         <div className="flex flex-wrap gap-4">
@@ -93,7 +93,7 @@ export default function StatRune({
           ))}
 
           {pool.length === 0 && (
-            <p className="font-body italic text-bone/30">
+            <p className="font-body italic text-bone/75">
               {bound.size === ABILITY_IDS.length
                 ? "Todo ligado. Las aptitudes tienen nombre."
                 : "Todavia no hay puntajes que repartir."}
@@ -102,7 +102,7 @@ export default function StatRune({
         </div>
 
         {pool.length > 0 && (
-          <p className="mt-4 font-body text-xs italic text-bone/30">
+          <p className="mt-4 font-body text-[13px] text-bone/60">
             {heldValue !== undefined ? (
               <>
                 Tenes el <span style={{ color: accent }}>{heldValue}</span> en la mano. Toca la
@@ -117,7 +117,7 @@ export default function StatRune({
 
       {/* ---- the slots ---- */}
       <div className="space-y-3">
-        <p className="mb-4 font-mono text-[10px] tracking-[0.4em] uppercase text-bone/40">
+        <p className="mb-4 font-mono text-[10px] tracking-[0.4em] uppercase text-bone/60">
           Ranuras de ligadura
         </p>
         {ABILITY_IDS.map((ability) => {
@@ -158,7 +158,7 @@ export default function StatRune({
 
               <div className="flex items-baseline gap-3">
                 {isBound && (
-                  <span className="font-mono text-[10px] text-bone/40">
+                  <span className="font-mono text-[10px] text-bone/60">
                     {modifierOf(score) >= 0 ? `+${modifierOf(score)}` : modifierOf(score)}
                   </span>
                 )}

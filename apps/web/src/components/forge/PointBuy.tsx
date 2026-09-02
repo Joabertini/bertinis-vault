@@ -19,6 +19,8 @@
 
 import { motion } from "framer-motion";
 
+import RuleNote from "@/components/ui/RuleNote";
+
 import { ABILITY_IDS, abilityLabels, type AbilityId } from "@/lib/abilities";
 import {
   POINT_BUY_BUDGET,
@@ -51,12 +53,23 @@ export default function PointBuy({
   return (
     <div>
       <div className="mb-6 flex items-baseline justify-between border-b border-iron/40 pb-4">
-        <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/40">
-          Puntos sin gastar
-        </p>
+        <div className="flex items-center gap-3">
+          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-bone/75">
+            Puntos sin gastar
+          </p>
+          <RuleNote title="Compra de puntos">
+            <p>
+              Los puntajes van de {POINT_BUY_MIN} a {POINT_BUY_MAX} antes de los bonus.
+            </p>
+            <p>
+              Subir de 13 a 14 y de 14 a 15 cuesta el doble, que es por lo que repartir suele
+              rendir mas que apilar.
+            </p>
+          </RuleNote>
+        </div>
         <p className="font-display text-3xl font-black" style={{ color: left < 0 ? "#C85028" : accent }}>
           {left}
-          <span className="ml-1 font-mono text-xs font-normal text-bone/30">/ {POINT_BUY_BUDGET}</span>
+          <span className="ml-1 font-mono text-xs font-normal text-bone/60">/ {POINT_BUY_BUDGET}</span>
         </p>
       </div>
 
@@ -80,7 +93,7 @@ export default function PointBuy({
                 <p className="font-display text-sm font-semibold tracking-[0.25em] text-bone/80">
                   {ability.toUpperCase()}
                 </p>
-                <p className="font-body text-[11px] italic text-bone/30">{abilityLabels[ability]}</p>
+                <p className="font-body text-[11px] text-bone/60">{abilityLabels[ability]}</p>
               </div>
 
               <Step label="−" enabled={down} onClick={() => onChange(ability, score - 1)} />
@@ -108,10 +121,10 @@ export default function PointBuy({
 
               <div className="ml-auto flex items-baseline gap-3 text-right">
                 {bonus > 0 && (
-                  <span className="font-mono text-[10px] text-ember/70">+{bonus} de especie</span>
+                  <span className="font-mono text-[10px] text-ember">+{bonus} de especie</span>
                 )}
                 <span className="w-8 font-display text-lg font-bold text-bone/70">{final}</span>
-                <span className="w-7 font-mono text-[10px] text-bone/35">
+                <span className="w-7 font-mono text-[10px] text-bone/60">
                   {signed(modifierOf(final))}
                 </span>
               </div>
@@ -120,10 +133,6 @@ export default function PointBuy({
         })}
       </div>
 
-      <p className="mt-5 font-body text-xs italic leading-relaxed text-bone/35">
-        Los puntajes van de {POINT_BUY_MIN} a {POINT_BUY_MAX} antes de los bonus. Subir de 13 a 14 y
-        de 14 a 15 cuesta el doble, que es por lo que repartir suele rendir mas que apilar.
-      </p>
     </div>
   );
 }
@@ -150,7 +159,7 @@ function Step({
       >
         {label}
       </button>
-      {note && <span className="mt-1 font-mono text-[8px] text-bone/25">{note}</span>}
+      {note && <span className="mt-1 font-mono text-[10px] text-bone/60">{note}</span>}
     </div>
   );
 }

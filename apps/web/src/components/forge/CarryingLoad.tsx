@@ -34,10 +34,10 @@ export default function CarryingLoad({ load, accent }: { load: CarriedLoad; acce
 
       <p className="mb-3 font-body text-sm text-bone/60">
         <span style={{ color: state === "over-capacity" ? "#ff5a1f" : accent }}>{pounds} lb</span>
-        <span className="text-bone/35"> de {limits.capacity}</span>
+        <span className="text-bone/60"> de {limits.capacity}</span>
         {/* Only claimed over what the index could weigh. */}
         {load.weighed < load.lines && (
-          <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-bone/25">
+          <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-bone/60">
             {load.weighed} de {load.lines} pesados
           </span>
         )}

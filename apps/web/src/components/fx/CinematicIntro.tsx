@@ -20,7 +20,7 @@ export default function CinematicIntro({ children }: { children: React.ReactNode
               className="fixed inset-0 z-[71] flex items-center justify-center">
               <div className="text-center">
                 <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3, duration: 1 }}
-                  className="font-mono text-[10px] tracking-[0.6em] uppercase text-[#B08A3E]/60">
+                  className="font-mono text-[10px] tracking-[0.6em] uppercase text-gold/85">
                   La luz que no se apaga
                 </motion.p>
                 <motion.h1
@@ -44,7 +44,7 @@ export default function CinematicIntro({ children }: { children: React.ReactNode
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: 2.4 }}
               onAnimationComplete={() => setTimeout(() => setPhase("done"), 600)}
-              className="fixed bottom-10 left-1/2 z-[72] -translate-x-1/2 font-mono text-[10px] tracking-[0.4em] uppercase text-bone/30"
+              className="fixed bottom-10 left-1/2 z-[72] -translate-x-1/2 font-mono text-[10px] tracking-[0.4em] uppercase text-bone/60"
             >
               click to enter
             </motion.div>

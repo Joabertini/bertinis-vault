@@ -1,14 +1,14 @@
 /**
  * Taking the Codex with you.
  *
- * `localStorage` is not storage, it is a cache the browser may drop: clearing
- * site data, a private window, another machine, a phone. A player who spent an
- * evening building a party currently has no way to carry it anywhere, and no
- * warning that it can vanish.
- *
  * Two buttons, and the import is the careful one. It merges rather than
  * replaces, and it says what it did — an import that reports nothing looks
  * like an import that did nothing.
+ *
+ * The warning about `localStorage` that used to sit under them is gone: there
+ * are accounts now, so a Codex that syncs is not a Codex that vanishes, and
+ * the line had become false. A file is for carrying a Codex somewhere, not
+ * for surviving the browser.
  */
 
 import { useRef, useState } from "react";
@@ -72,7 +72,7 @@ export default function CodexBackup() {
         type="button"
         onClick={save}
         disabled={characters.length === 0}
-        className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/40 transition-colors hover:text-gold disabled:cursor-not-allowed disabled:text-bone/15"
+        className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-gold disabled:cursor-not-allowed disabled:text-bone/45"
       >
         Guardar el Codice en un archivo
       </button>
@@ -80,7 +80,7 @@ export default function CodexBackup() {
       <button
         type="button"
         onClick={() => input.current?.click()}
-        className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/40 transition-colors hover:text-gold"
+        className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-gold"
       >
         Traer un Codice guardado
       </button>
@@ -101,11 +101,6 @@ export default function CodexBackup() {
       />
 
       {notice && <p className={WHISPER}>{notice}</p>}
-
-      <p className={`w-full ${WHISPER}`}>
-        Los tomos viven en este navegador. Se pierden al limpiarlo, y no estan en tus otras
-        maquinas: el archivo es como los llevas.
-      </p>
     </div>
   );
 }

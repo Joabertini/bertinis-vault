@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-export default function EmberField({ density = 40 }: { density?: number }) {
+export default function EmberField({ density = 48 }: { density?: number }) {
   const ref = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {

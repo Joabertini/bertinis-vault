@@ -94,11 +94,11 @@ export default function DropActor() {
           background: over ? "rgba(176,138,62,0.06)" : "transparent",
         }}
       >
-        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-gold/60">
+        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-gold/85">
           Traer de Foundry
         </p>
-        <p className="mt-2 font-body text-sm italic text-bone/45">
-          Solta aca el json que exporta Foundry, o hace click para buscarlo.
+        <p className="mt-2 font-body text-sm text-bone/75">
+          Solta aca el json que exporta Foundry.
         </p>
 
         <input
@@ -121,7 +121,7 @@ export default function DropActor() {
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mt-3 border-l-2 border-ember/60 pl-3 font-body text-sm text-bone/55"
+            className="mt-3 border-l-2 border-ember/60 pl-3 font-body text-sm text-bone/75"
           >
             {outcome.reason}
           </motion.p>
@@ -141,8 +141,8 @@ export default function DropActor() {
 
             <div className="mt-3 grid gap-x-8 gap-y-1 md:grid-cols-2">
               {outcome.report.resolved.map((line) => (
-                <p key={line} className="font-body text-xs text-bone/45">
-                  <span className="text-gold/50">·</span> {line}
+                <p key={line} className="font-body text-xs text-bone/75">
+                  <span className="text-gold/85">·</span> {line}
                 </p>
               ))}
             </div>
@@ -151,19 +151,18 @@ export default function DropActor() {
                 pick again by hand in the Forge. */}
             {outcome.report.unresolved.length > 0 && (
               <div className="mt-4 border-t border-iron/40 pt-3">
-                <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-ember/80">
+                <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-ember">
                   {outcome.report.unresolved.length} sin reconocer
                 </p>
                 <div className="mt-1.5 space-y-0.5">
                   {outcome.report.unresolved.map((line) => (
-                    <p key={line} className="font-body text-xs italic text-bone/40">
+                    <p key={line} className="font-body text-[13px] text-bone/60">
                       {line}
                     </p>
                   ))}
                 </div>
-                <p className="mt-2 font-body text-xs italic text-bone/30">
-                  El indice no conoce esos nombres. El resto del personaje entro igual; podes
-                  completarlos reforjandolo.
+                <p className="mt-2 font-body text-[13px] text-bone/60">
+                  El indice no los conoce. El resto entro igual.
                 </p>
               </div>
             )}

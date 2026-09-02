@@ -111,7 +111,7 @@ export default function Tome({
               <p className="line-clamp-2 text-center font-display text-sm font-bold leading-tight tracking-wide text-bone">
                 {state.characterName}
               </p>
-              <p className="font-mono text-[9px] uppercase tracking-[0.25em]" style={{ color: accent }}>
+              <p className="font-mono text-[10px] uppercase tracking-[0.25em]" style={{ color: accent }}>
                 Nivel {characterLevelFor(state)}
               </p>
             </div>
@@ -141,7 +141,7 @@ export default function Tome({
             <Link
               to={`/ritual?id=${character.id}`}
               onClick={(event) => event.stopPropagation()}
-              className="absolute bottom-3 left-3 font-mono text-[9px] uppercase tracking-widest text-transparent transition-colors group-hover:text-gold"
+              className="absolute bottom-3 left-3 font-mono text-[10px] uppercase tracking-widest text-transparent transition-colors group-hover:text-gold"
             >
               ✦ enviar
             </Link>
@@ -270,10 +270,10 @@ function OpenTome({
               ).map(([label, value]) =>
                 value ? (
                   <div key={label}>
-                    <p className="font-mono text-[8px] uppercase tracking-[0.3em] text-bone/30">
+                    <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60">
                       {label}
                     </p>
-                    <p className="mt-0.5 font-body text-sm italic leading-snug text-bone/55">
+                    <p className="mt-0.5 font-body text-sm leading-snug text-bone/75">
                       {value}
                     </p>
                   </div>
@@ -292,7 +292,7 @@ function OpenTome({
         <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
           <button
             onClick={onClose}
-            className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/40 transition-colors hover:text-bone"
+            className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
           >
             ← Cerrar el tomo
           </button>
@@ -300,7 +300,7 @@ function OpenTome({
           <div className="flex items-center gap-6">
             <button
               onClick={onReforge}
-              className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/40 transition-colors hover:text-bone"
+              className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
               title="Volver a abrir este personaje en la fragua"
             >
               ⚒ Reforjar
@@ -328,7 +328,7 @@ function OpenTome({
 function Row({ k, v, accent }: { k: string; v: string; accent?: string }) {
   return (
     <div className="flex items-baseline gap-2">
-      <dt className="uppercase tracking-widest text-bone/30">{k}</dt>
+      <dt className="uppercase tracking-widest text-bone/60">{k}</dt>
       <dd style={{ color: accent ?? "#8a857c" }}>{v}</dd>
     </div>
   );
@@ -343,7 +343,7 @@ function BurnButton({ onConfirm }: { onConfirm: (origin: { x: number; y: number 
     return (
       <button
         onClick={() => setArming(true)}
-        className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/30 transition-colors hover:text-ember"
+        className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-ember"
       >
         Quemar este tomo
       </button>
@@ -356,7 +356,7 @@ function BurnButton({ onConfirm }: { onConfirm: (origin: { x: number; y: number 
       animate={{ opacity: 1, x: 0 }}
       className="flex items-center gap-4"
     >
-      <span className="font-mono text-[10px] uppercase tracking-widest text-ember/80">
+      <span className="font-mono text-[10px] uppercase tracking-widest text-ember">
         No se puede deshacer.
       </span>
       <button
@@ -367,7 +367,7 @@ function BurnButton({ onConfirm }: { onConfirm: (origin: { x: number; y: number 
       </button>
       <button
         onClick={() => setArming(false)}
-        className="font-mono text-[11px] uppercase tracking-widest text-bone/40 hover:text-bone"
+        className="font-mono text-[11px] uppercase tracking-widest text-bone/60 hover:text-bone"
       >
         Perdonar
       </button>

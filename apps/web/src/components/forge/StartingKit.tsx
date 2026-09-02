@@ -95,7 +95,7 @@ export default function StartingKit({
                     )}
 
                     {coins && (
-                      <span className="mt-1 block font-mono text-[10px] tracking-[0.2em] text-gold/70">
+                      <span className="mt-1 block font-mono text-[10px] tracking-[0.2em] text-gold">
                         {coins}
                       </span>
                     )}
@@ -107,9 +107,6 @@ export default function StartingKit({
         );
       })}
 
-      <p className={WHISPER}>
-        Lo elegido entra a tu mochila. Sacalo de ahi si tu mesa te da otra cosa.
-      </p>
     </div>
   );
 }

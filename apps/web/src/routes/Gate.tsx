@@ -81,7 +81,7 @@ function GateContent() {
       className={PAGE}
     >
       <GrainOverlay />
-      <EmberField density={50} />
+      <EmberField density={60} />
 
       {/* God rays from above */}
       <motion.div
@@ -107,7 +107,7 @@ function GateContent() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.2, duration: 1.4 }}
-          className="font-mono text-[10px] tracking-[0.7em] uppercase text-gold/70"
+          className="font-mono text-[10px] tracking-[0.7em] uppercase text-gold"
         >
           El codice de personajes
         </motion.p>
@@ -164,7 +164,7 @@ function GateContent() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 2, duration: 1 }}
-          className="absolute bottom-10 flex flex-wrap justify-center gap-12 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/30"
+          className="absolute bottom-10 flex flex-wrap justify-center gap-12 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60"
         >
           <span>
             Heroes sellados — <b className="text-gold">{characters.length}</b>
@@ -192,21 +192,20 @@ function GateContent() {
               onClick={(event) => event.stopPropagation()}
               className="w-full max-w-3xl text-center"
             >
-              <p className="font-mono text-[10px] tracking-[0.6em] uppercase text-gold/60">
+              <p className="font-mono text-[10px] tracking-[0.6em] uppercase text-gold/85">
                 Dos puertas, un umbral
               </p>
               <h2 className="mt-4 font-display text-3xl font-black tracking-wide text-bone md:text-4xl">
                 ¿BAJO QUE REGLAS?
               </h2>
-              <p className="mx-auto mt-4 max-w-md font-body italic text-bone/45">
-                Decide que libros son legales. No se puede cambiar a mitad de la forja sin
-                rehacer cada eleccion.
+              <p className="mx-auto mt-4 max-w-md font-body italic text-bone/75">
+                Decide que libros son legales. No se cambia a mitad de la forja.
               </p>
 
               {/* Said before the click, not after: choosing an edition here
                   replaces whatever is on the anvil, and there is no undo. */}
               {inProgress && (
-                <p className="mx-auto mt-5 max-w-md border-l-2 border-ember/60 pl-4 text-left font-body text-sm leading-relaxed text-bone/50">
+                <p className="mx-auto mt-5 max-w-md border-l-2 border-ember/60 pl-4 text-left font-body text-sm leading-relaxed text-bone/75">
                   Hay una forja en curso
                   {draft.characterName.trim() ? ` — ${draft.characterName.trim()}` : ""}. Elegir
                   una edicion aca la descarta.
@@ -230,7 +229,7 @@ function GateContent() {
 
               <button
                 onClick={() => setChoosing(false)}
-                className="mt-10 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/30 transition-colors hover:text-bone"
+                className="mt-10 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
               >
                 ← Volver al umbral
               </button>
@@ -267,13 +266,13 @@ function EditionDoor({
         className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full border border-dashed border-gold/20"
       />
 
-      <p className="font-display text-5xl font-black text-gold/80 transition-colors group-hover:text-gold">
+      <p className="font-display text-5xl font-black text-gold transition-colors group-hover:text-gold">
         {edition}
       </p>
       <p className="mt-3 font-display text-sm font-bold uppercase tracking-[0.25em] text-bone">
         {title}
       </p>
-      <p className="mt-3 font-body text-sm italic leading-relaxed text-bone/40">{detail}</p>
+      <p className="mt-3 font-body text-sm leading-relaxed text-bone/60">{detail}</p>
 
       <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.05] to-transparent transition-transform duration-700 group-hover:translate-x-full" />
     </motion.button>

@@ -26,19 +26,26 @@ import {
   featChoiceForBackground,
   featOptionLabel,
   proficiencyGrantForBackground,
+  slugOf,
   startingEquipmentForBackground,
 } from "@/lib/index-options";
+import { WHISPER } from "@/styles/recipes";
 
 export default function BackgroundGrant({
   backgroundId,
   rulesVersion,
   sourceBook,
   accent,
+  featId,
+  onPickFeat,
 }: {
   backgroundId: string;
   rulesVersion: RulesVersion;
   sourceBook?: string | undefined;
   accent: string;
+  /** The feat already answered for, empty while the question is open. */
+  featId: string;
+  onPickFeat: (id: string) => void;
 }) {
   const grant = proficiencyGrantForBackground(backgroundId, rulesVersion, sourceBook);
   const feat = featChoiceForBackground(backgroundId, rulesVersion, sourceBook);
@@ -53,7 +60,7 @@ export default function BackgroundGrant({
 
   if (nothing) {
     return (
-      <p className="font-body text-sm italic text-bone/35">
+      <p className="font-body text-sm text-bone/60">
         El indice no registra que este trasfondo otorgue nada.
       </p>
     );
@@ -78,19 +85,80 @@ export default function BackgroundGrant({
         />
       )}
 
-      {feat && (
-        <Line
-          label={feat.options.length === 1 ? "Dote" : "Elegis una dote de"}
-          accent={accent}
-          items={feat.options.map(featOptionLabel)}
-          chosen={feat.options.length > 1}
-        />
-      )}
+      {feat &&
+        (feat.options.length > 1 ? (
+          <FeatChoice
+            options={feat.options}
+            value={featId}
+            accent={accent}
+            onPick={onPickFeat}
+          />
+        ) : (
+          <Line label="Dote" accent={accent} items={feat.options.map(featOptionLabel)} />
+        ))}
 
       {gear.length > 0 && (
         <Line label="Equipo inicial" accent={accent} items={gear} muted />
       )}
     </motion.div>
+  );
+}
+
+/**
+ * The feat a background offers a choice of.
+ *
+ * Drawn as buttons rather than as chips because it is the only row here that
+ * is a question. It used to be drawn like the rest — three names in a box that
+ * could not be pressed — so `backgroundFeatId` was never written and the
+ * chamber would not let anyone past. Two backgrounds ask this: Ruined and
+ * Rewarded, both 2014.
+ *
+ * Pressing the chosen one again clears it. A background can be reconsidered,
+ * and a question with no way back to unanswered is a trap.
+ */
+function FeatChoice({
+  options,
+  value,
+  accent,
+  onPick,
+}: {
+  options: { name: string; qualifier?: string }[];
+  value: string;
+  accent: string;
+  onPick: (id: string) => void;
+}) {
+  return (
+    <div>
+      <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60">
+        Elegis una dote
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((option) => {
+          const id = slugOf(option.name);
+          const chosen = id === value;
+
+          return (
+            <button
+              key={id}
+              type="button"
+              aria-pressed={chosen}
+              onClick={() => onPick(chosen ? "" : id)}
+              className="border px-2.5 py-1 font-body text-[13px] transition-colors"
+              style={
+                chosen
+                  ? { borderColor: accent, background: `${accent}1f`, color: accent }
+                  : { borderColor: "rgba(74,70,64,0.7)", color: "#E6DFCE" }
+              }
+            >
+              {featOptionLabel(option)}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Says why the next chamber is closed, which is otherwise invisible. */}
+      {!value && <p className={`mt-2 ${WHISPER}`}>Elegi una para seguir.</p>}
+    </div>
   );
 }
 
@@ -117,7 +185,7 @@ function Line({
 
   return (
     <div>
-      <p className="mb-2 font-mono text-[9px] uppercase tracking-[0.3em] text-bone/35">{label}</p>
+      <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60">{label}</p>
       <div className="flex flex-wrap gap-1.5">
         {items.map((item) => (
           <span
@@ -127,7 +195,7 @@ function Line({
               chosen
                 ? { borderColor: `${accent}55`, color: "#E6DFCE" }
                 : muted
-                  ? { borderColor: "rgba(74,70,64,0.4)", color: "rgba(230,223,206,0.4)" }
+                  ? { borderColor: "rgba(74,70,64,0.4)", color: "rgba(230,223,206,0.6)" }
                   : { borderColor: `${accent}33`, background: `${accent}0f`, color: accent }
             }
           >

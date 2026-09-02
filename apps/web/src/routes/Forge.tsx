@@ -21,9 +21,10 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import EmberField from "@/components/fx/EmberField";
 import GrainOverlay from "@/components/fx/GrainOverlay";
-import TorchWipe from "@/components/fx/TorchWipe";
+import StokeEmbers from "@/components/fx/StokeEmbers";
 import Sigil from "@/components/sigils/Sigil";
 import RuneButton from "@/components/ui/RuneButton";
+import RuleNote from "@/components/ui/RuleNote";
 import DiceTray from "@/components/forge/DiceTray";
 import StatRune from "@/components/forge/StatRune";
 import SigilCard from "@/components/forge/SigilCard";
@@ -172,7 +173,7 @@ export default function Forge() {
   // The opening chamber of whichever order this player asked for. Read once,
   // on mount: after that the rail decides where they are.
   const [chamberKey, setChamberKey] = useState<ChamberKey>(firstChamber(pace ?? "nuevo"));
-  const [wipeKey, setWipeKey] = useState(0);
+  const [stokeKey, setStokeKey] = useState(0);
   /** What the last species or class change released, named for the player. */
   const [shedByPick, setShedByPick] = useState<string[]>([]);
 
@@ -792,8 +793,12 @@ export default function Forge() {
     if (!next) return;
     // The notice belongs to the chamber that caused it; leaving is reading it.
     setShedByPick([]);
-    setWipeKey((key) => key + 1);
-    setTimeout(() => setChamberKey(next), 350); // the wipe covers the swap
+    setStokeKey((key) => key + 1);
+    // Short, and no longer a curtain: the torch wipe used to cover the swap
+    // for 350ms, but a burst of sparks hides nothing. The chamber's own
+    // cross-fade carries the change, and this beat only lets the surge start
+    // first so the two read as one event rather than as two.
+    setTimeout(() => setChamberKey(next), 160);
   };
 
   /* ---------------- picks ---------------- */
@@ -1084,16 +1089,16 @@ export default function Forge() {
     return (
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-void px-6">
         <GrainOverlay />
-        <EmberField density={18} />
+        <EmberField density={22} />
         <div className="relative z-10 w-full max-w-2xl">
-          <p className="font-mono text-[10px] uppercase tracking-[0.6em] text-gold/60">
+          <p className="font-mono text-[10px] uppercase tracking-[0.6em] text-gold/85">
             Antes de encender la fragua
           </p>
           <h1 className="mt-5 font-display text-3xl font-black tracking-wide text-bone md:text-4xl">
             ¿Cuantos personajes armaste?
           </h1>
-          <p className="mt-4 font-body italic leading-relaxed text-bone/40">
-            Decide por donde empezamos. Podes cambiarlo cuando quieras.
+          <p className="mt-4 font-body italic leading-relaxed text-bone/75">
+            Podes cambiarlo cuando quieras.
           </p>
 
           <div className="mt-10 grid gap-4 md:grid-cols-2">
@@ -1122,7 +1127,7 @@ export default function Forge() {
                 <span className="font-display text-lg font-bold text-bone transition-colors group-hover:text-gold">
                   {option.label}
                 </span>
-                <span className="mt-3 block font-body text-xs italic leading-relaxed text-bone/40">
+                <span className="mt-3 block font-body text-[13px] leading-relaxed text-bone/60">
                   {option.blurb}
                 </span>
               </button>
@@ -1136,8 +1141,8 @@ export default function Forge() {
   return (
     <main className={PAGE}>
       <GrainOverlay />
-      <EmberField density={30} />
-      <TorchWipe trigger={wipeKey} />
+      <EmberField density={36} />
+      <StokeEmbers trigger={stokeKey} />
 
       <motion.div
         animate={{
@@ -1150,7 +1155,7 @@ export default function Forge() {
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-14 md:px-10">
         <header className="mb-12 flex items-end justify-between gap-6">
           <div>
-            <p className="font-mono text-[10px] tracking-[0.6em] uppercase text-gold/60">
+            <p className="font-mono text-[10px] tracking-[0.6em] uppercase text-gold/85">
               Camara {position + 1} de {chambers.length}
             </p>
             <h1 className="mt-3 font-display text-4xl font-black tracking-wide text-bone md:text-5xl">
@@ -1159,7 +1164,7 @@ export default function Forge() {
             {editingId && (
               // Said plainly: sealing again replaces the tome instead of adding
               // one, and that is not something to discover after the fact.
-              <p className="mt-3 font-body text-sm italic text-bone/40">
+              <p className="mt-3 font-body text-sm text-bone/60">
                 Reforjando a{" "}
                 <span className="not-italic" style={{ color: accent }}>
                   {draft.characterName || "un tomo sin nombre"}
@@ -1169,7 +1174,7 @@ export default function Forge() {
             )}
           </div>
           <div className="text-right">
-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/30">
+            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60">
               {rulesVersion === "2024" ? "Reglas 2024" : "Reglas 2014"}
             </p>
             {/*
@@ -1180,7 +1185,7 @@ export default function Forge() {
             <button
               type="button"
               onClick={() => setPace(null)}
-              className="mt-2 font-mono text-[9px] uppercase tracking-[0.25em] text-bone/20 transition-colors hover:text-gold/70"
+              className="mt-2 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60 transition-colors hover:text-gold"
             >
               {pace === "veterano" ? "Aptitudes primero" : "Raza primero"} · cambiar
             </button>
@@ -1207,12 +1212,12 @@ export default function Forge() {
                   }`}
                 />
                 <span
-                  className={`mt-3 whitespace-nowrap font-mono text-[9px] uppercase tracking-[0.3em] transition-colors ${
+                  className={`mt-3 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.3em] transition-colors ${
                     index === position
                       ? "text-gold"
                       : answered[key]
-                        ? "text-bone/50"
-                        : "text-bone/20"
+                        ? "text-bone/75"
+                        : "text-bone/60"
                   }`}
                 >
                   {answered[key] && index !== position ? "✓ " : ""}
@@ -1236,7 +1241,7 @@ export default function Forge() {
               <h2 className="mb-2 font-display text-2xl font-bold" style={{ color: accent }}>
                 {CHAMBER_TITLE[chamberKey]}
               </h2>
-              <p className="mb-8 font-body italic text-bone/40">
+              <p className="mb-8 font-body italic text-bone/70">
                 {CHAMBER_EPIGRAPH[chamberKey]}
               </p>
 
@@ -1249,7 +1254,7 @@ export default function Forge() {
                   <motion.p
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8 border-l-2 border-ember/60 pl-4 font-body text-sm leading-relaxed text-bone/50"
+                    className="mb-8 border-l-2 border-ember/60 pl-4 font-body text-sm leading-relaxed text-bone/75"
                   >
                     Al cambiar {SHED_SUBJECT[chamberKey]} se solto {shedByPick.join(" y ")}. Eleg
                     {shedByPick.length > 1 ? "ilos" : "ilo"} de nuevo mas adelante.
@@ -1318,7 +1323,7 @@ export default function Forge() {
 
                   {draft.classId && (
                     <div className={DIVIDER}>
-                      <label className="mb-4 block font-mono text-[10px] tracking-[0.4em] uppercase text-bone/40">
+                      <label className="mb-4 block font-mono text-[10px] tracking-[0.4em] uppercase text-bone/60">
                         Nivel de poder — <span style={{ color: accent }}>{draft.level}</span>
                       </label>
                       <input
@@ -1350,10 +1355,10 @@ export default function Forge() {
                       )
                     ) : (
                       <div className={DIVIDER_TIGHT}>
-                        <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/25">
+                        <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
                           Senda
                         </p>
-                        <p className="mt-3 font-body italic text-bone/35">
+                        <p className="mt-3 font-body text-bone/75">
                           {selectedClass?.label} no elige senda hasta el nivel {subclassLevel}.
                         </p>
                       </div>
@@ -1421,7 +1426,7 @@ export default function Forge() {
                     <div className={DIVIDER}>
                       <p className="font-display text-lg font-bold" style={{ color: accent }}>
                         {selectedBackground.label}
-                        <span className="ml-3 font-mono text-[10px] font-normal uppercase tracking-[0.25em] text-bone/35">
+                        <span className="ml-3 font-mono text-[10px] font-normal uppercase tracking-[0.25em] text-bone/60">
                           {selectedBackground.source}
                         </span>
                       </p>
@@ -1431,6 +1436,8 @@ export default function Forge() {
                           rulesVersion={rulesVersion}
                           sourceBook={draft.sourceBooks[`background:${draft.backgroundId}`]}
                           accent={accent}
+                          featId={draft.backgroundFeatId}
+                          onPickFeat={(backgroundFeatId) => patchDraft({ backgroundFeatId })}
                         />
                       </div>
                     </div>
@@ -1475,7 +1482,7 @@ export default function Forge() {
                           >
                             {method.label}
                           </p>
-                          <p className="mt-1 font-body text-xs italic leading-snug text-bone/40">
+                          <p className="mt-1 font-body text-[13px] leading-snug text-bone/60">
                             {method.blurb}
                           </p>
                         </button>
@@ -1533,7 +1540,7 @@ export default function Forge() {
                           : "Sembrado desde el indice. Podes cambiarlo."}
                       </span>
                     </div>
-                    <p className="mb-3 font-body text-xs italic leading-relaxed text-bone/30">
+                    <p className="mb-3 font-body text-[13px] leading-relaxed text-bone/60">
                       Se suma a los puntajes ligados. Sin esto un enano exporta sin su +2 a
                       Constitucion.
                     </p>
@@ -1583,7 +1590,7 @@ export default function Forge() {
 
                   {pools.length > 0 && (
                     <div className={DIVIDER}>
-                      <p className="mb-6 font-body text-xs italic leading-relaxed text-bone/30">
+                      <p className="mb-6 font-body text-[13px] leading-relaxed text-bone/60">
                         Lo que {selectedClass?.label} te deja elegir a nivel {draft.level}.
                       </p>
                       <TalentPools
@@ -1678,7 +1685,7 @@ export default function Forge() {
                     offer.scope ? (
                       <div key={`${offer.from}-${index}`}>
                         <p className={LABEL_MB2}>Herramientas — {offer.from}</p>
-                        <p className="font-body italic text-bone/45">
+                        <p className="font-body text-bone/75">
                           Tu especie te da {offer.count}{" "}
                           {offer.scope === "artisan"
                             ? offer.count === 1
@@ -1721,9 +1728,7 @@ export default function Forge() {
                   )}
 
                   {profPlan.offers.length === 0 && (
-                    <p className="font-body italic text-bone/35">
-                      Ni la clase ni el trasfondo elegidos ofrecen competencias a elección.
-                    </p>
+                    <p className={WHISPER}>Ni la clase ni el trasfondo ofrecen a elección.</p>
                   )}
 
                   {/* After the skills, not before: you double what you have
@@ -1801,7 +1806,7 @@ export default function Forge() {
                             </p>
                             <p className={WHISPER_MB4}>
                               {offer.from === "especie" ? "Tu especie" : "Tu trasfondo"} no dice
-                              cual. Escribilo y viaja a la ficha como cualquier otro.
+                              cual. Escribilo.
                             </p>
                             <div className="mb-3 flex flex-wrap gap-2">
                               {(languagePicks[index] ?? [])
@@ -1881,7 +1886,7 @@ export default function Forge() {
                     />
                     {weaponFacts && <ItemFacts facts={weaponFacts} accent={accent} />}
                     {weaponWarning && (
-                      <p className="mt-3 font-body text-xs italic text-ember/70">{weaponWarning}</p>
+                      <p className="mt-3 font-body text-[13px] text-ember">{weaponWarning}</p>
                     )}
                   </div>
 
@@ -1889,9 +1894,7 @@ export default function Forge() {
                     <p className={LABEL_MB2}>
                       Armadura
                     </p>
-                    <p className={WHISPER_MB4}>
-                      Cambia la clase de armadura en la ficha. Dejala vacia para ir sin armadura.
-                    </p>
+                    <p className={WHISPER_MB4}>Dejala vacia para ir sin armadura.</p>
                     <ScryPicker
                       label="Buscar armadura"
                       placeholder="Buscar armadura o escudo…"
@@ -1902,7 +1905,7 @@ export default function Forge() {
                     />
                     {armorFacts && <ItemFacts facts={armorFacts} accent={accent} />}
                     {armorWarning && (
-                      <p className="mt-3 font-body text-xs italic text-ember/70">{armorWarning}</p>
+                      <p className="mt-3 font-body text-[13px] text-ember">{armorWarning}</p>
                     )}
                   </div>
 
@@ -1926,7 +1929,7 @@ export default function Forge() {
                     </p>
                     <p className={WHISPER_MB4}>
                       {plan.caster
-                        ? "Un mago sin libro de conjuros importa sin aquello de lo que vive su clase."
+                        ? "El libro de conjuros va aca."
                         : "Mochila, cuerda, raciones, herramientas."}
                     </p>
                     <GearBag
@@ -1958,7 +1961,7 @@ export default function Forge() {
               {/* ---------- Spells ---------- */}
               {chamberKey === "spells" && plan.picker && (
                 <div className="space-y-10">
-                  <p className="font-body italic text-bone/40">
+                  <p className="font-body text-bone/75">
                     {plan.picker.modeLabel}
                     {plan.picker.maxSpellLevel > 0
                       ? ` · hasta nivel ${plan.picker.maxSpellLevel}`
@@ -1978,25 +1981,30 @@ export default function Forge() {
 
                   {plan.book && (
                     <div className="space-y-8 border-t border-iron/40 pt-8">
-                      <div className="flex items-baseline justify-between">
-                        <span className={LABEL}>Libro de conjuros</span>
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <span className={LABEL}>Libro de conjuros</span>
+                          <RuleNote title="El libro de conjuros">
+                            <p>Seis conjuros a nivel 1, y dos mas por cada nivel despues.</p>
+                            <p>
+                              Lo que copies queda escrito aunque hoy no lo prepares: de aca salen
+                              los preparados.
+                            </p>
+                          </RuleNote>
+                        </div>
                         <span
                           className={META}
                           style={{
                             color:
                               chosenBook.length >= plan.book.limit
                                 ? accent
-                                : "rgba(230,223,206,0.35)",
+                                : "rgba(230,223,206,0.6)",
                           }}
                         >
                           {chosenBook.length} / {plan.book.limit}
                         </span>
                       </div>
 
-                      <p className={WHISPER_MB4}>
-                        Seis a nivel 1 y dos por cada nivel despues. Lo que copies queda escrito
-                        aunque hoy no lo prepares; de aca salen los preparados.
-                      </p>
 
                       {plan.book.options.map(({ level, names }) => (
                         <PickList
@@ -2024,7 +2032,7 @@ export default function Forge() {
                             color:
                               chosenSpells.length === plan.picker.spellLimit
                                 ? accent
-                                : "rgba(230,223,206,0.35)",
+                                : "rgba(230,223,206,0.6)",
                           }}
                         >
                           {chosenSpells.length} / {plan.picker.spellLimit}
@@ -2044,7 +2052,7 @@ export default function Forge() {
                       ))}
                     </div>
                   ) : (
-                    <p className="border-t border-iron/40 pt-8 font-body italic text-bone/35">
+                    <p className="border-t border-iron/40 pt-8 font-body text-bone/75">
                       {plan.book
                         ? "Sin nada escrito en el libro no hay de donde preparar."
                         : `A nivel ${draft.level} esta clase no prepara conjuros todavia.`}
@@ -2061,7 +2069,7 @@ export default function Forge() {
                       value={draft.characterName}
                       onChange={(event) => patchDraft({ characterName: event.target.value })}
                       placeholder="Decilo en la oscuridad…"
-                      className="w-full border-b border-iron bg-transparent pb-3 font-display text-3xl text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                      className="w-full border-b border-iron bg-transparent pb-3 font-display text-3xl text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
                     />
                   </Field>
 
@@ -2070,7 +2078,7 @@ export default function Forge() {
                       value={draft.playerName}
                       onChange={(event) => patchDraft({ playerName: event.target.value })}
                       placeholder="Quien sostiene la pluma"
-                      className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                      className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
                     />
                   </Field>
 
@@ -2079,7 +2087,7 @@ export default function Forge() {
                       value={draft.alignment}
                       onChange={(event) => patchDraft({ alignment: event.target.value })}
                       placeholder="Neutral bueno…"
-                      className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                      className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
                     />
                   </Field>
 
@@ -2103,7 +2111,7 @@ export default function Forge() {
                           value={draft[field]}
                           onChange={(event) => patchDraft({ [field]: event.target.value })}
                           placeholder={placeholder}
-                          className="w-full border-b border-iron bg-transparent pb-2 font-body text-base italic text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                          className="w-full border-b border-iron bg-transparent pb-2 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
                         />
                       </Field>
                     ))}
@@ -2114,7 +2122,7 @@ export default function Forge() {
                         onChange={(event) => patchDraft({ notes: event.target.value })}
                         rows={3}
                         placeholder="Lo que no entra en ninguna casilla."
-                        className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                        className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
                       />
                     </Field>
                   </div>
@@ -2145,7 +2153,7 @@ export default function Forge() {
                             value={draft[field]}
                             onChange={(event) => patchDraft({ [field]: event.target.value })}
                             placeholder={placeholder}
-                            className="w-full border-b border-iron bg-transparent pb-2 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                            className="w-full border-b border-iron bg-transparent pb-2 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
                           />
                         </Field>
                       ))}
@@ -2157,7 +2165,7 @@ export default function Forge() {
                         onChange={(event) => patchDraft({ appearance: event.target.value })}
                         rows={3}
                         placeholder="Lo primero que nota alguien que te cruza."
-                        className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/20 focus:border-gold"
+                        className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
                       />
                     </Field>
                   </div>
@@ -2173,7 +2181,7 @@ export default function Forge() {
           <button
             onClick={() => go(position - 1)}
             disabled={position === 0}
-            className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/40 transition-colors hover:text-bone disabled:opacity-20"
+            className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone disabled:opacity-20"
           >
             ← Retroceder
           </button>
@@ -2358,7 +2366,7 @@ function SubChoice({
       </div>
 
       {note && (
-        <p className="mt-4 border-l-2 border-ember/50 pl-3 font-body text-xs italic leading-relaxed text-bone/35">
+        <p className="mt-4 border-l-2 border-ember/50 pl-3 font-body text-[13px] leading-relaxed text-bone/60">
           {note}
         </p>
       )}
@@ -2369,7 +2377,7 @@ function SubChoice({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-3 block font-mono text-[10px] tracking-[0.4em] uppercase text-bone/40">
+      <label className="mb-3 block font-mono text-[10px] tracking-[0.4em] uppercase text-bone/60">
         {label}
       </label>
       {children}

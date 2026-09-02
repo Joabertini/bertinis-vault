@@ -43,10 +43,10 @@ export default function ScryPicker({
           onChange={(event) => setQuery(event.target.value)}
           placeholder={placeholder}
           aria-label={label}
-          className="w-full border-b border-iron bg-transparent pb-2.5 pl-8 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/25 focus:border-gold"
+          className="w-full border-b border-iron bg-transparent pb-2.5 pl-8 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
         />
         <svg
-          className="absolute left-0 top-1 h-4 w-4 text-gold/60"
+          className="absolute left-0 top-1 h-4 w-4 text-gold/85"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -93,7 +93,7 @@ export default function ScryPicker({
         </AnimatePresence>
 
         {results.length === 0 && (
-          <p className="py-8 text-center font-body italic text-bone/30">
+          <p className="py-8 text-center font-body italic text-bone/75">
             {query
               ? "Ningun nombre responde a tu adivinacion."
               : (emptyHint ?? "Escribi para buscar en los demas libros.")}

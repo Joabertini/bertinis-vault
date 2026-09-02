@@ -49,7 +49,7 @@ export default function PickList({
         </span>
         <span
           className={META}
-          style={{ color: complete ? accent : "rgba(230,223,206,0.35)" }}
+          style={{ color: complete ? accent : "rgba(230,223,206,0.6)" }}
         >
           {chosen.length} / {limit}
         </span>
@@ -81,7 +81,7 @@ export default function PickList({
               title={isLocked ? "Ya otorgado" : undefined}
             >
               <span
-                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center border text-[9px]"
+                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center border text-[10px]"
                 style={{
                   borderColor: isChosen || isLocked ? accent : "#4A4640",
                   background: isLocked ? accent : "transparent",
@@ -92,7 +92,7 @@ export default function PickList({
               </span>
               <span
                 className="truncate font-body text-sm"
-                style={{ color: isChosen ? accent : isLocked ? "rgba(230,223,206,0.5)" : "#E6DFCE" }}
+                style={{ color: isChosen ? accent : isLocked ? "rgba(230,223,206,0.75)" : "#E6DFCE" }}
               >
                 {option}
               </span>
