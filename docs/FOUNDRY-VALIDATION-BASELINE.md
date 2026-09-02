@@ -1,5 +1,13 @@
 # Foundry Validation Baseline
 
+> **Historical record, exporter era. Closed 2026-09-02.**
+>
+> This explains how to read the generated fixture packet, which comes from
+> `packages/foundry-exporter` — fabricated actors, not `ImportPayload`. The
+> module cannot import them.
+>
+> The live pass is [`FOUNDRY-MANUAL-VALIDATION.md`](./FOUNDRY-MANUAL-VALIDATION.md).
+
 ## Purpose
 
 This file explains how to read the generated Foundry validation packet before a human runs the live Foundry pass.

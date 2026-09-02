@@ -1,5 +1,17 @@
 # Bertini's Vault API
 
+> **Legado, a retirar. No construir sobre esto.**
+>
+> Este servicio existía para servir contenido al builder. Se midió y se decidió
+> lo contrario: el índice de navegación viaja con la app (47 KB gzip) y el
+> detalle completo va como assets estáticos, así que **ningún servidor sirve
+> contenido**. El único backend es `apps/worker`, que guarda una build y la
+> devuelve por código.
+>
+> Se conserva porque `packages/data-engine` todavía lo acompaña y porque
+> `bertinis-5e-api` sirvió como volcado fijado de 5etools para build time.
+> Retirarlo está en `ARCHITECTURE-PLAN.md`, sección *State of the migration*.
+
 Backend/BFF del proyecto.
 
 Responsabilidades previstas:

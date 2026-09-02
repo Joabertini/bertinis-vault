@@ -1,40 +1,47 @@
 # Tests en espera
 
-Estos archivos probaban `apps/web` cuando el front era el viejo. Siguen
-siendo válidos como especificación — describen comportamiento que el producto
-debería tener — pero llaman a funciones que el Faro del Alba todavía no expone.
+**Queda uno.** De las ocho suites que se aparcaron aquí el 2026-08-27, siete se
+resolvieron y se fueron. Este archivo describía las ocho y siguió haciéndolo
+hasta el 2026-09-02; la tabla de abajo es la que corresponde al directorio.
 
-**No están rotos: están esperando.** Se borrarían sólo si se decidiera que el
-comportamiento que describen ya no se quiere, y esa decisión no se tomó.
+Estos archivos probaban `apps/web` cuando el front era el viejo. Siguen siendo
+válidos como especificación — describen comportamiento que el producto debería
+tener — pero llaman a funciones que el Faro del Alba no expone con ese nombre.
 
 Quedan fuera de `vitest run` y del `typecheck` (ver `vitest.config.ts` y
-`tsconfig.json`). Aparcarlos costó **un** test que pasaba, en `multiclass`;
-los otros 78 verdes siguen en el gate.
+`tsconfig.json`).
 
-## Qué espera cada uno
+## Lo que queda
 
-| Archivo | Casos | Espera |
-|---|---:|---|
-| `feat-prerequisites.test.ts` | 13 | `featPrerequisiteProblemsFor`, `unmetFeatPrerequisitesFor`, `featCandidateFor` |
-| `optional-features.test.ts` | 13 | `optionalFeatureSlotsFor`, `optionalFeaturePrerequisitesFor`, `unmetOptionalFeaturesFor`, `optionalFeatureGrantersFor`, `optionalFeatureContextFor` |
-| `starting-equipment.test.ts` | 11 | `startingEquipmentFor`, `equipmentListsFor` |
-| `subclass-spells.test.ts` | 10 | `spellPoolFor` |
-| `origin-abilities.test.ts` | 10 | `originAbilityBonusesFor`, `originAbilityChoiceForBuild`, `pendingOriginAbilitiesFor` |
-| `spell-counts.test.ts` | 8 | `spellCountsFor` |
+| Archivo | Casos | Espera | Quién tiene hoy el comportamiento |
+|---|---:|---|---|
+| `starting-equipment.test.ts` | 11 | `startingEquipmentFor`, `equipmentListsFor`, sobre `lib/builder` | `lib/starting-kit.ts` (`startingKitFor`, `grantedOptions`, `takenOptions`, `kitCopper`), con **22 casos** en `test/starting-kit.test.ts` |
+
+**Hay una decisión pendiente y no es técnica.** El comportamiento está
+implementado y probado con el doble de casos que este spec; lo que este archivo
+aporta no es cobertura sino once redacciones distintas de la misma pregunta.
+Reescribirlo contra `starting-kit.ts` es trabajo real y puede no valer la pena.
+Se deja hasta que alguien decida, porque borrarlo en silencio es justo lo que
+esta carpeta existe para evitar.
 
 ## No todos piden lo mismo
 
-Cinco de los ocho prueban cosas que el Faro **sí hace**, con otra API: conjuros
-(`lib/spells.ts`), dotes y prerrequisitos (`lib/improvements.ts`), talentos
-(`lib/optional-features.ts`), equipo inicial (`lib/grants.ts` y la cámara
-Equipo), y bonos de origen (`components/forge/BonusEditor.tsx`). Para esos, el
-trabajo es reescribir el test contra el módulo que hoy dueño del comportamiento
-— no portar una función.
+El triaje del 2026-08-27 partió las ocho en dos montones, y los dos se
+vaciaron:
 
-Los otros tres — **multiclase**, **maestría de armas** y expertise, que nunca
-llegó a tener test — son huecos reales del Faro. Los tres además están rotos
-río abajo en los paquetes, así que arreglarlos es más que devolverle un control
-al front. Ver `docs/MIGRACION-FRONT.md`.
+- **Cinco probaban cosas que el Faro sí hacía con otra API** — conjuros
+  (`lib/spells.ts`), dotes y prerrequisitos (`lib/improvements.ts`), talentos
+  (`lib/optional-features.ts`), equipo inicial y bonos de origen. Se
+  reescribieron contra el módulo dueño del comportamiento, que era el trabajo
+  que este archivo decía que había que hacer. Sólo el equipo inicial quedó sin
+  reescribir, y por eso sigue arriba.
+- **Tres eran huecos reales** — multiclase, maestría de armas y expertise, que
+  nunca llegó a tener test. **Los tres se construyeron** entre las PRs #42 y
+  #61, incluyendo lo que estaba roto río abajo en los paquetes.
+
+La lección del triaje se sostuvo: *"reescribir el test, no portar la
+función"*. Ningún test aparcado terminó pidiendo que se resucitara una función
+vieja.
 
 ## Los que se fueron
 

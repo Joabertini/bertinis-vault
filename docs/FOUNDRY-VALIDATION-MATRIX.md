@@ -1,5 +1,14 @@
 # Foundry Validation Matrix
 
+> **Historical record, exporter era. Closed 2026-09-02.**
+>
+> Everything below is coverage of `packages/foundry-exporter`, which fabricates
+> actor payloads by hand — the approach this project abandoned. It still runs
+> and still catches regressions in that package, but it does not exercise the
+> import path a player takes.
+>
+> The live pass is [`FOUNDRY-MANUAL-VALIDATION.md`](./FOUNDRY-MANUAL-VALIDATION.md).
+
 ## Goal
 
 Keep one short matrix of the MVP build shapes we should validate regularly in Foundry and in exporter regressions.

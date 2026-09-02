@@ -312,10 +312,13 @@ Extra Attack's: the features do not stack, and the larger number counts.
 Summing would tell a fighter 3 / rogue 2 they may master five weapons when
 neither table ever says more than three at those levels.
 
-**Not written to Foundry.** The picks are held on the build and shown in the
-wizard. Whether `dnd5e` 5.3.3 exposes an actor path for mastery has not been
-verified against an installed system, and guessing a path would write a field
-that silently does nothing. That check needs a Foundry install.
+**Written to Foundry since 2026-08-28.** This paragraph used to say the picks
+stopped at the wizard because the actor path was unverified and guessing one
+would write a field that silently does nothing. Foundry was installed on
+2026-08-27, the path was read off the installed `dnd5e` 5.3.3 rather than
+guessed — `system.traits.weaponProf.mastery.value`, a set tested with
+`.has(baseItem)` — and `ImportPayload` gained the field. See the table at the
+end of this document.
 
 **The origin ability increase — done, 2026-08-26.** This is the sharpest
 difference between the editions at level one, and the builder got it wrong in
