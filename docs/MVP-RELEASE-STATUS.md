@@ -1,6 +1,6 @@
 # MVP Release Status
 
-Generated at: `2026-08-29T05:00:41.440Z`
+Generated at: `2026-09-02T03:25:21.067Z`
 
 ## Automated Gate
 
@@ -11,6 +11,11 @@ Generated at: `2026-08-29T05:00:41.440Z`
 - Blocked fixtures: 1
 
 ## Automated Expectations
+
+These fixtures come from `packages/foundry-exporter`, which is legacy: they
+are fabricated actors, not `ImportPayload`, and the module cannot consume
+them. They still catch exporter regressions, but they do not exercise the
+import path. The live pass in `docs/FOUNDRY-MANUAL-VALIDATION.md` does.
 
 | Fixture | Expected live result | Auto issues |
 | --- | --- | --- |
@@ -24,11 +29,11 @@ Generated at: `2026-08-29T05:00:41.440Z`
 
 ## Manual Release Blockers Still Open
 
-- [ ] Run the live Foundry validation pass in `docs/FOUNDRY-MANUAL-VALIDATION.md`.
+- [ ] Confirm the installed module matches `HEAD` **by hash**, not by version.
+- [ ] Publish a build with `apps/web/probes/rehearsal.ts` and import it by code in a live world.
+- [ ] Confirm the actor holds real compendium documents: `system.identifier` populated, spells with `activities`, weapons with `damage.base`.
+- [ ] Compare the imported actor against Rathma, the hand-levelled reference, and explain every difference.
 - [ ] Fill out `docs/FOUNDRY-MANUAL-VALIDATION-REPORT.md` with actual results and screenshot paths.
-- [ ] Confirm no valid fixture imports with unexpected blockers.
-- [ ] Confirm the warning-only fixture still creates an actor with understandable warnings.
-- [ ] Confirm the blocked fixture stops actor creation cleanly.
 
 ## Current Recommendation
 
