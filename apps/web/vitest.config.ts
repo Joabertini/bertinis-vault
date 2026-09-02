@@ -21,6 +21,8 @@ export default mergeConfig(
       environment: "jsdom",
       include: ["test/**/*.test.{ts,tsx}"],
       exclude: [...configDefaults.exclude, "test/pending/**"],
+      // Lo que jsdom no trae y el navegador si. Ver `test/setup-dom.ts`.
+      setupFiles: ["./test/setup-dom.ts"],
       restoreMocks: true,
       /*
        * Cinco segundos alcanzan en CI y no en una maquina cargada.
