@@ -77,7 +77,8 @@ import {
   proficiencyPlan,
   toLines,
 } from "@/lib/grants";
-import { formatSpellLine, spellPlan } from "@/lib/spells";
+import { attributeSpells, spellPlansFor } from "@/lib/spells";
+import SpellClassSection from "@/components/forge/SpellClassSection";
 import {
   abilityOptionsOf,
   grantedSpellChoicesFor,
@@ -96,7 +97,7 @@ import Multiclass from "@/components/forge/Multiclass";
 import WeaponMastery from "@/components/forge/WeaponMastery";
 import Expertise from "@/components/forge/Expertise";
 import type { ExtraClass } from "@/lib/classing";
-import { emptyExtraClass } from "@/lib/classing";
+import { classEntriesFor, emptyExtraClass } from "@/lib/classing";
 import { masteryPlanFor, masteryProblemsFor } from "@/lib/weapon-mastery";
 import { expertisePlanFor } from "@/lib/expertise";
 import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
@@ -356,14 +357,26 @@ export default function Forge() {
 
   /* ---------------- spells ---------------- */
 
-  const plan = useMemo(
+  /*
+   * One plan per class the character casts with, not one for the first class.
+   *
+   * Reading `draft.classId` alone was three of the beta reports at once: a
+   * fighter who took a level of wizard got no Spells chamber, because the
+   * fighter casts nothing and the wizard was never asked; and a wizard who took
+   * cleric got the wizard list and none of the cleric's.
+   */
+  const spellPlans = useMemo(
     () =>
-      spellPlan({
-        classId: draft.classId,
-        className: selectedClass?.label ?? "",
-        classSource: selectedClass?.source ?? "",
-        subclassId: draft.subclassId,
-        level: draft.level,
+      spellPlansFor({
+        entries: classEntriesFor(
+          { classId: draft.classId, subclassId: draft.subclassId, level: draft.level },
+          draft.extraClasses,
+          rulesVersion,
+        ),
+        labelFor: (classId) => {
+          const found = allClasses.find((entry) => entry.id === classId);
+          return { label: found?.label ?? classId, source: found?.source ?? "" };
+        },
         rulesVersion,
         snapshot,
         spellbook: toLines(draft.spellbookText),
@@ -372,16 +385,39 @@ export default function Forge() {
       draft.classId,
       draft.subclassId,
       draft.level,
+      draft.extraClasses,
       draft.spellbookText,
-      selectedClass,
+      allClasses,
       rulesVersion,
       snapshot,
     ],
   );
 
+  const castsAnything = spellPlans.length > 0;
+
   const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
   const chosenSpells = useMemo(() => toLines(draft.spellsText), [draft.spellsText]);
   const chosenBook = useMemo(() => toLines(draft.spellbookText), [draft.spellbookText]);
+
+  /*
+   * Which class each chosen spell counts against.
+   *
+   * Storage stays one flat list, because that is what the export reads and what
+   * every saved draft already holds — nothing has to be migrated for a second
+   * class to work. Only the counters need an owner, and the rule is the first
+   * class whose list has the spell: Cure Wounds is on four lists, and counting
+   * it against all of them would show a wizard/cleric over the limit on both
+   * sides at once.
+   */
+  const spellsByClass = useMemo(
+    () => attributeSpells(chosenSpells, spellPlans, (entry) => entry.spellsByLevel),
+    [chosenSpells, spellPlans],
+  );
+
+  const cantripsByClass = useMemo(
+    () => attributeSpells(chosenCantrips, spellPlans, (entry) => entry.cantripOptions),
+    [chosenCantrips, spellPlans],
+  );
 
   /*
    * The named alternatives a species or a subclass offers.
@@ -708,8 +744,8 @@ export default function Forge() {
   /* ---------------- chambers ---------------- */
 
   const chambers = useMemo<ChamberKey[]>(
-    () => chamberOrder(pace ?? "nuevo", plan.caster),
-    [plan.caster, pace],
+    () => chamberOrder(pace ?? "nuevo", castsAnything),
+    [castsAnything, pace],
   );
 
   /*
@@ -1935,7 +1971,7 @@ export default function Forge() {
                       Lo demas
                     </p>
                     <p className={WHISPER_MB4}>
-                      {plan.caster
+                      {castsAnything
                         ? "El libro de conjuros va aca."
                         : "Mochila, cuerda, raciones, herramientas."}
                     </p>
@@ -1966,105 +2002,23 @@ export default function Forge() {
               )}
 
               {/* ---------- Spells ---------- */}
-              {chamberKey === "spells" && plan.picker && (
-                <div className="space-y-10">
-                  <p className="font-body text-bone/75">
-                    {plan.picker.modeLabel}
-                    {plan.picker.maxSpellLevel > 0
-                      ? ` · hasta nivel ${plan.picker.maxSpellLevel}`
-                      : " · todavia sin espacios de conjuro"}
-                  </p>
-
-                  {plan.picker.availableCantripCount > 0 && (
-                    <PickList
-                      title="Trucos"
-                      options={plan.cantripOptions}
-                      selected={chosenCantrips}
-                      limit={plan.picker.availableCantripCount}
+              {chamberKey === "spells" && spellPlans.length > 0 && (
+                <div className="space-y-16">
+                  {spellPlans.map((classPlan) => (
+                    <SpellClassSection
+                      key={classPlan.classId}
+                      plan={classPlan}
+                      cantrips={cantripsByClass.get(classPlan.classId) ?? []}
+                      spells={spellsByClass.get(classPlan.classId) ?? []}
+                      book={chosenBook}
+                      characterLevel={draft.level}
                       accent={accent}
-                      onToggle={toggleCantrip}
+                      showName={spellPlans.length > 1}
+                      onToggleCantrip={toggleCantrip}
+                      onToggleSpell={toggleSpell}
+                      onToggleBookSpell={toggleBookSpell}
                     />
-                  )}
-
-                  {plan.book && (
-                    <div className="space-y-8 border-t border-iron/40 pt-8">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <span className={LABEL}>Libro de conjuros</span>
-                          <RuleNote title="El libro de conjuros">
-                            <p>Seis conjuros a nivel 1, y dos mas por cada nivel despues.</p>
-                            <p>
-                              Lo que copies queda escrito aunque hoy no lo prepares: de aca salen
-                              los preparados.
-                            </p>
-                          </RuleNote>
-                        </div>
-                        <span
-                          className={META}
-                          style={{
-                            color:
-                              chosenBook.length >= plan.book.limit
-                                ? accent
-                                : "rgba(230,223,206,0.6)",
-                          }}
-                        >
-                          {chosenBook.length} / {plan.book.limit}
-                        </span>
-                      </div>
-
-
-                      {plan.book.options.map(({ level, names }) => (
-                        <PickList
-                          key={level}
-                          title={`Nivel ${level}`}
-                          options={names.map((name) => formatSpellLine(level, name))}
-                          selected={chosenBook}
-                          limit={plan.book!.limit}
-                          accent={accent}
-                          onToggle={toggleBookSpell}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {plan.picker.spellLimit > 0 ? (
-                    <div className="space-y-8 border-t border-iron/40 pt-8">
-                      <div className="flex items-baseline justify-between">
-                        <span className={LABEL}>
-                          {plan.picker.sectionTitle}
-                        </span>
-                        <span
-                          className={META}
-                          style={{
-                            color:
-                              chosenSpells.length === plan.picker.spellLimit
-                                ? accent
-                                : "rgba(230,223,206,0.6)",
-                          }}
-                        >
-                          {chosenSpells.length} / {plan.picker.spellLimit}
-                        </span>
-                      </div>
-
-                      {plan.spellsByLevel.map(({ level, names }) => (
-                        <PickList
-                          key={level}
-                          title={`Nivel ${level}`}
-                          options={names.map((name) => formatSpellLine(level, name))}
-                          selected={chosenSpells}
-                          limit={plan.picker!.spellLimit}
-                          accent={accent}
-                          onToggle={toggleSpell}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="border-t border-iron/40 pt-8 font-body text-bone/75">
-                      {plan.book
-                        ? "Sin nada escrito en el libro no hay de donde preparar."
-                        : `A nivel ${draft.level} esta clase no prepara conjuros todavia.`}
-                    </p>
-                  )}
+                  ))}
                 </div>
               )}
 

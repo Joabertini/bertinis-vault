@@ -23,11 +23,15 @@ import {
   spellsAvailableAt,
   type SpellPickerState,
   warlockPactSlotLevelByClassLevel,
+  spellSlotsForPayload,
+  spellSlotsFullCasterTable,
+  type PayloadSpellSlots,
   type SpellSelectionProfile,
 } from "@bertinis-vault/domain";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
+import type { AbilityId } from "./abilities";
 
-import type { CharacterBuild } from "@bertinis-vault/contracts";
+import type { CharacterBuild, ClassEntry } from "@bertinis-vault/contracts";
 import {
   castingTimeOf,
   classInfoFor,
@@ -118,6 +122,45 @@ export function spellPlan(input: {
   snapshot: CharacterBuild | null;
   /** What the wizard has written down, as `"Nv1: Shield"` lines. Ignored otherwise. */
   spellbook?: string[];
+  /**
+   * This class's own casting ability, when the character has more than one.
+   *
+   * The snapshot carries a single ability for the whole character, which is
+   * right for a wizard and wrong for a wizard/cleric: the cleric prepares
+   * Wisdom + level and the wizard Intelligence + level, and reading one
+   * ability for both gives at least one of them the wrong count.
+   */
+  castingAbility?: AbilityId;
+  /**
+   * The slots this class would have on its own, when the character has more
+   * than one.
+   *
+   * Multiclass slots are shared, and the shared table is what the character
+   * *casts* with - but not what they may *learn*. The rules set spells known
+   * and prepared "as if you were a single-classed member of that class", and
+   * the books add the consequence in as many words: you might have slots of a
+   * higher level than any spell you know, and you spend them casting lower
+   * spells higher.
+   *
+   * Measured against this repository's own tables, the gap is ordinary rather
+   * than exotic:
+   *
+   *   wizard 5 / cleric 5     caster level 10, slots to 5th, each list to 3rd
+   *   wizard 3 / cleric 3     caster level  6, slots to 3rd, each list to 2nd
+   *   eldritch knight 17 / wizard 1
+   *                           caster level  6, slots to 3rd, wizard list to 1st
+   *
+   * Passing the shared table here offered a wizard 5 / cleric 5 fifth level
+   * spells to prepare, two levels past anything either class can prepare.
+   *
+   * A plain fighter is not one of these cases and is worth saying so: it
+   * contributes nothing to the caster level at all, so a fighter 17 / wizard 1
+   * has a 1st level caster's slots and no gap to close. Only the Eldritch
+   * Knight and the Arcane Trickster contribute a third of their levels.
+   */
+  ownSlots?: Record<string, number>;
+  /** This class's own pact slot level, for a warlock among other classes. */
+  ownPactLevel?: number;
 }): SpellPlan {
   const { classId, className, classSource, subclassId, level, rulesVersion, snapshot } = input;
 
@@ -136,16 +179,18 @@ export function spellPlan(input: {
   if (getSpellProgressionForClass(classId) === "none" && !castsFromSubclass) return NONE;
 
   const spellcasting = snapshot?.derived.spellcasting;
-  const slots = spellcasting?.slots ?? {};
+  const slots = input.ownSlots ?? spellcasting?.slots ?? {};
 
   /**
    * The ability modifier feeds the "prepared" classes, whose count is
    * `modifier + level`. A cleric with no Wisdom yet prepares fewer spells, and
    * that is the honest number rather than an assumed +3.
    */
-  const abilityModifier = spellcasting
-    ? Math.floor((snapshot!.abilities.final[spellcasting.ability] - 10) / 2)
-    : 0;
+  const modifierAbility = input.castingAbility ?? spellcasting?.ability;
+  const abilityModifier =
+    modifierAbility && snapshot
+      ? Math.floor((snapshot.abilities.final[modifierAbility] - 10) / 2)
+      : 0;
 
   /**
    * The counts come from the class's own table in the chosen edition, not from
@@ -223,7 +268,7 @@ export function spellPlan(input: {
     spellOptions: preparable.map((row) => ({ label: row.name, level: row.level })),
     // A warlock's slots are kept under "pact" and carry their level apart from
     // the map, so the picker is told what they are worth.
-    pactSlotLevel: spellcasting?.pactLevel ?? 0,
+    pactSlotLevel: input.ownPactLevel ?? spellcasting?.pactLevel ?? 0,
   });
 
   /*
@@ -248,6 +293,142 @@ export function spellPlan(input: {
     ),
     book: bookPlan,
   };
+}
+
+/**
+ * One plan per class the character casts with.
+ *
+ * The builder used to make a single plan out of `draft.classId` and never
+ * looked at the rest, which is what three of the beta reports were: a fighter
+ * who took a level of wizard got no Spells chamber at all, because the fighter
+ * casts nothing and the question was never asked of the wizard; and a wizard
+ * who took cleric got the wizard list and nothing of the cleric's.
+ *
+ * The rules make each class its own question - "you determine what spells you
+ * know and can prepare for each class individually, as if you were a
+ * single-classed member of that class" - so this asks it once per class rather
+ * than trying to merge them. What is shared is the slots, and only the slots.
+ *
+ * Non-casters drop out. A fighter 5 / wizard 3 gets one section, not a fighter
+ * section that says zero.
+ */
+export type ClassSpellPlan = SpellPlan & {
+  classId: string;
+  label: string;
+  classLevel: number;
+};
+
+export function spellPlansFor(input: {
+  entries: ClassEntry[];
+  labelFor: (classId: string) => { label: string; source: string };
+  rulesVersion: RulesVersion;
+  snapshot: CharacterBuild | null;
+  spellbook?: string[];
+}): ClassSpellPlan[] {
+  const plans: ClassSpellPlan[] = [];
+
+  for (const entry of input.entries) {
+    if (!entry.classId) continue;
+    const named = input.labelFor(entry.classId);
+
+    const own = ownSlotsFor(entry, input.rulesVersion);
+
+    const plan = spellPlan({
+      classId: entry.classId,
+      className: named.label,
+      classSource: named.source,
+      subclassId: entry.subclassId ?? "",
+      level: entry.level,
+      rulesVersion: input.rulesVersion,
+      snapshot: input.snapshot,
+      ownSlots: own.slots,
+      ...(own.pactLevel === undefined ? {} : { ownPactLevel: own.pactLevel }),
+      ...(entry.spellcastingAbility ? { castingAbility: entry.spellcastingAbility } : {}),
+      ...(input.spellbook ? { spellbook: input.spellbook } : {}),
+    });
+
+    if (!plan.caster) continue;
+    plans.push({ ...plan, classId: entry.classId, label: named.label, classLevel: entry.level });
+  }
+
+  return plans;
+}
+
+/** Where the Eldritch Knight and the Arcane Trickster start, in both editions. */
+const THIRD_CASTER_FIRST_LEVEL = 3;
+
+/**
+ * The slots this class would have on its own, which is the table its spells
+ * known and prepared come off.
+ *
+ * Not `multiclassSpellSlots([entry])`, which was the first attempt and is
+ * wrong: that function answers what a class *contributes* to a shared caster
+ * level, and for anything but a full caster the contribution and the class's
+ * own table are different numbers. A half-caster contributes `floor(level / 2)`
+ * and reads its own table at `ceil(level / 2)` — measured, a paladin 5 came
+ * back with three 1st level slots where the published table gives four 1st and
+ * two 2nd, so the picker would have refused them every 2nd level paladin spell.
+ *
+ * `spellSlotsForPayload` is that own-table reading, editions included: in 2014
+ * a paladin and a ranger cast nothing at level 1 and in 2024 both start there.
+ *
+ * It answers by class, so it has nothing to say about a caster whose magic
+ * comes from a subclass. The Eldritch Knight and the Arcane Trickster are the
+ * only two, they are third casters, and a third caster reads the full table at
+ * `ceil(level / 3)` — checked against the printed Eldritch Knight table at
+ * fighter 3, 7 and 13.
+ */
+function ownSlotsFor(entry: ClassEntry, rulesVersion: RulesVersion): PayloadSpellSlots {
+  const own = spellSlotsForPayload(entry.classId, entry.level, rulesVersion);
+  if (Object.keys(own.slots).length > 0) return own;
+
+  if (entry.subclassCasterProgression !== "1/3") return own;
+
+  // All four third-caster subclasses in the data - the Eldritch Knight and the
+  // Arcane Trickster, in both editions - begin at 3rd level, and `ceil(1 / 3)`
+  // would otherwise hand a 1st level fighter two spell slots.
+  if (entry.level < THIRD_CASTER_FIRST_LEVEL) return own;
+
+  const table = spellSlotsFullCasterTable[Math.ceil(entry.level / 3)] ?? [];
+  const slots: Record<string, number> = {};
+  table.forEach((count, index) => {
+    if (count > 0) slots[String(index + 1)] = count;
+  });
+
+  return { slots };
+}
+
+/**
+ * Which plan a chosen spell belongs to.
+ *
+ * Storage stays one flat list of `"Nv1: Shield"` lines, because that is what
+ * the export reads and what every saved draft already holds - nothing has to be
+ * migrated. What the sections need is only a rule for counting, and the rule is
+ * the first plan whose pool contains the spell. Cure Wounds is on four lists;
+ * counting it against all four would show a wizard/cleric two spells over their
+ * limit on both sides at once.
+ */
+export function attributeSpells(
+  chosen: string[],
+  plans: readonly ClassSpellPlan[],
+  pick: (plan: ClassSpellPlan) => SpellsByLevel | string[],
+): Map<string, string[]> {
+  const pools = plans.map((plan) => {
+    const from = pick(plan);
+    const names = Array.isArray(from) && typeof from[0] === "string"
+      ? (from as string[])
+      : (from as SpellsByLevel).flatMap((group) => group.names);
+    return { classId: plan.classId, names: new Set(names) };
+  });
+
+  const owned = new Map<string, string[]>(plans.map((plan) => [plan.classId, []]));
+  for (const line of chosen) {
+    const name = parseSpellLine(line)?.name ?? line.trim();
+    const home = pools.find((pool) => pool.names.has(name)) ?? pools[0];
+    if (home) owned.get(home.classId)!.push(line);
+  }
+
+  return owned;
 }
 
 /** Spells in the order the books print them: by level, then as the pool gave them. */
