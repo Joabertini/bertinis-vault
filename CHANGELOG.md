@@ -1,6 +1,80 @@
 # Changelog
 
-## [Unreleased] — 2026-08-26
+## [Unreleased] — 2026-09-02
+
+Thirty-three pull requests, #41 through #74. The build order below closed on
+2026-08-26 and this is everything after it: the front was replaced, accounts
+arrived, and the import stopped losing things quietly.
+
+### The front is now El Faro del Alba
+- The prototype front replaced `apps/web` wholesale (#42). Nine chambers —
+  Lineage, Calling, Origin, Abilities, Improvements, Gifts, Gear, Spells,
+  Identity — plus the Gate, the Codex and the Ritual. The package name did not
+  change, so the deploy did not either.
+- The repository's `tsconfig` is stricter than the loose front's was
+  (`noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`) and found two real
+  bugs on contact: an unchecked index in `dice.ts` and three components passing
+  an explicit `undefined` to an optional prop.
+- Every supporting text was below the contrast floor at which text is text
+  (#73). The whisper class measured **2.2:1** against a 4.5:1 requirement, and
+  the gold labels 3.0:1. The ramp and the measurements are written above
+  `styles/recipes.ts`. D&D rules stopped being permanent grey paragraphs and
+  became a mark that opens them.
+
+### Accounts
+- Sign in with Discord, and a Codex that syncs itself (#60, #61). The shelf
+  still works signed out: an account is an offer — take this to another
+  machine — not a door.
+- A wildcard origin never grants credentials (#62). `#60` had shipped
+  `Access-Control-Allow-Credentials: true` unconditionally, which with a `*`
+  origin is the shape of a CSRF.
+- The store answers to `api.bertinilabs.xyz` and keeps answering on
+  `workers.dev` (#66); the Faro addresses it by that name (#68); every route
+  serves `index.html`, and a rejected login says why (#69).
+- Account storage is Cloudflare D1, connected in #63.
+
+### What a character is made of
+Species proficiencies, senses and traits (#44); each proficiency offer charging
+only for its own (#45); Origin Customization as a switch, in blocks (#46);
+traits as real items, measured languages, and a warning for gear you are not
+proficient with (#49); the wizard's spellbook and prepared state where `dnd5e`
+keeps it (#50); 2024 lineage and three casters that did not work (#51); spells
+from feats, backgrounds and gifts (#52); the warlock's Mystic Arcanum (#53);
+hit points by average or by roll (#54); the elf that 2024 was not (#55); age,
+height, weight and appearance in the `dnd5e` fields (#56); what you carry
+against what you can carry (#57); attunement and its three slots (#59).
+
+### What reaches Foundry
+- Weapon and armour proficiencies reach the actor (#47), with a test that takes
+  them from the builder rather than from the contract (#48).
+- Currency and weapon mastery, which the builder knew and never sent (#58).
+  Both were listed as known gaps below; both are closed.
+- Tasha's optional class features are no longer granted for free (#65). A PHB
+  wizard was being handed Cantrip Formulas.
+- An item Foundry rejects is named instead of vanishing (#70), and an item
+  whose damage part cannot be rolled is kept rather than dropped (#71).
+- The payload says what is worn and what is only carried (#72, #74). Measured
+  on a live import of a level 8 ranger: **one of ten** equipment entries
+  carried an `equipped` key, and Plutonium equips whatever it imports, so the
+  ranger reached the sheet wearing two suits of armour.
+
+### The seam that hid a week of bugs
+- `importPayloadSchema.safeParse` strips what it does not know and answers 200,
+  so a deployed Worker older than the contract discards new fields in silence.
+  On 2026-09-01 the deployed Worker was from 23 August and was throwing away
+  **20 of 73 fields**, including `optionalFeatures` — every fighting style,
+  invocation, pact boon, metamagic and maneuver. `apps/web/probes/
+  store-fidelity.ts` round-trips a payload through the live store and names
+  every field that does not come back (#64).
+- The same PR fixed a gate that went red for the machine rather than the code:
+  vitest was starting eight forks on a disk that gives 18 IOPS. Threads instead
+  of forks, 111s instead of 219s.
+
+### Documentation
+- The build order was closed (#41) and the handoff brought back in line with
+  what shipped (#67).
+
+## [Build order] — 2026-08-26
 
 The build order in `docs/BUILDER-COVERAGE.md` is complete: items 1 through 9,
 nine merged pull requests. Every one replaced a hand-written table with the

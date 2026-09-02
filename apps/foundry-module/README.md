@@ -1,15 +1,21 @@
 # Foundry Module
 
-Where the Foundry module is going. It is not built yet.
+**This is the import path.** It has created real actors in a live world since
+2026-08-24, on Foundry v14.367 with dnd5e 5.3.3.
 
-The working module still lives at the repository root:
+The legacy prototype still sits at the repository root — [module.json](../../module.json),
+[scripts/vault-app.js](../../scripts/vault-app.js),
+[scripts/character-builder.js](../../scripts/character-builder.js) — and
+declares the same module id. It builds actors by fabricating item documents,
+which is why its imported spells and equipment never functioned. Nothing
+depends on it; removing it is open work.
 
-- [module.json](../../module.json)
-- [scripts/vault-app.js](../../scripts/vault-app.js)
-- [scripts/character-builder.js](../../scripts/character-builder.js)
-
-That prototype builds actors by fabricating item documents, which is why
-imported spells and equipment never functioned. It stays until this replaces it.
+**Installing it is part of merging a pull request that changes it.** A copy in
+a Foundry data directory keeps its version number while its code falls behind:
+one was four pull requests behind while still calling itself `0.2.2`. Compare
+by hash, never by version —
+`git hash-object <install>/src/import.js` against
+`git rev-parse HEAD:apps/foundry-module/src/import.js`.
 
 ## What this module does
 
@@ -27,5 +33,7 @@ the prototype of reference resolution that already exists in the legacy module.
 
 ## Requirements
 
-Plutonium 2.17.2 requires Foundry v14, dnd5e 5.3.x and lib-wrapper. The root
-`module.json` still declares Foundry 12-13 and has to move.
+Plutonium 2.17.2 requires Foundry v14, dnd5e 5.3.x and lib-wrapper. This
+module's `module.json` declares exactly that — Foundry 14 verified, dnd5e 5.3.0
+minimum and 5.3.3 verified, Plutonium required. The root `module.json` still
+declares Foundry 12-13; it is the legacy one.

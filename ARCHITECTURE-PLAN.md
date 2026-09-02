@@ -2,8 +2,8 @@
 
 ## The product
 
-Build a D&D 5e character on the web — on a phone, away from the table, saved to
-an account — then import it into Foundry VTT with a short code. Plus a
+Build a D&D 5e character on the web — in a browser, away from the table, saved
+to an account — then import it into Foundry VTT with a short code. Plus a
 cheatsheet for playing the character.
 
 Pathbuilder 2e is the shape to aim at.
@@ -105,14 +105,46 @@ Plutonium `2.17.2` requires:
 - dnd5e system 5.3.x
 - lib-wrapper
 
-The repository has not moved to those yet: `module.json` declares Foundry 12-13
-and the legacy exporter targets dnd5e 5.2.5.
+`apps/foundry-module/module.json` targets those, and a live install confirms
+them: **Foundry v14.367, dnd5e 5.3.3**, with Plutonium and lib-wrapper present.
+
+Two manifests still carry the id `bertinis-vault`: the one above, and the
+legacy `module.json` at the repository root, which declares Foundry 12-13 and
+loads `scripts/vault.js`. Only the first is the import path.
 
 ## State of the migration
 
-The legacy Foundry module at the repository root is still the only working
-import path. It stays until the reference-based module replaces it.
+The reference-based module is the import path and has been since 2026-08-24,
+when it created its first actors. What remains is removal, not replacement:
 
-`packages/data-engine` is a hand-written catalog superseded by
-`packages/vetools-index`, but `packages/domain` still depends on it for entity
-lookups. Those lookups move first; the package goes afterwards.
+| Piece | Why it is still here |
+| --- | --- |
+| Legacy root module (`module.json`, `scripts/`, `templates/`, `styles/`) | Nothing depends on it; it has simply not been taken out |
+| `packages/data-engine` | `packages/domain` still uses it for entity lookups. Those lookups move to `vetools-index` first — high risk, 24 tests |
+| `packages/foundry-exporter` | Fabricates item bodies, the approach this design replaced. Depends on `data-engine` |
+| `apps/api` | Content BFF. No server serves content any more, so it has no job |
+
+Retiring them is deliberate open work, not an oversight. It comes after the
+live validation pass, because it touches everything the pass exercises.
+
+## Relationship to El Faro del Alba
+
+`Joabertini/Faro-del-alba` is the downloadable, local-first track: a Tauri
+desktop application with its own rules engine and content ingestion, aimed at
+more than one game system. It is a separate repository and a separate product.
+
+The split is deliberate, and its terms are set by that repository's
+`ADR-0001`: the two converge **through explicit shared contracts and portable
+engines, never by synchronising whole applications**. Faro's own rule — "the
+rules/domain core must not depend on Tauri, React or browser APIs" — is the one
+that reaches back into this repository.
+
+What that means here, in practice:
+
+- Everything under `packages/` stays free of browser APIs. It already is; see
+  [docs/PORTABILIDAD.md](./docs/PORTABILIDAD.md) for the measurement and the
+  command that repeats it.
+- Offline operation, local files, installed content packages and local AI are
+  **not goals of this product**. They are the reason the desktop track exists.
+- New 5e rules logic belongs in a package, not in `apps/web/src/lib`, so that
+  the desktop track can take it without taking React with it.

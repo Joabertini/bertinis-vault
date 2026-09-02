@@ -1,5 +1,21 @@
 # Environment Guide
 
+> **Historical record. Closed 2026-09-02. Superseded, do not follow.**
+>
+> Written when `apps/api` served the builder's content and the root module was
+> the export path. Both are gone: no server serves content any more, and
+> `apps/foundry-module` — described below as "planned" — has been the import
+> path since August. It also refers to `apps/web/src/App.tsx`, which stopped
+> existing when the front was replaced.
+>
+> What replaced it:
+> - **Setup and daily work** → [`../CONTRIBUTING.md`](../CONTRIBUTING.md)
+> - **Deploying the three pieces** → [`DEPLOY.md`](./DEPLOY.md)
+> - **Accounts, secrets and DNS** → [`CUENTAS.md`](./CUENTAS.md)
+>
+> Kept for the `apps/api` variable reference, which is still accurate for that
+> legacy service.
+
 ## Purpose
 
 This guide describes the real local development environment for the current `bertinis-vault` monorepo as it exists today.

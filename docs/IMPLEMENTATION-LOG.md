@@ -1,5 +1,16 @@
 # Bertini's Vault - Implementation Log
 
+> **Historical record, closed 2026-04-03. Do not read this as instructions.**
+>
+> This log covers the era when the exporter fabricated item bodies by hand. That
+> approach was abandoned: a spell it produced fell back to a default school and
+> carried no activities, so it appeared on the sheet and did nothing when
+> clicked. The design that replaced it — reference entities, never fabricate
+> them — is in [`../ARCHITECTURE-PLAN.md`](../ARCHITECTURE-PLAN.md).
+>
+> Kept because deleting history is worse than keeping it. Start at
+> [`AI-HANDOFF.md`](./AI-HANDOFF.md) instead.
+
 ## 2026-04-03
 
 ### JSON export/import deep-dive and native filename alignment

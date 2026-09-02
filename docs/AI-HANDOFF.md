@@ -20,9 +20,18 @@ Fast start for the next agent working on this repo.
 5. [`CHARACTER-SHEET-FIELDS.md`](./CHARACTER-SHEET-FIELDS.md) — every field a
    gap fix has to land on, read from the `dnd5e` actor data model itself, with
    which ones `import.js` actually writes today.
+6. [`PORTABILIDAD.md`](./PORTABILIDAD.md) — what in this repository can run
+   outside a browser, and the rule that keeps it that way. The downloadable
+   product depends on it and cannot enforce it from its own repository.
 
 Those are current. Treat anything else in this directory as a record of how the
 project got here, not as instructions.
+
+A document that narrates rather than asserts now says so in its own first
+lines, with a closing date: `MIGRACION-FRONT.md`, `IMPLEMENTATION-LOG.md`,
+`ENVIRONMENT-GUIDE.md`, `FOUNDRY-VALIDATION-MATRIX.md` and
+`FOUNDRY-VALIDATION-BASELINE.md` are records. The rule is in
+[`../CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 [`IMPLEMENTATION-LOG.md`](./IMPLEMENTATION-LOG.md) in particular is a historical
 log covering the fabricate-the-item approach that was abandoned. It is kept
@@ -61,9 +70,25 @@ repository, which is current by definition; only a round trip shows that the
 deployment is not.
 
 The same applies to the module. A copy installed in Foundry keeps its version
-number while its code falls behind — one was 234 lines short of `main` and
-still called itself 0.2.2. Compare `apps/foundry-module/src` against
-`Data/modules/bertinis-vault/src`, never the versions.
+number while its code falls behind. Compare the files, never the versions:
+
+```
+git hash-object "<FoundryData>/modules/bertinis-vault/src/import.js"
+git rev-parse HEAD:apps/foundry-module/src/import.js
+```
+
+On 2026-09-01 those two differed and the installed copy turned out to be the
+**exact blob of PR #58** — four pull requests of fixes that had been merged to
+`main` and never reached a table: #59 (attunement), #65 (stop granting Tasha's
+optional class features for free), #70 (name the item Foundry rejected) and
+#71 (keep an item whose damage cannot be rolled). To find which pull request an
+old copy corresponds to, walk the blobs:
+
+```
+git log --format=%h -- apps/foundry-module/src/import.js
+```
+
+**Installing the module is part of merging a pull request that changes it.**
 
 ## The one thing to understand
 

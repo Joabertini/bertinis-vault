@@ -1,7 +1,22 @@
 # Migración del front — Faro del Alba a `apps/web`
 
-Estado: **cableado hecho y verificado.** Falta cerrar tres huecos de mecánica y
-reescribir ocho suites de test contra la API nueva.
+> **CERRADO el 2026-09-02. Esto es un registro, no una lista de tareas.**
+>
+> La migración se hizo (PR #42) y todo lo que este documento dejaba abierto se
+> cerró después: los tres huecos de mecánica —multiclase, maestría de armas y
+> expertise— se construyeron entre las PRs #42 y #61, y de las ocho suites
+> aparcadas queda una, por una decisión que está escrita en
+> `apps/web/test/pending/README.md`.
+>
+> Se conserva porque el razonamiento vale más que la lista: mide, y varias
+> veces contradice a la nota anterior con la medición al lado. Lo que sigue
+> vigente sobre el estado del producto vive en
+> [`AI-HANDOFF.md`](./AI-HANDOFF.md) y
+> [`CHARACTER-MODEL-GAPS.md`](./CHARACTER-MODEL-GAPS.md).
+
+Estado al momento de escribirlo: **cableado hecho y verificado.** Faltaba
+cerrar tres huecos de mecánica y reescribir ocho suites de test contra la API
+nueva.
 
 El front que vivía suelto en `Downloads/bertinis-vault-front` — Puerta, Forja de
 nueve cámaras, Códice con la Visión, Ritual — ahora es `apps/web`. El front
