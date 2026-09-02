@@ -15,7 +15,7 @@
  * Living Record on the right is reading the same numbers the export will.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -50,7 +50,7 @@ import {
   levellingFor,
   optionsFor,
   slugOf,
-
+  startingEquipmentForClass,
 } from "@/lib/index-options";
 import ItemFacts from "@/components/forge/ItemFacts";
 import { factsFor } from "@/lib/item-facts";
@@ -839,6 +839,26 @@ export default function Forge() {
 
   /* ---------------- picks ---------------- */
 
+  /*
+   * The classes a character is not built from, kept apart from the ones they
+   * are.
+   *
+   * Tasha's three sidekicks - Expert, Spellcaster, Warrior - are simplified
+   * companion classes, and a UA prestige class sits with them. In the flat
+   * list they read as ordinary classes beside the wizard.
+   *
+   * What tells them apart is data rather than a list of names written here:
+   * every class a character is built from prints starting equipment, and these
+   * four are the only ones that do not.
+   */
+  const sidekickHeading = useCallback(
+    (entry: CatalogEntry) =>
+      startingEquipmentForClass(entry.id, rulesVersion).length === 0
+        ? "Auxiliares y prestigio"
+        : undefined,
+    [rulesVersion],
+  );
+
   const pick = (
     prop: "race" | "class" | "background" | "subrace" | "subclass" | "weapon" | "armor",
     entry: CatalogEntry,
@@ -1303,6 +1323,7 @@ export default function Forge() {
                   <SigilShelf
                     entries={allRaces}
                     selectedId={draft.raceId}
+                    selectedSource={draft.sourceBooks[`race:${draft.raceId}`]}
                     onPick={(entry) => pick("race", entry)}
                     accent={VAULT_GOLD}
                     label="Buscar raza"
@@ -1345,6 +1366,8 @@ export default function Forge() {
                   <SigilShelf
                     entries={allClasses}
                     selectedId={draft.classId}
+                    selectedSource={draft.sourceBooks[`class:${draft.classId}`]}
+                    groupFor={sidekickHeading}
                     onPick={(entry) => pick("class", entry)}
                     accent={accent}
                     label="Buscar clase"
@@ -1448,6 +1471,7 @@ export default function Forge() {
                   <SigilShelf
                     entries={allBackgrounds}
                     selectedId={draft.backgroundId}
+                    selectedSource={draft.sourceBooks[`background:${draft.backgroundId}`]}
                     onPick={(entry) => pick("background", entry)}
                     accent={accent}
                     label="Buscar trasfondo"
