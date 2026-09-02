@@ -1684,9 +1684,12 @@ export default function Forge() {
                      */
                     offer.scope ? (
                       <div key={`${offer.from}-${index}`}>
-                        <p className={LABEL_MB2}>Herramientas — {offer.from}</p>
+                        <p className={LABEL_MB2}>Herramientas — {offer.label ?? offer.from}</p>
                         <p className="font-body text-bone/75">
-                          Tu especie te da {offer.count}{" "}
+                          {/* Named rather than assumed: this used to say "tu
+                              especie" for every one of them, and feats offer
+                              these too. */}
+                          {offer.label ?? `Tu ${offer.from}`} te da {offer.count}{" "}
                           {offer.scope === "artisan"
                             ? offer.count === 1
                               ? "herramienta de artesano"
@@ -1700,11 +1703,12 @@ export default function Forge() {
                     ) : (
                       <PickList
                         key={`${offer.from}-${index}`}
-                        title={`${offer.kind === "tool" ? "Herramientas" : "Competencias"} — ${offer.from}`}
+                        title={`${offer.kind === "tool" ? "Herramientas" : "Competencias"} — ${offer.label ?? offer.from}`}
                         hint={
-                          offer.isOpen
+                          offer.note ??
+                          (offer.isOpen
                             ? "Cualquier habilidad."
-                            : `Elegi ${offer.count} de esta lista.`
+                            : `Elegi ${offer.count} de esta lista.`)
                         }
                         options={offer.options}
                         // Only what this offer paid for. Handed the whole list,
@@ -1728,7 +1732,10 @@ export default function Forge() {
                   )}
 
                   {profPlan.offers.length === 0 && (
-                    <p className={WHISPER}>Ni la clase ni el trasfondo ofrecen a elección.</p>
+                    <p className={WHISPER}>
+                      Ni la clase, ni el trasfondo, ni la especie, ni tus dotes ofrecen nada a
+                      elección.
+                    </p>
                   )}
 
                   {/* After the skills, not before: you double what you have

@@ -18,12 +18,16 @@
 
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
+import { collections, forRulesVersion, type FeatRow } from "@bertinis-vault/vetools-index";
+
 import type { BuilderState } from "./builder";
+import { featIdsFor } from "./feats";
 import { speciesProficienciesFor } from "./species";
 import {
   multiclassGrantsFor,
   proficiencyGrantForBackground,
   skillChoiceForClass,
+  slugOf,
 } from "./index-options";
 
 export type SkillOffer = {
@@ -47,7 +51,22 @@ export type SkillOffer = {
    */
   scope?: "artisan" | "instrument";
   /** Who is asking, for the label. */
-  from: "clase" | "trasfondo" | "multiclase" | "especie";
+  from: "clase" | "trasfondo" | "multiclase" | "especie" | "dote";
+  /**
+   * The specific thing asking, where naming the kind is not enough.
+   *
+   * "Competencias — dote" says nothing when a character has three feats;
+   * "Competencias — Skill Expert" says which one is owed.
+   */
+  label?: string;
+  /**
+   * A sentence the picker shows under the title.
+   *
+   * Skilled is why this exists: three picks spent across skills *and* tools in
+   * any mix, and the list of tools is not in the data. The picker offers the
+   * skills and this says the picks may go to tools instead.
+   */
+  note?: string;
 };
 
 export type ProficiencyPlan = {
@@ -188,12 +207,94 @@ export function proficiencyPlan(
     });
   }
 
+  /*
+   * What the character's feats hand over.
+   *
+   * Twelve feats state skills and ten state tools, and until this block existed
+   * not one of them reached a character: Skill Expert granted its expertise and
+   * not the skill it doubles, Prodigy granted nothing at all, and a player who
+   * took Skilled for three proficiencies got none. A beta player described it
+   * as not feeling able to really choose their proficiencies, which is what it
+   * was.
+   *
+   * Feats come last, and the order is load-bearing rather than cosmetic.
+   * `assignOffers` charges each pick to the first offer that both lists it and
+   * has room, so an offer that lists *everything* must not go early: a rogue
+   * offering [Stealth, Acrobatics] beside a feat offering any skill, with
+   * Stealth and Arcana picked, resolves correctly only if the feat is asked
+   * second. Asked first it takes Stealth, and Arcana then fits nowhere — the
+   * class offer sits unsatisfied over a pick the player already made. Feat
+   * offers are usually open, so they belong at the end.
+   */
+  const feats = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
+  for (const featId of featIdsFor(state)) {
+    const feat = feats.find((row) => slugOf(row.name) === featId);
+    if (!feat) continue;
+
+    for (const choice of feat.skills?.choices ?? []) {
+      if (choice.count <= 0) continue;
+      offers.push({
+        options: choice.scope === "any" ? [...ALL_SKILLS] : choice.options,
+        count: choice.count,
+        isOpen: choice.scope === "any",
+        kind: "skill",
+        from: "dote",
+        label: feat.name,
+      });
+    }
+
+    for (const choice of feat.tools?.choices ?? []) {
+      if (choice.count <= 0) continue;
+      offers.push({
+        options: choice.options,
+        count: choice.count,
+        isOpen: choice.scope !== null,
+        ...(choice.scope && choice.scope !== "any" ? { scope: choice.scope } : {}),
+        kind: "tool",
+        from: "dote",
+        label: feat.name,
+      });
+    }
+
+    /*
+     * Skilled's one budget over two kinds. The skills are offered as a list
+     * because there is one; the tools are said in a sentence because 5etools
+     * states the kind and not the members, and writing a tool list here would
+     * be writing a rule.
+     */
+    for (const choice of feat.skillOrTool ?? []) {
+      if (choice.count <= 0 || !choice.skills) continue;
+      offers.push({
+        options: [...ALL_SKILLS],
+        count: choice.count,
+        isOpen: true,
+        kind: "skill",
+        from: "dote",
+        label: feat.name,
+        ...(choice.tools
+          ? {
+              note: `Cualquier habilidad. Podes gastar estas ${choice.count} en herramientas en vez de habilidades — escribi cual abajo.`,
+            }
+          : {}),
+      });
+    }
+  }
+
   return {
-    grantedSkills: dedupe([...(species?.skills.granted ?? []), ...background.skillsGranted]),
+    grantedSkills: dedupe([
+      ...(species?.skills.granted ?? []),
+      ...background.skillsGranted,
+      ...featIdsFor(state).flatMap(
+        (featId) => feats.find((row) => slugOf(row.name) === featId)?.skills?.granted ?? [],
+      ),
+    ]),
     grantedTools: dedupe([
       ...(species?.tools.granted ?? []),
       ...background.toolsGranted,
       ...multiclass.tools,
+      ...featIdsFor(state).flatMap(
+        (featId) => feats.find((row) => slugOf(row.name) === featId)?.tools?.granted ?? [],
+      ),
     ]),
     offers,
   };
