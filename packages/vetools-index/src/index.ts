@@ -323,6 +323,38 @@ export type FeatRow = IndexRow & {
    * classes, Ritual Caster's five — which is why the entries carry a variant.
    */
   spells: GrantedSpellEntry[];
+  /**
+   * What the feat makes the character proficient in.
+   *
+   * Twelve feats state skills and ten state tools, and not one of them reached
+   * a character before this field existed: a player who took Skill Expert for
+   * the skill got the expertise and no skill, and Prodigy granted nothing at
+   * all. A beta player put it as not feeling able to really choose their
+   * proficiencies, which is exactly what it was.
+   */
+  skills: ProficiencyGrant;
+  tools: ProficiencyGrant;
+  /**
+   * Skilled's shape: one budget spent across skills *and* tools in any mix.
+   *
+   * Kept apart from the two above because it is one choice over two kinds
+   * rather than two choices, and merging them would let a player take three
+   * skills *and* three tools from a feat that grants three of either.
+   *
+   * There is no list of options — 5etools states the kinds, not the members —
+   * so a picker offers every skill and asks the player to write down a tool
+   * they spend a pick on, the same way the artisan's-tools choices already
+   * work.
+   */
+  skillOrTool: SkillOrToolChoice[];
+};
+
+/** "Choose `count` from these kinds", with no list of members to choose from. */
+export type SkillOrToolChoice = {
+  count: number;
+  skills: boolean;
+  tools: boolean;
+  languages: boolean;
 };
 
 /** One feat a background offers, already scoped to the book it comes from. */
