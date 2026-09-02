@@ -8,6 +8,8 @@ import {
   initialState,
 } from "../src/lib/builder";
 
+import { scoresBefore } from "../src/lib/improvements";
+
 const resolver = new RefResolver("2014", collections);
 
 const noBonuses = { ...initialState, abilityBonuses: {}, levelChoices: {} };
@@ -172,5 +174,54 @@ describe("the feat a background grants", () => {
 
     expect(snapshot.choices.feats).not.toContain("tough");
     expect(snapshot.background.grantedFeatIds).toEqual(["tough"]);
+  });
+});
+
+describe("the scores an improvement is applied on top of", () => {
+  test("this level's own points are not counted twice", () => {
+    // The beta report: a character with an 18 placed one point, was told they
+    // had 19, and had the second refused for reaching 20. 18 + 2 = 20 is legal.
+    // `before` was shared across every level and included the very points the
+    // editor was holding.
+    const state = {
+      ...noBonuses,
+      str: 18,
+      level: 4,
+      levelChoices: { 4: { kind: "improvement" as const, bonuses: { str: 1 } } },
+    };
+
+    expect(scoresBefore(state, 4).str).toBe(18);
+    // Without the exception it is the doubled number the player was shown.
+    expect(scoresBefore(state).str).toBe(19);
+  });
+
+  test("an earlier level's points do count", () => {
+    // Level 8 is applied on top of what level 4 already did.
+    const state = {
+      ...noBonuses,
+      str: 14,
+      level: 8,
+      levelChoices: {
+        4: { kind: "improvement" as const, bonuses: { str: 2 } },
+        8: { kind: "improvement" as const, bonuses: { str: 1 } },
+      },
+    };
+
+    expect(scoresBefore(state, 8).str).toBe(16);
+  });
+
+  test("a feat's increase raises the floor too", () => {
+    // Omitting feats let a stepper push a score past 20: the same cap failing
+    // in the other direction.
+    const withFeat = {
+      ...noBonuses,
+      con: 17,
+      level: 8,
+      levelChoices: { 4: { kind: "feat" as const, featId: "tough" } },
+    };
+
+    const plain = { ...noBonuses, con: 17, level: 8, levelChoices: {} };
+
+    expect(scoresBefore(withFeat, 8).con).toBeGreaterThanOrEqual(scoresBefore(plain, 8).con);
   });
 });

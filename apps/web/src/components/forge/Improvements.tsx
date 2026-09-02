@@ -47,8 +47,6 @@ export default function Improvements({
   onSetChoice: (level: number, choice: BuilderState["levelChoices"][number]) => void;
   onSetFeatAbilities: (featId: string, bonuses: AbilityBonusMap) => void;
 }) {
-  const before = useMemo(() => scoresBefore(state), [state]);
-
   if (levels.length === 0) {
     return (
       <p className={WHISPER}>
@@ -64,7 +62,6 @@ export default function Improvements({
           key={level}
           level={level}
           state={state}
-          before={before}
           rulesVersion={rulesVersion}
           accent={accent}
           onSetChoice={onSetChoice}
@@ -78,7 +75,6 @@ export default function Improvements({
 function LevelSlot({
   level,
   state,
-  before,
   rulesVersion,
   accent,
   onSetChoice,
@@ -86,7 +82,6 @@ function LevelSlot({
 }: {
   level: number;
   state: BuilderState;
-  before: Record<AbilityId, number>;
   rulesVersion: RulesVersion;
   accent: string;
   onSetChoice: (level: number, choice: BuilderState["levelChoices"][number]) => void;
@@ -94,6 +89,15 @@ function LevelSlot({
 }) {
   const choice = choiceAt(state, level);
   const isFeat = choice.kind === "feat";
+
+  /*
+   * This level's own points are left out, which is what makes the number a
+   * "before". Shared across every level, it included them: the editor added
+   * the points it was holding on top of a total that already had them, so a
+   * character with an 18 was told they had 19 and refused the second point for
+   * reaching 20. 18 + 2 = 20 is legal.
+   */
+  const before = useMemo(() => scoresBefore(state, level), [state, level]);
 
   const featSearch = useMemo(
     () => (query: string) => optionsFor({ prop: "feat", rulesVersion, search: query, limit: 24 }),
