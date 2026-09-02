@@ -204,7 +204,7 @@ export default function LiveSheet({
       </div>
 
       {/* ---- the three numbers that decide a fight ---- */}
-      <div className="mt-5 grid grid-cols-3 gap-2">
+      <div className="mt-5 grid grid-cols-3 items-stretch gap-2">
         <Vital
           label="PG"
           value={derived?.hp ?? "—"}
@@ -268,6 +268,7 @@ export default function LiveSheet({
           value={size ?? "—"}
           accent={accent}
           dim={size === null}
+          word
           hint="Tamano: la casilla que ocupas y por donde pasas."
         />
       </div>
@@ -510,6 +511,7 @@ function Vital({
   accent,
   dim = false,
   hint,
+  word = false,
 }: {
   label: string;
   value: number | string;
@@ -517,12 +519,29 @@ function Vital({
   dim?: boolean;
   /** Plain definition, for the abbreviations a new player has not met yet. */
   hint?: string;
+  /**
+   * The value is a word rather than a number.
+   *
+   * Every other box in this row holds two or three characters — a 14, a +3 —
+   * and is set large and black to be read across a table. Size holds
+   * "Gargantuesco", which at that weight is half again as wide as the cell and
+   * simply hung out of it. A word is set smaller and allowed to wrap, and the
+   * cells stretch so a two-line box does not shorten the row.
+   */
+  word?: boolean;
 }) {
   return (
-    <div className="border border-iron/50 bg-void/40 px-2 py-2 text-center" title={hint}>
+    <div
+      className="flex h-full flex-col border border-iron/50 bg-void/40 px-2 py-2 text-center"
+      title={hint}
+    >
       <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">{label}</p>
       <p
-        className="mt-0.5 font-display text-lg font-black"
+        className={
+          word
+            ? "mt-0.5 font-display text-[13px] font-bold leading-tight [overflow-wrap:anywhere]"
+            : "mt-0.5 font-display text-lg font-black"
+        }
         style={{ color: dim ? "#4A4640" : accent }}
       >
         {value}
