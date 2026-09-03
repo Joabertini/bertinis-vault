@@ -78,7 +78,17 @@ export type OptionQuery = {
   prop: "race" | "background" | "feat" | "item" | "subclass" | "subrace" | "class";
   rulesVersion: RulesVersion;
   search: string;
-  limit?: number | undefined;
+  /**
+   * How many to return. `null` means every legal one.
+   *
+   * A cap is right for the pickers that search a catalog nobody browses — no
+   * one scrolls 900 items looking for a longsword. It is wrong for a list a
+   * player is meant to *read*: the feat picker showed 24 of the 168 a 2024
+   * character may take, and a feat outside that first 24 existed only for the
+   * player who already knew its name. A list that has to be guessed at is not
+   * a list.
+   */
+  limit?: number | null | undefined;
   /** Narrow items to the weapons, which is all the weapon picker wants. */
   weaponsOnly?: boolean | undefined;
   /** Narrow items to armour and shields, which carry an armour class. */
@@ -111,7 +121,7 @@ export function optionsFor({
   if (armorOnly) scoped = scoped.filter((row) => isArmor(row as ItemRow));
   if (parentName) scoped = scoped.filter((row) => parentOf(row) === parentName);
 
-  return toOptions(searchByName(scoped, search, limit));
+  return toOptions(searchByName(scoped, search, limit ?? scoped.length));
 }
 
 /** The class a subclass belongs to, or the species a subrace belongs to. */

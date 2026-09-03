@@ -93,3 +93,35 @@ describe("switching ruleset", () => {
     expect(optionById("background", "2024", slugOf("Acolyte"))?.source).toBe("XPHB");
   });
 });
+
+describe("a list the player is meant to read, not guess at", () => {
+  /*
+   * The feat picker capped at 24. The catalog holds far more than that in both
+   * editions, so a feat outside the first 24 by name existed only for the
+   * player who already knew to type it — and a player scrolling the list read
+   * it as the whole list, because that is what a list looks like.
+   */
+  test("no limit means every feat the ruleset allows", () => {
+    for (const rulesVersion of ["2014", "2024"] as const) {
+      const capped = optionsFor({ prop: "feat", rulesVersion, search: "", limit: 24 });
+      const whole = optionsFor({ prop: "feat", rulesVersion, search: "", limit: null });
+
+      expect(capped).toHaveLength(24);
+      expect(whole.length).toBeGreaterThan(100);
+    }
+  });
+
+  test("the whole list is more than four times what the picker used to show", () => {
+    const whole = optionsFor({ prop: "feat", rulesVersion: "2024", search: "", limit: null });
+
+    expect(whole.length).toBeGreaterThan(24 * 4);
+  });
+
+  test("a capped picker is unchanged, so the item search keeps its ceiling", () => {
+    // Removing the cap everywhere would be the other mistake: nobody scrolls
+    // the whole item catalog looking for a longsword.
+    expect(
+      optionsFor({ prop: "item", rulesVersion: "2014", search: "", limit: 30 }),
+    ).toHaveLength(30);
+  });
+});
