@@ -417,6 +417,36 @@ function traitsOf(entity) {
  * Every array in the data has exactly one element, so there is no second grant
  * hiding behind the first.
  */
+/**
+ * The "any skill or any tool" choice, which 5etools states in its own shape.
+ *
+ * Skilled is the feat this exists for: three picks spent across skills and
+ * tools in any mix. The blocks are nested one level deeper than the ordinary
+ * proficiency shapes — `choose` is an array — and the entries inside `from` are
+ * the tokens `anySkill` and `anyTool` rather than the names of proficiencies,
+ * so there is no list to map. Only the count and which kinds are open survive,
+ * which is all a picker needs.
+ */
+function skillOrToolChoicesOf(groups) {
+  const out = [];
+
+  for (const group of groups ?? []) {
+    for (const block of [group.choose ?? []].flat()) {
+      const from = block.from ?? [];
+      const count = Number(block.count) || 1;
+      if (count <= 0) continue;
+      out.push({
+        count,
+        skills: from.includes("anySkill"),
+        tools: from.includes("anyTool"),
+        languages: from.includes("anyLanguage"),
+      });
+    }
+  }
+
+  return out;
+}
+
 function proficiencyOffersOf(groups, nameOf) {
   const granted = [];
   const choices = [];
@@ -1921,6 +1951,21 @@ const BUILDERS = {
       // Ten of them are a choice between named lists, which is why the blocks
       // carry a name.
       spells: grantedSpellsOf(f),
+      // What the feat makes the character proficient in. Twelve state skills
+      // and ten state tools, and none of them reached a character: a player who
+      // took Skill Expert for the skill got the expertise and no skill.
+      //
+      // Read with the same helper the species and backgrounds use, because it
+      // is the same 5etools shape. Weapons and armour are deliberately not here
+      // — four feats and six state them, and nothing downstream models a weapon
+      // proficiency from any source yet.
+      skills: proficiencyOffersOf(f.skillProficiencies, skillNameOf),
+      tools: proficiencyOffersOf(f.toolProficiencies, titleCase),
+      // Skilled's shape, which is its own: "three from any skill or any tool",
+      // one budget spent across two kinds. Two feats use it and the existing
+      // helper cannot read it — its `choose` is an array and its `from` holds
+      // the tokens `anySkill` and `anyTool` rather than named proficiencies.
+      skillOrTool: skillOrToolChoicesOf(f.skillToolLanguageProficiencies),
     })),
 
   race: (entities, context) =>

@@ -15,7 +15,7 @@
  * Living Record on the right is reading the same numbers the export will.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
@@ -50,7 +50,7 @@ import {
   levellingFor,
   optionsFor,
   slugOf,
-
+  startingEquipmentForClass,
 } from "@/lib/index-options";
 import ItemFacts from "@/components/forge/ItemFacts";
 import { factsFor } from "@/lib/item-facts";
@@ -77,7 +77,8 @@ import {
   proficiencyPlan,
   toLines,
 } from "@/lib/grants";
-import { formatSpellLine, spellPlan } from "@/lib/spells";
+import { attributeSpells, spellPlansFor } from "@/lib/spells";
+import SpellClassSection from "@/components/forge/SpellClassSection";
 import {
   abilityOptionsOf,
   grantedSpellChoicesFor,
@@ -96,7 +97,8 @@ import Multiclass from "@/components/forge/Multiclass";
 import WeaponMastery from "@/components/forge/WeaponMastery";
 import Expertise from "@/components/forge/Expertise";
 import type { ExtraClass } from "@/lib/classing";
-import { emptyExtraClass } from "@/lib/classing";
+import { classEntriesFor, emptyExtraClass } from "@/lib/classing";
+import { suggestAppearance, type Appearance } from "@/lib/appearance";
 import { masteryPlanFor, masteryProblemsFor } from "@/lib/weapon-mastery";
 import { expertisePlanFor } from "@/lib/expertise";
 import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
@@ -356,14 +358,26 @@ export default function Forge() {
 
   /* ---------------- spells ---------------- */
 
-  const plan = useMemo(
+  /*
+   * One plan per class the character casts with, not one for the first class.
+   *
+   * Reading `draft.classId` alone was three of the beta reports at once: a
+   * fighter who took a level of wizard got no Spells chamber, because the
+   * fighter casts nothing and the wizard was never asked; and a wizard who took
+   * cleric got the wizard list and none of the cleric's.
+   */
+  const spellPlans = useMemo(
     () =>
-      spellPlan({
-        classId: draft.classId,
-        className: selectedClass?.label ?? "",
-        classSource: selectedClass?.source ?? "",
-        subclassId: draft.subclassId,
-        level: draft.level,
+      spellPlansFor({
+        entries: classEntriesFor(
+          { classId: draft.classId, subclassId: draft.subclassId, level: draft.level },
+          draft.extraClasses,
+          rulesVersion,
+        ),
+        labelFor: (classId) => {
+          const found = allClasses.find((entry) => entry.id === classId);
+          return { label: found?.label ?? classId, source: found?.source ?? "" };
+        },
         rulesVersion,
         snapshot,
         spellbook: toLines(draft.spellbookText),
@@ -372,16 +386,39 @@ export default function Forge() {
       draft.classId,
       draft.subclassId,
       draft.level,
+      draft.extraClasses,
       draft.spellbookText,
-      selectedClass,
+      allClasses,
       rulesVersion,
       snapshot,
     ],
   );
 
+  const castsAnything = spellPlans.length > 0;
+
   const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
   const chosenSpells = useMemo(() => toLines(draft.spellsText), [draft.spellsText]);
   const chosenBook = useMemo(() => toLines(draft.spellbookText), [draft.spellbookText]);
+
+  /*
+   * Which class each chosen spell counts against.
+   *
+   * Storage stays one flat list, because that is what the export reads and what
+   * every saved draft already holds — nothing has to be migrated for a second
+   * class to work. Only the counters need an owner, and the rule is the first
+   * class whose list has the spell: Cure Wounds is on four lists, and counting
+   * it against all of them would show a wizard/cleric over the limit on both
+   * sides at once.
+   */
+  const spellsByClass = useMemo(
+    () => attributeSpells(chosenSpells, spellPlans, (entry) => entry.spellsByLevel),
+    [chosenSpells, spellPlans],
+  );
+
+  const cantripsByClass = useMemo(
+    () => attributeSpells(chosenCantrips, spellPlans, (entry) => entry.cantripOptions),
+    [chosenCantrips, spellPlans],
+  );
 
   /*
    * The named alternatives a species or a subclass offers.
@@ -708,8 +745,8 @@ export default function Forge() {
   /* ---------------- chambers ---------------- */
 
   const chambers = useMemo<ChamberKey[]>(
-    () => chamberOrder(pace ?? "nuevo", plan.caster),
-    [plan.caster, pace],
+    () => chamberOrder(pace ?? "nuevo", castsAnything),
+    [castsAnything, pace],
   );
 
   /*
@@ -802,6 +839,48 @@ export default function Forge() {
   };
 
   /* ---------------- picks ---------------- */
+
+  /*
+   * The classes a character is not built from, kept apart from the ones they
+   * are.
+   *
+   * Tasha's three sidekicks - Expert, Spellcaster, Warrior - are simplified
+   * companion classes, and a UA prestige class sits with them. In the flat
+   * list they read as ordinary classes beside the wizard.
+   *
+   * What tells them apart is data rather than a list of names written here:
+   * every class a character is built from prints starting equipment, and these
+   * four are the only ones that do not.
+   */
+  const sidekickHeading = useCallback(
+    (entry: CatalogEntry) =>
+      startingEquipmentForClass(entry.id, rulesVersion).length === 0
+        ? "Auxiliares y prestigio"
+        : undefined,
+    [rulesVersion],
+  );
+
+  /*
+   * Fills the empty appearance boxes with something the species makes likely.
+   *
+   * A player asked for this and gave the right reason: the species is what
+   * guides the visual, and six blank boxes make every character start as the
+   * same nobody. Only the empty ones are touched — pressing this must never
+   * discard something the player already wrote, and pressing it twice on a
+   * half-filled sheet fills the rest rather than rerolling the lot.
+   */
+  const suggestLooks = () => {
+    const suggestion = suggestAppearance(draft.raceId, draft.subraceId, rulesVersion);
+    if (!suggestion) return;
+
+    const patch: Partial<typeof draft> = {};
+    for (const [field, value] of Object.entries(suggestion)) {
+      const key = field as keyof Appearance;
+      if (value && !draft[key].trim()) patch[key] = value;
+    }
+
+    if (Object.keys(patch).length > 0) patchDraft(patch);
+  };
 
   const pick = (
     prop: "race" | "class" | "background" | "subrace" | "subclass" | "weapon" | "armor",
@@ -1267,6 +1346,7 @@ export default function Forge() {
                   <SigilShelf
                     entries={allRaces}
                     selectedId={draft.raceId}
+                    selectedSource={draft.sourceBooks[`race:${draft.raceId}`]}
                     onPick={(entry) => pick("race", entry)}
                     accent={VAULT_GOLD}
                     label="Buscar raza"
@@ -1309,6 +1389,8 @@ export default function Forge() {
                   <SigilShelf
                     entries={allClasses}
                     selectedId={draft.classId}
+                    selectedSource={draft.sourceBooks[`class:${draft.classId}`]}
+                    groupFor={sidekickHeading}
                     onPick={(entry) => pick("class", entry)}
                     accent={accent}
                     label="Buscar clase"
@@ -1412,6 +1494,7 @@ export default function Forge() {
                   <SigilShelf
                     entries={allBackgrounds}
                     selectedId={draft.backgroundId}
+                    selectedSource={draft.sourceBooks[`background:${draft.backgroundId}`]}
                     onPick={(entry) => pick("background", entry)}
                     accent={accent}
                     label="Buscar trasfondo"
@@ -1684,9 +1767,12 @@ export default function Forge() {
                      */
                     offer.scope ? (
                       <div key={`${offer.from}-${index}`}>
-                        <p className={LABEL_MB2}>Herramientas — {offer.from}</p>
+                        <p className={LABEL_MB2}>Herramientas — {offer.label ?? offer.from}</p>
                         <p className="font-body text-bone/75">
-                          Tu especie te da {offer.count}{" "}
+                          {/* Named rather than assumed: this used to say "tu
+                              especie" for every one of them, and feats offer
+                              these too. */}
+                          {offer.label ?? `Tu ${offer.from}`} te da {offer.count}{" "}
                           {offer.scope === "artisan"
                             ? offer.count === 1
                               ? "herramienta de artesano"
@@ -1700,11 +1786,12 @@ export default function Forge() {
                     ) : (
                       <PickList
                         key={`${offer.from}-${index}`}
-                        title={`${offer.kind === "tool" ? "Herramientas" : "Competencias"} — ${offer.from}`}
+                        title={`${offer.kind === "tool" ? "Herramientas" : "Competencias"} — ${offer.label ?? offer.from}`}
                         hint={
-                          offer.isOpen
+                          offer.note ??
+                          (offer.isOpen
                             ? "Cualquier habilidad."
-                            : `Elegi ${offer.count} de esta lista.`
+                            : `Elegi ${offer.count} de esta lista.`)
                         }
                         options={offer.options}
                         // Only what this offer paid for. Handed the whole list,
@@ -1728,7 +1815,10 @@ export default function Forge() {
                   )}
 
                   {profPlan.offers.length === 0 && (
-                    <p className={WHISPER}>Ni la clase ni el trasfondo ofrecen a elección.</p>
+                    <p className={WHISPER}>
+                      Ni la clase, ni el trasfondo, ni la especie, ni tus dotes ofrecen nada a
+                      elección.
+                    </p>
                   )}
 
                   {/* After the skills, not before: you double what you have
@@ -1928,7 +2018,7 @@ export default function Forge() {
                       Lo demas
                     </p>
                     <p className={WHISPER_MB4}>
-                      {plan.caster
+                      {castsAnything
                         ? "El libro de conjuros va aca."
                         : "Mochila, cuerda, raciones, herramientas."}
                     </p>
@@ -1959,105 +2049,23 @@ export default function Forge() {
               )}
 
               {/* ---------- Spells ---------- */}
-              {chamberKey === "spells" && plan.picker && (
-                <div className="space-y-10">
-                  <p className="font-body text-bone/75">
-                    {plan.picker.modeLabel}
-                    {plan.picker.maxSpellLevel > 0
-                      ? ` · hasta nivel ${plan.picker.maxSpellLevel}`
-                      : " · todavia sin espacios de conjuro"}
-                  </p>
-
-                  {plan.picker.availableCantripCount > 0 && (
-                    <PickList
-                      title="Trucos"
-                      options={plan.cantripOptions}
-                      selected={chosenCantrips}
-                      limit={plan.picker.availableCantripCount}
+              {chamberKey === "spells" && spellPlans.length > 0 && (
+                <div className="space-y-16">
+                  {spellPlans.map((classPlan) => (
+                    <SpellClassSection
+                      key={classPlan.classId}
+                      plan={classPlan}
+                      cantrips={cantripsByClass.get(classPlan.classId) ?? []}
+                      spells={spellsByClass.get(classPlan.classId) ?? []}
+                      book={chosenBook}
+                      characterLevel={draft.level}
                       accent={accent}
-                      onToggle={toggleCantrip}
+                      showName={spellPlans.length > 1}
+                      onToggleCantrip={toggleCantrip}
+                      onToggleSpell={toggleSpell}
+                      onToggleBookSpell={toggleBookSpell}
                     />
-                  )}
-
-                  {plan.book && (
-                    <div className="space-y-8 border-t border-iron/40 pt-8">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <span className={LABEL}>Libro de conjuros</span>
-                          <RuleNote title="El libro de conjuros">
-                            <p>Seis conjuros a nivel 1, y dos mas por cada nivel despues.</p>
-                            <p>
-                              Lo que copies queda escrito aunque hoy no lo prepares: de aca salen
-                              los preparados.
-                            </p>
-                          </RuleNote>
-                        </div>
-                        <span
-                          className={META}
-                          style={{
-                            color:
-                              chosenBook.length >= plan.book.limit
-                                ? accent
-                                : "rgba(230,223,206,0.6)",
-                          }}
-                        >
-                          {chosenBook.length} / {plan.book.limit}
-                        </span>
-                      </div>
-
-
-                      {plan.book.options.map(({ level, names }) => (
-                        <PickList
-                          key={level}
-                          title={`Nivel ${level}`}
-                          options={names.map((name) => formatSpellLine(level, name))}
-                          selected={chosenBook}
-                          limit={plan.book!.limit}
-                          accent={accent}
-                          onToggle={toggleBookSpell}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  {plan.picker.spellLimit > 0 ? (
-                    <div className="space-y-8 border-t border-iron/40 pt-8">
-                      <div className="flex items-baseline justify-between">
-                        <span className={LABEL}>
-                          {plan.picker.sectionTitle}
-                        </span>
-                        <span
-                          className={META}
-                          style={{
-                            color:
-                              chosenSpells.length === plan.picker.spellLimit
-                                ? accent
-                                : "rgba(230,223,206,0.6)",
-                          }}
-                        >
-                          {chosenSpells.length} / {plan.picker.spellLimit}
-                        </span>
-                      </div>
-
-                      {plan.spellsByLevel.map(({ level, names }) => (
-                        <PickList
-                          key={level}
-                          title={`Nivel ${level}`}
-                          options={names.map((name) => formatSpellLine(level, name))}
-                          selected={chosenSpells}
-                          limit={plan.picker!.spellLimit}
-                          accent={accent}
-                          onToggle={toggleSpell}
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="border-t border-iron/40 pt-8 font-body text-bone/75">
-                      {plan.book
-                        ? "Sin nada escrito en el libro no hay de donde preparar."
-                        : `A nivel ${draft.level} esta clase no prepara conjuros todavia.`}
-                    </p>
-                  )}
+                  ))}
                 </div>
               )}
 
@@ -2133,7 +2141,18 @@ export default function Forge() {
                       which is where the description used to go, when it went
                       anywhere at all. */}
                   <div className="space-y-6 border-t border-iron/40 pt-8">
-                    <p className={LABEL}>Como te ven</p>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className={LABEL}>Como te ven</p>
+                      {draft.raceId && (
+                        <button
+                          type="button"
+                          onClick={suggestLooks}
+                          className="border border-iron/70 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/70 transition-colors hover:border-gold hover:text-gold"
+                        >
+                          Sugerir por especie
+                        </button>
+                      )}
+                    </div>
 
                     <div className="grid grid-cols-2 gap-x-6 gap-y-6 sm:grid-cols-3">
                       {(

@@ -28,20 +28,47 @@ import SigilCard from "./SigilCard";
 export default function SigilShelf({
   entries,
   selectedId,
+  selectedSource,
   onPick,
   accent,
   placeholder,
   label,
   /** Drawn under a card's name. The book, usually. */
   noteFor,
+  /**
+   * Which heading an entry belongs under, when the shelf holds more than one
+   * kind of thing.
+   *
+   * Tasha's sidekick classes sit in the class list beside the wizard and read
+   * as ordinary classes, which they are not: they are the simplified companion
+   * classes, and a player scrolling past Warrior has no way to tell. Returning
+   * undefined leaves an entry in the main run, so a shelf that groups nothing
+   * passes nothing and is unchanged.
+   */
+  groupFor,
 }: {
   entries: CatalogEntry[];
   selectedId: string;
+  /**
+   * The book the selected entry came from.
+   *
+   * An id is not unique on this shelf. The goblin is printed in six books and
+   * every one of them is `goblin`, so matching on the id alone lit all six at
+   * once and the player could not tell which one they had picked. The card key
+   * below has always been `id:source` - the shelf knew the source was what told
+   * them apart, and the selection check was the one place that did not ask.
+   *
+   * Optional, and when it is absent the id decides on its own. Shelves whose
+   * entries are unique - the classes, the backgrounds - pass nothing and behave
+   * exactly as they did.
+   */
+  selectedSource?: string | undefined;
   onPick: (entry: CatalogEntry) => void;
   accent: string;
   placeholder: string;
   label: string;
   noteFor?: (entry: CatalogEntry) => string | undefined;
+  groupFor?: ((entry: CatalogEntry) => string | undefined) | undefined;
 }) {
   const [query, setQuery] = useState("");
 
@@ -51,8 +78,27 @@ export default function SigilShelf({
     return entries.filter((entry) => normalizeForSearch(entry.label).includes(needle));
   }, [entries, query]);
 
-  const selected = entries.find((entry) => entry.id === selectedId);
-  const selectionHidden = Boolean(selected) && !shown.some((entry) => entry.id === selectedId);
+  const isSelected = (entry: CatalogEntry) =>
+    entry.id === selectedId && (!selectedSource || entry.source === selectedSource);
+
+  /*
+   * Ungrouped entries stay first and keep their order; each heading follows in
+   * the order it first appears. A shelf with no `groupFor` produces one
+   * headingless run, which renders exactly as the flat grid always did.
+   */
+  const grouped = useMemo(() => {
+    const runs: Array<{ heading: string | undefined; items: CatalogEntry[] }> = [];
+    for (const entry of shown) {
+      const heading = groupFor?.(entry);
+      const run = runs.find((candidate) => candidate.heading === heading);
+      if (run) run.items.push(entry);
+      else runs.push({ heading, items: [entry] });
+    }
+    return runs.sort((left, right) => Number(Boolean(left.heading)) - Number(Boolean(right.heading)));
+  }, [shown, groupFor]);
+
+  const selected = entries.find(isSelected);
+  const selectionHidden = Boolean(selected) && !shown.some(isSelected);
 
   return (
     <div>
@@ -99,21 +145,30 @@ export default function SigilShelf({
         // there is more below, so the container is deliberately not sized to
         // the content.
         <div className="mt-4 max-h-[27rem] overflow-y-auto pr-2">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {shown.map((entry) => (
-              <SigilCard
-                key={`${entry.id}:${entry.source}`}
-                compact
-                label={entry.label}
-                note={noteFor?.(entry)}
-                active={selectedId === entry.id}
-                accent={accent}
-                onClick={() => onPick(entry)}
-              >
-                <Sigil name={entry.id} size={30} />
-              </SigilCard>
-            ))}
-          </div>
+          {grouped.map(({ heading, items }) => (
+            <div key={heading ?? "main"} className={heading ? "mt-8" : ""}>
+              {heading && (
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.35em] text-bone/45">
+                  {heading}
+                </p>
+              )}
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                {items.map((entry) => (
+                  <SigilCard
+                    key={`${entry.id}:${entry.source}`}
+                    compact
+                    label={entry.label}
+                    note={noteFor?.(entry)}
+                    active={isSelected(entry)}
+                    accent={accent}
+                    onClick={() => onPick(entry)}
+                  >
+                    <Sigil name={entry.id} size={30} />
+                  </SigilCard>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

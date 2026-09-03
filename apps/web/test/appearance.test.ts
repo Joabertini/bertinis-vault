@@ -11,6 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import { buildCanonicalSnapshot, coerceBuilderState, initialState } from "@/lib/builder";
 import { readFoundryActor } from "@/lib/foundry-import";
+import { hasPalette, suggestAppearance } from "@/lib/appearance";
 
 describe("what the snapshot carries", () => {
   it("sends each box under the name dnd5e keeps it by", () => {
@@ -79,5 +80,44 @@ describe("a draft saved before these existed", () => {
 
     expect(state.age).toBe("");
     expect(state.appearance).toBe("");
+  });
+});
+
+describe("what a species suggests you look like", () => {
+  /** A fixed sequence, so a suggestion is a fact rather than a coin toss. */
+  const fixed = (values: number[]) => {
+    let at = 0;
+    return () => values[at++ % values.length] ?? 0;
+  };
+
+  it("gives a dwarf a dwarf's build and a goliath a goliath's", () => {
+    const dwarf = suggestAppearance("dwarf", "", "2014", fixed([0]));
+    const goliath = suggestAppearance("goliath", "", "2014", fixed([0]));
+
+    expect(dwarf?.height).toBe("1,22 m");
+    expect(goliath?.height).toBe("2,13 m");
+  });
+
+  it("answers in the units the sheet asks for", () => {
+    // The boxes are Spanish and their own placeholders read "1,75 m", "70 kg".
+    const human = suggestAppearance("human", "", "2014", fixed([0.5]));
+
+    expect(human?.height).toMatch(/^\d,\d\d m$/);
+    expect(human?.weight).toMatch(/^\d+ kg$/);
+  });
+
+  it("gives a species it has no palette for a build and no invented colours", () => {
+    // Inventing a palette for a species whose book nobody here has read would
+    // put a wrong fact on a sheet. A blank box is a question the player answers.
+    const suggestion = suggestAppearance("loxodon", "", "2014", fixed([0.5]));
+
+    expect(suggestion?.height).not.toBe("");
+    expect(suggestion?.eyes).toBe("");
+    expect(hasPalette("loxodon")).toBe(false);
+    expect(hasPalette("dwarf")).toBe(true);
+  });
+
+  it("says nothing when there is no species yet", () => {
+    expect(suggestAppearance("", "", "2014")).toBeNull();
   });
 });

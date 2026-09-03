@@ -9,7 +9,7 @@ import {
   unmetMulticlassRequirementsFor,
 } from "../src/lib/builder";
 import { classingLabel } from "../src/lib/classing";
-import { proficiencyPlan } from "../src/lib/grants";
+import { ALL_SKILLS, assignOffers, proficiencyPlan, type SkillOffer } from "../src/lib/grants";
 import { featCandidateFor } from "../src/lib/improvements";
 import { multiclassGrantsFor } from "../src/lib/index-options";
 
@@ -336,5 +336,120 @@ describe("lo que una segunda clase le da al personaje", () => {
     );
 
     expect(plan.offers.some((entry) => entry.from === "multiclase")).toBe(false);
+  });
+});
+
+describe("what a feat makes you proficient in", () => {
+  const withFeat = (featId: string) => ({
+    ...base,
+    classId: "fighter",
+    subclassId: "",
+    level: 4,
+    backgroundId: "",
+    raceId: "",
+    levelChoices: { 4: { kind: "feat" as const, featId } },
+  });
+
+  test("Skill Expert offers the skill it grants, not only the expertise", () => {
+    // Twelve feats state skills and ten state tools, and not one reached a
+    // character: a player who took Skill Expert for the skill got the expertise
+    // and nothing to pick.
+    const plan = proficiencyPlan(withFeat("skill-expert"), "2014");
+    const fromFeat = plan.offers.filter((offer) => offer.from === "dote");
+
+    expect(fromFeat.length).toBeGreaterThan(0);
+    expect(fromFeat[0]?.label).toBe("Skill Expert");
+    expect(fromFeat[0]?.count).toBe(1);
+    expect(fromFeat[0]?.options.length).toBeGreaterThan(10);
+  });
+
+  test("Skilled offers its three, which the ordinary shape cannot express", () => {
+    // Skilled states "three from any skill or any tool" in a shape of its own:
+    // one budget over two kinds, nested a level deeper than every other
+    // proficiency block.
+    const plan = proficiencyPlan(withFeat("skilled"), "2014");
+    const fromFeat = plan.offers.filter((offer) => offer.from === "dote");
+
+    expect(fromFeat).toHaveLength(1);
+    expect(fromFeat[0]?.count).toBe(3);
+    expect(fromFeat[0]?.isOpen).toBe(true);
+    // The tools have no list in the data, so they are said rather than offered.
+    expect(fromFeat[0]?.note).toContain("herramientas");
+  });
+
+  test("a feat that grants no proficiency adds no offer", () => {
+    const plan = proficiencyPlan(withFeat("tough"), "2014");
+
+    expect(plan.offers.filter((offer) => offer.from === "dote")).toEqual([]);
+  });
+
+  test("a feat's offer has its own budget, apart from the class's", () => {
+    // The bug this whole shape exists to avoid: one list read as one budget,
+    // where picks made for the class silently filled the feat's quota.
+    const state = { ...withFeat("skill-expert"), classId: "rogue", subclassId: "", level: 4 };
+    const plan = proficiencyPlan(state, "2014");
+    const budgets = plan.offers.map((offer) => offer.count);
+
+    expect(plan.offers.length).toBeGreaterThan(1);
+    expect(budgets.reduce((sum, count) => sum + count, 0)).toBeGreaterThan(
+      Math.max(...budgets),
+    );
+  });
+});
+
+describe("the proficiencies a 2024 background owes through its feat", () => {
+  test("a Charlatan is offered the three Skilled grants", () => {
+    // 12 backgrounds grant a feat that carries proficiencies, and Charlatan and
+    // Noble are two of the 2024 core ones. The chain is background -> origin
+    // feat -> proficiency choice, and the middle link was missing: a player who
+    // took Charlatan under the 2024 rules was owed three and got none.
+    const state = {
+      ...base,
+      rulesVersion: "5e-2024" as const,
+      classId: "fighter",
+      subclassId: "",
+      level: 1,
+      backgroundId: "charlatan",
+      sourceBooks: { "background:charlatan": "XPHB" },
+    };
+
+    const plan = proficiencyPlan(state, "2024");
+    const fromFeat = plan.offers.filter((offer) => offer.label === "Skilled");
+
+    expect(fromFeat).toHaveLength(1);
+    expect(fromFeat[0]?.count).toBe(3);
+  });
+});
+
+describe("which offer pays for a shared skill", () => {
+  test("an open feat offer does not eat a pick only the class could have paid for", () => {
+    // Load-bearing ordering: `assignOffers` charges a pick to the first offer
+    // that lists it and has room. A feat offering *any* skill, asked before a
+    // class offering a short list, takes the shared skill and leaves the other
+    // pick fitting nowhere.
+    const restrictive: SkillOffer = {
+      options: ["Stealth", "Acrobatics"],
+      count: 1,
+      isOpen: false,
+      kind: "skill",
+      from: "clase",
+    };
+    const open: SkillOffer = {
+      options: [...ALL_SKILLS],
+      count: 1,
+      isOpen: true,
+      kind: "skill",
+      from: "dote",
+      label: "Skill Expert",
+    };
+
+    const rightWayRound = assignOffers([restrictive, open], ["Stealth", "Arcana"]);
+    expect(rightWayRound[0]).toEqual(["Stealth"]);
+    expect(rightWayRound[1]).toEqual(["Arcana"]);
+
+    // The order this guards against: the open offer takes Stealth and Arcana
+    // has nowhere to go.
+    const wrongWayRound = assignOffers([open, restrictive], ["Stealth", "Arcana"]);
+    expect(wrongWayRound[1]).toEqual([]);
   });
 });

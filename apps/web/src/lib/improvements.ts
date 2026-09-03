@@ -245,8 +245,23 @@ export function pointsSpent(bonuses: AbilityBonusMap): number {
  *
  * Needed for the cap: two points into a 19 is illegal, and a stepper that
  * lets it happen produces a 21 the schema will refuse.
+ *
+ * `exceptLevel` is what makes this "before" rather than "after", and leaving it
+ * out is a bug the players found. The editor for level 4 asks this what the
+ * scores are, then adds the points it is holding on top — so if the answer
+ * already contains those same points, they are counted twice. A character with
+ * an 18 placed one point, was told they now had 19, and had the second point
+ * refused for reaching 20. 18 + 2 = 20 is legal, and the sheet also showed a
+ * number the character did not have.
+ *
+ * Feats count. A feat taken at level 4 that raises Strength raises the floor
+ * the level 8 improvement starts from, and omitting it let a stepper push a
+ * score past 20 — the same cap failing the other way.
  */
-export function scoresBefore(state: BuilderState): Record<AbilityId, number> {
+export function scoresBefore(
+  state: BuilderState,
+  exceptLevel?: number,
+): Record<AbilityId, number> {
   const raw: Record<AbilityId, number> = {
     str: state.str,
     dex: state.dex,
@@ -256,10 +271,21 @@ export function scoresBefore(state: BuilderState): Record<AbilityId, number> {
     cha: state.cha,
   };
 
-  const fromLevels = bonusesFromChoices(state.levelChoices);
+  const choices =
+    exceptLevel === undefined
+      ? state.levelChoices
+      : Object.fromEntries(
+          Object.entries(state.levelChoices).filter(([level]) => Number(level) !== exceptLevel),
+        );
+
+  const fromLevels = bonusesFromChoices(choices);
+  const fromFeats = bonusesFromFeats(takenFeatsFor(state));
 
   for (const ability of Object.keys(raw) as AbilityId[]) {
-    raw[ability] += (state.abilityBonuses[ability] ?? 0) + (fromLevels[ability] ?? 0);
+    raw[ability] +=
+      (state.abilityBonuses[ability] ?? 0) +
+      (fromLevels[ability] ?? 0) +
+      (fromFeats[ability] ?? 0);
   }
 
   return raw;
