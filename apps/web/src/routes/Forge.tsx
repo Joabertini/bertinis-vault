@@ -808,7 +808,13 @@ export default function Forge() {
 
   const answered: Record<ChamberKey, boolean> = {
     ancestry: Boolean(draft.raceId) && grantsSettled("species"),
-    calling: Boolean(draft.classId) && grantsSettled("class"),
+    // The pools moved here with the picker that fills them. A fighting style
+    // is a level 1 class feature, so the chamber that owes it is the one that
+    // chose the class.
+    calling:
+      Boolean(draft.classId) &&
+      talentsSatisfied(pools, draft.optionalFeatureIds) &&
+      grantsSettled("class"),
     // A background that offers several feats owes an answer; one that grants a
     // single one has already been recorded above.
     origin:
@@ -823,12 +829,10 @@ export default function Forge() {
       scores: rawScores,
       boundCount: bound.size,
     }),
-    // Every reached improvement must be answered, and every pool filled: an
-    // unspent one exports a character weaker than the rules make them.
-    growth:
-      growth.unanswered.length === 0 &&
-      talentsSatisfied(pools, draft.optionalFeatureIds) &&
-      grantsSettled("growth"),
+    // Every reached improvement must be answered: an unspent one exports a
+    // character weaker than the rules make them. The class's own pools are
+    // asked in Clase now, not here.
+    growth: growth.unanswered.length === 0 && grantsSettled("growth"),
     gifts: offersSatisfied && languagesSatisfied(langPlan, chosenLanguages) && grantsSettled("gifts"),
     // Optional: an unarmoured wizard is a legal character.
     gear: true,
@@ -1472,6 +1476,32 @@ export default function Forge() {
                     onPickAbility={chooseSpellAbility}
                   />
 
+                  {/*
+                    A fighting style is a level 1 class feature, and it used to
+                    be asked in Mejoras — the chamber a player opens at level 4
+                    to spend an improvement. So the builder answered a question
+                    about the level they had just reached with a question about
+                    the level they started at, and refused to move on until
+                    they settled it. Players read that as a bug in the
+                    improvement, which is a fair reading of where it appeared.
+
+                    It belongs with the rest of what the class hands over:
+                    after the subclass and its variants, before the hit points.
+                  */}
+                  {pools.length > 0 && (
+                    <div className={DIVIDER}>
+                      <p className="mb-6 font-body text-[13px] leading-relaxed text-bone/60">
+                        Lo que {selectedClass?.label} te deja elegir a nivel {draft.level}.
+                      </p>
+                      <TalentPools
+                        pools={pools}
+                        chosen={draft.optionalFeatureIds}
+                        accent={accent}
+                        onToggle={toggleTalent}
+                      />
+                    </div>
+                  )}
+
                   {draft.classId && (
                     <HitPoints
                       method={draft.hpMethod}
@@ -1685,20 +1715,6 @@ export default function Forge() {
                       />
                     )}
                   </div>
-
-                  {pools.length > 0 && (
-                    <div className={DIVIDER}>
-                      <p className="mb-6 font-body text-[13px] leading-relaxed text-bone/60">
-                        Lo que {selectedClass?.label} te deja elegir a nivel {draft.level}.
-                      </p>
-                      <TalentPools
-                        pools={pools}
-                        chosen={draft.optionalFeatureIds}
-                        accent={accent}
-                        onToggle={toggleTalent}
-                      />
-                    </div>
-                  )}
 
                   <Improvements
                     state={draft}

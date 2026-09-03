@@ -219,3 +219,85 @@ describe("un personaje se arma", () => {
     expect(pageText()).toMatch(/Nivel 8/);
   });
 });
+
+describe("el estilo de lucha vive en Clase", () => {
+  /*
+   * Un estilo de lucha es un rasgo de clase de nivel 1 y se preguntaba en
+   * Mejoras — la camara que un jugador abre a nivel 4 para gastar una mejora.
+   * El constructor le contestaba una pregunta sobre el nivel al que acababa de
+   * llegar con una pregunta sobre el nivel en el que empezo, y no lo dejaba
+   * avanzar hasta resolverla. Los jugadores lo leyeron como una falla de la
+   * mejora, que es una lectura justa de donde aparecia.
+   *
+   * Medido en el indice: el pool "Fighting Style" existe para Guerrero,
+   * Paladin y Explorador bajo 2014, con once opciones. Bajo 2024 solo el
+   * hechicero y el brujo traen pools, asi que el guerrero de aquel reporte era
+   * de 2014.
+   */
+  const asFighter = (over: Record<string, unknown> = {}) =>
+    useVault.setState((state) => ({
+      draft: {
+        ...state.draft,
+        rulesVersion: "5e-2014" as const,
+        classId: "fighter",
+        subclassId: "",
+        level: 4,
+        raceId: "human",
+        backgroundId: "acolyte",
+        ...over,
+      },
+    }));
+
+  /*
+   * Esperado, no cronometrado. El cambio de camara arranca tras una pausa y la
+   * que sale queda montada mientras se desvanece, asi que una espera fija cae
+   * en el medio: el encabezado ya dice la camara nueva y el cuerpo todavia
+   * tiene la vieja. `findByText` reintenta hasta que la nueva llega.
+   */
+  const openChamber = async (user: ReturnType<typeof userEvent.setup>, chamber: string) => {
+    const target = document.querySelector<HTMLButtonElement>(`[data-chamber="${chamber}"]`);
+    if (!target || target.disabled) return false;
+    await user.click(target);
+    return true;
+  };
+
+  test("la camara de Clase ofrece el estilo", async () => {
+    const user = userEvent.setup();
+    asFighter({ optionalFeatureIds: [] });
+    openForge();
+
+    expect(await openChamber(user, "calling")).toBe(true);
+
+    expect(await screen.findByText(/te deja elegir a nivel/, undefined, { timeout: 3000 }))
+      .toBeTruthy();
+  });
+
+  test("y Mejoras ya no lo pregunta", async () => {
+    const user = userEvent.setup();
+    // Con el estilo ya elegido Mejoras es alcanzable, que es lo que este test
+    // necesita para poder mirar adentro.
+    asFighter({ optionalFeatureIds: ["defense"] });
+    openForge();
+
+    expect(await openChamber(user, "growth")).toBe(true);
+
+    // La camara de Mejoras se reconoce por lo suyo, no por la ausencia de otra
+    // cosa: esperar a que llegue es lo que hace que el `not` signifique algo.
+    // Varios nodos dicen "Aumento de" en esa camara; alcanza con que llegue.
+    await screen.findAllByText(/Aumento de/, undefined, { timeout: 3000 });
+    expect(pageText()).not.toContain("te deja elegir a nivel");
+  });
+
+  test("sin elegirlo, Clase no deja avanzar", async () => {
+    // La puerta se mudo con el selector. Un guerrero que no eligio estilo debe
+    // seguir debiendo la respuesta — moverla de camara no es soltarla.
+    const user = userEvent.setup();
+    asFighter({ optionalFeatureIds: [] });
+    openForge();
+
+    await openChamber(user, "calling");
+
+    const growth = document.querySelector<HTMLButtonElement>('[data-chamber="growth"]');
+    expect(growth?.disabled).toBe(true);
+  });
+});
