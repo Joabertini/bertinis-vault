@@ -133,3 +133,69 @@ export const ROLL_ATTEMPTS = 3;
 export function spreadWorth(scores: number[]): number {
   return scores.reduce((total, score) => total + Math.floor((score - 10) / 2), 0);
 }
+
+/** The loose numbers a chamber is holding, and the throws already made. */
+export type StatScratch = {
+  /** Scores made but not yet given an ability. */
+  pool: number[];
+  /** Which abilities hold one. */
+  bound: string[];
+  /** The rolled sets, kept so a player can compare and choose between them. */
+  sets: number[][];
+};
+
+/**
+ * What the scratch becomes when the player switches method.
+ *
+ * The pool and the bindings go, and have to: carrying a rolled 17 into point
+ * buy would show a spread point buy cannot sell against a budget it never
+ * paid, so the numbers on screen would stop meaning what the panel says.
+ *
+ * The throws stay. They were being destroyed by the switch, so a player who
+ * opened the point buy panel to compare it against what they rolled came back
+ * to nothing — three throws they cannot make again, lost by *looking* at
+ * another screen. Rolling is the one method whose result cannot be reproduced,
+ * which is why it is the one worth carrying through a look elsewhere.
+ */
+export function scratchForMethod(method: StatMethodId, sets: number[][]): StatScratch {
+  if (method === "array") return { pool: [...STANDARD_ARRAY], bound: [], sets };
+  return { pool: [], bound: [], sets };
+}
+
+/**
+ * Whether the six numbers are settled, which is what lets the player move on.
+ *
+ * The chamber used to ask one question for all four methods: are all six
+ * abilities *bound*? Binding is the pool gesture — pick a loose score, give it
+ * an ability — and only rolling and the standard array produce a pool. Point
+ * buy has no loose scores at all: its steppers write straight onto the draft,
+ * nothing is ever bound, and the count stayed at zero however long the player
+ * spent assigning. So the button was dead for the whole method, not for some
+ * edge of it, and a player who bought a perfectly legal spread could not leave
+ * the chamber.
+ *
+ * Each method is now asked what settled means for it:
+ *
+ * - **Pool methods** keep the old question. Six numbers exist and each owes an
+ *   ability, and one still loose is a spread that is not finished.
+ * - **Point buy** asks whether the budget holds. Spending less than all 27 is
+ *   the player's business — it costs them, and the panel shows what is left in
+ *   the accent colour — but spending more is not a spread the rules sell.
+ * - **Manual** is whatever the table agreed on, so there is nothing here to
+ *   refuse.
+ */
+export function abilitiesSettled(input: {
+  method: StatMethodId;
+  scores: Record<AbilityId, number>;
+  /** How many abilities hold a score bound from the pool. */
+  boundCount: number;
+}): boolean {
+  switch (input.method) {
+    case "pointbuy":
+      return pointBuySpent(input.scores) <= POINT_BUY_BUDGET;
+    case "manual":
+      return true;
+    default:
+      return input.boundCount === ABILITY_IDS.length;
+  }
+}
