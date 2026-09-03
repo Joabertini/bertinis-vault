@@ -15,6 +15,13 @@
  * the Living Record once a +2 lands on it, and that is the number worth
  * planning around — so the racial bonus is shown alongside rather than left
  * for the player to add in their head.
+ *
+ * The same steppers serve **a mano**, which had no screen at all: it drew the
+ * binding board with an empty pool, so it read "todavia no hay puntajes que
+ * repartir" and offered six slots that could not be clicked. Four methods were
+ * advertised and two of them worked. Manual is the same six rows without a
+ * budget — no ceiling of 15, no cost per point, nothing to run out of — which
+ * is what "whatever the table agreed on" means.
  */
 
 import { motion } from "framer-motion";
@@ -35,23 +42,32 @@ import {
 const modifierOf = (score: number) => Math.floor((score - 10) / 2);
 const signed = (value: number) => (value >= 0 ? `+${value}` : `${value}`);
 
+/** What the payload accepts, which is manual's only bound. */
+const MANUAL_MIN = 1;
+const MANUAL_MAX = 30;
+
 export default function PointBuy({
   scores,
   bonuses,
   accent,
   onChange,
+  mode = "pointbuy",
 }: {
   scores: Record<AbilityId, number>;
   /** The species or background bonus, shown but not spent. */
   bonuses: Partial<Record<AbilityId, number>>;
   accent: string;
   onChange: (ability: AbilityId, score: number) => void;
+  /** Manual drops the budget and its ceiling; the rows are the same. */
+  mode?: "pointbuy" | "manual";
 }) {
+  const buying = mode === "pointbuy";
   const spent = pointBuySpent(scores);
   const left = POINT_BUY_BUDGET - spent;
 
   return (
     <div>
+      {buying ? (
       <div className="mb-6 flex items-baseline justify-between border-b border-iron/40 pb-4">
         <div className="flex items-center gap-3">
           <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-bone/75">
@@ -72,6 +88,16 @@ export default function PointBuy({
           <span className="ml-1 font-mono text-xs font-normal text-bone/60">/ {POINT_BUY_BUDGET}</span>
         </p>
       </div>
+      ) : (
+        <div className="mb-6 border-b border-iron/40 pb-4">
+          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-bone/75">
+            Los seis numeros
+          </p>
+          <p className="mt-1 font-body text-[13px] text-bone/60">
+            Sin presupuesto y sin tope de 15. Escribi lo que tu mesa acordo.
+          </p>
+        </div>
+      )}
 
       <div className="space-y-2">
         {ABILITY_IDS.map((ability) => {
@@ -79,8 +105,16 @@ export default function PointBuy({
           const bonus = bonuses[ability] ?? 0;
           const final = score + bonus;
 
-          const up = canRaise(scores, ability);
-          const down = canLower(scores, ability);
+          /*
+           * Manual's only ceiling is the one the payload refuses.
+           *
+           * The schema takes a final score of 1 to 30, and final is what it
+           * checks — so the base stops where the bonus would carry it past 30
+           * rather than at a flat 30, which would let a dwarf seal a 32 and be
+           * told so only at the very end.
+           */
+          const up = buying ? canRaise(scores, ability) : final < MANUAL_MAX;
+          const down = buying ? canLower(scores, ability) : score > MANUAL_MIN;
           // What the next point costs, which is the number point buy is about.
           const step = (pointBuyCost(score + 1) ?? 0) - (pointBuyCost(score) ?? 0);
 
@@ -112,11 +146,14 @@ export default function PointBuy({
                 label="+"
                 enabled={up}
                 onClick={() => onChange(ability, score + 1)}
-                note={
-                  score < POINT_BUY_MAX
-                    ? `${step} ${step === 1 ? "punto" : "puntos"}`
-                    : `tope ${POINT_BUY_MAX}`
-                }
+                {...(buying
+                  ? {
+                      note:
+                        score < POINT_BUY_MAX
+                          ? `${step} ${step === 1 ? "punto" : "puntos"}`
+                          : `tope ${POINT_BUY_MAX}`,
+                    }
+                  : {})}
               />
 
               <div className="ml-auto flex items-baseline gap-3 text-right">

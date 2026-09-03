@@ -110,3 +110,75 @@ describe("what the player has picked against it", () => {
     expect(unmetTalents(list, fine.map((option) => option.id))).toEqual([]);
   });
 });
+
+describe("a prerequisite the data states as a kind, not a name", () => {
+  /*
+   * The crash that blanked production. Three 2024 invocations state their
+   * spell prerequisite as a described choice — "a Warlock Cantrip That Deals
+   * Damage" — carried as an object rather than a name. Every reader called
+   * `.split` on it, and because prerequisites are read while the Forge
+   * renders, the throw was the entire page: any draft with a 2024 warlock
+   * showed a blank screen and nothing else.
+   */
+  test("building the warlock pools under 2024 does not throw", () => {
+    expect(() =>
+      talentPools(
+        build({ rulesVersion: "5e-2024", classId: "warlock", level: 5 }),
+        "2024",
+        "Warlock",
+        "",
+      ),
+    ).not.toThrow();
+  });
+
+  test("the three that state a kind are offered rather than refused", () => {
+    // Unverifiable is not unmet. A requirement this cannot read must not
+    // produce a verdict it cannot justify.
+    const warlock = talentPools(
+      build({ rulesVersion: "5e-2024", classId: "warlock", level: 5 }),
+      "2024",
+      "Warlock",
+      "",
+    );
+    const options = warlock.flatMap((pool) => pool.options);
+
+    for (const name of ["Agonizing Blast", "Eldritch Spear", "Repelling Blast"]) {
+      const found = options.find((option) => option.label === name);
+      expect(found, `${name} deberia estar en la lista`).toBeDefined();
+      expect(found?.eligible).toBe(true);
+      expect(found?.blockedBy).toBeUndefined();
+    }
+  });
+
+  test("a named prerequisite is still checked", () => {
+    // The guard. Making the unreadable case permissive must not make the
+    // readable one permissive too.
+    const withoutSpell = talentPools(
+      build({ rulesVersion: "5e-2014", classId: "warlock", level: 5 }),
+      "2014",
+      "Warlock",
+      "",
+    );
+    const options = withoutSpell.flatMap((pool) => pool.options);
+    const blocked = options.filter((option) =>
+      (option.blockedBy ?? "").includes("Requiere conocer"),
+    );
+
+    expect(blocked.length).toBeGreaterThan(0);
+  });
+});
+
+describe("every spell prerequisite in the data, read as the readers read it", () => {
+  test("none of them throws, in either edition", () => {
+    // The conformance check the crash was missing: the readers run over the
+    // real rows rather than over a fixture that only holds the shape someone
+    // remembered.
+    for (const rulesVersion of ["2014", "2024"] as const) {
+      for (const className of ["Warlock", "Fighter", "Rogue", "Sorcerer"]) {
+        expect(() =>
+          talentPools(build({ rulesVersion: `5e-${rulesVersion}` }), rulesVersion, className, ""),
+        ).not.toThrow();
+      }
+    }
+  });
+});

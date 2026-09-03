@@ -63,9 +63,10 @@ import { grantedOptions, kitItemIds, startingKitFor, swapKitAnswer } from "@/lib
 import PointBuy from "@/components/forge/PointBuy";
 import {
   ROLL_ATTEMPTS,
-  STANDARD_ARRAY,
   STAT_METHODS,
+  abilitiesSettled,
   pointBuyFloor,
+  scratchForMethod,
   type StatMethodId,
 } from "@/lib/stat-methods";
 import { tintFor, VAULT_GOLD } from "@/lib/class-tint";
@@ -762,6 +763,16 @@ export default function Forge() {
 
   const bound = useMemo(() => new Set(scratch.bound as AbilityId[]), [scratch.bound]);
 
+  /** The six as the player made them, before any bonus is added on top. */
+  const rawScores = {
+    str: draft.str,
+    dex: draft.dex,
+    con: draft.con,
+    int: draft.int,
+    wis: draft.wis,
+    cha: draft.cha,
+  };
+
   /**
    * Whether every bounded skill offer has been answered.
    *
@@ -804,7 +815,14 @@ export default function Forge() {
       Boolean(draft.backgroundId) &&
       (backgroundFeatIds.length < 2 || Boolean(draft.backgroundFeatId)) &&
       grantsSettled("origin"),
-    attributes: bound.size === ABILITY_IDS.length,
+    // Asked of the method the player chose. Point buy binds nothing — its
+    // steppers write straight onto the draft — so the old one-question-for-all
+    // left the button dead for the whole method.
+    attributes: abilitiesSettled({
+      method: draft.statMethod,
+      scores: rawScores,
+      boundCount: bound.size,
+    }),
     // Every reached improvement must be answered, and every pool filled: an
     // unspent one exports a character weaker than the rules make them.
     growth:
@@ -1071,39 +1089,35 @@ export default function Forge() {
 
   /* ---------------- dice ---------------- */
 
-  const rawScores = {
-    str: draft.str,
-    dex: draft.dex,
-    con: draft.con,
-    int: draft.int,
-    wis: draft.wis,
-    cha: draft.cha,
-  };
-
   /** Every ability back to unbound, and nothing loose. */
   const clearScores = () =>
     patchDraft({ str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
 
   /*
-   * Switching method clears what the last one produced.
+   * Switching method clears what the last one produced, and keeps the dice.
    *
    * Carrying a rolled 17 into point buy would show a spread that point buy
    * cannot sell, with a budget it never paid — the numbers on screen would
-   * stop meaning what the panel says they mean.
+   * stop meaning what the panel says they mean. So the pool and the bindings
+   * go.
+   *
+   * The throws do not. `sets` is the record of what the dice actually did, and
+   * a player looking at the point buy panel to compare it against their roll
+   * came back to find the roll gone — three throws they cannot make again,
+   * destroyed by reading another screen. Rolling is the one method whose
+   * result cannot be reproduced, which is exactly why it is the one worth
+   * keeping through a look elsewhere.
    */
   function chooseStatMethod(method: StatMethodId) {
     if (method === draft.statMethod) return;
 
     patchDraft({ statMethod: method });
-    setScratch({ pool: [], bound: [], sets: [] });
+    // The array is a pool like any other: six numbers, assigned freely.
+    setScratch(scratchForMethod(method, scratch.sets));
 
     if (method === "pointbuy") {
       patchDraft(pointBuyFloor());
       return;
-    }
-    if (method === "array") {
-      // The array is a pool like any other: six numbers, assigned freely.
-      setScratch({ pool: [...STANDARD_ARRAY], bound: [], sets: [] });
     }
     clearScores();
   }
@@ -1573,8 +1587,9 @@ export default function Forge() {
                     })}
                   </div>
 
-                  {draft.statMethod === "pointbuy" ? (
+                  {draft.statMethod === "pointbuy" || draft.statMethod === "manual" ? (
                     <PointBuy
+                      mode={draft.statMethod === "manual" ? "manual" : "pointbuy"}
                       scores={rawScores}
                       bonuses={draft.abilityBonuses}
                       accent={accent}

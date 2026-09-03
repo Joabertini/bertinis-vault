@@ -127,11 +127,37 @@ export function optionalFeatureSlots(
   });
 }
 
+/**
+ * A spell prerequisite stated as a kind rather than a name.
+ *
+ * "A Warlock Cantrip That Deals Damage", with the filter that selects it.
+ */
+export type SpellPrerequisiteChoiceLike = {
+  choose?: string | undefined;
+  entry?: string | undefined;
+  entrySummary?: string | undefined;
+};
+
+/**
+ * The name a spell prerequisite asks for, or null when it asks for a kind.
+ *
+ * Both shapes are real in the data and the type used to admit only one, so
+ * every reader called `.split` on whatever arrived. The three 2024 invocations
+ * that state a choice threw, and the throw reached production: the Forge
+ * rendered nothing at all for any character carrying a 2024 warlock.
+ */
+export function spellPrerequisiteName(
+  spell: string | SpellPrerequisiteChoiceLike,
+): string | null {
+  if (typeof spell !== "string") return null;
+  return spell.split("#")[0]?.trim() ?? null;
+}
+
 /** A prerequisite the rules state in a form worth checking. */
 export type OptionalFeaturePrerequisiteLike =
   | { kind: "level"; level: number; className: string | null; classSource: string | null }
   | { kind: "pact"; pact: string }
-  | { kind: "spell"; spell: string }
+  | { kind: "spell"; spell: string | SpellPrerequisiteChoiceLike }
   | { kind: "optionalfeature"; name: string; source: string | null };
 
 /** What a build has, in the terms prerequisites are stated in. */
@@ -205,10 +231,20 @@ function isMet(
       return context.pacts.some((pact) => fold(pact) === fold(entry.pact));
 
     case "spell": {
-      // Stated as `"eldritch blast#c"`, where the suffix marks a cantrip. The
-      // name is the part that identifies it.
-      const wanted = fold(entry.spell.split("#")[0] ?? "");
-      return context.spells.some((spell) => fold(spell) === wanted);
+      /*
+       * Stated as `"eldritch blast#c"`, where the suffix marks a cantrip. The
+       * name is the part that identifies it.
+       *
+       * Three 2024 invocations state a described choice rather than a name —
+       * "a Warlock Cantrip That Deals Damage" — and a description cannot be
+       * compared against the spells a character knows. An unverifiable
+       * requirement is not an unmet one, so it does not refuse the pick; the
+       * picker shows what it asks for and the player answers it.
+       */
+      const wanted = spellPrerequisiteName(entry.spell);
+      if (wanted === null) return true;
+
+      return context.spells.some((spell) => fold(spell) === fold(wanted));
     }
 
     case "optionalfeature": {

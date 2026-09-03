@@ -49,7 +49,16 @@ export default function BonusEditor({
   const mayTake = (ability: AbilityId) => !permitted || permitted.has(ability);
 
   const step = (ability: AbilityId, delta: number) => {
-    if (!mayTake(ability)) return;
+    /*
+     * What the background forbids is *taking*, never giving back.
+     *
+     * Refusing both directions is how a draft got stuck: a 2024 character
+     * seeded with a spread its background does not name held points in
+     * abilities the editor would not let it lower, so the panel sat over
+     * budget with no move that reduced it. Whatever the reason a point is
+     * somewhere it should not be, removing it is always a legal answer.
+     */
+    if (delta > 0 && !mayTake(ability)) return;
     const current = bonuses[ability] ?? 0;
     const next = current + delta;
 

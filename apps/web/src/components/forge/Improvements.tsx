@@ -100,7 +100,21 @@ function LevelSlot({
   const before = useMemo(() => scoresBefore(state, level), [state, level]);
 
   const featSearch = useMemo(
-    () => (query: string) => optionsFor({ prop: "feat", rulesVersion, search: query, limit: 24 }),
+    /*
+     * Every feat the ruleset allows, not the first 24 of them.
+     *
+     * The picker capped at 24 and the catalog holds 108 legal feats under 2014
+     * and 168 under 2024, so five out of six never appeared unless the player
+     * typed a name — which means unless they already knew the feat existed.
+     * A player scrolling the list read it as the whole list, because that is
+     * what a list looks like.
+     *
+     * Nothing is filtered by prerequisite here on purpose: a feat a character
+     * does not qualify for yet is one they may qualify for at the next level,
+     * and hiding it answers a question they did not ask. `FeatPrerequisiteNote`
+     * says so under the pick instead.
+     */
+    () => (query: string) => optionsFor({ prop: "feat", rulesVersion, search: query, limit: null }),
     [rulesVersion],
   );
 
