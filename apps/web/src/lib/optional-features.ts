@@ -21,6 +21,7 @@
 import {
   collections,
   forRulesVersion,
+  spellPrerequisiteName,
   type ClassRow,
   type OptionalFeaturePrerequisite,
   type OptionalFeatureProgression,
@@ -141,13 +142,27 @@ function unmetReason(
     }
 
     case "spell": {
-      // 5etools writes these as "eldritch blast#c" — the suffix is the level.
-      const name = prerequisite.spell.split("#")[0]?.trim().toLowerCase() ?? "";
+      /*
+       * 5etools writes these as "eldritch blast#c" — the suffix is the level.
+       *
+       * Except for three 2024 invocations, which state the requirement as a
+       * kind: "a Warlock Cantrip That Deals Damage", carried as an object.
+       * Calling `.split` on that threw, and because this runs while the Forge
+       * renders, the throw was the whole page: any draft with a 2024 warlock
+       * showed a blank screen.
+       *
+       * A description cannot be matched against what the character wrote down,
+       * so it is shown rather than judged. Refusing the pick over a
+       * requirement this cannot read would be inventing a verdict.
+       */
+      const wanted = spellPrerequisiteName(prerequisite.spell);
+      if (wanted === null) return null;
+
       const known = [
         ...toLines(state.cantripsText).map((entry) => entry.toLowerCase()),
         ...toLines(state.spellsText).map((entry) => parseSpellLine(entry)?.name.toLowerCase() ?? ""),
       ];
-      return known.includes(name) ? null : `Requiere conocer ${prerequisite.spell.split("#")[0]}`;
+      return known.includes(wanted.toLowerCase()) ? null : `Requiere conocer ${wanted}`;
     }
 
     case "optionalfeature":

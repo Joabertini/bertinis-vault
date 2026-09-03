@@ -624,12 +624,59 @@ export type StartingEquipment = {
   additionalFromBackground: boolean;
 };
 
+/** "Any warlock cantrip that deals damage", as 5etools states it. */
+export type SpellPrerequisiteChoice = {
+  /** The filter that selects the spells, e.g. `"level=0|class=Warlock"`. */
+  choose?: string;
+  /** The requirement in words, which is what a player can be shown. */
+  entry?: string;
+  entrySummary?: string;
+};
+
+/**
+ * The name a spell prerequisite asks for, or null when it asks for a kind.
+ *
+ * Every reader wants the same thing out of the two shapes, and each one
+ * splitting the string itself is how a crash reached production: the object
+ * shape has no `split`, so the Forge threw before drawing anything for any
+ * character carrying a 2024 warlock.
+ */
+export function spellPrerequisiteName(
+  spell: string | SpellPrerequisiteChoice,
+): string | null {
+  if (typeof spell !== "string") return null;
+  return spell.split("#")[0]?.trim() ?? null;
+}
+
+/** What to show a player for a prerequisite, named or described. */
+export function spellPrerequisiteLabel(
+  spell: string | SpellPrerequisiteChoice,
+): string {
+  if (typeof spell === "string") return spell.split("#")[0]?.trim() ?? spell;
+  return spell.entrySummary ?? spell.entry ?? "un conjuro que la describe";
+}
+
 /** A prerequisite that can be checked against a build rather than read. */
 export type OptionalFeaturePrerequisite =
   | { kind: "level"; level: number; className: string | null; classSource: string | null }
   | { kind: "pact"; pact: string }
-  /** A spell that must already be known, e.g. `"eldritch blast#c"`. */
-  | { kind: "spell"; spell: string }
+  /**
+   * A spell that must already be known.
+   *
+   * Usually a name: `"eldritch blast#c"`, where the suffix marks a cantrip.
+   *
+   * Three 2024 invocations — Agonizing Blast, Eldritch Spear and Repelling
+   * Blast — state a *described choice* instead: "a Warlock Cantrip That Deals
+   * Damage", carried as an object with the filter that selects it. This type
+   * claimed they were all strings, so every reader called `.split` on them and
+   * the three threw. Nothing typechecked the lie because the data is read
+   * through the type, not against it.
+   *
+   * A description is not a name, so it cannot be matched to what a character
+   * knows. `spellPrerequisiteName` returns null for it, and the readers treat
+   * a requirement they cannot check as one they cannot refuse.
+   */
+  | { kind: "spell"; spell: string | SpellPrerequisiteChoice }
   /** Another optional feature that must already be taken. */
   | { kind: "optionalfeature"; name: string; source: string | null };
 
