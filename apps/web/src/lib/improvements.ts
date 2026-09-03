@@ -65,6 +65,26 @@ export function seedSpeciesBonus(
 ): AbilityBonusMap {
   if (!state.raceId) return {};
 
+  /*
+   * Under 2024 there is nothing to seed, and the fallback below is a 2014
+   * table.
+   *
+   * That is the bug a player found by making a 2024 human. Every 2024 species
+   * records `null`, so the index came back empty and the hand-written table
+   * answered instead — with the *2014* human's six +1s. The 2024 editor then
+   * counted those six against the background's budget of three and offered
+   * only the three abilities the background names, so the panel opened at 6/3
+   * with a +1 in all six, nothing addable, and points that could only be taken
+   * away. The same seed reached the improvements screen, which is where it was
+   * reported from.
+   *
+   * The edition already decides this everywhere else in this file —
+   * `speciesBonusBudgetFor` returns three for 2024 and `bonusOrigin` says the
+   * increase comes from the background — and the seed was the one place that
+   * did not ask.
+   */
+  if (rulesVersion === "2024") return {};
+
   const fromIndex = speciesBonusFromIndex(
     state.raceId,
     rulesVersion,

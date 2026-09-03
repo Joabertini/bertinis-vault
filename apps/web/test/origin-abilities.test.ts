@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { initialState, type BuilderState } from "../src/lib/builder";
-import { originAbilityAllowanceFor } from "../src/lib/improvements";
+import { originAbilityAllowanceFor, seedSpeciesBonus } from "../src/lib/improvements";
 
 const build = (over: Partial<BuilderState> = {}): BuilderState => ({
   ...initialState,
@@ -56,5 +56,40 @@ describe("which abilities the origin increase may go into", () => {
         "2024",
       ),
     ).toBeNull();
+  });
+});
+
+describe("what the species seeds the increase with", () => {
+  test("a 2024 species seeds nothing, because 2024 moved it to the background", () => {
+    /*
+     * The bug a player found by making a 2024 human. Every 2024 species
+     * records `null` in the index, so the seed fell through to a hand-written
+     * table that is the *2014* one — and the 2014 human is six +1s. The 2024
+     * editor then counted six against a budget of three and offered only the
+     * three abilities the background names, so the panel opened at 6/3 with
+     * nothing addable and points that could only be taken away.
+     */
+    expect(seedSpeciesBonus(build({ rulesVersion: "5e-2024", raceId: "human" }), "2024")).toEqual(
+      {},
+    );
+  });
+
+  test("no 2024 species seeds anything, human or otherwise", () => {
+    for (const raceId of ["human", "elf", "dwarf", "halfling", "tiefling", "orc"]) {
+      expect(seedSpeciesBonus(build({ rulesVersion: "5e-2024", raceId }), "2024")).toEqual({});
+    }
+  });
+
+  test("2014 is untouched: the species still grants what the book prints", () => {
+    // The guard. The edition that does hand out an increase must keep it.
+    const dwarf = seedSpeciesBonus(build({ rulesVersion: "5e-2014", raceId: "dwarf" }), "2014");
+
+    expect(dwarf.con).toBe(2);
+  });
+
+  test("the 2014 human is still six ones", () => {
+    const human = seedSpeciesBonus(build({ rulesVersion: "5e-2014", raceId: "human" }), "2014");
+
+    expect(human).toEqual({ str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 });
   });
 });
