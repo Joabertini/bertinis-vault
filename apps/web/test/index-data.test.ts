@@ -111,6 +111,53 @@ describe("species bonuses", () => {
   });
 });
 
+/*
+ * The size the index carries is the offer, not an answer.
+ *
+ * It used to be `r.size?.[0]`, one letter, and thirty species print two. Every
+ * one of them came out Small — the 2024 human included, which is a Small
+ * square and half the carrying capacity on a character nobody built that way.
+ * Pinned here rather than in the front, because the front cannot ask a
+ * question the data has already answered for it.
+ */
+describe("the sizes a species offers", () => {
+  const races = (collections.race ?? []) as { name: string; source: string; sizes?: unknown }[];
+
+  test("arrive as a list, never as a bare letter", () => {
+    const bare = races.filter((row) => row.sizes != null && !Array.isArray(row.sizes));
+
+    expect(bare).toEqual([]);
+  });
+
+  test("are two for the thirty species that ask, and always Small or Medium", () => {
+    const asking = races.filter((row) => Array.isArray(row.sizes) && row.sizes.length > 1);
+
+    expect(asking).toHaveLength(30);
+    expect(asking.every((row) => (row.sizes as string[]).join() === "S,M")).toBe(true);
+  });
+
+  test("include the three 2024 species a player meets first", () => {
+    const named = ["Human", "Aasimar", "Tiefling"].map((name) =>
+      races.find((row) => row.name === name && row.source === "XPHB"),
+    );
+
+    expect(named.map((row) => row?.sizes)).toEqual([
+      ["S", "M"],
+      ["S", "M"],
+      ["S", "M"],
+    ]);
+  });
+
+  test("are null rather than empty when a species states none", () => {
+    // `raceInfoFor` merges a subrace over its race by skipping nulls. An empty
+    // array is a value: it would erase the race's own sizes on the way past.
+    const silent = races.filter((row) => row.sizes == null);
+
+    expect(silent.length).toBeGreaterThan(0);
+    expect(silent.every((row) => row.sizes === null)).toBe(true);
+  });
+});
+
 describe("when a class asks its questions", () => {
   test("the subclass level follows the class, not a rule of thumb", () => {
     // The three shapes 2014 has. Assuming 3 across the board hid the choice

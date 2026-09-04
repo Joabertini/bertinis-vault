@@ -75,11 +75,27 @@ regla que quedó es que un dato que se puede medir no se escribe a mano.
 El principio: **primero lo que hace que un personaje esté mal, después lo que
 lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida.
 
-1. **Tamaño 2024.** Es lo único de la lista que produce un personaje
-   *incorrecto*: `build-vetools-index.mjs` guarda `r.size?.[0]`, el bundle trae
-   `["S","M"]` para Aasimar, Humano y Tiefling, y el tamaño llega al payload
-   (`character-build.ts`, enum de `dnd5e`). Hoy un humano 2024 se exporta como
-   `sm`. Pide elección guardada: dato, estado, pregunta y exportación.
+1. ~~**Tamaño 2024.**~~ Hecho. Era lo único de la lista que producía un
+   personaje *incorrecto*.
+
+   **Y era más grande de lo que decía este documento: no son tres especies,
+   son treinta.** Medido contra el bundle: además de Aasimar, Humano y Tiefling
+   de XPHB, imprimen `["S","M"]` veintisiete más de MPMM, VRGR, AAG, EFA, RHW,
+   LFL, SCC, TCE y WBtW — Changeling, Genasi, Harengon, Kenku, Tabaxi, Tortle,
+   Yuan-Ti, Warforged, Plasmoid, Thri-kreen, Owlin, Dhampir, Hexblood, Reborn,
+   Shifter, Lupin, Rimekin, Khoravar, Custom Lineage y las variantes por libro.
+   Las treinta se exportaban como Pequeñas.
+
+   Las cuatro puntas: la fila del índice guarda `sizes` (la oferta entera, y
+   `null` — no `[]` — cuando la especie no dice nada, porque `raceInfoFor`
+   fusiona la subraza salteando nulls); `BuilderState.sizeChoice` guarda la
+   respuesta como letra del índice; la cámara Linaje pregunta cuando hay dos; y
+   `foundrySizeFor` recontrasta la respuesta contra la oferta, así que un
+   halfling rehecho goliat no se lleva el "Pequeño" puesto.
+
+   Sin responder no viaja nada, que Foundry lee como Mediano — lo mismo que
+   pasaba antes de que esto existiera. `ImportPayload` no cambió
+   (`ancestry.size` ya estaba), así que **no hace falta desplegar el Worker**.
 
 2. **"Descender" → "Siguiente", con scroll al tope, y las flechas a los
    costados.** Todo jugador lo toca en cada cámara, las dos ya tienen criterio
@@ -123,7 +139,10 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
   paladín, explorador, hechicero y brujo.
 - Doce trasfondos otorgan una dote que carga competencias, no trece.
 - Un personaje puede tomar 108 dotes bajo 2014 y 168 bajo 2024.
-- Tres de las diez especies 2024 imprimen el tamaño como elección.
+- Tres de las diez especies 2024 imprimen el tamaño como elección — **pero
+  contando todos los libros son treinta**, y las otras veintisiete son de
+  fuentes 2014. El recorte a "2024" era del lector, no del dato: la pregunta la
+  hacen MPMM, VRGR, AAG y seis libros más.
 - De las 31 clases del índice, las únicas cuatro sin equipo inicial son Rune
   Scribe y los tres auxiliares de Tasha.
 - **Las competencias de armas y armaduras sí llegan al personaje** desde la

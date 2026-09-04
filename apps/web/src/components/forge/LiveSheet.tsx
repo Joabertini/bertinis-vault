@@ -33,6 +33,7 @@ import {
   passivePerceptionFor,
   sensesFor,
   sizeLabelFor,
+  sizeOptionsFor,
   speedFor,
 } from "@/lib/table-numbers";
 import { actionProfile, concentrationAmong } from "@/lib/spells";
@@ -126,6 +127,10 @@ export default function LiveSheet({
   // player who has picked an elf and nothing else can still read 30.
   const speed = speedFor(state, rulesVersion);
   const size = sizeLabelFor(state, rulesVersion);
+  // Thirty species offer two sizes, so a dash here can mean "not chosen yet"
+  // rather than "not known". Saying which one it is costs a word and stops the
+  // dash reading as a bug on the thirty species that ask.
+  const sizePending = !size && sizeOptionsFor(state, rulesVersion).length > 1;
   const senses = sensesFor(state, rulesVersion);
 
   /**
@@ -269,7 +274,11 @@ export default function LiveSheet({
           accent={accent}
           dim={size === null}
           word
-          hint="Tamano: la casilla que ocupas y por donde pasas."
+          hint={
+            sizePending
+              ? "Tamano: esta especie se juega en dos. Elegilo en Linaje; sin elegir sale Mediano."
+              : "Tamano: la casilla que ocupas y por donde pasas."
+          }
         />
       </div>
 
