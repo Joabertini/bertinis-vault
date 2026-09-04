@@ -1367,7 +1367,11 @@ export default function Forge() {
           ))}
         </nav>
 
-        <div className="grid gap-12 lg:grid-cols-[1fr_340px]">
+        {/* La ficha se ensancha en `xl` para poder ir en dos columnas. Debajo
+            de ese ancho la camara no puede ceder 460px sin que la estanteria
+            de tarjetas quede en una sola, asi que se queda en 340 y la ficha
+            en una columna. */}
+        <div className="grid gap-12 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_460px]">
           <AnimatePresence mode="wait">
             <motion.section
               key={chamberKey}
