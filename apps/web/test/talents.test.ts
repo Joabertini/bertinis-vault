@@ -150,6 +150,31 @@ describe("a prerequisite the data states as a kind, not a name", () => {
     }
   });
 
+  test("y lo que pide se dice, en vez de no decir nada", () => {
+    /*
+     * Ofrecerlas sin juzgarlas era la mitad correcta. La otra mitad faltaba:
+     * las tres traen `prerequisiteText` vacio, asi que no listaban ningun
+     * requisito y las tres invocaciones mas tomadas del juego parecian no
+     * pedir nada. Va a `notes`, que es el canal de lo que el jugador juzga.
+     */
+    const warlock = talentPools(
+      build({ rulesVersion: "5e-2024", classId: "warlock", level: 5 }),
+      "2024",
+      "Warlock",
+      "",
+    );
+    const options = warlock.flatMap((pool) => pool.options);
+
+    for (const name of ["Agonizing Blast", "Eldritch Spear", "Repelling Blast"]) {
+      const found = options.find((option) => option.label === name);
+      expect(found?.notes.join(" "), `${name} deberia decir que pide`).toMatch(
+        /Requiere .*Cantrip/i,
+      );
+      // Dicho, no exigido: sigue siendo elegible.
+      expect(found?.eligible).toBe(true);
+    }
+  });
+
   test("a named prerequisite is still checked", () => {
     // The guard. Making the unreadable case permissive must not make the
     // readable one permissive too.

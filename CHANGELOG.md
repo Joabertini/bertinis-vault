@@ -95,6 +95,22 @@ against what you can carry (#57); attunement and its three slots (#59).
   removed at the ends of the rail — an arrow that vanishes moves the other one.
   Same gate as the footer: an unanswered chamber does not let you past.
 
+### Two quiet ones in the Improvements chamber
+- A half-feat's editor counted itself. `scoresBefore` dropped the level's
+  improvement but not the level's **feat**, so the editor added the point it
+  was holding on top of a total that already had it: a 19 read as 20 and
+  offered nothing, an 18 taking a two-point half-feat lost the second point.
+  The same double-count the beta reported on the improvement side, in the
+  other half of the chamber. Excluded by level, not wholesale — a level 4
+  feat is still the floor a level 8 improvement starts from.
+- The three invocations that state their requirement as a description —
+  Agonizing Blast, Eldritch Spear, Repelling Blast, all XPHB — carry an empty
+  `prerequisiteText` and so listed no requirement at all. The three
+  most-taken invocations in the game looked like they asked for nothing.
+  `spellPrerequisiteLabel` now feeds `notes`, the channel for what the player
+  judges. Shown, not enforced: refusing a pick over a requirement the code
+  cannot read would be inventing a verdict.
+
 ### Documentation
 - The build order was closed (#41) and the handoff brought back in line with
   what shipped (#67).

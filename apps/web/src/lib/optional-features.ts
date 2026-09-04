@@ -21,6 +21,7 @@
 import {
   collections,
   forRulesVersion,
+  spellPrerequisiteLabel,
   spellPrerequisiteName,
   type ClassRow,
   type OptionalFeaturePrerequisite,
@@ -114,10 +115,31 @@ function toOption(
     id: slugOf(row.name),
     label: row.name,
     source: row.source,
-    notes: row.prerequisiteText ?? [],
+    notes: [...(row.prerequisiteText ?? []), ...describedSpellPrerequisites(row)],
     eligible: unmet.length === 0,
     ...(unmet[0] ? { blockedBy: unmet[0] } : {}),
   };
+}
+
+/**
+ * Spell prerequisites stated as a description rather than as a name.
+ *
+ * Three 2024 invocations state one — Agonizing Blast, Eldritch Spear and
+ * Repelling Blast all want "a warlock cantrip that deals damage" rather than
+ * naming Eldritch Blast. `unmetReason` cannot judge those, and correctly does
+ * not try: refusing a pick over a requirement it cannot read would be
+ * inventing a verdict. But returning null there also said *nothing*, so the
+ * three most-taken invocations in the game listed no requirement at all.
+ *
+ * They belong in `notes`, which is the channel for what the player judges,
+ * next to the prose prerequisites that already arrive that way.
+ */
+function describedSpellPrerequisites(row: OptionalFeatureRow): string[] {
+  return row.prerequisites.flatMap((prerequisite) =>
+    prerequisite.kind === "spell" && spellPrerequisiteName(prerequisite.spell) === null
+      ? [`Requiere ${spellPrerequisiteLabel(prerequisite.spell)}`]
+      : [],
+  );
 }
 
 /** Why a prerequisite is not met, or null when it is. */

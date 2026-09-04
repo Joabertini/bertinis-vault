@@ -120,9 +120,24 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    que volver a encontrar. La puerta es la misma del pie — sin contestar la
    cámara, no deja pasar.
 
-3. **Higiene sin decisiones.** `FeatAbilityPlacement` cuenta la dote que se
-   está editando dentro de su propio "antes"; hoy no rompe nada.
-   `spellPrerequisiteLabel` quedó exportada y sin llamar: se conecta o se saca.
+3. ~~**Higiene sin decisiones.**~~ Hecho, y ninguna de las dos era inocua.
+
+   **El "antes" de la semi-dote.** `scoresBefore` excluía la mejora del nivel
+   que se está editando pero no la **dote** de ese mismo nivel, así que el
+   editor de una semi-dote sumaba su punto sobre un total que ya lo tenía: un
+   19 se leía 20 y no ofrecía nada, y un 18 con una semi-dote de dos puntos
+   perdía el segundo. Es el mismo doble conteo que los jugadores reportaron
+   del lado de las mejoras, en la otra mitad de la cámara. Se excluye por
+   nivel, no todas las dotes: la de nivel 4 sigue siendo el piso de la de 8.
+
+   **`spellPrerequisiteLabel` se conectó.** Las tres invocaciones que declaran
+   el requisito como descripción (Agonizing Blast, Eldritch Spear, Repelling
+   Blast, todas XPHB) traen `prerequisiteText` vacío, así que **no listaban
+   ningún requisito**: las tres más tomadas del juego parecían no pedir nada.
+   Va a `notes`, que es el canal de lo que el jugador juzga, al lado de los
+   prerrequisitos en prosa. Dicho, no exigido — siguen elegibles, porque
+   negar una pick por un requisito que no se puede leer es inventar un
+   veredicto.
 
 4. **El agujero del test de humo.** Recorre las ocho cámaras y en cada una
    comprueba que la página diga "Nivel", que es cierto en todas: si un click de
