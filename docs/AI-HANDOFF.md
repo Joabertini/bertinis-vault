@@ -9,6 +9,10 @@ Fast start for the next agent working on this repo.
 2. [`PLUTONIUM-INTEGRATION.md`](./PLUTONIUM-INTEGRATION.md) — the import path,
    read from Plutonium's own bundle.
 3. [`DEPLOY.md`](./DEPLOY.md) — the three pieces and what shipping them needs.
+3b. [`RUTA-POST-BETA.md`](./RUTA-POST-BETA.md) — what the players asked for
+   after the beta, what was decided about it, and the order it is being built
+   in. The list below is engineering debt; that one is product. When they
+   disagree about what to do next, that one is what the owner chose.
 
 4. [`CHARACTER-MODEL-GAPS.md`](./CHARACTER-MODEL-GAPS.md) — what the builder
    models of a 5e character, what it does not, and in what order that is worth
