@@ -14,8 +14,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
-import Forge from "../src/routes/Forge";
-import { chamberOrder } from "../src/lib/chambers";
+import Forge, { CHAMBER_TITLE } from "../src/routes/Forge";
+import { chamberOrder, type ChamberKey } from "../src/lib/chambers";
 import { initialState } from "../src/lib/builder";
 import { useVault } from "../src/lib/vault-store";
 
@@ -108,6 +108,19 @@ describe("las camaras", () => {
    * pericias — y un modulo que devuelve bien no prueba que la pagina sobreviva
    * a usarlo. Se recorre el riel entero, camara por camara.
    */
+  /*
+   * "Nivel" no alcanzaba.
+   *
+   * Este recorrido comprobaba que la pagina dijera "Nivel" despues de cada
+   * click, y "Nivel" es cierto en las nueve camaras porque la ficha viva lo
+   * imprime al costado siempre. Si un click del riel dejara de navegar, el
+   * test seguiria pasando entero: comprobaba que la pagina existiera, no que
+   * la camara hubiera cambiado.
+   *
+   * Ahora compara el `h2` contra el titulo que la camara declara, leido del
+   * mismo mapa que la pagina renderiza — una copia en el test pasaria
+   * mientras la pagina dice otra cosa.
+   */
   test("todas se abren, una por una, sin que ninguna tire", async () => {
     const user = userEvent.setup();
     useVault.setState((state) => ({
@@ -138,19 +151,49 @@ describe("las camaras", () => {
      * atras estan contestadas, y forzarlas seria probar un camino que el
      * jugador no puede recorrer.
      */
-    let opened = 0;
+    const opened: ChamberKey[] = [];
 
     for (const chamber of order) {
       const target = document.querySelector<HTMLButtonElement>(`[data-chamber="${chamber}"]`);
       if (!target || target.disabled) continue;
       await user.click(target);
-      // El cambio de camara espera al barrido que lo tapa.
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      opened += 1;
+
+      /*
+       * Esperado, no cronometrado. El cambio arranca tras una pausa y la
+       * camara que sale queda montada mientras se desvanece, asi que una
+       * espera fija cae en el medio. `findByRole` reintenta hasta que llega
+       * la nueva, y si no llega el test dice cual falto.
+       */
+      const heading = await screen.findByRole(
+        "heading",
+        { level: 2, name: CHAMBER_TITLE[chamber] },
+        { timeout: 3000 },
+      );
+
+      expect(heading, `la camara ${chamber} no abrio`).toBeTruthy();
+      // La ficha viva sigue derivando al costado de cada camara.
       expect(pageText()).toContain("Nivel");
+      opened.push(chamber);
     }
 
-    expect(opened).toBeGreaterThan(1);
+    /*
+     * Lo abierto es el principio del riel, en orden. El umbral viejo era
+     * "mas de una", que pasaba abriendo dos de nueve; esto exige que se haya
+     * llegado exactamente hasta donde el riel deja y no antes.
+     */
+    expect(opened).toEqual(order.slice(0, opened.length));
+    expect(opened.length).toBeGreaterThan(1);
+
+    /*
+     * Y que lo que falto haya faltado por la puerta y no por un click roto.
+     * Sin esto, un riel que dejara de navegar a la sexta camara se veria
+     * igual que uno que la tiene cerrada a proposito.
+     */
+    const stoppedAt = order[opened.length];
+    if (stoppedAt) {
+      const closed = document.querySelector<HTMLButtonElement>(`[data-chamber="${stoppedAt}"]`);
+      expect(closed?.disabled, `${stoppedAt} no abrio y tampoco estaba cerrada`).toBe(true);
+    }
   });
 });
 

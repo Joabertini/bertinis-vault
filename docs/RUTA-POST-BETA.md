@@ -139,10 +139,19 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    negar una pick por un requisito que no se puede leer es inventar un
    veredicto.
 
-4. **El agujero del test de humo.** Recorre las ocho cámaras y en cada una
-   comprueba que la página diga "Nivel", que es cierto en todas: si un click de
-   riel dejara de navegar, seguiría pasando. Va acá y no más abajo porque
-   protege todo lo que viene después.
+4. ~~**El agujero del test de humo.**~~ Tapado.
+
+   Ahora compara el `h2` contra el título que declara la cámara, leído del
+   mismo mapa que la página renderiza — una copia en el test pasaría mientras
+   la página dice otra cosa.
+
+   El umbral también era falso: `opened > 1` pasaba abriendo dos de nueve.
+   Ahora se exige que lo abierto sea el principio del riel en orden, y que la
+   primera que faltó esté **cerrada**. Sin eso, un riel que dejara de navegar
+   a la sexta cámara se vería igual que uno que la tiene cerrada a propósito.
+
+   Medido al arreglarlo: con el borrador del test (guerrero 2024 nivel 5) el
+   riel abre **5 de 8** y cierra en Dones. El test viejo pasaba igual.
 
 5. **La preview en dos columnas.** El reparto está decidido —a la izquierda lo
    que se calcula, a la derecha lo que se lee, "cómo pelea" abajo a ancho

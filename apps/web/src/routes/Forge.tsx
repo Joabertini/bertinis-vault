@@ -136,7 +136,12 @@ const CHAMBER_LABEL: Record<ChamberKey, string> = {
   identity: "Identidad",
 };
 
-const CHAMBER_TITLE: Record<ChamberKey, string> = {
+/*
+ * Exported for the smoke test, which walks the rail and has to know what
+ * arriving looks like. Reading the same map the page renders is the point: a
+ * copy in the test would pass while the page said something else.
+ */
+export const CHAMBER_TITLE: Record<ChamberKey, string> = {
   ancestry: "Elegi tu raza",
   calling: "Elegi tu camino",
   origin: "Recorda de donde venis",
