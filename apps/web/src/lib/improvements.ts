@@ -277,6 +277,13 @@ export function pointsSpent(bonuses: AbilityBonusMap): number {
  * Feats count. A feat taken at level 4 that raises Strength raises the floor
  * the level 8 improvement starts from, and omitting it let a stepper push a
  * score past 20 — the same cap failing the other way.
+ *
+ * `exceptLevel` drops that level's feat too, not only its improvement. A
+ * half-feat's own editor asks this what the scores are and then adds the point
+ * it is holding, so counting the feat being edited is the same double-count in
+ * the other half of the chamber: a character with a 19 who places Resilient's
+ * +1 is told they have 20 and offered nothing, and one with an 18 taking a
+ * two-point half-feat is refused the second point.
  */
 export function scoresBefore(
   state: BuilderState,
@@ -299,7 +306,16 @@ export function scoresBefore(
         );
 
   const fromLevels = bonusesFromChoices(choices);
-  const fromFeats = bonusesFromFeats(takenFeatsFor(state));
+
+  // The feat this level bought, if it bought one. Excluded by id rather than
+  // by level because a feat is a feat wherever it came from, and the same one
+  // cannot be held twice.
+  const excluded = exceptLevel === undefined ? null : state.levelChoices[exceptLevel];
+  const editedFeatId = excluded?.kind === "feat" ? excluded.featId : null;
+
+  const fromFeats = bonusesFromFeats(
+    takenFeatsFor(state).filter((feat) => feat.featId !== editedFeatId),
+  );
 
   for (const ability of Object.keys(raw) as AbilityId[]) {
     raw[ability] +=

@@ -136,7 +136,12 @@ const CHAMBER_LABEL: Record<ChamberKey, string> = {
   identity: "Identidad",
 };
 
-const CHAMBER_TITLE: Record<ChamberKey, string> = {
+/*
+ * Exported for the smoke test, which walks the rail and has to know what
+ * arriving looks like. Reading the same map the page renders is the point: a
+ * copy in the test would pass while the page said something else.
+ */
+export const CHAMBER_TITLE: Record<ChamberKey, string> = {
   ancestry: "Elegi tu raza",
   calling: "Elegi tu camino",
   origin: "Recorda de donde venis",
@@ -863,7 +868,22 @@ export default function Forge() {
     // for 350ms, but a burst of sparks hides nothing. The chamber's own
     // cross-fade carries the change, and this beat only lets the surge start
     // first so the two read as one event rather than as two.
-    setTimeout(() => setChamberKey(next), 160);
+    setTimeout(() => {
+      setChamberKey(next);
+      /*
+       * Back to the top, with the new chamber.
+       *
+       * The button that moves you is at the bottom, so leaving the scroll
+       * where it was dropped every player into the middle of the next
+       * chamber — past its heading, past its first question.
+       *
+       * Instant rather than smooth: the cross-fade above is already carrying
+       * the change, and a 500ms scroll racing a 500ms fade reads as two
+       * events. It also means nothing to undo when the player has asked for
+       * reduced motion.
+       */
+      window.scrollTo({ top: 0 });
+    }, 160);
   };
 
   /* ---------------- picks ---------------- */
@@ -1260,6 +1280,14 @@ export default function Forge() {
         }}
         transition={{ duration: 1.2 }}
         className="pointer-events-none fixed inset-0"
+      />
+
+      <ChamberArrows
+        onBack={() => go(position - 1)}
+        onNext={() => go(position + 1)}
+        canGoBack={position > 0}
+        canGoNext={!isLast && answered[chamberKey]}
+        accent={accent}
       />
 
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-14 md:px-10">
@@ -2271,7 +2299,7 @@ export default function Forge() {
               variant="gold"
               className={answered[chamberKey] ? "" : "pointer-events-none opacity-30"}
             >
-              Descender →
+              Siguiente →
             </RuneButton>
           ) : (
             <RuneButton
@@ -2385,6 +2413,64 @@ function VariantChoices({
           onToggle={(name) => onToggleSpell(question.key, name)}
         />
       ))}
+    </>
+  );
+}
+
+/**
+ * Back and forward, pinned to the edges of the screen.
+ *
+ * The footer already carries both, and the footer is at the bottom: a player
+ * in the middle of a long chamber has to scroll past everything to move on.
+ * These do not scroll, so the way out is always where the player last saw it.
+ *
+ * Only from `xl` up. The page is `max-w-6xl` (1152px) centred, so above
+ * 1280px there is real margin either side to sit in; below it these would
+ * float over the chamber itself, and an arrow covering the question it is
+ * asking about is worse than an arrow you scroll to. The footer stays as it
+ * is at every width, so nothing is lost when they are absent.
+ *
+ * Disabled rather than removed at the ends of the rail — an arrow that
+ * vanishes on the last chamber moves the other one, and a control that moves
+ * is a control you have to find again.
+ */
+function ChamberArrows({
+  onBack,
+  onNext,
+  canGoBack,
+  canGoNext,
+  accent,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+  canGoBack: boolean;
+  canGoNext: boolean;
+  accent: string;
+}) {
+  const base =
+    "fixed top-1/2 z-20 hidden h-14 w-11 -translate-y-1/2 items-center justify-center border border-iron/60 bg-void/80 font-display text-2xl text-bone/60 backdrop-blur-sm transition-colors enabled:hover:text-bone disabled:opacity-25 xl:flex";
+
+  return (
+    <>
+      <button
+        type="button"
+        onClick={onBack}
+        disabled={!canGoBack}
+        aria-label="Camara anterior"
+        className={`${base} left-2`}
+      >
+        ‹
+      </button>
+      <button
+        type="button"
+        onClick={onNext}
+        disabled={!canGoNext}
+        aria-label="Camara siguiente"
+        className={`${base} right-2`}
+        style={canGoNext ? { borderColor: `${accent}66` } : undefined}
+      >
+        ›
+      </button>
     </>
   );
 }

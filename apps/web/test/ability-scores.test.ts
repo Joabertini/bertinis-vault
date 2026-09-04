@@ -224,4 +224,41 @@ describe("the scores an improvement is applied on top of", () => {
 
     expect(scoresBefore(withFeat, 8).con).toBeGreaterThanOrEqual(scoresBefore(plain, 8).con);
   });
+
+  test("pero la dote que se esta editando no se cuenta a si misma", () => {
+    /*
+     * La otra mitad del mismo doble conteo. El editor de una semi-dote
+     * pregunta cuanto valen las puntuaciones y despues suma el punto que
+     * tiene en la mano; si la respuesta ya lo trae, un 19 se lee 20 y no
+     * ofrece nada, y un 18 con una semi-dote de dos puntos pierde el segundo.
+     */
+    const state = {
+      ...noBonuses,
+      str: 18,
+      level: 4,
+      levelChoices: { 4: { kind: "feat" as const, featId: "resilient" } },
+      featAbilityChoices: { resilient: { str: 1 } },
+    };
+
+    expect(scoresBefore(state, 4).str).toBe(18);
+    // Sin la excepcion es el numero doblado, que es lo que veia el editor.
+    expect(scoresBefore(state).str).toBe(19);
+  });
+
+  test("y una dote de otro nivel si se cuenta", () => {
+    // Excluir por nivel, no todas las dotes: la de nivel 4 sigue siendo el
+    // piso desde el que arranca la de nivel 8.
+    const state = {
+      ...noBonuses,
+      str: 15,
+      level: 8,
+      levelChoices: {
+        4: { kind: "feat" as const, featId: "resilient" },
+        8: { kind: "feat" as const, featId: "athlete" },
+      },
+      featAbilityChoices: { resilient: { str: 1 }, athlete: { str: 1 } },
+    };
+
+    expect(scoresBefore(state, 8).str).toBe(16);
+  });
 });

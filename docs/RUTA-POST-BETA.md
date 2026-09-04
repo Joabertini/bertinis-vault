@@ -97,18 +97,61 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    pasaba antes de que esto existiera. `ImportPayload` no cambió
    (`ancestry.size` ya estaba), así que **no hace falta desplegar el Worker**.
 
-2. **"Descender" → "Siguiente", con scroll al tope, y las flechas a los
-   costados.** Todo jugador lo toca en cada cámara, las dos ya tienen criterio
-   dado —visibles, fáciles de tocar— y no dependen de nada.
+2. ~~**"Descender" → "Siguiente", con scroll al tope, y las flechas a los
+   costados.**~~ Hecho.
 
-3. **Higiene sin decisiones.** `FeatAbilityPlacement` cuenta la dote que se
-   está editando dentro de su propio "antes"; hoy no rompe nada.
-   `spellPrerequisiteLabel` quedó exportada y sin llamar: se conecta o se saca.
+   El scroll al tope va con el cambio de cámara y es instantáneo: el
+   cruce-fundido de 500 ms ya lleva el cambio, y un scroll suave corriendo
+   contra él se lee como dos eventos en vez de uno.
 
-4. **El agujero del test de humo.** Recorre las ocho cámaras y en cada una
-   comprueba que la página diga "Nivel", que es cierto en todas: si un click de
-   riel dejara de navegar, seguiría pasando. Va acá y no más abajo porque
-   protege todo lo que viene después.
+   "A los costados" pedía una decisión que este documento no tenía: las dos ya
+   estaban en los extremos del pie. Resuelto como **flechas fijas a los bordes
+   del viewport**, que no scrollean — el pie está abajo, así que quien está a
+   media cámara larga tenía que recorrerla entera para salir.
+
+   Aparecen **de `xl` (1280 px) para arriba**. La página es `max-w-6xl`
+   (1152 px) centrada, así que recién ahí hay margen real donde pararse; por
+   debajo flotarían sobre la cámara, y una flecha que tapa la pregunta que
+   contesta es peor que una flecha a la que hay que bajar. El pie queda igual
+   en todos los anchos, así que no se pierde nada cuando no están.
+
+   Deshabilitadas y no ocultas en las puntas del riel: una flecha que
+   desaparece mueve a la otra, y un control que se mueve es un control que hay
+   que volver a encontrar. La puerta es la misma del pie — sin contestar la
+   cámara, no deja pasar.
+
+3. ~~**Higiene sin decisiones.**~~ Hecho, y ninguna de las dos era inocua.
+
+   **El "antes" de la semi-dote.** `scoresBefore` excluía la mejora del nivel
+   que se está editando pero no la **dote** de ese mismo nivel, así que el
+   editor de una semi-dote sumaba su punto sobre un total que ya lo tenía: un
+   19 se leía 20 y no ofrecía nada, y un 18 con una semi-dote de dos puntos
+   perdía el segundo. Es el mismo doble conteo que los jugadores reportaron
+   del lado de las mejoras, en la otra mitad de la cámara. Se excluye por
+   nivel, no todas las dotes: la de nivel 4 sigue siendo el piso de la de 8.
+
+   **`spellPrerequisiteLabel` se conectó.** Las tres invocaciones que declaran
+   el requisito como descripción (Agonizing Blast, Eldritch Spear, Repelling
+   Blast, todas XPHB) traen `prerequisiteText` vacío, así que **no listaban
+   ningún requisito**: las tres más tomadas del juego parecían no pedir nada.
+   Va a `notes`, que es el canal de lo que el jugador juzga, al lado de los
+   prerrequisitos en prosa. Dicho, no exigido — siguen elegibles, porque
+   negar una pick por un requisito que no se puede leer es inventar un
+   veredicto.
+
+4. ~~**El agujero del test de humo.**~~ Tapado.
+
+   Ahora compara el `h2` contra el título que declara la cámara, leído del
+   mismo mapa que la página renderiza — una copia en el test pasaría mientras
+   la página dice otra cosa.
+
+   El umbral también era falso: `opened > 1` pasaba abriendo dos de nueve.
+   Ahora se exige que lo abierto sea el principio del riel en orden, y que la
+   primera que faltó esté **cerrada**. Sin eso, un riel que dejara de navegar
+   a la sexta cámara se vería igual que uno que la tiene cerrada a propósito.
+
+   Medido al arreglarlo: con el borrador del test (guerrero 2024 nivel 5) el
+   riel abre **5 de 8** y cierra en Dones. El test viejo pasaba igual.
 
 5. **La preview en dos columnas.** El reparto está decidido —a la izquierda lo
    que se calcula, a la derecha lo que se lee, "cómo pelea" abajo a ancho

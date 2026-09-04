@@ -14,8 +14,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
-import Forge from "../src/routes/Forge";
-import { chamberOrder } from "../src/lib/chambers";
+import Forge, { CHAMBER_TITLE } from "../src/routes/Forge";
+import { chamberOrder, type ChamberKey } from "../src/lib/chambers";
 import { initialState } from "../src/lib/builder";
 import { useVault } from "../src/lib/vault-store";
 
@@ -108,6 +108,19 @@ describe("las camaras", () => {
    * pericias — y un modulo que devuelve bien no prueba que la pagina sobreviva
    * a usarlo. Se recorre el riel entero, camara por camara.
    */
+  /*
+   * "Nivel" no alcanzaba.
+   *
+   * Este recorrido comprobaba que la pagina dijera "Nivel" despues de cada
+   * click, y "Nivel" es cierto en las nueve camaras porque la ficha viva lo
+   * imprime al costado siempre. Si un click del riel dejara de navegar, el
+   * test seguiria pasando entero: comprobaba que la pagina existiera, no que
+   * la camara hubiera cambiado.
+   *
+   * Ahora compara el `h2` contra el titulo que la camara declara, leido del
+   * mismo mapa que la pagina renderiza — una copia en el test pasaria
+   * mientras la pagina dice otra cosa.
+   */
   test("todas se abren, una por una, sin que ninguna tire", async () => {
     const user = userEvent.setup();
     useVault.setState((state) => ({
@@ -138,19 +151,121 @@ describe("las camaras", () => {
      * atras estan contestadas, y forzarlas seria probar un camino que el
      * jugador no puede recorrer.
      */
-    let opened = 0;
+    const opened: ChamberKey[] = [];
 
     for (const chamber of order) {
       const target = document.querySelector<HTMLButtonElement>(`[data-chamber="${chamber}"]`);
       if (!target || target.disabled) continue;
       await user.click(target);
-      // El cambio de camara espera al barrido que lo tapa.
-      await new Promise((resolve) => setTimeout(resolve, 400));
-      opened += 1;
+
+      /*
+       * Esperado, no cronometrado. El cambio arranca tras una pausa y la
+       * camara que sale queda montada mientras se desvanece, asi que una
+       * espera fija cae en el medio. `findByRole` reintenta hasta que llega
+       * la nueva, y si no llega el test dice cual falto.
+       */
+      const heading = await screen.findByRole(
+        "heading",
+        { level: 2, name: CHAMBER_TITLE[chamber] },
+        { timeout: 3000 },
+      );
+
+      expect(heading, `la camara ${chamber} no abrio`).toBeTruthy();
+      // La ficha viva sigue derivando al costado de cada camara.
       expect(pageText()).toContain("Nivel");
+      opened.push(chamber);
     }
 
-    expect(opened).toBeGreaterThan(1);
+    /*
+     * Lo abierto es el principio del riel, en orden. El umbral viejo era
+     * "mas de una", que pasaba abriendo dos de nueve; esto exige que se haya
+     * llegado exactamente hasta donde el riel deja y no antes.
+     */
+    expect(opened).toEqual(order.slice(0, opened.length));
+    expect(opened.length).toBeGreaterThan(1);
+
+    /*
+     * Y que lo que falto haya faltado por la puerta y no por un click roto.
+     * Sin esto, un riel que dejara de navegar a la sexta camara se veria
+     * igual que uno que la tiene cerrada a proposito.
+     */
+    const stoppedAt = order[opened.length];
+    if (stoppedAt) {
+      const closed = document.querySelector<HTMLButtonElement>(`[data-chamber="${stoppedAt}"]`);
+      expect(closed?.disabled, `${stoppedAt} no abrio y tampoco estaba cerrada`).toBe(true);
+    }
+  });
+});
+
+/*
+ * Las flechas fijas a los costados.
+ *
+ * Son el segundo camino para moverse entre camaras y por eso mismo el riesgo
+ * conocido de este repo: un control que se dibuja y no escribe nada. El pie de
+ * pagina ya movia al jugador, asi que una flecha inerte se ve exactamente
+ * igual que una que anda hasta que alguien la aprieta.
+ */
+describe("las flechas de los costados mueven", () => {
+  const arrows = () => ({
+    back: screen.getByLabelText("Camara anterior") as HTMLButtonElement,
+    next: screen.getByLabelText("Camara siguiente") as HTMLButtonElement,
+  });
+
+  test("la de adelante avanza una camara y la de atras vuelve", async () => {
+    const user = userEvent.setup();
+    useVault.setState((state) => ({
+      draft: {
+        ...state.draft,
+        rulesVersion: "5e-2014",
+        classId: "fighter",
+        subclassId: "",
+        // Con estilo elegido, Clase queda contestada y la flecha se habilita.
+        optionalFeatureIds: ["defense"],
+        level: 1,
+        raceId: "human",
+        backgroundId: "acolyte",
+      },
+    }));
+
+    openForge();
+
+    /*
+     * El encabezado de la camara, no un texto suelto de adentro. El riel
+     * repite los nombres de las nueve camaras, asi que buscar por texto
+     * encuentra el riel; el `h2` lo tiene solo la camara abierta.
+     */
+    const heading = (name: RegExp) =>
+      screen.findByRole("heading", { level: 2, name }, { timeout: 3000 });
+
+    // Linaje es la primera: no hay nada atras.
+    expect(arrows().back.disabled).toBe(true);
+    expect(arrows().next.disabled).toBe(false);
+    expect(await heading(/Elegi tu raza/)).toBeTruthy();
+
+    await user.click(arrows().next);
+    expect(await heading(/Elegi tu camino/)).toBeTruthy();
+
+    // Y ahora si hay algo atras, y vuelve.
+    expect(arrows().back.disabled).toBe(false);
+    await user.click(arrows().back);
+    expect(await heading(/Elegi tu raza/)).toBeTruthy();
+  });
+
+  test("la de adelante no deja pasar una camara sin contestar", async () => {
+    // La puerta es la misma que la del pie: mover el control no es soltarla.
+    useVault.setState((state) => ({
+      draft: {
+        ...state.draft,
+        rulesVersion: "5e-2014",
+        classId: "",
+        subclassId: "",
+        raceId: "",
+        backgroundId: "",
+      },
+    }));
+
+    openForge();
+    expect(arrows().next.disabled).toBe(true);
   });
 });
 
