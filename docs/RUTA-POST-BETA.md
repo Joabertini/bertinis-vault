@@ -97,9 +97,28 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    pasaba antes de que esto existiera. `ImportPayload` no cambió
    (`ancestry.size` ya estaba), así que **no hace falta desplegar el Worker**.
 
-2. **"Descender" → "Siguiente", con scroll al tope, y las flechas a los
-   costados.** Todo jugador lo toca en cada cámara, las dos ya tienen criterio
-   dado —visibles, fáciles de tocar— y no dependen de nada.
+2. ~~**"Descender" → "Siguiente", con scroll al tope, y las flechas a los
+   costados.**~~ Hecho.
+
+   El scroll al tope va con el cambio de cámara y es instantáneo: el
+   cruce-fundido de 500 ms ya lleva el cambio, y un scroll suave corriendo
+   contra él se lee como dos eventos en vez de uno.
+
+   "A los costados" pedía una decisión que este documento no tenía: las dos ya
+   estaban en los extremos del pie. Resuelto como **flechas fijas a los bordes
+   del viewport**, que no scrollean — el pie está abajo, así que quien está a
+   media cámara larga tenía que recorrerla entera para salir.
+
+   Aparecen **de `xl` (1280 px) para arriba**. La página es `max-w-6xl`
+   (1152 px) centrada, así que recién ahí hay margen real donde pararse; por
+   debajo flotarían sobre la cámara, y una flecha que tapa la pregunta que
+   contesta es peor que una flecha a la que hay que bajar. El pie queda igual
+   en todos los anchos, así que no se pierde nada cuando no están.
+
+   Deshabilitadas y no ocultas en las puntas del riel: una flecha que
+   desaparece mueve a la otra, y un control que se mueve es un control que hay
+   que volver a encontrar. La puerta es la misma del pie — sin contestar la
+   cámara, no deja pasar.
 
 3. **Higiene sin decisiones.** `FeatAbilityPlacement` cuenta la dote que se
    está editando dentro de su propio "antes"; hoy no rompe nada.

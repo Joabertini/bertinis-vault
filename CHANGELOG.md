@@ -82,6 +82,19 @@ against what you can carry (#57); attunement and its three slots (#59).
 - Pinned in `index-data.test.ts` against the shipped rows rather than in the
   front: the front cannot ask a question the data already answered for it.
 
+### Moving between chambers
+- "Descender" is "Siguiente", and changing chamber returns to the top of the
+  page. The button that moves you is in the footer, so leaving the scroll where
+  it was dropped every player into the middle of the next chamber, past its
+  heading and its first question. Instant rather than smooth: the cross-fade
+  already carries the change.
+- Back and forward arrows pinned to the edges of the screen, from `xl` up.
+  The page is `max-w-6xl` centred, so above 1280px there is margin to sit in;
+  below that they would float over the chamber, and an arrow covering the
+  question it asks about is worse than one you scroll to. Disabled rather than
+  removed at the ends of the rail — an arrow that vanishes moves the other one.
+  Same gate as the footer: an unanswered chamber does not let you past.
+
 ### Documentation
 - The build order was closed (#41) and the handoff brought back in line with
   what shipped (#67).
