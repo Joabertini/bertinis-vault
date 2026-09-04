@@ -208,6 +208,20 @@ export default function LiveSheet({
         <Sigil name={state.classId || state.raceId || "fighter"} size={36} className="shrink-0" />
       </div>
 
+      {/*
+        Two columns from `xl`, one below it.
+
+        The split is by form rather than by topic: what the sheet *computes*
+        reads as tiles and numbers, what it *states* reads as sentences and
+        lists. Run as a single strip they took turns, so the ability scores —
+        the block a player checks most — sat under six paragraphs of prose.
+
+        Only from `xl`, because that is where the aside is wide enough to hold
+        two of anything. Below it nothing changes.
+      */}
+      <div className="xl:grid xl:grid-cols-2 xl:gap-x-6">
+      {/* ---- what the sheet computes ---- */}
+      <div>
       {/* ---- the three numbers that decide a fight ---- */}
       <div className="mt-5 grid grid-cols-3 items-stretch gap-2">
         <Vital
@@ -282,6 +296,30 @@ export default function LiveSheet({
         />
       </div>
 
+      {/* Save DC and spell attack sit with the numbers, not under the prose:
+          a caster reads them on the same beat as the armour class. */}
+      {derived?.spellcasting && (
+        <div className="mt-2 grid grid-cols-2 gap-2">
+          <Vital label="CD salv" value={derived.spellcasting.saveDC} accent={accent} />
+          <Vital
+            label="At. conjuro"
+            value={`${derived.spellcasting.attackBonus >= 0 ? "+" : ""}${derived.spellcasting.attackBonus}`}
+            accent={accent}
+          />
+        </div>
+      )}
+
+      <AbilityRows
+        scores={scores}
+        sources={sources}
+        rulesVersion={rulesVersion}
+        accent={accent}
+      />
+      </div>
+
+      {/* ---- what the sheet states ---- */}
+      <div>
+
       {/* Flying, swimming, climbing, burrowing — the reason someone picked
           this species. An Aarakocra's 50 feet of flight was nowhere on the
           sheet. */}
@@ -305,17 +343,6 @@ export default function LiveSheet({
           <span style={{ color: accent }}>{coinLabel(snapshot.choices.startingCopper)}</span>.
         </p>
       ) : null}
-
-      {/* What the character rolls, for everything. Only once the draft
-          derives: a modifier without a proficiency bonus behind it would be
-          a number the player could write down and be wrong about. */}
-      {snapshot && (
-        <Checks
-          saves={savingThrowChecksFor(snapshot)}
-          skills={skillChecksFor(snapshot)}
-          accent={accent}
-        />
-      )}
 
       {/* What the character may wear and swing. Until now the only place this
           existed was inside the Foundry exporter, so a player who never
@@ -387,79 +414,26 @@ export default function LiveSheet({
         </p>
       )}
 
-      {derived?.spellcasting && (
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <Vital label="CD salv" value={derived.spellcasting.saveDC} accent={accent} />
-          <Vital
-            label="At. conjuro"
-            value={`${derived.spellcasting.attackBonus >= 0 ? "+" : ""}${derived.spellcasting.attackBonus}`}
-            accent={accent}
-          />
-        </div>
-      )}
-
-      {/* ---- abilities ---- */}
-      <div className="mt-6 space-y-2.5">
-        {ABILITY_IDS.map((ability) => {
-          const source = sources[ability];
-          const score = scores[ability];
-          const modifier = Math.floor((score - 10) / 2);
-          const added = source.species + source.improvements + source.feats;
-
-          return (
-            <div key={ability}>
-              <div className="flex items-center justify-between gap-3">
-                <span
-                  className="font-mono text-[10px] tracking-[0.3em] text-bone/60"
-                  title={abilityLabels[ability]}
-                >
-                  {ability.toUpperCase()}
-                </span>
-                <div className="flex items-center gap-3">
-                  <div className="h-px w-14 bg-iron/60">
-                    <motion.div
-                      className="h-px"
-                      animate={{ width: `${Math.min(score / BAR_CEILING, 1) * 100}%` }}
-                      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-                      style={{ background: accent }}
-                    />
-                  </div>
-                  <span className="w-6 text-right font-mono text-[10px] text-ember">
-                    {added > 0 ? `+${added}` : ""}
-                  </span>
-                  <span
-                    className="w-6 text-right font-display text-sm font-bold"
-                    style={{ color: accent }}
-                  >
-                    {score}
-                  </span>
-                  <span className="w-7 text-right font-mono text-[10px] text-bone/60">
-                    {modifier >= 0 ? `+${modifier}` : modifier}
-                  </span>
-                </div>
-              </div>
-
-              {/*
-                Where the points came from, spelled out under the score.
-                A "+3" on its own does not tell a player whether they can still
-                move it — a species bonus is fixed, an improvement is theirs to
-                spend elsewhere, and a half-feat's +1 comes with the feat.
-                Only drawn where something was actually added, so a character
-                with no bonuses keeps the tight six-row list it had.
-              */}
-              {added > 0 && (
-                <p className="mt-1 pl-1 font-mono text-[10px] leading-none text-bone/60">
-                  {source.base} base
-                  {source.species > 0 && ` · +${source.species} ${bonusOrigin(rulesVersion)}`}
-                  {source.improvements > 0 && ` · +${source.improvements} mejora`}
-                  {source.feats > 0 && ` · +${source.feats} dote`}
-                  {source.capped && <span className="text-ember"> · tope 20</span>}
-                </p>
-              )}
-            </div>
-          );
-        })}
+      {/* Close the right-hand column, and the two-column band with it. */}
       </div>
+      </div>
+
+      {/*
+        How this character fights, full width under both columns.
+
+        Saves and skills are eighteen rows of number-plus-name; in half a
+        column they wrap, and wrapped is unreadable for the one block a player
+        scans mid-turn. Only once the draft derives — a modifier with no
+        proficiency bonus behind it is a number they would write down and be
+        wrong about.
+      */}
+      {snapshot && (
+        <Checks
+          saves={savingThrowChecksFor(snapshot)}
+          skills={skillChecksFor(snapshot)}
+          accent={accent}
+        />
+      )}
 
       {/* ---- the seal ---- */}
       <motion.div
@@ -511,6 +485,89 @@ export default function LiveSheet({
         </div>
       )}
     </motion.aside>
+  );
+}
+
+/**
+ * The six scores, with where each point came from.
+ *
+ * Its own component because the aside is long enough already, and because
+ * the two-column split moved this whole block: sixty lines of JSX travelling
+ * between columns is sixty lines of diff nobody can read.
+ */
+function AbilityRows({
+  scores,
+  sources,
+  rulesVersion,
+  accent,
+}: {
+  scores: Record<(typeof ABILITY_IDS)[number], number>;
+  sources: ReturnType<typeof abilitySources>;
+  rulesVersion: ReturnType<typeof rulesVersionOf>;
+  accent: string;
+}) {
+  return (
+    <div className="mt-6 space-y-2.5">
+      {ABILITY_IDS.map((ability) => {
+        const source = sources[ability];
+        const score = scores[ability];
+        const modifier = Math.floor((score - 10) / 2);
+        const added = source.species + source.improvements + source.feats;
+
+        return (
+          <div key={ability}>
+            <div className="flex items-center justify-between gap-3">
+              <span
+                className="font-mono text-[10px] tracking-[0.3em] text-bone/60"
+                title={abilityLabels[ability]}
+              >
+                {ability.toUpperCase()}
+              </span>
+              <div className="flex items-center gap-3">
+                <div className="h-px w-14 bg-iron/60">
+                  <motion.div
+                    className="h-px"
+                    animate={{ width: `${Math.min(score / BAR_CEILING, 1) * 100}%` }}
+                    transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+                    style={{ background: accent }}
+                  />
+                </div>
+                <span className="w-6 text-right font-mono text-[10px] text-ember">
+                  {added > 0 ? `+${added}` : ""}
+                </span>
+                <span
+                  className="w-6 text-right font-display text-sm font-bold"
+                  style={{ color: accent }}
+                >
+                  {score}
+                </span>
+                <span className="w-7 text-right font-mono text-[10px] text-bone/60">
+                  {modifier >= 0 ? `+${modifier}` : modifier}
+                </span>
+              </div>
+            </div>
+
+            {/*
+              Where the points came from, spelled out under the score.
+              A "+3" on its own does not tell a player whether they can still
+              move it — a species bonus is fixed, an improvement is theirs to
+              spend elsewhere, and a half-feat's +1 comes with the feat.
+              Only drawn where something was actually added, so a character
+              with no bonuses keeps the tight six-row list it had.
+            */}
+            {added > 0 && (
+              <p className="mt-1 pl-1 font-mono text-[10px] leading-none text-bone/60">
+                {source.base} base
+                {source.species > 0 && ` · +${source.species} ${bonusOrigin(rulesVersion)}`}
+                {source.improvements > 0 && ` · +${source.improvements} mejora`}
+                {source.feats > 0 && ` · +${source.feats} dote`}
+                {source.capped && <span className="text-ember"> · tope 20</span>}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

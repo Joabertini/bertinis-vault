@@ -153,10 +153,32 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    Medido al arreglarlo: con el borrador del test (guerrero 2024 nivel 5) el
    riel abre **5 de 8** y cierra en Dones. El test viejo pasaba igual.
 
-5. **La preview en dos columnas.** El reparto está decidido —a la izquierda lo
-   que se calcula, a la derecha lo que se lee, "cómo pelea" abajo a ancho
-   completo— pero hay que medir contra la ficha real qué campos existen antes
-   de mover nada.
+5. ~~**La preview en dos columnas.**~~ Hecha, sobre la **ficha viva**.
+
+   Medir primero contestó cuál era la superficie: `Vision.tsx` —el
+   desplegable del tomo— **ya es dos columnas con tabs**, así que el ítem no
+   era ese. La que estaba en una sola columna era `LiveSheet.tsx`, la tira de
+   340 px al costado de la Forja.
+
+   **El reparto terminó siendo por forma, no por tema.** Lo que la ficha
+   *calcula* se lee como fichas y números; lo que *afirma* se lee como frases
+   y listas. Corridos en una tira sola se turnaban, así que las aptitudes —el
+   bloque que un jugador mira más— quedaban debajo de seis párrafos de prosa.
+
+   - **Calcula:** PG · CA · Comp / Inic · Perc pas · Vel / V. oscura · Tam /
+     CD salv · At. conjuro / las seis aptitudes con su procedencia.
+   - **Afirma:** velocidades extra, bolsa, dado de golpe, competencias de
+     equipo, rasgos de especie, conjuros que ya tenés.
+   - **Ancho completo abajo:** tiradas de salvación y pericia. Son dieciocho
+     filas de número más nombre; en media columna envuelven, y envuelto es
+     ilegible para el único bloque que se mira a mitad de turno.
+
+   Sólo de `xl` para arriba, donde la ficha pasa a 460 px. Por debajo la
+   cámara no puede ceder ese ancho sin dejar la estantería de tarjetas en una
+   sola columna, así que nada cambia.
+
+   Las aptitudes salieron a `AbilityRows`: sesenta líneas de JSX viajando
+   entre columnas son sesenta líneas de diff que nadie lee.
 
 6. **La hoja estilo roll20 al abrir el tomo**, con la cheatsheet como opción
    intercambiable. Es la más grande de la lista y se parte en features propias

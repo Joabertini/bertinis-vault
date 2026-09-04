@@ -111,6 +111,17 @@ against what you can carry (#57); attunement and its three slots (#59).
   judges. Shown, not enforced: refusing a pick over a requirement the code
   cannot read would be inventing a verdict.
 
+### The living record, in two columns
+- Split by form rather than by topic, from `xl` up: what the sheet **computes**
+  reads as tiles and numbers, what it **states** reads as sentences and lists.
+  Run as one 340px strip they took turns, so the ability scores — the block a
+  player checks most — sat under six paragraphs of prose.
+- Saves and skills moved full width under both columns. Eighteen rows of
+  number-plus-name wrap in half a column, and wrapped is unreadable for the one
+  block anyone reads mid-turn.
+- Below `xl` nothing changes: the chamber cannot give up 460px without leaving
+  the card shelf in a single column.
+
 ### Documentation
 - The build order was closed (#41) and the handoff brought back in line with
   what shipped (#67).
