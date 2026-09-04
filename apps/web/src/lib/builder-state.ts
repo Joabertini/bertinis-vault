@@ -95,6 +95,15 @@ export type BuilderState = {
   alignment: string;
   raceId: string;
   subraceId: string;
+  /**
+   * Which size the player chose, for the species that offer two.
+   *
+   * Kept as the index's own letter — `"S"` or `"M"` — rather than the `dnd5e`
+   * key, so checking that the answer is still legal is a lookup in the same
+   * list the question was drawn from. Empty for the species that offer one,
+   * which answer for themselves, and empty until the player answers.
+   */
+  sizeChoice: string;
   classId: string;
   subclassId: string;
   /**
@@ -320,6 +329,7 @@ export const initialState: BuilderState = {
   alignment: "Neutral Bueno",
   raceId: "human",
   subraceId: "",
+  sizeChoice: "",
   classId: "wizard",
   subclassId: "school-of-evocation",
   backgroundId: "sage",
@@ -387,6 +397,10 @@ export function coerceBuilderState(value: unknown): BuilderState {
     alignment: typeof candidate.alignment === "string" ? candidate.alignment : initialState.alignment,
     raceId: typeof candidate.raceId === "string" ? candidate.raceId : initialState.raceId,
     subraceId: typeof candidate.subraceId === "string" ? candidate.subraceId : initialState.subraceId,
+    // Absent on every character saved before the question existed, and empty
+    // is the right reading of that: they were never asked. `sizeFor` re-checks
+    // the answer against what the species offers, so a stale one cannot stick.
+    sizeChoice: typeof candidate.sizeChoice === "string" ? candidate.sizeChoice : "",
     classId: typeof candidate.classId === "string" ? candidate.classId : initialState.classId,
     subclassId: typeof candidate.subclassId === "string" ? candidate.subclassId : initialState.subclassId,
     backgroundId:

@@ -91,8 +91,8 @@ describe("what a species suggests you look like", () => {
   };
 
   it("gives a dwarf a dwarf's build and a goliath a goliath's", () => {
-    const dwarf = suggestAppearance("dwarf", "", "2014", fixed([0]));
-    const goliath = suggestAppearance("goliath", "", "2014", fixed([0]));
+    const dwarf = suggestAppearance("dwarf", "", "2014", null, fixed([0]));
+    const goliath = suggestAppearance("goliath", "", "2014", null, fixed([0]));
 
     expect(dwarf?.height).toBe("1,22 m");
     expect(goliath?.height).toBe("2,13 m");
@@ -100,7 +100,7 @@ describe("what a species suggests you look like", () => {
 
   it("answers in the units the sheet asks for", () => {
     // The boxes are Spanish and their own placeholders read "1,75 m", "70 kg".
-    const human = suggestAppearance("human", "", "2014", fixed([0.5]));
+    const human = suggestAppearance("human", "", "2014", null, fixed([0.5]));
 
     expect(human?.height).toMatch(/^\d,\d\d m$/);
     expect(human?.weight).toMatch(/^\d+ kg$/);
@@ -109,7 +109,7 @@ describe("what a species suggests you look like", () => {
   it("gives a species it has no palette for a build and no invented colours", () => {
     // Inventing a palette for a species whose book nobody here has read would
     // put a wrong fact on a sheet. A blank box is a question the player answers.
-    const suggestion = suggestAppearance("loxodon", "", "2014", fixed([0.5]));
+    const suggestion = suggestAppearance("loxodon", "", "2014", null, fixed([0.5]));
 
     expect(suggestion?.height).not.toBe("");
     expect(suggestion?.eyes).toBe("");
@@ -119,5 +119,24 @@ describe("what a species suggests you look like", () => {
 
   it("says nothing when there is no species yet", () => {
     expect(suggestAppearance("", "", "2014")).toBeNull();
+  });
+
+  it("follows the chosen size for a species that offers two", () => {
+    // The 2024 human is `["S","M"]`. A Small one and a Medium one are a metre
+    // apart, so the suggestion has to follow the answer and not the species.
+    const small = suggestAppearance("human", "", "2024", "S", fixed([0]));
+    const medium = suggestAppearance("human", "", "2024", "M", fixed([0]));
+
+    expect(small?.height).toBe("0,86 m");
+    expect(medium?.height).toBe("1,47 m");
+  });
+
+  it("reads an unanswered size as Medium rather than as the first letter", () => {
+    // Falling to `sizes[0]` would make every unanswered 2024 human Small,
+    // which is the bug the array replaced.
+    const unanswered = suggestAppearance("human", "", "2024", null, fixed([0]));
+    const medium = suggestAppearance("human", "", "2024", "M", fixed([0]));
+
+    expect(unanswered?.height).toBe(medium?.height);
   });
 });

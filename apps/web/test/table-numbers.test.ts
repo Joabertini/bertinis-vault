@@ -8,6 +8,7 @@ import {
   sensesFor,
   sizeFor,
   sizeLabelFor,
+  sizeOptionsFor,
   speedFor,
 } from "../src/lib/table-numbers";
 
@@ -104,6 +105,61 @@ describe("el tamano", () => {
 
   test("llega al payload", () => {
     const snapshot = buildCanonicalSnapshot({ ...at("gnome"), classId: "wizard", level: 1 });
+    expect(snapshot.ancestry.size).toBe("sm");
+  });
+});
+
+/*
+ * Treinta especies imprimen dos tamanos y el libro se lo pregunta al jugador.
+ * El indice guardaba solo la primera letra, asi que las treinta salian
+ * Pequenas: un humano de 2024 llegaba a la mesa en una casilla Pequena y
+ * cargando la mitad del peso.
+ */
+describe("las especies que ofrecen dos tamanos preguntan", () => {
+  const at = (raceId: string, over: Partial<BuilderState> = {}): BuilderState => ({
+    ...initialState,
+    abilityBonuses: {},
+    levelChoices: {},
+    sourceBooks: {},
+    rulesVersion: "5e-2024",
+    raceId,
+    subraceId: "",
+    sizeChoice: "",
+    ...over,
+  });
+
+  test("el humano de 2024 ofrece Pequeno y Mediano; el enano de 2014 no ofrece nada", () => {
+    expect(sizeOptionsFor(at("human"), "2024")).toEqual(["S", "M"]);
+    expect(sizeOptionsFor(at("dwarf", { rulesVersion: "5e-2014" }), "2014")).toEqual(["M"]);
+  });
+
+  test("sin respuesta no se afirma un tamano", () => {
+    // Lo contrario — quedarse con la primera letra — es exactamente el bug.
+    expect(sizeFor(at("human"), "2024")).toBeNull();
+    expect(foundrySizeFor(at("human"), "2024")).toBeNull();
+  });
+
+  test("la respuesta del jugador es la que viaja", () => {
+    expect(foundrySizeFor(at("human", { sizeChoice: "S" }), "2024")).toBe("sm");
+    expect(foundrySizeFor(at("human", { sizeChoice: "M" }), "2024")).toBe("med");
+  });
+
+  test("una especie que ofrece uno contesta sola", () => {
+    // Nadie tiene que responder una pregunta que no se hizo.
+    expect(foundrySizeFor(at("goliath", { rulesVersion: "5e-2014" }), "2014")).toBe("med");
+  });
+
+  test("una respuesta que la nueva especie no ofrece no se hereda", () => {
+    // Un jugador que eligio Pequeno como humano y despues se rehizo enano no
+    // se lleva la respuesta puesta: el enano nunca pregunto.
+    const dwarf = at("dwarf", { rulesVersion: "5e-2014", sizeChoice: "S" });
+    expect(foundrySizeFor(dwarf, "2014")).toBe("med");
+  });
+
+  test("llega al payload con la letra elegida", () => {
+    const snapshot = buildCanonicalSnapshot(
+      at("human", { sizeChoice: "S", classId: "wizard", level: 1, backgroundId: "acolyte" }),
+    );
     expect(snapshot.ancestry.size).toBe("sm");
   });
 });

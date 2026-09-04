@@ -118,7 +118,7 @@ import { chamberOrder, firstChamber, type ChamberKey } from "@/lib/chambers";
 import { hitPointLevelsFor } from "@/lib/hit-points";
 import { carriedLoadFor } from "@/lib/carrying";
 import { attunementStateFor } from "@/lib/attunement";
-import { foundrySizeFor } from "@/lib/table-numbers";
+import { foundrySizeFor, sizeFor, sizeNameOf, sizeOptionsFor } from "@/lib/table-numbers";
 import Attunement from "@/components/forge/Attunement";
 import CarryingLoad from "@/components/forge/CarryingLoad";
 import HitPoints from "@/components/forge/HitPoints";
@@ -298,6 +298,12 @@ export default function Forge() {
   const speciesGranted = useMemo(
     () => [...(speciesGrant?.skills.granted ?? []), ...(speciesGrant?.tools.granted ?? [])],
     [speciesGrant],
+  );
+
+  /* The sizes this species offers. One for most, two for thirty of them. */
+  const sizeOptions = useMemo(
+    () => sizeOptionsFor(draft, rulesVersion),
+    [draft.raceId, draft.subraceId, rulesVersion],
   );
   const otherGranted = useMemo(
     () => granted.filter((entry) => !speciesGranted.includes(entry)),
@@ -892,7 +898,14 @@ export default function Forge() {
    * half-filled sheet fills the rest rather than rerolling the lot.
    */
   const suggestLooks = () => {
-    const suggestion = suggestAppearance(draft.raceId, draft.subraceId, rulesVersion);
+    const suggestion = suggestAppearance(
+      draft.raceId,
+      draft.subraceId,
+      rulesVersion,
+      // A Small human and a Medium one are a metre apart, so the suggestion
+      // follows the answer rather than the species' first letter.
+      sizeFor(draft, rulesVersion),
+    );
     if (!suggestion) return;
 
     const patch: Partial<typeof draft> = {};
@@ -1396,6 +1409,22 @@ export default function Forge() {
                       onPick={(entry) => pick("subrace", entry)}
                       accent={VAULT_GOLD}
                       note="La subraza queda guardada, pero todavia no cruza a Foundry."
+                    />
+                  )}
+
+                  {/* Thirty species offer two sizes and the books hand the
+                      choice to the player. Until this existed the first letter
+                      won, and every one of them exported as Small.
+
+                      Below the branch because the offer is read off the merged
+                      row: no subrace states a size today, and the day one does
+                      the question has to be asked about the merged species. */}
+                  {sizeOptions.length > 1 && (
+                    <SizeChoice
+                      options={sizeOptions}
+                      value={draft.sizeChoice}
+                      accent={VAULT_GOLD}
+                      onPick={(letter) => patchDraft({ sizeChoice: letter })}
                     />
                   )}
                 </div>
@@ -2357,6 +2386,69 @@ function VariantChoices({
         />
       ))}
     </>
+  );
+}
+
+/**
+ * The size question, for the thirty species that ask it.
+ *
+ * Drawn as buttons and not as a fact, because it is a question: the 2024
+ * human, aasimar and tiefling and twenty-seven more print `["S","M"]` and
+ * leave the choice to the player. Reading that as Small — which is what
+ * taking the first letter did — sent every one of them to the table in a
+ * Small square carrying half the weight.
+ *
+ * Pressing the chosen one again clears it, and unanswered is a legal state:
+ * the field simply does not travel, and Foundry reads an absent size as
+ * Medium. So the note says what silence will mean rather than barring the way.
+ */
+function SizeChoice({
+  options,
+  value,
+  accent,
+  onPick,
+}: {
+  options: string[];
+  value: string;
+  accent: string;
+  onPick: (letter: string) => void;
+}) {
+  return (
+    <div className={DIVIDER_TIGHT}>
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <span className={LABEL}>Tamano</span>
+        <span className={WHISPER}>Esta especie se juega en dos tamanos.</span>
+      </div>
+
+      <div className="mt-5 flex flex-wrap gap-1.5">
+        {options.map((letter) => {
+          const chosen = letter === value;
+
+          return (
+            <button
+              key={letter}
+              type="button"
+              aria-pressed={chosen}
+              onClick={() => onPick(chosen ? "" : letter)}
+              className="border px-3 py-1.5 font-body text-[13px] transition-colors"
+              style={
+                chosen
+                  ? { borderColor: accent, background: `${accent}1f`, color: accent }
+                  : { borderColor: "rgba(74,70,64,0.7)", color: "#E6DFCE" }
+              }
+            >
+              {sizeNameOf(letter)}
+            </button>
+          );
+        })}
+      </div>
+
+      {!value && (
+        <p className={`mt-4 ${WHISPER}`}>
+          Sin elegir sale como Mediano, que es lo que Foundry entiende cuando no se dice nada.
+        </p>
+      )}
+    </div>
   );
 }
 

@@ -173,6 +173,7 @@ function freshDraft(rulesVersion: BuilderRulesVersion): BuilderState {
     notes: "",
     raceId: "",
     subraceId: "",
+    sizeChoice: "",
     classId: "",
     subclassId: "",
     backgroundId: "",
@@ -466,7 +467,12 @@ export function releasedByPick(
     const shed: string[] = [];
     if (draft.subraceId) shed.push("la subraza");
     if (Object.keys(draft.abilityBonuses).length > 0) shed.push("la mejora de especie");
-    return { patch: { subraceId: "", abilityBonuses: {} }, shed };
+    // Only thirty species ask about size, so an answer carried onto the next
+    // one is an answer to a question the new species never posed. `sizeFor`
+    // re-checks it anyway and would ignore it; clearing it here is what makes
+    // the Forge say so out loud instead of dropping it in silence.
+    if (draft.sizeChoice) shed.push("el tamano elegido");
+    return { patch: { subraceId: "", sizeChoice: "", abilityBonuses: {} }, shed };
   }
 
   const shed: string[] = [];

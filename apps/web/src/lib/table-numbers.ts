@@ -80,16 +80,39 @@ export function sensesFor(state: BuilderState, rulesVersion: RulesVersion): Race
   };
 }
 
-/** Small, Medium — whatever the race prints. Null when it prints nothing. */
-export function sizeFor(state: BuilderState, rulesVersion: RulesVersion): string | null {
-  if (!state.raceId) return null;
+/**
+ * Every size this species offers, in 5etools' letters.
+ *
+ * One for most, and two — always Small and Medium — for the thirty that let
+ * the player decide: the 2024 human, aasimar and tiefling, plus twenty-seven
+ * from the later 2014 books. Empty when the species states none, and empty
+ * for the one species that prints `"V"` for variable, because `dnd5e` has no
+ * key for "it depends" and inventing one would put a size on the sheet nobody
+ * chose.
+ */
+export function sizeOptionsFor(state: BuilderState, rulesVersion: RulesVersion): string[] {
+  if (!state.raceId) return [];
   const row = raceInfoFor(state.raceId, state.subraceId, rulesVersion) as
-    | { size?: string | string[] | null }
+    | { sizes?: string[] | null }
     | null;
 
-  const size = row?.size;
-  if (Array.isArray(size)) return size[0] ?? null;
-  return typeof size === "string" && size ? size : null;
+  return (row?.sizes ?? []).filter((letter) => letter in FOUNDRY_SIZE);
+}
+
+/**
+ * The size the character actually is, in 5etools' letters.
+ *
+ * A species offering one answers for itself. A species offering two waits for
+ * the player, and stays null until they answer — an unanswered question is not
+ * the first option. The stored answer is re-checked against the offer, so a
+ * player who picked Small as a halfling and then reforged as a goliath does
+ * not carry the halfling's answer onto a species that never asked.
+ */
+export function sizeFor(state: BuilderState, rulesVersion: RulesVersion): string | null {
+  const options = sizeOptionsFor(state, rulesVersion);
+  if (options.length === 1) return options[0]!;
+  if (options.length > 1 && options.includes(state.sizeChoice)) return state.sizeChoice;
+  return null;
 }
 
 const modifier = (score: number) => Math.floor((score - 10) / 2);
@@ -156,12 +179,11 @@ const SIZE_LABEL: Record<string, string> = {
 };
 
 /**
- * The size as Foundry keys it, or null when the species does not say.
+ * The size as Foundry keys it, or null when nothing has answered for it yet.
  *
- * One species in 2014 prints `"V"` — variable, meaning the player chooses at
- * creation. Read as nothing rather than guessed: picking one for them would
- * put a size on the sheet they never chose, and Medium is what an absent size
- * already means.
+ * Null travels as an absent field, and Foundry reads an absent size as Medium
+ * — which is what an unanswered question should look like on the sheet, and
+ * what it looked like before any of this existed.
  */
 export function foundrySizeFor(
   state: BuilderState,
@@ -175,4 +197,10 @@ export function foundrySizeFor(
 export function sizeLabelFor(state: BuilderState, rulesVersion: RulesVersion): string | null {
   const size = foundrySizeFor(state, rulesVersion);
   return size ? (SIZE_LABEL[size] ?? null) : null;
+}
+
+/** One of 5etools' letters, said the same way — for the question, not the sheet. */
+export function sizeNameOf(letter: string): string {
+  const key = FOUNDRY_SIZE[letter];
+  return (key && SIZE_LABEL[key]) || letter;
 }

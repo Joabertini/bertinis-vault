@@ -8,9 +8,10 @@
  *
  * Two sources, kept apart on purpose:
  *
- * - **Size, from the index.** Every species row carries it, so height, weight
- *   and build come out of data for all 258 of them rather than out of a list
- *   written here.
+ * - **Size, from the index and from the player.** The row carries what the
+ *   species offers, so height, weight and build come out of data rather than
+ *   out of a list written here. Thirty species offer two sizes and the answer
+ *   is the player's, which is why it arrives as an argument.
  * - **Colouring, from a short table below.** The index does not carry it. The
  *   books print it per species and the source bundle those rows are generated
  *   from is not in this repository, so the alternative to a table is nothing.
@@ -205,6 +206,12 @@ function between([low, high]: [number, number], random: () => number): number {
 /**
  * A suggested appearance for a species, or null when there is no species yet.
  *
+ * `size` is passed in rather than read off the species, because thirty species
+ * offer two and only the player's answer says which. A Small human and a
+ * Medium one are a metre apart, so guessing here would fill the height box
+ * with a number the sheet then contradicts. Absent falls back to Medium, which
+ * is what an unanswered size already means everywhere else.
+ *
  * `random` is a parameter so a test can hand it a fixed sequence. Left out, it
  * is `Math.random` and every press of the button gives a different character.
  */
@@ -212,6 +219,7 @@ export function suggestAppearance(
   raceId: string,
   subraceId: string,
   rulesVersion: RulesVersion,
+  size: string | null = null,
   random: () => number = Math.random,
 ): Appearance | null {
   if (!raceId) return null;
@@ -220,7 +228,11 @@ export function suggestAppearance(
   // hill dwarf and a mountain dwarf are not the same weight.
   const row = raceInfoFor(raceId, subraceId, rulesVersion);
   const palette = PALETTES[raceId];
-  const build = BUILD[row?.size ?? "M"] ?? BUILD.M!;
+  // A species that offers one size answers for itself. One that offers two and
+  // has not been answered falls to Medium rather than to the first letter,
+  // because reading `["S","M"]` as Small is the whole bug this replaced.
+  const offered = row?.sizes ?? [];
+  const build = BUILD[size ?? (offered.length === 1 ? offered[0]! : "M")] ?? BUILD.M!;
 
   const inches = between(palette?.inches ?? build.inches, random);
   const pounds = between(palette?.pounds ?? build.pounds, random);

@@ -70,6 +70,18 @@ against what you can carry (#57); attunement and its three slots (#59).
   vitest was starting eight forks on a disk that gives 18 IOPS. Threads instead
   of forks, 111s instead of 219s.
 
+### Size is a question, not the first letter
+- The index kept `r.size?.[0]`, one letter, and **thirty species print two** —
+  always `["S","M"]`, the 2024 human, aasimar and tiefling among them. All
+  thirty exported as Small: a Small square at the table and half the carrying
+  capacity, on a character nobody built that way. The row now carries the whole
+  offer, the Lineage chamber asks, and an unanswered size travels as nothing —
+  which Foundry reads as Medium, exactly as it did before any of this existed.
+- The suggested appearance follows the answer too. A Small human and a Medium
+  one are a metre apart, and the height box was filling with the Small one.
+- Pinned in `index-data.test.ts` against the shipped rows rather than in the
+  front: the front cannot ask a question the data already answered for it.
+
 ### Documentation
 - The build order was closed (#41) and the handoff brought back in line with
   what shipped (#67).

@@ -176,7 +176,18 @@ export type LanguageGrant = {
 };
 
 export type RaceRow = IndexRow & {
-  size: string | null;
+  /**
+   * The sizes this species offers, as 5etools' letters — `["S","M"]`.
+   *
+   * Plural because thirty species genuinely offer two and the player picks
+   * one at creation. It was singular, holding the first letter, and that made
+   * every one of those thirty a Small character: the 2024 human exported as
+   * `sm`, which halves carrying capacity and shrinks the square they stand in.
+   *
+   * Null when the species states none, which is what leaves the sheet at
+   * Medium — the same thing an absent size already meant.
+   */
+  sizes: string[] | null;
   /** The fixed part of the species bonus. Null when the player chooses it. */
   ability: AbilityBonuses | null;
   speed: number | null;

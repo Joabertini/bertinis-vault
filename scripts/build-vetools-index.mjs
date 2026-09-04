@@ -1972,7 +1972,19 @@ const BUILDERS = {
     entities.map((r) => ({
       name: r.name,
       source: sourceOf(r),
-      size: r.size?.[0] ?? null,
+      // Every size the species offers, not the first one.
+      //
+      // Thirty species print two — always `["S","M"]`: the 2024 Aasimar,
+      // Human and Tiefling, and twenty-seven more from MPMM, VRGR, AAG and
+      // the rest. Keeping `[0]` exported every one of them as Small, so a
+      // 2024 human reached the table occupying a Small square and carrying
+      // half the weight. The books state it as a question for the player,
+      // and a question is not a fact to pick the first answer of.
+      //
+      // Null rather than `[]` when the species says nothing, because
+      // `raceInfoFor` merges a subrace over its race by skipping nulls: an
+      // empty array is a value and would erase the race's own sizes.
+      sizes: Array.isArray(r.size) && r.size.length > 0 ? r.size : null,
       ability: abilityOf(r),
       speed: typeof r.speed === "number" ? r.speed : r.speed?.walk ?? null,
       // Flying, swimming, climbing and burrowing, for the species that do.
