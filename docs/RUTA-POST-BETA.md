@@ -204,7 +204,13 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
 
 8. **La capa derivada de símbolos.**
 
-9. **Competencias de armas y armaduras por dotes, e idiomas por dotes.**
+9. **Competencias de armas y armaduras por dotes** — hecha. Faltan los
+   **idiomas por dotes**, que son otra cañería: `languagePlanFor` y
+   `assignLanguages`, no `gearProficienciesFor`. Y traen una forma que ninguna
+   otra fuente usa: cinco dotes escriben `any: N` donde las 66 especies y
+   trasfondos escriben `anyStandard`. No son lo mismo — `anyStandard` son los
+   ocho idiomas estándar y `any` es cualquiera — así que reusar el lector tal
+   cual metería un idioma llamado "Any" en la ficha.
 
 10. **El sugeridor de builds.** Aparcado por pedido, y con una pregunta sin
     responder que hay que cortar antes de escribir una línea: biblioteca de
@@ -226,14 +232,20 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
 - De las 31 clases del índice, las únicas cuatro sin equipo inicial son Rune
   Scribe y los tres auxiliares de Tasha.
 - **Las competencias de armas y armaduras sí llegan al personaje** desde la
-  clase y la especie: `gearProficienciesFor` las recibe y la ficha viva las
-  muestra. Lo que falta es la fuente *dote*. El ítem 9 es sumar una fuente, no
-  construir la cañería.
+  clase, la especie y —desde el ítem 9— la dote.
+- Los números que circulaban eran correctos y ahora están contados contra el
+  bundle: **cuatro** dotes declaran armas, **seis** declaran armaduras y
+  **siete** declaran idiomas, sobre 276. Diez en total tocan equipo.
+- El escudo cambia de dote entre ediciones: **2014 lo da Moderately Armored,
+  2024 lo da Lightly Armored**. Y tres de las cuatro dotes de armas existen en
+  una sola edición: Gunner no llega a 2024, Weapon Master no sobrevive, y la
+  Tavern Brawler de 2014 no dice nada de armas.
+- Las dotes son la **única** fuente del bundle que escribe `martial`,
+  `improvised`, `shield` y `any`. Ninguna especie, subespecie ni trasfondo usa
+  esas cuatro claves.
 
 **Sin medir, y hay que medirlo antes de prometer nada.**
 
-- Cuántas dotes declaran armas, armaduras e idiomas. Los números que circulan
-  —cuatro, seis, siete— vienen de la conversación, no del bundle.
 - Si el índice guarda texto de objetos. Si no lo guarda, los globos con impacto
   mecánico no tienen de dónde salir y el ítem cambia de forma. `spellInfoFor`
   ya dice que el texto de los conjuros no está.

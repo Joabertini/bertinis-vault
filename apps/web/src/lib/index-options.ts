@@ -19,6 +19,7 @@ import {
   type FeatChoice,
   type IndexRow,
   type FeatAbilityGrant,
+  type FeatGearGrant,
   type FeatPrerequisite,
   type FeatRow,
   type ItemRow,
@@ -38,6 +39,8 @@ import {
 } from "@bertinis-vault/domain";
 import type { MulticlassGrants } from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
+
+import type { FeatGrant } from "./gear-proficiencies";
 
 export type IndexOption = {
   /** The slug a build stores. Matches how `RefResolver` looks names up. */
@@ -760,6 +763,43 @@ export function featAbilityGrantsFor(
 ): FeatAbilityGrant[] {
   const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
   return legal.find((row) => slugOf(row.name) === featId)?.ability ?? [];
+}
+
+/**
+ * What these feats let the character wear and swing.
+ *
+ * Read per rules version and not once, because the two editions disagree about
+ * the shield: under 2014 it comes with Moderately Armored, under 2024 with
+ * Lightly Armored. A character who took the feat under one set of books and is
+ * read under the other would be handed a shield they never bought, or lose one
+ * they did.
+ *
+ * The feat's name travels with the grant. On a single-class sheet there is no
+ * other way to answer "where did the heavy armour come from", and that is the
+ * only question this data is ever asked.
+ */
+export function featGearGrantsFor(
+  featIds: readonly string[],
+  rulesVersion: RulesVersion,
+): FeatGrant[] {
+  const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
+  const grants: FeatGrant[] = [];
+
+  for (const featId of featIds) {
+    const row = legal.find((entry) => slugOf(entry.name) === featId);
+    const gear: FeatGearGrant | null = row?.gear ?? null;
+    if (!row || !gear) continue;
+
+    grants.push({
+      id: featId,
+      label: row.name,
+      armor: gear.armor,
+      weaponCategories: gear.weaponCategories,
+      weaponClauses: gear.weaponClauses,
+    });
+  }
+
+  return grants;
 }
 
 /**

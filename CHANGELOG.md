@@ -142,6 +142,31 @@ against what you can carry (#57); attunement and its three slots (#59).
   `"[object Object]"`. `masteryOf` had already learned this in the field next
   door, with the lesson written above it; `property` never received it.
 
+### What a feat lets you wear and swing
+- Ten feats state armour or weapons and none of them reached the character. A
+  wizard could spend a whole level on **Heavily Armored** and the sheet would
+  still say they could not wear plate, and the Gear chamber would still warn
+  that the leather they bought costs them their spells.
+- Read per rules version, because the two editions disagree about the shield:
+  **2014 puts it on Moderately Armored, 2024 on Lightly Armored.** A single
+  hand-written table would have been wrong for half of every character.
+- Three of the four weapon feats exist under one edition only — Gunner does not
+  reach 2024, Weapon Master does not survive it, and the 2014 Tavern Brawler
+  says nothing about weapons where the 2024 one grants improvised ones.
+- Feats are the only source in the whole bundle that writes `martial`,
+  `improvised` or `shield`. Handing them to the species reader would have filed
+  "martial" as a weapon *name*, and Martial Weapon Training would have granted
+  a base item that matches nothing. The reader throws on anything it does not
+  model rather than guessing.
+- Firearms, improvised weapons and "choose four martial weapons" are shown and
+  grant nothing: dnd5e has no code for the first two, and nothing asks the
+  player to make the third pick yet. The Giff's firearms had been reading
+  `Firearms` in English on a Spanish sheet since species grants landed.
+- The sheet now says **where** a proficiency came from whenever the answer is
+  not the character's only class. It used to credit sources only on a
+  multiclass sheet, so a species' warhammer — and now a feat's plate — appeared
+  with no owner.
+
 ### Documentation
 - The build order was closed (#41) and the handoff brought back in line with
   what shipped (#67).

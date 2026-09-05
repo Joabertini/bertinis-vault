@@ -21,6 +21,8 @@ import Checks from "@/components/forge/Checks";
 import GearProficienciesPanel from "@/components/forge/GearProficiencies";
 import { savingThrowChecksFor, skillChecksFor } from "@/lib/checks";
 import { gearProficienciesFor } from "@/lib/gear-proficiencies";
+import { featGearGrantsFor } from "@/lib/index-options";
+import { featIdsFor } from "@/lib/feats";
 import { grantedSpellsFor } from "@/lib/granted-spells";
 import { speciesProficienciesFor, speciesTraitsFor } from "@/lib/species";
 import { coinLabel } from "@/lib/starting-kit";
@@ -90,18 +92,22 @@ export default function LiveSheet({
   const speciesGrant = state.raceId
     ? speciesProficienciesFor(state.raceId, state.subraceId, rulesVersion, state.sourceBooks)
     : null;
+  // And the ones a feat grants: Heavily Armored is a level spent on plate, and
+  // until now the sheet said the character could not wear it.
+  const featGrants = featGearGrantsFor(featIdsFor(state), rulesVersion);
   const gearProficiencies = classEntries.length
     ? gearProficienciesFor(
         classEntries,
         rulesVersion,
         speciesGrant ? { id: state.raceId, ...speciesGrant } : null,
+        featGrants,
       )
     : null;
   const grantedSpells = grantedSpellsFor(state, rulesVersion);
   const speciesTraits = state.raceId
     ? speciesTraitsFor(state.raceId, state.subraceId, rulesVersion, state.sourceBooks)
     : [];
-  const classLabels = Object.fromEntries([
+  const sourceLabels = Object.fromEntries([
     ...classEntries.map((entry) => [
       entry.classId,
       entryById("class", rulesVersion, entry.classId)?.label ?? entry.classId,
@@ -109,6 +115,8 @@ export default function LiveSheet({
     // The species is credited beside the classes, under the name the player
     // picked it by.
     ...(state.raceId ? [[state.raceId, race?.label ?? state.raceId]] : []),
+    // And the feats, under the name on the feat.
+    ...featGrants.map((grant) => [grant.id, grant.label]),
   ]);
   const subclass = entryById("subclass", rulesVersion, state.subclassId, state.sourceBooks[`subclass:${state.subclassId}`]);
   const background = entryById(
@@ -350,7 +358,8 @@ export default function LiveSheet({
       {gearProficiencies && (
         <GearProficienciesPanel
           proficiencies={gearProficiencies}
-          classLabels={classLabels}
+          sourceLabels={sourceLabels}
+          classIds={classEntries.map((entry) => entry.classId)}
           accent={accent}
         />
       )}
