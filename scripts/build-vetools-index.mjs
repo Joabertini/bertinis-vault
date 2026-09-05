@@ -757,6 +757,25 @@ function spellcastingLevelOf(entity, features) {
  * The note is a rule rather than prose, so it is kept as one: a property that
  * costs no slot is listed separately instead of being described.
  */
+/**
+ * A weapon property's code, from either shape 5etools writes it in.
+ *
+ * `"2H|XPHB"` for almost all of them, and `{uid, note}` where the property
+ * applies only under a condition. Measured: one such entry in the whole
+ * catalogue, the 2024 Lance's `{"uid":"2H|XPHB","note":"unless mounted"}`.
+ *
+ * The note is dropped rather than kept, unlike mastery's: a mastery note
+ * changes how many properties a character may use, which is a number the
+ * builder computes, while this one qualifies a property the sheet only
+ * prints. Carrying it would mean modelling conditional properties for one
+ * weapon; printing `[object Object]` was the cost of not reading it at all.
+ */
+function propertyCodeOf(entry) {
+  if (typeof entry === "string") return entry.split("|")[0];
+  if (!entry?.uid) throw new Error(`unmodelled weapon property: ${JSON.stringify(entry)}`);
+  return String(entry.uid).split("|")[0];
+}
+
 function masteryOf(item) {
   if (!item.mastery?.length) return null;
 
@@ -1918,7 +1937,13 @@ const BUILDERS = {
       damage: i.dmg1 ?? null,
       damageType: i.dmgType ?? null,
       versatileDamage: i.dmg2 ?? null,
-      properties: (i.property ?? []).map((entry) => String(entry).split("|")[0]),
+      // Same two shapes `mastery` has, and the same fix. Nearly every entry is
+      // the string "2H|XPHB"; one is an object carrying a condition — the 2024
+      // Lance is Two-Handed *unless mounted*. `String(entry)` turned that one
+      // into the literal text "[object Object]", which shipped in the index as
+      // a property code no weapon has, on the only weapon whose rule is
+      // conditional. See `masteryOf`, which learned this first.
+      properties: (i.property ?? []).map((entry) => propertyCodeOf(entry)),
       // Simple or martial. `type` says melee or ranged and nothing about the
       // category, so without this there is no way to answer "which martial
       // weapons have the Light property" — which is how the 2024 monk's and
