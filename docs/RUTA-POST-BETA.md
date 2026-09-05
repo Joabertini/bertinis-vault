@@ -180,6 +180,21 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    Las aptitudes salieron a `AbilityRows`: sesenta líneas de JSX viajando
    entre columnas son sesenta líneas de diff que nadie lee.
 
+   **Cimientos puestos (2026-09-04).** Dos cosas que el ítem 6 necesita y no
+   existían:
+
+   - `packages/domain/src/weapon-attack.ts` — **nada en el repo calculaba el
+     bonus de ataque ni el daño de un arma**; `derive.ts` sólo hacía el de
+     conjuro. Va al paquete y no a `lib` porque es regla 5e, y el rumbo es el
+     `.exe`. Melé usa Fuerza, distancia Destreza, finesse la mejor de las dos;
+     la competencia se pregunta, no se adivina.
+   - El `type` del arma **no es `"M"`/`"R"` pelado**: 73 armas cuerpo a cuerpo
+     de 2024 traen `"M|XPHB"`, y **26 filas no traen tipo** (báculos y varas
+     mágicas). Un `=== "M"` habría mandado las 73 a Destreza. Hay conformidad
+     sobre las 325 armas publicadas en `apps/web/test/weapon-attack.test.ts`.
+
+   Y un bug del índice que apareció midiendo: ver el arreglo de `property`.
+
 6. **La hoja estilo roll20 al abrir el tomo**, con la cheatsheet como opción
    intercambiable. Es la más grande de la lista y se parte en features propias
    para no pisarse: primero la hoja, después el selector, después recordar la

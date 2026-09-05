@@ -122,6 +122,26 @@ against what you can carry (#57); attunement and its three slots (#59).
 - Below `xl` nothing changes: the chamber cannot give up 460px without leaving
   the card shelf in a single column.
 
+### What a weapon rolls
+- Nothing in the repository computed a weapon's attack bonus or damage.
+  `derive.ts` produced the *spell* attack and stopped, so the sheet had every
+  number except the line a player rolls on their turn.
+  `packages/domain/src/weapon-attack.ts` has it: melee takes Strength, ranged
+  takes Dexterity, Finesse takes the better of the two, and proficiency is
+  asked of the proficiency layer rather than guessed.
+- The catalogue does not write `type` as a bare `"M"`. **73 of the 2024 melee
+  weapons carry `"M|XPHB"`, and 26 rows carry no type at all** — magic staves,
+  rods and wands. Testing for `"M"` would have handed every 2024 greatsword to
+  Dexterity. Ranged is `R` at the head of the type; everything else is melee,
+  and the whole 325-weapon catalogue is run through the rule in a conformance
+  test rather than asserted from a handful of rows.
+- A weapon property is a code, never a stringified object. 5etools writes
+  `property` as `"2H|XPHB"` almost everywhere and as `{uid, note}` where the
+  property is conditional — the 2024 Lance is Two-Handed *unless mounted* —
+  and `String(entry)` shipped that one to the index as the literal text
+  `"[object Object]"`. `masteryOf` had already learned this in the field next
+  door, with the lesson written above it; `property` never received it.
+
 ### Documentation
 - The build order was closed (#41) and the handoff brought back in line with
   what shipped (#67).

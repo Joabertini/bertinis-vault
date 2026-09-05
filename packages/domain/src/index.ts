@@ -27,3 +27,4 @@ export * from "./class-proficiencies.js";
 export * from "./saving-throws.js";
 export * from "./progression.js";
 export * from "./spellbook.js";
+export * from "./weapon-attack.js";
