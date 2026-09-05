@@ -358,6 +358,39 @@ export type FeatRow = IndexRow & {
    * work.
    */
   skillOrTool: SkillOrToolChoice[];
+  /**
+   * What the feat lets the character wear and swing. `null` for the 266 that
+   * say nothing about either.
+   *
+   * In the books' words, not dnd5e's codes: `light` and `martial`, never `lgt`
+   * and `mar`. The layer that exports to Foundry owns that table already, and
+   * the index has no business holding a second copy of it.
+   */
+  gear: FeatGearGrant | null;
+};
+
+/**
+ * Armour and weapons from one feat, split by what a sheet can do with each.
+ *
+ * A category is a checkbox, a named weapon is a checkbox, and a rule is a
+ * sentence — the same three-way split a class's proficiencies take, because a
+ * player reads them the same three ways.
+ */
+export type FeatGearGrant = {
+  /** `light`, `medium`, `heavy`, `shield`. */
+  armor: string[];
+  /** `simple`, `martial`. */
+  weaponCategories: string[];
+  /** Weapon names as the books print them. No feat states one today. */
+  weaponItems: string[];
+  /**
+   * Rules, as sentences.
+   *
+   * Firearms and improvised weapons are categories dnd5e has no base item for,
+   * and "choose four martial weapons" is a pick nothing asks for yet. All
+   * three are shown and none of them grant.
+   */
+  weaponClauses: string[];
 };
 
 /** "Choose `count` from these kinds", with no list of members to choose from. */
