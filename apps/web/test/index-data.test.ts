@@ -158,6 +158,44 @@ describe("the sizes a species offers", () => {
   });
 });
 
+/*
+ * Una propiedad de arma es un codigo, nunca un objeto stringificado.
+ *
+ * 5etools escribe `property` de dos formas: casi siempre `"2H|XPHB"`, y como
+ * `{uid, note}` cuando la propiedad vale solo bajo una condicion. El
+ * generador hacia `String(entry)`, asi que la unica que es objeto -- la Lanza
+ * de 2024, Two-Handed *unless mounted* -- viajaba al indice como el texto
+ * literal `"[object Object]"`. `masteryOf` ya habia aprendido esta leccion en
+ * el campo de al lado; `property` no. Ver [[parser-fuente-ajena-dos-muestras]].
+ */
+describe("las propiedades de un arma", () => {
+  const weapons = (collections.item ?? []) as {
+    name: string;
+    source: string;
+    weaponCategory?: unknown;
+    properties?: unknown;
+  }[];
+
+  test("son siempre codigos cortos, en las 325 armas", () => {
+    const armed = weapons.filter((row) => row.weaponCategory);
+    const bad = armed.filter((row) =>
+      ((row.properties as unknown[]) ?? []).some(
+        (code) => typeof code !== "string" || !/^[A-Za-z0-9]{1,4}$/.test(code),
+      ),
+    );
+
+    expect(armed.length).toBeGreaterThan(300);
+    expect(bad.map((row) => `${row.name}/${row.source}`)).toEqual([]);
+  });
+
+  test("la Lanza de 2024 llega con las tres que imprime", () => {
+    // La unica del catalogo cuya `property` trae un objeto.
+    const lance = weapons.find((row) => row.name === "Lance" && row.source === "XPHB");
+
+    expect(lance?.properties).toEqual(["H", "R", "2H"]);
+  });
+});
+
 describe("when a class asks its questions", () => {
   test("the subclass level follows the class, not a rule of thumb", () => {
     // The three shapes 2014 has. Assuming 3 across the board hid the choice
