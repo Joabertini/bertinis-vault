@@ -185,6 +185,41 @@ against what you can carry (#57); attunement and its three slots (#59).
   Worker deploy separately and refusing one would break sharing for the minutes
   between the two.
 
+### The tome opens onto a choice, and the sheet is one of them
+
+- Opening a tome now asks which of the two views you want — the sheet or the
+  cheat sheet — and opens it in a window that behaves like a table's: dragged
+  by its title bar, resized from its corner, closed with Escape. Below `md` it
+  fills the screen instead, because dragging a window with a thumb is a fight.
+- The sheet is the SRD's arrangement, the one roll20 draws. That was chosen for
+  the round trip and not the looks: roll20's importer moves characters as JSON,
+  so building against this shape leaves that work done.
+- It has no experience, inspiration or death saves. All three are play-time
+  state this builder does not keep, and empty boxes would promise a tracker.
+- `weapon-attack.ts` finally has a caller. It shipped with #85 and nothing used
+  it: the arithmetic was tested and the wiring — which thing in the bag is a
+  weapon, what the index says about it, whether the character is trained — did
+  not exist.
+
+### A weapon is a weapon, all 325 of them
+
+- The bag filed everything outside a hand-written catalogue of **twenty-four**
+  weapons as `other`. A **longbow** — the most common ranged weapon in the game
+  — was one of the missing: no attack line on the sheet, and it did not reach
+  Foundry as a weapon either.
+- The index is asked when the catalogue cannot place something. The catalogue
+  is still asked first, because it carries the Spanish aliases: "espada larga"
+  is a name only it knows.
+- The conformance test puts the whole weapon catalogue in one character's bag
+  and demands it come out whole, under both editions. Written that way because
+  the fault was not a wrong line but an incomplete list, and an incomplete list
+  is only visible against the complete one.
+- It also turned up a second thing the same test would have hidden: **two rows
+  can share a name across books and disagree** — the Spider Staff of LMoP is
+  not a weapon and the one from PaBTSO is. The Forge already records which book
+  a picked item came from; the test now does too, instead of resolving by
+  whichever row came first.
+
 ### Documentation
 - The build order was closed (#41) and the handoff brought back in line with
   what shipped (#67).

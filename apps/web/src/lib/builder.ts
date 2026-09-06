@@ -69,6 +69,7 @@ import {
   featAbilityGrantsFor,
   featChoiceForBackground,
   featGearGrantsFor,
+  isWeaponRow,
   itemInfoFor,
   slugOf,
 } from "./index-options";
@@ -217,7 +218,42 @@ function withAttunement<T extends { itemId?: string }>(
   return marked ? { ...entry, attuned: true } : entry;
 }
 
-function normalizeEquipmentEntry(entry: string, quantity = 1) {
+/**
+ * The item as the index knows it, when the hand catalog does not.
+ *
+ * The hand-written catalog carries twenty-four weapons and their Spanish
+ * aliases; the index carries all 325. Before this, everything outside the
+ * twenty-four was filed as `other` — a longbow had no attack line on the sheet
+ * and did not arrive in Foundry as a weapon. The aliases are why the catalog
+ * is still asked first: "espada larga" is a name only it knows.
+ *
+ * Only weapons and armour are decided here. Gear against `other` is a
+ * distinction the index does not draw and the catalog does.
+ */
+function indexEquipmentEntry(entry: string, quantity: number, state: BuilderState) {
+  const rulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+  const id = slugOf(entry);
+  const row = id ? itemInfoFor(id, rulesVersion, state.sourceBooks[`item:${id}`]) : null;
+  if (!row) return null;
+
+  if (isWeaponRow(row)) {
+    return { itemId: slugOf(row.name), label: row.name, quantity, category: "weapon" as const };
+  }
+
+  const { formula, shield } = armorFormulaOf(row);
+  if (!formula && !shield) return null;
+
+  return {
+    itemId: slugOf(row.name),
+    label: row.name,
+    quantity,
+    category: shield ? ("shield" as const) : ("armor" as const),
+    ...(formula ? { armorFormula: formula } : {}),
+    ...(shield ? { grantsShieldBonus: true } : {}),
+  };
+}
+
+function normalizeEquipmentEntry(entry: string, quantity = 1, state?: BuilderState) {
   const weaponEntry = getWeaponCatalogEntry(entry);
   if (weaponEntry) {
     return {
@@ -247,6 +283,11 @@ function normalizeEquipmentEntry(entry: string, quantity = 1) {
       category: "gear" as const,
     };
   }
+
+  // Asked last, and only for what the catalogs could not place: everything the
+  // index calls a weapon or armour is one, whatever the hand catalog knows.
+  const fromIndex = state ? indexEquipmentEntry(entry, quantity, state) : null;
+  if (fromIndex) return fromIndex;
 
   return {
     itemId: idOrFallback(resolveGearId(entry), entry),
@@ -551,7 +592,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const proficiencies = uniqueEntries(parseLineList(state.proficienciesText));
   const languageEntries = uniqueEntries(parseLineList(state.languagesText));
   const languages = languageEntries.map((entry) => `Language: ${entry}`);
-  const normalizedWeapon = normalizeEquipmentEntry(state.weaponId);
+  const normalizedWeapon = normalizeEquipmentEntry(state.weaponId, 1, state);
   const normalizedArmor = normalizeArmorEntry(state);
   const writtenSpells: Array<{
     label: string;
@@ -782,7 +823,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
             ...(state.weaponId ? [withAttunement(normalizedWeapon, state.weaponId, attuned)] : []),
             ...(state.armorId ? [withAttunement(normalizedArmor, state.armorId, attuned)] : []),
             ...extraEquipment.map((entry) =>
-              withAttunement(normalizeEquipmentEntry(entry.id, entry.quantity), entry.id, attuned),
+              withAttunement(normalizeEquipmentEntry(entry.id, entry.quantity, state), entry.id, attuned),
             ),
         ],
           features: features.map((entry) => normalizeFeatureEntry(entry, state)),
