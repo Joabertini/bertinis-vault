@@ -30,7 +30,7 @@
     { "lang": "en", "name": "English", "path": "lang/en.json" },
     { "lang": "es", "name": "Español", "path": "lang/es.json" }
   ],
-  "url": "https://github.com/Joabertini/bertinis-vault",
-  "manifest": "https://raw.githubusercontent.com/Joabertini/bertinis-vault/main/apps/foundry-module/module.json",
-  "download": "https://github.com/Joabertini/bertinis-vault/releases/latest/download/bertinis-vault.zip"
+  "url": "https://alba.bertinilabs.xyz",
+  "manifest": "https://alba.bertinilabs.xyz/foundry/module.json",
+  "download": "https://alba.bertinilabs.xyz/foundry/bertinis-vault.zip"
 }

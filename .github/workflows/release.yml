@@ -36,22 +36,25 @@ jobs:
         id: get_version
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
-      - name: Update release manifests
+      # The manifest Foundry polls is the one the site serves, built from main.
+      # Writing the tag's version into a copy here would ship a zip that says one
+      # version while every installed module is offered another, so the committed
+      # manifest is checked instead of rewritten.
+      - name: Check the committed manifest carries the tag's version
         run: |
-          sed -i 's/"version": ".*"/"version": "${{ steps.get_version.outputs.VERSION }}"/' module.json
-          sed -i '0,/"version": ".*"/s//"version": "${{ steps.get_version.outputs.VERSION }}"/' package.json
+          COMMITTED=$(node -p "require('./apps/foundry-module/module.json').version")
+          if [ "$COMMITTED" != "${{ steps.get_version.outputs.VERSION }}" ]; then
+            echo "apps/foundry-module/module.json says $COMMITTED, tag says ${{ steps.get_version.outputs.VERSION }}."
+            exit 1
+          fi
 
       - name: Create release ZIP
-        run: |
-          zip -r bertinis-vault.zip . \
-          --exclude "*.git*" \
-          --exclude "*/.github/*" \
-          --exclude "*/node_modules/*"
+        run: corepack pnpm foundry:package ./release
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: ./bertinis-vault.zip
+          files: ./release/bertinis-vault.zip
           body_path: CHANGELOG.md
           generate_release_notes: false
           draft: false
