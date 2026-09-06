@@ -24,24 +24,35 @@ Tres PRs el 2026-09-02:
 
 ## Las dos decisiones que faltaban
 
-### Códigos para compartir: solo lectura
+### Códigos para compartir: editables, sin sincronizar
 
-Un código abierto en la web muestra una ficha que no se puede editar.
+**Corregido el 2026-09-06.** Este documento decía "solo lectura"; se decidió lo
+contrario. Un código abierto en la web se puede editar, porque el caso real no
+es que el DM mire la ficha sino que la arregle, y lo mismo entre jugadores.
 
 La cañería ya existe entera — `POST /builds`, `GET /builds/{código}`, base32 de
 Crockford de diez caracteres — porque nació para que un jugador dictara el
-código en Foundry. Falta una ruta web que muestre el personaje en vez de que
-solo Foundry lo consuma.
+código en Foundry. Falta la ruta web que abra el personaje en la Forja en vez
+de que solo Foundry lo consuma.
 
-Solo lectura por dos razones. La primera es que **no agrega exposición**: quien
-tiene el código ya puede importar ese personaje a Foundry hoy, así que una
-vista web no revela nada que el código no revelara. La segunda es que una copia
-editable no es una vista, es una bifurcación: pide identidad propia, procedencia
-y una respuesta a qué pasa cuando el original cambia. Eso es una feature aparte.
+**No es un espejo y no se sincroniza.** Abrir un código carga ese personaje y
+desde ahí es del que lo abrió: editarlo no toca el original, y el original que
+cambie después no llega a la copia. Es una bifurcación, y eso es lo pedido —
+nadie quiere que la corrección del DM le mute la ficha al jugador sin avisar.
 
-El caso que se pidió —"que el DM los pueda revisar"— se resuelve entero con
-solo lectura. "Pasame tu build y lo tuneo" queda para después, y una vez que la
-vista existe es un botón encima de ella, no un rediseño.
+Lo que la bifurcación obliga a decidir, y que solo lectura evitaba:
+
+- **La copia guarda con código propio.** El original conserva el suyo. Dos
+  códigos, dos personajes, desde el momento de la edición.
+- **La corrección vuelve por el código nuevo.** El DM arregla, pasa el código
+  nuevo, y el jugador reimporta en Foundry. No hay camino de vuelta automático
+  y no hace falta que lo haya.
+- **La copia cae en el Códice del que la abre**, que es local primero: sin
+  cuenta, vive en ese navegador.
+
+No agrega exposición: quien tiene el código ya puede importar ese personaje a
+Foundry hoy, así que abrirlo en la web no revela nada que el código no
+revelara.
 
 ### Emojis de función: mixto, derivado primero
 
@@ -200,7 +211,8 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    para no pisarse: primero la hoja, después el selector, después recordar la
    preferencia.
 
-7. **La vista de código compartido**, solo lectura, según lo decidido arriba.
+7. **La vista de código compartido**, editable y sin sincronizar, según lo
+   decidido arriba. Abre el personaje en la Forja; guardar da un código nuevo.
 
 8. **La capa derivada de símbolos.**
 
