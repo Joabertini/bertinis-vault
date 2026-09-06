@@ -211,6 +211,30 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    para no pisarse: primero la hoja, después el selector, después recordar la
    preferencia.
 
+   **Decidido el 2026-09-06, y no es sólo estética.** La hoja va con el layout
+   clásico de roll20 — que es el del SRD, libre de usar — habiendo mirado
+   otros. Dos razones, y la segunda es la que decide:
+
+   - Es la más clara y la más conocida: quien juega ya sabe dónde mirar.
+   - **El importador de roll20 exporta e importa personajes en `.json`.**
+     Armar el personaje contra ese layout deja el trabajo hecho para cuando
+     haya que mandarlo a roll20: la hoja y el destino tienen la misma forma, en
+     vez de una traducción por escribir. Es la misma apuesta que ya se hizo con
+     Foundry, en la otra mesa.
+
+   **Al abrir el tomo se ve un selector chico con las dos opciones**, y lo
+   elegido se abre en una ventana como la abre roll20: dentro de la página, con
+   su barra de título, movible y cerrable. No una pestaña del navegador —
+   nadie juega con el tomo en otra ventana, se juega con la hoja al lado de la
+   mesa.
+
+   La cheatsheet se rehace con el diseño y el layout de
+   `Joabertini/dnd-cheatsheet`, que es de donde salió la idea y se ve mejor que
+   lo que hay: Georgia sobre fondo casi negro, secciones con la cabecera teñida
+   del color de la clase, tarjetas de acción y de rasgo con píldora de recurso,
+   y las pestañas marcadas con una línea del color de la clase. El diseño ya
+   está probado contra jugadores; el de acá no.
+
 7. ~~**La vista de código compartido**, editable y sin sincronizar.~~ Hecha.
    `/tomo/:code` abre el tomo con la Vision, y quedarse una copia la mete en el
    Códice con id propio.
@@ -239,9 +263,11 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    ocho idiomas estándar y `any` es cualquiera — así que reusar el lector tal
    cual metería un idioma llamado "Any" en la ficha.
 
-10. **El sugeridor de builds.** Aparcado por pedido, y con una pregunta sin
-    responder que hay que cortar antes de escribir una línea: biblioteca de
-    guías contra generación por IA.
+10. **El sugeridor de builds — SUSPENDIDO hasta nuevo aviso** (2026-09-06).
+    No es "el próximo de la lista con menos prioridad": está fuera de la ruta
+    hasta que el usuario lo reabra. La pregunta que había que cortar antes de
+    escribir una línea sigue sin cortar — biblioteca de guías contra generación
+    por IA — y queda anotada para cuando vuelva, no para resolverla ahora.
 
 ## Lo medido y lo que sigue siendo una suposición
 
