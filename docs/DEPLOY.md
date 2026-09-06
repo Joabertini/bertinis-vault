@@ -78,15 +78,23 @@ rewrite in `vercel.json`:
 ```
 
 It cannot swallow the assets: the filesystem is matched before rewrites are,
-so `/assets/*` and `/fonts/*` are served as themselves.
+so `/assets/*`, `/fonts/*` and `/foundry/*` are served as themselves.
 
 ## Foundry module
 
 The module lives in `apps/foundry-module` and installs from its manifest:
 
 ```
-https://raw.githubusercontent.com/Joabertini/bertinis-vault/main/apps/foundry-module/module.json
+https://alba.bertinilabs.xyz/foundry/module.json
 ```
+
+**It is served by the site, not by GitHub.** The repo went private on
+2026-09-06, and a private repo answers 404 to anyone without a token — both on
+`raw.githubusercontent.com` and on release assets, which is every Foundry
+install and every update check. `pnpm foundry:package` runs as the last step of
+the Vercel build and writes `module.json` plus `bertinis-vault.zip` into
+`dist/foundry/`, so the manifest Foundry polls is always the one main deploys.
+The script refuses to build if the committed manifest points anywhere else.
 
 It requires Foundry v14, dnd5e 5.3.x, and Plutonium. Plutonium is what turns a
 reference into a real document; without it there is nothing to import.
@@ -97,15 +105,17 @@ in the module settings to match.
 ### Releasing it
 
 Pushing a `v*` tag runs `.github/workflows/release.yml`, which runs the gate,
-checks `pnpm release:ready`, builds the zip and publishes the release.
+checks `pnpm release:ready`, builds the zip and publishes the release. The
+release is an archive of what shipped: players install from the site, and a
+private repo's assets are unreachable to them anyway.
 
 Two things have to be true before the tag, and both have caught releases out:
 
-1. **Bump the version in the committed `module.json`.** The workflow writes the
-   tag's version into its own copy before zipping, but Foundry's update check
-   reads the manifest URL above, which serves `main`'s copy. A release whose
+1. **Bump the version in the committed `module.json`.** Foundry's update check
+   reads the manifest the site serves, which is main's copy, so a release whose
    committed manifest still says the old version is a release nobody is offered.
-   Bump `apps/foundry-module/package.json` alongside it.
+   The workflow now fails on that mismatch instead of papering over it by
+   rewriting its own copy. Bump `apps/foundry-module/package.json` alongside it.
 2. **Sign [`FOUNDRY-MANUAL-VALIDATION-REPORT.md`](./FOUNDRY-MANUAL-VALIDATION-REPORT.md).**
    `release:ready` refuses while anything in it is `pending`. The automated gate
    proves the pipeline is internally consistent; only a live run proves it
@@ -117,9 +127,8 @@ the import first came out clean — build and publish it by hand, and say in the
 notes that it was:
 
 ```bash
-cd apps/foundry-module
-zip -r bertinis-vault.zip module.json src lang styles
-gh release create v0.2.2 bertinis-vault.zip
+corepack pnpm foundry:package ./release
+gh release create v0.2.2 ./release/bertinis-vault.zip
 ```
 
 That is a deliberate bypass of a gate, not a shortcut around a broken one. Reach
