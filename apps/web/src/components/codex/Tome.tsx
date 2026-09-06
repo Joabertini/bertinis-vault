@@ -252,7 +252,7 @@ function TomeMenu({
           />
           <MenuChoice
             accent={accent}
-            title="La chuleta"
+            title="Los recordatorios"
             blurb="Lo que se mira en medio de un combate."
             onClick={() => onPick("vision")}
           />
@@ -384,7 +384,7 @@ function TomeWindow({
         {(
           [
             ["hoja", "La hoja"],
-            ["vision", "La chuleta"],
+            ["vision", "Recordatorios"],
           ] as const
         ).map(([id, label]) => (
           <button

@@ -126,7 +126,7 @@ describe("el tomo abre en un selector", () => {
     await user.click(screen.getByLabelText(/Abrir Kaelen Thorne/));
 
     expect(pageText()).toContain("La hoja");
-    expect(pageText()).toContain("La chuleta");
+    expect(pageText()).toContain("Los recordatorios");
   });
 
   test("la hoja trae los numeros derivados, no un resumen", async () => {
@@ -149,7 +149,7 @@ describe("el tomo abre en un selector", () => {
     expect(text).toContain("CAR");
   });
 
-  test("se puede pasar a la chuleta sin cerrar la ventana", async () => {
+  test("se puede pasar a los recordatorios sin cerrar la ventana", async () => {
     const user = userEvent.setup();
     openTome(characterWith({ classId: "fighter", subclassId: "" }));
 
@@ -157,8 +157,27 @@ describe("el tomo abre en un selector", () => {
     await user.click(screen.getByText("La hoja"));
     expect(pageText()).toContain("Puntos de golpe");
 
-    await user.click(screen.getByText("La chuleta"));
+    await user.click(screen.getByText("Recordatorios"));
     expect(pageText()).not.toContain("Puntos de golpe");
+  });
+
+  /*
+   * Escape cierra, y esto es lo unico de la ventana que un test en jsdom puede
+   * comprobar de verdad: arrastrarla depende de medidas de layout que jsdom no
+   * calcula —todo rectangulo mide cero— asi que un test de arrastre estaria
+   * midiendo jsdom y no la ventana.
+   */
+  test("Escape cierra la ventana", async () => {
+    const user = userEvent.setup();
+    openTome(characterWith({ classId: "fighter", subclassId: "" }));
+
+    await user.click(screen.getByLabelText(/Abrir Kaelen Thorne/));
+    await user.click(screen.getByText("La hoja"));
+    expect(pageText()).toContain("Puntos de golpe");
+
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => expect(pageText()).not.toContain("Puntos de golpe"));
   });
 
   test("la ventana se cierra y devuelve la estanteria", async () => {
