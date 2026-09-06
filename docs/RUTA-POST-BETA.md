@@ -211,8 +211,23 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    para no pisarse: primero la hoja, después el selector, después recordar la
    preferencia.
 
-7. **La vista de código compartido**, editable y sin sincronizar, según lo
-   decidido arriba. Abre el personaje en la Forja; guardar da un código nuevo.
+7. ~~**La vista de código compartido**, editable y sin sincronizar.~~ Hecha.
+   `/tomo/:code` abre el tomo con la Vision, y quedarse una copia la mete en el
+   Códice con id propio.
+
+   Lo que costó la decisión: el estado del constructor tuvo que empezar a
+   viajar **al lado** del payload. El payload es a lo que las decisiones
+   derivaron, y la derivación no corre para atrás — qué aptitud subió una
+   semi-dote, de qué libro salió un nombre compartido, con qué método se
+   tiraron las puntuaciones. El Códice ya guardaba estado por esto mismo.
+
+   El almacén lo guarda **opaco, sin schema**: valida el payload porque Foundry
+   lo consume, y el estado solo lo lee el constructor que lo escribió. Un
+   schema ahí sería una copia de la forma de la Forja viviendo en un servicio
+   que no tiene por qué conocerla.
+
+   Los códigos publicados antes de esto no traen estado. Importan en Foundry
+   igual y la página lo dice, en vez de dibujar un tomo vacío.
 
 8. **La capa derivada de símbolos.**
 
