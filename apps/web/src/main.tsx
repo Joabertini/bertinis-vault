@@ -5,7 +5,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import Gate from "@/routes/Gate";
 
 /*
- * The three working rooms load when they are entered.
+ * The working rooms load when they are entered.
  *
  * The Gate is the door: it shows the title and asks whether you are starting
  * or continuing. It has no business waiting for the Forge's chambers, the
@@ -14,6 +14,9 @@ import Gate from "@/routes/Gate";
 const Forge = lazy(() => import("@/routes/Forge"));
 const Codex = lazy(() => import("@/routes/Codex"));
 const Ritual = lazy(() => import("@/routes/Ritual"));
+// A borrowed tome: someone else's code, opened as a character. Lazy like the
+// rest — most visits never reach it, and it pulls the whole Vision with it.
+const SharedTome = lazy(() => import("@/routes/SharedTome"));
 // Order is the cascade: Tailwind's layers first, then the rules that override
 // its preflight. See the note at the top of globals.css.
 import "./styles/globals.css";
@@ -32,6 +35,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/forge" element={<Forge />} />
           <Route path="/codex" element={<Codex />} />
           <Route path="/ritual" element={<Ritual />} />
+          <Route path="/tomo/:code" element={<SharedTome />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

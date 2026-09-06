@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import Tome from "@/components/codex/Tome";
 import DropActor from "@/components/codex/DropActor";
+import OpenCode from "@/components/codex/OpenCode";
 import AshBurst from "@/components/fx/AshBurst";
 import EmberField from "@/components/fx/EmberField";
 import GrainOverlay from "@/components/fx/GrainOverlay";
@@ -105,6 +106,8 @@ export default function Codex() {
         {/* Above the shelves, and shown even when they are empty: an empty
             Codex is exactly when a player most wants to bring characters in
             rather than start from nothing. */}
+        <OpenCode />
+
         <DropActor />
 
         <CodexBackup />

@@ -108,9 +108,19 @@ async function readError(response: Response): Promise<VaultRequestError> {
   );
 }
 
-/** Store a build and get the code a player types into Foundry. */
+/**
+ * Store a build and get the code a player types into Foundry — or passes to
+ * another player, who opens the tome in this builder.
+ *
+ * The state travels beside the payload rather than instead of it. Foundry
+ * consumes the payload and reads nothing else; the builder needs the state,
+ * because the payload is what the choices *derived to* and a derivation does
+ * not run backwards. Sending only one of the two would mean picking which half
+ * of the audience the code works for.
+ */
 export async function publishBuild(
   payload: ImportPayload,
+  state?: unknown,
   baseUrl = vaultBaseUrl(),
 ): Promise<PublishedBuild> {
   const controller = new AbortController();
@@ -125,7 +135,7 @@ export async function publishBuild(
     response = await fetch(`${root}/builds`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(state === undefined ? { payload } : { payload, state }),
       signal: controller.signal,
     });
   } catch (error) {
@@ -181,14 +191,22 @@ async function readPublished(response: Response): Promise<PublishedBuild> {
   };
 }
 
-/** Read a build back by code. */
+/**
+ * Read a build back by code.
+ *
+ * `state` is absent for every code published before it was stored, and for
+ * anything posted straight to the store. Those codes still import into Foundry
+ * and cannot be opened here — which is a sentence the page has to say, rather
+ * than a blank tome.
+ */
 export async function fetchBuild(
   code: string,
   baseUrl = vaultBaseUrl(),
-): Promise<{ payload: ImportPayload; createdAt: string }> {
-  const response = await fetch(`${baseUrl}/builds/${encodeURIComponent(code)}`);
+): Promise<{ payload: ImportPayload; state?: unknown; createdAt: string }> {
+  const root = baseUrl.replace(/\/+$/, "");
+  const response = await fetch(`${root}/builds/${encodeURIComponent(code)}`);
 
   if (!response.ok) throw await readError(response);
 
-  return (await response.json()) as { payload: ImportPayload; createdAt: string };
+  return (await response.json()) as { payload: ImportPayload; state?: unknown; createdAt: string };
 }

@@ -40,6 +40,13 @@ Once the web builder has a public address, narrow the origin list in
 `wrangler.toml` from `*` to it. Leaving it open lets any page post builds to
 your store.
 
+**The Worker goes out before the web, whenever what a publish sends changes.**
+The two deploy separately — Vercel on merge, this by hand — so the order is a
+real choice and only one of them is safe. A new Worker still accepts what an
+old page sends; an old Worker validates the whole body as the payload, so a new
+page's envelope fails its schema and every publish answers 422. Sharing breaks
+for everyone until the Worker catches up, and nothing in the merge says so.
+
 ### Running it locally
 
 `npx wrangler dev` serves on `127.0.0.1:8787`, which is what the web builder
@@ -67,11 +74,12 @@ travels between addresses that share a registrable domain, so a page talking to
 `workers.dev` can store builds and can never hold an account.
 
 **Every path has to serve `index.html`.** The router is a `BrowserRouter` with
-four paths — `/`, `/forge`, `/codex`, `/ritual` — and none of them is a file in
-`dist`, so a static host answers 404 to anyone who types one, reloads on one,
-or is sent back to one. That last case is not hypothetical: a sign-in returns
-to `/codex`, so accounts cannot work at all without this. On Vercel it is the
-rewrite in `vercel.json`:
+five paths — `/`, `/forge`, `/codex`, `/ritual`, `/tomo/:code` — and none of them
+is a file in `dist`, so a static host answers 404 to anyone who types one,
+reloads on one, or is sent back to one. Neither case is hypothetical: a sign-in
+returns to `/codex`, so accounts cannot work at all without this, and
+`/tomo/:code` is a link people paste to each other, so it is *always* typed
+cold. On Vercel it is the rewrite in `vercel.json`:
 
 ```json
 "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]

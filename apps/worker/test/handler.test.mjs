@@ -142,6 +142,46 @@ test("a stored build comes back byte for byte", async () => {
   assert.ok(Date.parse(stored.createdAt) <= Date.now());
 });
 
+test("a build published with its builder state gives that state back", async () => {
+  const env = { BUILDS: makeStore() };
+  const state = { characterName: "Seraphina Vale", classId: "warlock", rulesVersion: "5e-2014" };
+
+  const created = await (await handle(post({ payload: payload(), state }), env)).json();
+  const stored = await (await handle(get(created.code), env)).json();
+
+  assert.deepEqual(stored.state, state);
+  assert.equal(stored.payload.identity.characterName, "Seraphina Vale");
+});
+
+test("a bare payload is still published, and simply has no state to open", async () => {
+  const env = { BUILDS: makeStore() };
+
+  const response = await handle(post(payload()), env);
+  assert.equal(response.status, 201);
+
+  const stored = await (await handle(get((await response.json()).code), env)).json();
+  assert.equal(stored.state, undefined);
+  assert.equal(stored.payload.identity.characterName, "Seraphina Vale");
+});
+
+test("a state that is not an object is dropped rather than stored", async () => {
+  const env = { BUILDS: makeStore() };
+
+  for (const state of ["Seraphina", 7, ["warlock"], null]) {
+    const created = await (await handle(post({ payload: payload(), state }), env)).json();
+    const stored = await (await handle(get(created.code), env)).json();
+    assert.equal(stored.state, undefined, `state ${JSON.stringify(state)} should not be stored`);
+  }
+});
+
+test("an envelope with an invalid payload is refused, state or no state", async () => {
+  const env = { BUILDS: makeStore() };
+  const response = await handle(post({ payload: { version: 1 }, state: { classId: "warlock" } }), env);
+
+  assert.equal(response.status, 422);
+  assert.equal(env.BUILDS.data.size, 0);
+});
+
 test("a payload written before a field existed comes back with it defaulted", async () => {
   // The contract grows by adding optional lists, and the worker validates what
   // it stores. A builder that predates a field must keep working, and what it

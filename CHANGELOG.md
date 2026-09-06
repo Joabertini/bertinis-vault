@@ -167,6 +167,24 @@ against what you can carry (#57); attunement and its three slots (#59).
   multiclass sheet, so a species' warhammer — and now a feat's plate — appeared
   with no owner.
 
+### A shared code opens a tome, and the copy is yours
+- The same ten characters Foundry imports now open the character in the builder
+  at `/tomo/:code`, with the tome's own page — the Vision, not a summary.
+- The builder state travels beside the payload rather than instead of it. A
+  payload is what the choices derived *to*, and the derivation does not run
+  backwards: which ability a half-feat raised, which book a shared name came
+  from and which method rolled the scores are all gone from it. The store keeps
+  both, Foundry reads the payload and ignores the rest.
+- Taking a copy is a fork, not a mirror. It lands in the Codex with its own id
+  and nothing it does afterwards reaches the original — a DM fixing a sheet
+  must not mutate the player's tome under them. The correction travels back the
+  way it came, as a new code.
+- Codes published before this carry no state. They still import into Foundry,
+  and the page says so instead of drawing an empty tome.
+- The store still accepts a bare payload, because the web builder and the
+  Worker deploy separately and refusing one would break sharing for the minutes
+  between the two.
+
 ### Documentation
 - The build order was closed (#41) and the handoff brought back in line with
   what shipped (#67).
