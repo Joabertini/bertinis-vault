@@ -1,17 +1,16 @@
 /**
- * The character sheet: the roll20 sheet, not a drawing of it.
+ * La hoja de personaje: la hoja de roll20, no un dibujo de ella.
  *
- * Two attempts before this one were layouts of my own using D&D's field names,
- * and that is the thing this replaces. What renders is the Shaped sheet's own
- * HTML and its own stylesheet, vendored under `apps/web/vendor/5eshaped/`,
- * filled from the build — see `shaped-render.ts` for how, `shaped-attrs.ts` for
- * which number goes where.
+ * Los dos intentos anteriores fueron maquetas propias con los nombres de campo
+ * de D&D, y eso es lo que esto reemplaza. Lo que se dibuja es el HTML de la
+ * hoja *D&D 5E by Roll20* (la OGL, versión 4.21), vendorizado en
+ * `apps/web/vendor/roll20-ogl/`, llenado desde el build — el cómo está en
+ * `ogl-render.ts`, el qué va dónde en `ogl-attrs.ts`.
  *
- * **2024 is not here yet, on purpose.** Both sheets we have are 2014 documents
- * — neither mentions Heroic Inspiration, weapon mastery or species — so there
- * is nothing to render a 2024 character *into*. A 2024 character is told that
- * rather than shown a 2014 sheet with its numbers in it, which would be a sheet
- * that quietly disagrees with the rules the character was built under.
+ * **La de 2024 no está todavía, a propósito.** La hoja que tenemos es de 2014:
+ * no menciona inspiración heroica, ni maestría de armas, ni especies. A un
+ * personaje de 2024 se le dice eso en vez de mostrarle una hoja de 2014 con sus
+ * números adentro, que sería una hoja en desacuerdo con sus propias reglas.
  */
 
 import type { CharacterBuild } from "@bertinis-vault/contracts";
@@ -20,7 +19,7 @@ import type { BuilderState } from "@/lib/builder";
 import { sheetDataFor } from "@/lib/sheet-data";
 import { rulesVersionOf } from "@/lib/vault-store";
 
-import ShapedSheet from "./ShapedSheet";
+import OglSheet from "./OglSheet";
 
 export default function CharacterSheet({
   state,
@@ -44,5 +43,5 @@ export default function CharacterSheet({
     );
   }
 
-  return <ShapedSheet data={sheetDataFor(state, build, rulesVersion)} />;
+  return <OglSheet data={sheetDataFor(state, build, rulesVersion)} />;
 }
