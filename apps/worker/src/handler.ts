@@ -192,8 +192,44 @@ function error(message: string, status: number, headers: Record<string, string>,
 
 type StoredBuild = {
   payload: ImportPayload;
+  /**
+   * The builder state the payload was derived from, when the sender had one.
+   *
+   * Kept so a shared code can be opened and edited rather than only imported.
+   * A payload is the computed result — which ability a half-feat raised, which
+   * book a shared name came from, which method rolled the scores — none of
+   * that survives the derivation, so a sheet cannot be edited back into
+   * choices. The Codex already stores state for exactly this reason.
+   *
+   * Opaque here on purpose. This store validates the payload because Foundry
+   * consumes it and a broken one fails at a table; the state is only ever read
+   * by the builder that wrote it, which coerces it through the same path a
+   * stored draft goes through. A schema here would be a second copy of the
+   * builder's shape, in a service that has no business knowing it, and every
+   * new field in the Forge would fail its own store until this deploys too.
+   */
+  state?: unknown;
   createdAt: string;
 };
+
+/**
+ * What a publish may send.
+ *
+ * The bare payload is still accepted because the web builder and this Worker
+ * deploy separately: for the minutes between the two, a page still on the old
+ * build posts a payload with no envelope, and refusing it would break sharing
+ * for that window.
+ */
+function envelopeOf(parsed: unknown): { payload: unknown; state?: unknown } {
+  if (parsed && typeof parsed === "object" && "payload" in parsed) {
+    const envelope = parsed as { payload: unknown; state?: unknown };
+    return "state" in envelope
+      ? { payload: envelope.payload, state: envelope.state }
+      : { payload: envelope.payload };
+  }
+
+  return { payload: parsed };
+}
 
 async function handleCreate(request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
   const body = await request.text();
@@ -209,7 +245,9 @@ async function handleCreate(request: Request, env: Env, headers: Record<string, 
     return error("Body is not valid JSON.", 400, headers);
   }
 
-  const result = importPayloadSchema.safeParse(parsed);
+  const envelope = envelopeOf(parsed);
+
+  const result = importPayloadSchema.safeParse(envelope.payload);
   if (!result.success) {
     // Field paths tell the builder what to fix; the raw Zod tree does not.
     return error("Build did not validate.", 422, headers, {
@@ -220,7 +258,18 @@ async function handleCreate(request: Request, env: Env, headers: Record<string, 
     });
   }
 
-  const stored: StoredBuild = { payload: result.data, createdAt: new Date().toISOString() };
+  // Anything that is not an object is not a state, and storing it would hand
+  // the builder a string where it expects choices.
+  const state =
+    envelope.state && typeof envelope.state === "object" && !Array.isArray(envelope.state)
+      ? envelope.state
+      : undefined;
+
+  const stored: StoredBuild = {
+    payload: result.data,
+    ...(state ? { state } : {}),
+    createdAt: new Date().toISOString(),
+  };
   const serialized = JSON.stringify(stored);
 
   for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {

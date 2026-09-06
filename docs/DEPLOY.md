@@ -67,11 +67,12 @@ travels between addresses that share a registrable domain, so a page talking to
 `workers.dev` can store builds and can never hold an account.
 
 **Every path has to serve `index.html`.** The router is a `BrowserRouter` with
-four paths — `/`, `/forge`, `/codex`, `/ritual` — and none of them is a file in
-`dist`, so a static host answers 404 to anyone who types one, reloads on one,
-or is sent back to one. That last case is not hypothetical: a sign-in returns
-to `/codex`, so accounts cannot work at all without this. On Vercel it is the
-rewrite in `vercel.json`:
+five paths — `/`, `/forge`, `/codex`, `/ritual`, `/tomo/:code` — and none of them
+is a file in `dist`, so a static host answers 404 to anyone who types one,
+reloads on one, or is sent back to one. Neither case is hypothetical: a sign-in
+returns to `/codex`, so accounts cannot work at all without this, and
+`/tomo/:code` is a link people paste to each other, so it is *always* typed
+cold. On Vercel it is the rewrite in `vercel.json`:
 
 ```json
 "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]

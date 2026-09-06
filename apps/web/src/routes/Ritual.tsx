@@ -37,6 +37,7 @@ import {
   type RealmId,
 } from "@/lib/export-targets";
 import { VaultRequestError, publishBuild } from "@/lib/vault-client";
+import { shareLinkFor } from "@/lib/share-link";
 import { rulesVersionOf, useVault } from "@/lib/vault-store";
 import { PAGE } from "@/styles/recipes";
 
@@ -59,6 +60,7 @@ export default function Ritual() {
   const [realmId, setRealmId] = useState<RealmId | null>(null);
   const [phase, setPhase] = useState<Phase>({ kind: "select" });
   const [copied, setCopied] = useState(false);
+  const [linkCopied, setLinkCopied] = useState(false);
 
   const resolved = useMemo(
     () => (character ? resolveDraft(character.state) : null),
@@ -154,8 +156,10 @@ export default function Ritual() {
     }
 
     // Foundry: the payload goes to the Worker and comes back as a code.
+    // The draft goes with it, so the same code opens the tome in the builder
+    // for whoever it is passed to — a DM, or another player at the table.
     try {
-      const published = await publishBuild(payload);
+      const published = await publishBuild(payload, state);
       setPhase({ kind: "arrived", code: published.code });
     } catch (error) {
       setPhase({
@@ -172,11 +176,17 @@ export default function Ritual() {
     setPhase({ kind: "select" });
     setRealmId(null);
     setCopied(false);
+    setLinkCopied(false);
   };
 
   const copyCode = async (code: string) => {
     await navigator.clipboard?.writeText(code);
     setCopied(true);
+  };
+
+  const copyLink = async (code: string) => {
+    await navigator.clipboard?.writeText(shareLinkFor(code));
+    setLinkCopied(true);
   };
 
   return (
@@ -344,6 +354,28 @@ export default function Ritual() {
 
                   <p className="mt-4 font-body text-sm leading-relaxed text-bone/60">
                     En Foundry, abri el modulo del Faro del Alba y escribi el codigo.
+                  </p>
+
+                  {/* The same code, as a link. A DM asked to look at a build
+                      should not have to be told where to type ten characters. */}
+                  <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.4em] text-bone/60">
+                    O pasaselo a alguien
+                  </p>
+                  <button
+                    onClick={() => copyLink(phase.code!)}
+                    className="mt-3 w-full border border-bone/20 bg-ash/60 px-4 py-3 text-left transition-colors hover:border-gold/60"
+                    title="Copiar enlace"
+                  >
+                    <span className="block break-all font-mono text-xs text-bone/60">
+                      {shareLinkFor(phase.code)}
+                    </span>
+                    <span className="mt-2 block font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60">
+                      {linkCopied ? "✓ copiado" : "click para copiar"}
+                    </span>
+                  </button>
+                  <p className="mt-3 font-body text-sm leading-relaxed text-bone/60">
+                    Quien lo abra ve el tomo y puede quedarse una copia para editar. Su copia
+                    es suya: no toca este personaje.
                   </p>
                 </motion.div>
               )}
