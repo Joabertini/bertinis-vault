@@ -77,7 +77,8 @@ afterEach(() => {
 describe("publicar y leer un codigo", () => {
   test("el estado del constructor viaja al lado del payload, no en su lugar", async () => {
     const fetchMock = vi.fn(
-      async () => new Response(JSON.stringify({ code: "ABCDE-12345" }), { status: 201 }),
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify({ code: "ABCDE-12345" }), { status: 201 }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
@@ -90,7 +91,8 @@ describe("publicar y leer un codigo", () => {
 
   test("sin estado, el sobre no inventa uno", async () => {
     const fetchMock = vi.fn(
-      async () => new Response(JSON.stringify({ code: "ABCDE-12345" }), { status: 201 }),
+      async (_url: string | URL | Request, _init?: RequestInit) =>
+        new Response(JSON.stringify({ code: "ABCDE-12345" }), { status: 201 }),
     );
     vi.stubGlobal("fetch", fetchMock);
 
