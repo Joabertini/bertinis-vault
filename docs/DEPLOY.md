@@ -29,6 +29,12 @@ Then deploy:
 corepack pnpm worker:deploy
 ```
 
+Two things about that line, both of which broke it and neither of which said
+so. `pnpm --filter <pkg> deploy` runs **pnpm's own** `deploy` command, not the
+package's script, and answers `ERR_PNPM_INVALID_DEPLOY_TARGET`; it needs `run
+deploy`. And `wrangler` is not a dependency of anything here, so the script
+calls it through `npx` the way the two commands above do.
+
 Check it answers:
 
 ```bash
