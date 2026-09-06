@@ -69,10 +69,32 @@ export function weaponWarningFor(
 ): string | null {
   if (!row.weaponCategory || !proficiencies) return null;
   if (row.rarity && row.rarity !== "none") return null;
-
-  const category = row.weaponCategory === "martial" ? "mar" : "sim";
-  if (proficiencies.foundryWeaponIds.includes(category)) return null;
-  if (proficiencies.foundryWeaponIds.includes(foundryWeaponId(row.name))) return null;
+  if (isWeaponProficient(row, proficiencies)) return null;
 
   return "Tu personaje no tiene competencia con esta arma: ataca sin sumar el bonificador de competencia.";
+}
+
+/**
+ * Whether the character is trained in this weapon.
+ *
+ * Split out of the warning above because the attack line needs the same
+ * question answered and cannot reuse its silence: the warning also says
+ * nothing about a magic weapon, and "no warning" would read as "add the
+ * proficiency bonus" — the one place where a guess becomes a wrong number on
+ * the sheet rather than a missing sentence.
+ *
+ * The category covers a magic weapon too. A Scimitar of Speed still carries
+ * `weaponCategory: "martial"`, and anyone trained in martial weapons swings it
+ * with proficiency; what the magic name breaks is only the by-name match.
+ */
+export function isWeaponProficient(
+  row: Pick<ItemRow, "name" | "weaponCategory">,
+  proficiencies: GearProficiencies | null,
+): boolean {
+  if (!proficiencies) return false;
+
+  const category = row.weaponCategory === "martial" ? "mar" : row.weaponCategory ? "sim" : null;
+  if (category && proficiencies.foundryWeaponIds.includes(category)) return true;
+
+  return proficiencies.foundryWeaponIds.includes(foundryWeaponId(row.name));
 }

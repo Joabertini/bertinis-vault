@@ -22,6 +22,8 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import Sigil from "@/components/sigils/Sigil";
 import Vision from "@/components/codex/Vision";
+import CharacterSheet from "@/components/sheet/CharacterSheet";
+import FloatingWindow from "@/components/ui/FloatingWindow";
 import { playbookFor } from "@/lib/playbook";
 import { entryById, hitDieFor } from "@/lib/catalog";
 import { characterLevelFor, classingLabelFor } from "@/lib/builder";
@@ -39,7 +41,7 @@ export default function Tome({
   /** Put this character back on the anvil. Re-sealing overwrites this tome. */
   onReforge: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"closed" | "menu" | "hoja" | "vision">("closed");
   const { state } = character;
   const accent = tintFor(state.classId);
 
@@ -57,7 +59,7 @@ export default function Tome({
     <>
       {/* ---------- closed, on the shelf ---------- */}
       <motion.button
-        onClick={() => setOpen(true)}
+        onClick={() => setView("menu")}
         whileHover="hover"
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
@@ -152,18 +154,30 @@ export default function Tome({
       </motion.button>
 
       <AnimatePresence>
-        {open && (
-          <OpenTome
+        {view === "menu" && (
+          <TomeMenu
+            character={character}
+            accent={accent}
+            className={classLine}
+            onPick={setView}
+            onClose={() => setView("closed")}
+            onBurn={(origin) => {
+              setView("closed");
+              onBurn(origin);
+            }}
+            onReforge={onReforge}
+          />
+        )}
+
+        {(view === "hoja" || view === "vision") && (
+          <TomeWindow
             character={character}
             accent={accent}
             hitDie={hitDieFor(state.classId, rulesVersion)}
             className={classLine}
-            onClose={() => setOpen(false)}
-            onBurn={(origin) => {
-              setOpen(false);
-              onBurn(origin);
-            }}
-            onReforge={onReforge}
+            view={view}
+            onSwitch={setView}
+            onClose={() => setView("closed")}
           />
         )}
       </AnimatePresence>
@@ -171,24 +185,162 @@ export default function Tome({
   );
 }
 
-/* ================= open book ================= */
+/* ================= the choice the tome opens onto ================= */
 
-function OpenTome({
+/**
+ * Two ways to read the same character, and the tome asks which.
+ *
+ * The sheet is what a player fills in and checks; the cheat sheet is what they
+ * reach for mid-combat. Neither is a subset of the other, and opening straight
+ * into one of them makes the other feel hidden — which is what the shelf did
+ * for as long as the tome opened onto the Vision and nothing else.
+ */
+function TomeMenu({
   character,
   accent,
-  hitDie,
   className,
+  onPick,
   onClose,
   onBurn,
   onReforge,
 }: {
   character: SealedCharacter;
   accent: string;
-  hitDie: number | null;
   className: string;
+  onPick: (view: "hoja" | "vision") => void;
   onClose: () => void;
   onBurn: (origin: { x: number; y: number }) => void;
   onReforge: () => void;
+}) {
+  const { state } = character;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 px-6 backdrop-blur-md"
+    >
+      <motion.div
+        initial={{ scale: 0.94, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.96, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 200, damping: 24 }}
+        onClick={(event) => event.stopPropagation()}
+        style={{ borderColor: `${accent}44`, boxShadow: `0 30px 70px rgba(0,0,0,0.8)` }}
+        className="w-full max-w-lg border bg-[#0c0a08] p-8"
+      >
+        <div className="flex items-center gap-4">
+          <Sigil name={state.classId || state.raceId} size={40} />
+          <div className="min-w-0">
+            <p className="truncate font-display text-xl font-bold text-bone">
+              {state.characterName}
+            </p>
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60">
+              Nivel {characterLevelFor(state)} · {className}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-7 grid gap-3 sm:grid-cols-2">
+          <MenuChoice
+            accent={accent}
+            title="La hoja"
+            blurb="Todo el personaje, en el reparto de siempre."
+            onClick={() => onPick("hoja")}
+          />
+          <MenuChoice
+            accent={accent}
+            title="La chuleta"
+            blurb="Lo que se mira en medio de un combate."
+            onClick={() => onPick("vision")}
+          />
+        </div>
+
+        <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-iron/30 pt-5">
+          <button
+            onClick={onClose}
+            className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
+          >
+            ← Cerrar
+          </button>
+
+          <div className="flex items-center gap-5">
+            <button
+              onClick={onReforge}
+              className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
+              title="Volver a abrir este personaje en la fragua"
+            >
+              ⚒ Reforjar
+            </button>
+            <Link
+              to={`/ritual?id=${character.id}`}
+              className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold transition-colors hover:text-ember"
+            >
+              ✦ Enviar →
+            </Link>
+            <BurnButton onConfirm={onBurn} />
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function MenuChoice({
+  accent,
+  title,
+  blurb,
+  onClick,
+}: {
+  accent: string;
+  title: string;
+  blurb: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ borderColor: `${accent}44` }}
+      className="border bg-ash/50 px-5 py-4 text-left transition-colors hover:bg-ash"
+    >
+      <p className="font-display text-base font-bold" style={{ color: accent }}>
+        {title}
+      </p>
+      <p className="mt-1 font-body text-[13px] leading-snug text-bone/60">{blurb}</p>
+    </button>
+  );
+}
+
+/* ================= open book ================= */
+
+/* ================= the window the choice opens ================= */
+
+/**
+ * Whichever view was picked, in a window that behaves like a table's.
+ *
+ * Both views live in the same window, and the switch is in it rather than back
+ * in the menu: the two answer different questions about the same character,
+ * and a player who wants the other one wants it *now*, not after closing and
+ * reopening the book.
+ */
+function TomeWindow({
+  character,
+  accent,
+  hitDie,
+  className,
+  view,
+  onSwitch,
+  onClose,
+}: {
+  character: SealedCharacter;
+  accent: string;
+  hitDie: number | null;
+  className: string;
+  view: "hoja" | "vision";
+  onSwitch: (view: "hoja" | "vision") => void;
+  onClose: () => void;
 }) {
   const { state } = character;
 
@@ -197,7 +349,7 @@ function OpenTome({
   /**
    * A sealed character reached the last chamber, so it has a species, a class
    * and a background and always derives. A tome stored by an older build might
-   * not, and a folio of dashes is better than a crash.
+   * not, and dashes are better than a crash.
    */
   const snapshot = resolved.status === "ready" ? resolved.snapshot : null;
 
@@ -216,106 +368,68 @@ function OpenTome({
     state.sourceBooks[`background:${state.backgroundId}`],
   );
 
+  const subtitle = `Nivel ${characterLevelFor(state)} · ${race?.label ?? "—"} · ${className}${
+    background ? ` · ${background.label}` : ""
+  }`;
+
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      onClick={onClose}
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 px-6 backdrop-blur-md"
+    <FloatingWindow
+      title={state.characterName}
+      subtitle={subtitle}
+      accent={accent}
+      width={view === "hoja" ? 1040 : 900}
+      onClose={onClose}
     >
-      <motion.div
-        initial={{ scale: 0.94, y: 30 }}
-        animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.96, y: 20, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 160, damping: 22 }}
-        onClick={(event) => event.stopPropagation()}
-        className="relative w-full max-w-6xl"
-      >
-        {/*
-          The page the book opens onto.
-          Wide, and its own scroll — the play notes run past a screen for most
-          classes, and the alternative is either a shrunken column or a modal
-          that grows taller than the window it sits in.
-        */}
-        <div
-          className="max-h-[82vh] overflow-y-auto border"
-          style={{
-            borderColor: `${accent}44`,
-            background: "#0c0a08",
-            boxShadow: `0 40px 80px rgba(0,0,0,0.8), inset 0 0 80px ${accent}08`,
-          }}
-        >
+      <div className="flex items-center gap-4 border-b border-iron/30 px-6 py-2">
+        {(
+          [
+            ["hoja", "La hoja"],
+            ["vision", "La chuleta"],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            onClick={() => onSwitch(id)}
+            style={{
+              color: view === id ? accent : undefined,
+              borderColor: view === id ? accent : "transparent",
+            }}
+            className={`border-b-2 pb-1 font-mono text-[11px] uppercase tracking-[0.25em] transition-colors ${
+              view === id ? "" : "text-bone/60 hover:text-bone"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view === "hoja" ? (
+        snapshot ? (
+          <CharacterSheet state={state} build={snapshot} accent={accent} />
+        ) : (
+          <p className="px-8 py-10 font-body text-sm italic text-bone/60">
+            Este tomo no se puede derivar: le falta especie, clase o trasfondo. Reforjalo y
+            terminalo para ver la hoja.
+          </p>
+        )
+      ) : (
+        <>
           <Vision
             playbook={playbook}
             accent={accent}
             name={state.characterName}
-            subtitle={`Nivel ${characterLevelFor(state)} · ${race?.label ?? "—"} · ${className}${
-              background ? ` · ${background.label}` : ""
-            }`}
+            subtitle={subtitle}
             sigilName={state.classId || state.raceId}
           />
-
-          {/* Who the player said this was, in their own words. Kept at the
-              foot: it is the part they wrote, not the part they play from. */}
-          {(state.trait || state.ideal || state.bond || state.flaw) && (
-            <div className="grid gap-4 border-t border-iron/30 px-8 py-6 md:grid-cols-2">
-              {(
-                [
-                  ["Rasgo", state.trait],
-                  ["Ideal", state.ideal],
-                  ["Vinculo", state.bond],
-                  ["Defecto", state.flaw],
-                ] as const
-              ).map(([label, value]) =>
-                value ? (
-                  <div key={label}>
-                    <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60">
-                      {label}
-                    </p>
-                    <p className="mt-0.5 font-body text-sm leading-snug text-bone/75">
-                      {value}
-                    </p>
-                  </div>
-                ) : null,
-              )}
-            </div>
-          )}
 
           <dl className="flex flex-wrap gap-x-8 gap-y-2 border-t border-iron/30 px-8 py-5 font-mono text-xs">
             {hitDie && <Row k="Dado de golpe" v={`d${hitDie}`} />}
             <Row k="Reglas" v={rulesVersion} />
             <Row k="Sellado" v={new Date(character.sealedAt).toLocaleDateString()} />
           </dl>
-        </div>
-
-        <div className="mt-6 flex flex-wrap items-center justify-between gap-4">
-          <button
-            onClick={onClose}
-            className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
-          >
-            ← Cerrar el tomo
-          </button>
-
-          <div className="flex items-center gap-6">
-            <button
-              onClick={onReforge}
-              className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
-              title="Volver a abrir este personaje en la fragua"
-            >
-              ⚒ Reforjar
-            </button>
-            <Link
-              to={`/ritual?id=${character.id}`}
-              className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold transition-colors hover:text-ember"
-            >
-              ✦ Enviar por el portal →
-            </Link>
-            <BurnButton onConfirm={onBurn} />
-          </div>
-        </div>
-      </motion.div>
-    </motion.div>
+        </>
+      )}
+    </FloatingWindow>
   );
 }
 

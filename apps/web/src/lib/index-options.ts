@@ -61,8 +61,21 @@ export function slugOf(name: string): string {
 /** Item types that count as a weapon in the index's own vocabulary. */
 const weaponTypes = new Set(["M", "R"]);
 
-function isWeapon(row: ItemRow): boolean {
+/**
+ * Whether the index calls this a weapon.
+ *
+ * Exported because the builder has to ask the same question when it files an
+ * item into the bag. It used to answer from a hand-written catalog of
+ * twenty-four weapons, so a longbow — not one of the twenty-four — was filed
+ * as "other": no attack line on the sheet, and not a weapon on arrival in
+ * Foundry either.
+ */
+export function isWeaponRow(row: ItemRow): boolean {
   return row.type ? weaponTypes.has(row.type.split("|")[0] ?? "") : false;
+}
+
+function isWeapon(row: ItemRow): boolean {
+  return isWeaponRow(row);
 }
 
 function toOptions(rows: IndexRow[]): IndexOption[] {
