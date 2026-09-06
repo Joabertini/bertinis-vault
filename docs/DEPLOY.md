@@ -40,6 +40,13 @@ Once the web builder has a public address, narrow the origin list in
 `wrangler.toml` from `*` to it. Leaving it open lets any page post builds to
 your store.
 
+**The Worker goes out before the web, whenever what a publish sends changes.**
+The two deploy separately — Vercel on merge, this by hand — so the order is a
+real choice and only one of them is safe. A new Worker still accepts what an
+old page sends; an old Worker validates the whole body as the payload, so a new
+page's envelope fails its schema and every publish answers 422. Sharing breaks
+for everyone until the Worker catches up, and nothing in the merge says so.
+
 ### Running it locally
 
 `npx wrangler dev` serves on `127.0.0.1:8787`, which is what the web builder
