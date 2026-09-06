@@ -17,6 +17,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
+import CharacterSheet from "../src/components/sheet/CharacterSheet";
 import Tome from "../src/components/codex/Tome";
 import { initialState } from "../src/lib/builder";
 import { resolveDraft } from "../src/lib/derive";
@@ -191,5 +192,72 @@ describe("el tomo abre en un selector", () => {
     // La ventana sale con animacion, asi que "cerrada" es cuando termina de
     // desmontarse y no en el click.
     await waitFor(() => expect(pageText()).not.toContain("Puntos de golpe"));
+  });
+});
+
+/*
+ * Cada edicion tiene SU hoja, no una hoja con dos nombres.
+ *
+ * Es la correccion que ordeno este trabajo: un personaje 2014 tiene que ver la
+ * hoja legacy y uno 2024 la nueva. Lo que se prueba aca no es el diseno —eso lo
+ * mira un humano— sino que la edicion elija, porque el modo de romperlo es que
+ * las dos rutas terminen dibujando la misma.
+ */
+describe("cada edicion abre su hoja", () => {
+  const sheetOf = (state: BuilderState) => {
+    const resolved = resolveDraft(state);
+    if (resolved.status !== "ready") throw new Error(`no derivo: ${resolved.missing.join(", ")}`);
+    render(<CharacterSheet state={state} build={resolved.snapshot} />);
+    return pageText();
+  };
+
+  test("2014 dibuja la hoja legacy", () => {
+    const text = sheetOf(
+      characterWith({ rulesVersion: "5e-2014", classId: "fighter", subclassId: "" }),
+    );
+
+    expect(text).toContain("Ataques y lanzamiento de conjuros");
+    expect(text).toContain("Sabiduria pasiva (Percepcion)");
+    // La inspiracion de 2014 es una casilla a secas; la heroica es de 2024.
+    expect(text).not.toContain("Inspiracion heroica");
+  });
+
+  test("2024 dibuja la hoja nueva", () => {
+    const text = sheetOf(
+      characterWith({
+        rulesVersion: "5e-2024",
+        classId: "fighter",
+        subclassId: "",
+        backgroundId: "acolyte",
+      }),
+    );
+
+    expect(text).toContain("Inspiracion heroica");
+    expect(text).toContain("Armas y trucos de dano");
+    expect(text).toContain("Entrenamiento con armaduras");
+    expect(text).not.toContain("Sabiduria pasiva");
+  });
+
+  /*
+   * Un arma de 2024 trae su maestria escrita en el indice tenga o no tenga el
+   * personaje derecho a usarla. Si la hoja imprime la del arma, le esta dando
+   * al jugador una maestria que no eligio: la fila tiene que salir de lo que
+   * eligio, no de lo que el arma es.
+   */
+  test("la maestria sale de la eleccion del jugador, no del arma", () => {
+    const base = characterWith({
+      rulesVersion: "5e-2024",
+      classId: "fighter",
+      subclassId: "",
+      backgroundId: "acolyte",
+    });
+
+    const conMaestria = sheetOf({ ...base, weaponMasteryIds: ["longsword"] });
+    expect(conMaestria).toMatch(/Maestria: \w+/);
+
+    cleanup();
+
+    const sinMaestria = sheetOf({ ...base, weaponMasteryIds: [] });
+    expect(sinMaestria).not.toContain("Maestria:");
   });
 });

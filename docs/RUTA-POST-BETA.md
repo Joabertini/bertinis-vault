@@ -228,6 +228,27 @@ lo hace incómodo.** Y entre dos cosas parecidas, primero la que ya está medida
    nadie juega con el tomo en otra ventana, se juega con la hoja al lado de la
    mesa.
 
+   **La hoja es LA hoja, no un layout con los campos de D&D.** El primer
+   intento fue un diseño propio usando los nombres de los campos del SRD, y
+   está corregido: se dibujan las dos hojas reales, la legacy de 2014 para un
+   personaje 2014 y la nueva de 2024 para uno 2024. Son documentos distintos,
+   no uno con dos casillas renombradas — en la de 2024 las pericias van debajo
+   de su característica, la inspiración es heroica, la tabla de ataques tiene
+   columna de Notas con la maestría del arma, el entrenamiento con armaduras es
+   una fila de casillas y la sintonización tiene tres ranuras.
+
+   La edición no es una preferencia de la hoja: es `state.rulesVersion`, el
+   mismo interruptor que lee el resto de la app. No hay dónde elegir la hoja
+   equivocada. Los dos layouts leen una sola juntada de datos
+   (`lib/sheet-data.ts`) para que no puedan dar números distintos del mismo
+   personaje.
+
+   **Las casillas de partida van vacías, como en la hoja impresa**: puntos de
+   golpe actuales, temporales, dados gastados, salvaciones contra muerte,
+   experiencia, inspiración. El constructor guarda decisiones, no una sesión;
+   un cero ahí sería una afirmación. Decidido el 2026-09-06: *"con tener la
+   visual alcanza"*. Tirar dados como 5etools queda como deseable, no pedido.
+
    La cheatsheet se rehace con el diseño y el layout de
    `Joabertini/dnd-cheatsheet`, que es de donde salió la idea y se ve mejor que
    lo que hay: Georgia sobre fondo casi negro, secciones con la cabecera teñida

@@ -191,11 +191,27 @@ against what you can carry (#57); attunement and its three slots (#59).
   cheat sheet — and opens it in a window that behaves like a table's: dragged
   by its title bar, resized from its corner, closed with Escape. Below `md` it
   fills the screen instead, because dragging a window with a thumb is a fight.
-- The sheet is the SRD's arrangement, the one roll20 draws. That was chosen for
-  the round trip and not the looks: roll20's importer moves characters as JSON,
-  so building against this shape leaves that work done.
-- It has no experience, inspiration or death saves. All three are play-time
-  state this builder does not keep, and empty boxes would promise a tracker.
+- The sheet is **the** sheet, and there are two of them: the 2014 legacy sheet
+  for a 2014 character and the 2024 sheet for a 2024 one, chosen by
+  `state.rulesVersion` — the same switch the rest of the app reads, so there is
+  nowhere to be shown the wrong one. The first attempt was a layout of my own
+  using the SRD's field names; that is what this replaces.
+- They are different documents, not one with renamed boxes. The 2024 sheet puts
+  each skill under the ability it uses, calls inspiration Heroic, carries a
+  Notes column with weapon mastery, checkboxes for armour training and three
+  attunement slots; the 2014 sheet keeps one alphabetical skill column, passive
+  Wisdom, and the coin column beside the equipment box.
+- Both read one gathering of facts (`lib/sheet-data.ts`), so the two layouts
+  are layouts: neither derives anything, and they cannot disagree about the
+  same character.
+- Experience, inspiration, current and temporary hit points, spent hit dice,
+  death saves and expended slots are drawn **empty**, the way a printed sheet
+  has them. This builder keeps choices, not a session — a zero there would be a
+  claim about a character nobody is playing yet.
+- The mastery on an attack line is the one the **player chose**, never the one
+  the weapon carries. Every 2024 weapon has a mastery written in the index
+  whether or not its wielder may use it, so printing the weapon's own would
+  hand out a mastery that was not picked.
 - `weapon-attack.ts` finally has a caller. It shipped with #85 and nothing used
   it: the arithmetic was tested and the wiring — which thing in the bag is a
   weapon, what the index says about it, whether the character is trained — did
