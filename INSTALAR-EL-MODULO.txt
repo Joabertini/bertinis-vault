@@ -1,0 +1,63 @@
+BERTINI'S VAULT - INSTALAR EL MODULO EN FOUNDRY
+================================================
+
+Todo lo que hace falta, en orden. No necesitas cuenta de GitHub ni descargar
+nada a mano.
+
+
+1. LA WEB
+---------
+Ahi armas el personaje y sacas el codigo:
+
+    https://alba.bertinilabs.xyz
+
+
+2. EL MANIFEST DEL MODULO
+-------------------------
+Esta es la URL que se pega en Foundry:
+
+    https://alba.bertinilabs.xyz/foundry/module.json
+
+En Foundry: Configuracion -> Administrar modulos -> Instalar modulo ->
+pegar la URL en "URL del manifiesto" -> Instalar.
+
+
+3. LO QUE EL MODULO NECESITA PARA FUNCIONAR
+-------------------------------------------
+- Foundry VTT v14
+- Sistema dnd5e 5.3.x
+- Plutonium (obligatorio): es lo que convierte cada conjuro, objeto y rasgo
+  en un documento real de dnd5e. Sin Plutonium no hay nada que importar.
+
+      https://github.com/TheGiddyLimit/plutonium-next/releases/latest/download/module.json
+
+- lib-wrapper: lo pide Plutonium. Se instala desde el buscador de modulos de
+  Foundry, escribiendo "lib-wrapper".
+
+Los cuatro se activan en el mundo donde vas a jugar.
+
+
+4. IMPORTAR UN PERSONAJE
+------------------------
+1. Arma el personaje en la web y copia el codigo (diez caracteres).
+2. En Foundry, pestania de Actores, boton "Importar del Vault" al pie.
+3. Pega el codigo e importa. No importan las mayusculas ni los guiones.
+   El actor aparece en la carpeta "Bertini's Vault".
+
+
+5. SI YA TENIAS EL MODULO INSTALADO ANTES DEL 6 DE SEPTIEMBRE DE 2026
+---------------------------------------------------------------------
+La direccion vieja del modulo dejo de funcionar, y una instalacion vieja no se
+entera sola: no le van a llegar actualizaciones nunca mas.
+
+Desinstalalo y volve a instalarlo una vez con la URL del punto 2. De ahi en
+adelante, las actualizaciones vuelven a llegar solas.
+
+
+6. SI EL IMPORTADOR NO ENCUENTRA EL CODIGO
+------------------------------------------
+El modulo trae una direccion configurada de fabrica y no hay que tocarla. Si
+alguien la cambio, se arregla en Configuracion -> Ajustes del modulo ->
+Bertini's Vault -> "Vault address", que tiene que decir:
+
+    https://bertinis-vault.bertinisdnd.workers.dev
