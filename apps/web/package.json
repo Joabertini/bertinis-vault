@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "node ../../scripts/build-shaped-sheet.mjs",
+    "prebuild": "node ../../scripts/build-shaped-sheet.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "node ../../scripts/build-shaped-sheet.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "probe": "vite build --ssr probes/conformance.ts --outDir .probe --logLevel error && node .probe/conformance.js"

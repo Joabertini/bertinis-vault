@@ -29,3 +29,6 @@ packages/domain/src/*.d.ts.map
 
 # Salida del conformance del front (`pnpm --filter @bertinis-vault/web probe`).
 .probe
+
+# La hoja de roll20 se genera desde apps/web/vendor/5eshaped en cada build
+apps/web/public/hoja/
