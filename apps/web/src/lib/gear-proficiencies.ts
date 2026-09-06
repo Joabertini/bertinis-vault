@@ -40,6 +40,26 @@ export type SpeciesGrant = {
   weaponClauses: string[];
 };
 
+/**
+ * What a feat contributes, and the name to credit it under.
+ *
+ * Read per rules version by the caller, not here: the shield changes hands
+ * between editions — 2014 puts it on Moderately Armored, 2024 on Lightly
+ * Armored — so the grant that arrives is already the one this character's
+ * books print.
+ */
+export type FeatGrant = {
+  /** The feat slug `grantedBy` credits. */
+  id: string;
+  /** The feat's name, for a sheet that has to say where a shield came from. */
+  label: string;
+  /** "light", "medium", "heavy", "shield". */
+  armor: string[];
+  /** "simple", "martial". */
+  weaponCategories: string[];
+  weaponClauses: string[];
+};
+
 export type ProficiencyLine = {
   /** The dnd5e key or base-item id this line stands for. */
   id: string;
@@ -88,12 +108,18 @@ const ARMOR_LABEL: Record<string, string> = {
   shl: "Escudos",
 };
 
-/** The books say "light"; dnd5e says "lgt". */
-const SPECIES_ARMOR_KEY: Record<string, string> = {
+/** The books say "light"; dnd5e says "lgt". Species and feats both arrive in the books' words. */
+const ARMOR_KEY: Record<string, string> = {
   light: "lgt",
   medium: "med",
   heavy: "hvy",
   shield: "shl",
+};
+
+/** The same trade for weapons: the books say "martial", dnd5e says "mar". */
+const WEAPON_CATEGORY_KEY: Record<string, string> = {
+  simple: "sim",
+  martial: "mar",
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
@@ -200,8 +226,34 @@ export function weaponsMatchingClause(clause: string, rulesVersion: RulesVersion
   return ids.sort();
 }
 
+/**
+ * The rules that are a category the export has no code for, said in Spanish.
+ *
+ * The Giff's firearms have read "Firearms" on a Spanish sheet since the species
+ * grants landed. Tavern Brawler and Weapon Master would have added two more.
+ */
+const CLAUSE_LABEL: Record<string, string> = {
+  Firearms: "Armas de fuego",
+  "Improvised weapons": "Armas improvisadas",
+};
+
 /** The same rule, said in Spanish. Falls back to the sentence as printed. */
 function clauseLabel(clause: string): string {
+  const named = CLAUSE_LABEL[clause];
+  if (named) return named;
+
+  /*
+   * A pick, not a grant. The count is said because it is the whole rule —
+   * Weapon Master is four weapons, the Hobgoblin's is two — and nothing here
+   * asks the player which, so the line grants nothing and says so by naming a
+   * number the player still owes.
+   */
+  const choice = /^choose (\d+) (martial|simple) weapons$/i.exec(clause);
+  if (choice) {
+    const kind = choice[2]?.toLowerCase() === "martial" ? "marciales" : "simples";
+    return `${choice[1]} armas ${kind} a eleccion`;
+  }
+
   const category = /\bmartial\b/i.test(clause)
     ? "Armas marciales"
     : /\bsimple\b/i.test(clause)
@@ -256,6 +308,7 @@ export function gearProficienciesFor(
   classes: ReadonlyArray<{ classId: string }>,
   rulesVersion: RulesVersion,
   species?: SpeciesGrant | null,
+  feats?: ReadonlyArray<FeatGrant> | null,
 ): GearProficiencies {
   const resolved: ResolvedClassProficiencies = classProficienciesFor(
     classes,
@@ -273,13 +326,41 @@ export function gearProficienciesFor(
   };
 
   const armorIds: string[] = [...resolved.armor];
+  const categoryIds: string[] = [...resolved.weaponCategories];
   const weaponItemIds = [...resolved.weaponItems];
   const clauses = [...resolved.weaponClauses];
   const speciesWeaponIds: string[] = [];
 
+  /*
+   * Feats before the species, because a feat can widen a category and the
+   * species check below asks whether a category already covers a named weapon.
+   * A dwarf who took Martial Weapon Training does not need the battleaxe
+   * listed twice.
+   */
+  for (const feat of feats ?? []) {
+    for (const value of feat.armor) {
+      const id = ARMOR_KEY[value];
+      if (!id) continue;
+      if (!armorIds.includes(id)) armorIds.push(id);
+      credit(id, feat.id);
+    }
+
+    for (const value of feat.weaponCategories) {
+      const id = WEAPON_CATEGORY_KEY[value];
+      if (!id) continue;
+      if (!categoryIds.includes(id)) categoryIds.push(id);
+      credit(id, feat.id);
+    }
+
+    for (const clause of feat.weaponClauses) {
+      if (!clauses.includes(clause)) clauses.push(clause);
+      credit(clause, feat.id);
+    }
+  }
+
   if (species) {
     for (const value of species.armor) {
-      const id = SPECIES_ARMOR_KEY[value];
+      const id = ARMOR_KEY[value];
       if (!id) continue;
       if (!armorIds.includes(id)) armorIds.push(id);
       credit(id, species.id);
@@ -294,8 +375,8 @@ export function gearProficienciesFor(
       // fighter does not need the battleaxe named; a dwarf wizard does.
       const category = categories.get(id);
       const covered =
-        (category === "simple" && resolved.weaponCategories.includes("sim")) ||
-        (category === "martial" && resolved.weaponCategories.includes("mar"));
+        (category === "simple" && categoryIds.includes("sim")) ||
+        (category === "martial" && categoryIds.includes("mar"));
       if (!speciesWeaponIds.includes(id)) speciesWeaponIds.push(id);
       if (covered) continue;
       if (!weaponItemIds.includes(id)) weaponItemIds.push(id);
@@ -315,7 +396,7 @@ export function gearProficienciesFor(
   });
 
   const weapons: ProficiencyLine[] = [
-    ...resolved.weaponCategories.map((id) => line(id, CATEGORY_LABEL[id] ?? id)),
+    ...categoryIds.map((id) => line(id, CATEGORY_LABEL[id] ?? id)),
     ...weaponItemIds.map((id) => line(id, names.get(id) ?? id)),
   ];
 
@@ -344,7 +425,7 @@ export function gearProficienciesFor(
     speciesWeaponIds,
     foundryWeaponIds: Array.from(
       new Set([
-        ...resolved.weaponCategories,
+        ...categoryIds,
         ...weaponItemIds,
         ...clauseWeaponIds,
         ...speciesWeaponIds,

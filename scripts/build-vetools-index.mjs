@@ -537,6 +537,95 @@ function speciesProficienciesOf(entity) {
   return { armor, weaponItems, weaponClauses, skills, tools };
 }
 
+/** The four words the books use for armour, and the only ones modelled. */
+const ARMOR_WORDS = new Set(["light", "medium", "heavy", "shield"]);
+
+/**
+ * The armour and the weapons a feat grants.
+ *
+ * The same two 5etools fields the species read, and deliberately not the same
+ * reader. Measured across every race, subrace, background and feat in the
+ * bundle, feats are the only source that writes `martial`, `improvised` or
+ * `shield` — so `speciesProficienciesOf` would file "martial" as a weapon
+ * *name*, and Martial Weapon Training would reach the sheet granting a base
+ * item that matches nothing. See [[parser-fuente-ajena-dos-muestras]].
+ *
+ * What travels is the books' own words — `light`, `shield`, `martial` — and
+ * not dnd5e's `lgt` and `mar`. The index is a reading of the page; the codes
+ * are an export concern, and the layer that exports already owns that table.
+ *
+ * Anything else throws. Six feats state armour and four state weapons, which
+ * is few enough that a shape appearing later would be a book adding a rule,
+ * not noise to swallow.
+ */
+function featGearProficienciesOf(feat) {
+  const where = `${feat.name} (${sourceOf(feat)})`;
+  const weaponCategories = [];
+  const weaponItems = [];
+  const weaponClauses = [];
+
+  for (const group of feat.weaponProficiencies ?? []) {
+    for (const [key, value] of Object.entries(group)) {
+      if (!value) continue;
+
+      if (key === "simple" || key === "martial") {
+        weaponCategories.push(key);
+        continue;
+      }
+      if (key === "choose") {
+        // Weapon Master picks four. Which four is a question nothing asks yet,
+        // and a clause grants no ids, so the feat is shown and hands out
+        // nothing rather than handing out all of them.
+        const filter = String(value.fromFilter ?? "");
+        const category = /martial weapon/i.test(filter)
+          ? "martial"
+          : /simple weapon/i.test(filter)
+            ? "simple"
+            : null;
+        if (!category) {
+          throw new Error(`${where}: a weapon choice this does not model: ${JSON.stringify(value)}`);
+        }
+        weaponClauses.push(`Choose ${value.count ?? 1} ${category} weapons`);
+        continue;
+      }
+      // Two categories dnd5e has no base item for. They are sentences on the
+      // sheet and nothing on the export, the same as the Giff's firearms.
+      if (key === "firearms") {
+        weaponClauses.push("Firearms");
+        continue;
+      }
+      if (key === "improvised") {
+        weaponClauses.push("Improvised weapons");
+        continue;
+      }
+      // A named weapon still says its name, tagged with its book.
+      if (key.includes("|")) {
+        weaponItems.push(String(key).split("|")[0]);
+        continue;
+      }
+
+      throw new Error(`${where}: unmodelled weapon proficiency "${key}"`);
+    }
+  }
+
+  const armor = [];
+  for (const group of feat.armorProficiencies ?? []) {
+    for (const [key, value] of Object.entries(group)) {
+      if (!value) continue;
+      const word = String(key).split("|")[0];
+      if (!ARMOR_WORDS.has(word)) {
+        throw new Error(`${where}: unmodelled armour proficiency "${key}"`);
+      }
+      armor.push(word);
+    }
+  }
+
+  if (!armor.length && !weaponCategories.length && !weaponItems.length && !weaponClauses.length) {
+    return null;
+  }
+  return { armor, weaponCategories, weaponItems, weaponClauses };
+}
+
 /**
  * The languages an entity grants, in the four shapes the books write them.
  *
@@ -1981,9 +2070,7 @@ const BUILDERS = {
       // took Skill Expert for the skill got the expertise and no skill.
       //
       // Read with the same helper the species and backgrounds use, because it
-      // is the same 5etools shape. Weapons and armour are deliberately not here
-      // — four feats and six state them, and nothing downstream models a weapon
-      // proficiency from any source yet.
+      // is the same 5etools shape.
       skills: proficiencyOffersOf(f.skillProficiencies, skillNameOf),
       tools: proficiencyOffersOf(f.toolProficiencies, titleCase),
       // Skilled's shape, which is its own: "three from any skill or any tool",
@@ -1991,6 +2078,11 @@ const BUILDERS = {
       // helper cannot read it — its `choose` is an array and its `from` holds
       // the tokens `anySkill` and `anyTool` rather than named proficiencies.
       skillOrTool: skillOrToolChoicesOf(f.skillToolLanguageProficiencies),
+      // Ten feats say what the character may wear and swing. Until now the
+      // sheet read weapon and armour proficiency from the class and the
+      // species only, so Heavily Armored granted nothing to the character who
+      // spent a level on it.
+      gear: featGearProficienciesOf(f),
     })),
 
   race: (entities, context) =>

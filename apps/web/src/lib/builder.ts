@@ -68,6 +68,7 @@ import {
   armorFormulaOf,
   featAbilityGrantsFor,
   featChoiceForBackground,
+  featGearGrantsFor,
   itemInfoFor,
   slugOf,
 } from "./index-options";
@@ -530,6 +531,9 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         classesFor(state),
         rulesVersionOf(state),
         speciesGrant ? { id: state.raceId, ...speciesGrant } : null,
+        // And the ones a *feat* grants. Heavily Armored is a whole level spent
+        // on plate; before this it reached the exported actor as nothing.
+        featGearGrantsFor(featIdsFor(state), rulesVersionOf(state)),
       )
     : null;
   /*

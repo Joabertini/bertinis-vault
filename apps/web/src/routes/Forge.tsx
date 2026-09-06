@@ -47,11 +47,13 @@ import {
 } from "@/lib/catalog";
 import {
   featChoiceForBackground,
+  featGearGrantsFor,
   levellingFor,
   optionsFor,
   slugOf,
   startingEquipmentForClass,
 } from "@/lib/index-options";
+import { featIdsFor } from "@/lib/feats";
 import ItemFacts from "@/components/forge/ItemFacts";
 import { factsFor } from "@/lib/item-facts";
 import { armorWarningFor, weaponWarningFor } from "@/lib/gear-warnings";
@@ -693,6 +695,10 @@ export default function Forge() {
       classEntries,
       rulesVersion,
       speciesGrant ? { id: draft.raceId, ...speciesGrant } : null,
+      // A feat counts here too, and this is the warning that used to be wrong
+      // about it: the wizard who spent a level on Lightly Armored was still
+      // being told the leather they just bought would cost them their spells.
+      featGearGrantsFor(featIdsFor(draft), rulesVersion),
     );
   }, [draft, rulesVersion, speciesGrant]);
 

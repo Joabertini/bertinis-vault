@@ -15,12 +15,15 @@ import { LABEL_MB2, WHISPER } from "@/styles/recipes";
 
 export default function GearProficienciesPanel({
   proficiencies,
-  classLabels,
+  sourceLabels,
+  classIds,
   accent,
 }: {
   proficiencies: GearProficiencies;
-  /** Class id to the name the player picked it by. */
-  classLabels: Record<string, string>;
+  /** Any granting id — class, species, feat — to the name it is known by. */
+  sourceLabels: Record<string, string>;
+  /** Which of those ids are classes. See `Lines` for why that matters. */
+  classIds: string[];
   accent: string;
 }) {
   const { armor, weapons } = proficiencies;
@@ -36,7 +39,7 @@ export default function GearProficienciesPanel({
       <div className="mb-3">
         <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-bone/60">Armadura</p>
         {armor.length ? (
-          <Lines lines={armor} classLabels={classLabels} accent={accent} />
+          <Lines lines={armor} sourceLabels={sourceLabels} classIds={classIds} accent={accent} />
         ) : (
           <p className={WHISPER}>
             Ninguna — con armadura tiras con desventaja y no podes lanzar conjuros.
@@ -46,7 +49,7 @@ export default function GearProficienciesPanel({
 
       <div>
         <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-bone/60">Armas</p>
-        <Lines lines={weapons} classLabels={classLabels} accent={accent} />
+        <Lines lines={weapons} sourceLabels={sourceLabels} classIds={classIds} accent={accent} />
       </div>
     </div>
   );
@@ -54,13 +57,28 @@ export default function GearProficienciesPanel({
 
 function Lines({
   lines,
-  classLabels,
+  sourceLabels,
+  classIds,
   accent,
 }: {
   lines: ProficiencyLine[];
-  classLabels: Record<string, string>;
+  sourceLabels: Record<string, string>;
+  classIds: string[];
   accent: string;
 }) {
+  /*
+   * Which sources are worth naming.
+   *
+   * On a single-class sheet the class is the assumption, and repeating it on
+   * every line is noise. Anything else is not the assumption: a species or a
+   * feat is the whole answer to "where did the heavy armour come from", and
+   * that question is the only reason this credit exists. Multiclassed, every
+   * line is worth crediting, because the answer is on the other class's page.
+   */
+  const multiclass = classIds.length > 1;
+  const credited = (line: ProficiencyLine) =>
+    line.from.filter((id) => multiclass || !classIds.includes(id));
+
   return (
     <ul className="space-y-1">
       {lines.map((line) => (
@@ -70,11 +88,11 @@ function Lines({
               •
             </span>
             <span className="truncate font-body text-xs">{line.label}</span>
-            {/* Only worth saying when more than one class is in play: on a
-                single-class sheet every line came from the same place. */}
-            {line.from.length > 0 && Object.keys(classLabels).length > 1 && (
+            {credited(line).length > 0 && (
               <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-bone/60">
-                {line.from.map((id) => classLabels[id] ?? id).join(", ")}
+                {credited(line)
+                  .map((id) => sourceLabels[id] ?? id)
+                  .join(", ")}
               </span>
             )}
           </span>
