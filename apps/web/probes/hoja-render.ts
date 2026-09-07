@@ -45,5 +45,25 @@ Object.assign(globalThis, {
 });
 
 renderOgl(root, oglDataFor(sheetDataFor(state, resolved.snapshot, "2014")));
-writeFileSync(join(hoja, "sheet-llena.html"), root.outerHTML, "utf8");
-console.log("sheet-llena.html escrito");
+
+/*
+ * Con la hoja de estilos puesta, que es la mitad del punto.
+ *
+ * Antes esto escribía `root.outerHTML` pelado. Un navegador abriendo ese
+ * archivo mide una hoja sin CSS: `.container` sale del ancho de la ventana en
+ * vez de sus 750px, las tres columnas se apilan, y todo lo que se mida encima
+ * es ruido. Se perdió una tanda entera de mediciones así.
+ */
+const pagina = `<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Hoja llena, para medir</title>
+<link rel="stylesheet" href="./sheet.css">
+<style>body { margin: 0; background: #14100c; }</style>
+</head>
+<body>${root.outerHTML}</body>
+</html>`;
+
+writeFileSync(join(hoja, "sheet-llena.html"), pagina, "utf8");
+console.log("sheet-llena.html escrito, con la CSS enlazada");

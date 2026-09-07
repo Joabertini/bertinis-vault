@@ -109,7 +109,20 @@ if (clipped.length < source.length * 0.8) {
  * CONJUROS quedaba cortada. No hacía falta escribir CSS, hacía falta que la
  * hoja supiera en qué idioma está.
  */
-const sheet = wrapInDarkmode(clipped).replace("lang-undefined", "lang-es");
+/**
+ * Un rótulo que roll20 tradujo sin el espacio.
+ *
+ * La cadena en español de `class-level-u` es literalmente `CLASEY NIVEL`, y así
+ * viene en la captura. No es nuestro y no hay forma de arreglarlo desde la CSS:
+ * es texto, y está mal en el origen.
+ *
+ * Se cambia acá, sobre el recorte, y no en `captura-v4.21.html`, que es una
+ * copia del DOM tal como lo entregó roll20 y tiene que seguir siéndolo — la
+ * captura es la prueba de dónde salió la hoja, no un archivo que editamos.
+ */
+const sheet = wrapInDarkmode(clipped)
+  .replace("lang-undefined", "lang-es")
+  .replace(/>CLASEY NIVEL</g, ">CLASE Y NIVEL<");
 
 /**
  * El arte de la hoja, cambiado por el del modo oscuro.
@@ -142,25 +155,30 @@ const DARK_ART = [
 const DARK_BASE = "https://storage.googleapis.com/char-sheet-app-images-6e101411/D%26D5e/images/darkmode";
 
 /**
- * Saca el diálogo de roll20 de los selectores que hablan de la hoja.
+ * Lo que el diálogo de roll20 se llevaba puesto.
  *
- * En roll20 la hoja vive dentro de su ventana, así que 16 reglas están escritas
- * como `.charsheet .ui-dialog .charsheet …`: el primero es la ventana, el
- * segundo la hoja. Nosotros recortamos la hoja y dejamos la ventana afuera, así
- * que esas 16 no matchean nunca.
+ * La hoja vive dentro de su ventana, así que 15 reglas están escritas como
+ * `.charsheet .ui-dialog .charsheet …`: el primero es la ventana, el segundo la
+ * hoja. Nosotros recortamos la hoja y dejamos la ventana afuera, así que esas
+ * 15 no matchean nunca.
  *
  * Entre ellas está la que esconde los controles de fila —mover, borrar, el
- * candado—, que roll20 sólo muestra cuando la lista se pone en modo edición.
- * Sin esa regla el `<div>` queda en su `display: block` de fábrica y los
- * botones se dibujan sobre cada fila.
+ * candado—, que roll20 sólo muestra cuando la lista está en modo edición. Sin
+ * esa regla el `<div>` queda en su `display: block` de fábrica y los botones se
+ * dibujan encima de cada fila.
  *
- * No alcanza con ponerle la clase `ui-dialog` al envoltorio: probado, enciende
- * las mismas 16 pero además trae el layout de la ventana y la hoja colapsa a
- * cero de alto. Se saca el trozo del selector, que es lo que sobra.
+ * **Acá hubo un intento peor y conviene que quede escrito.** Se reescribía el
+ * selector para encender las 15 de una, y las otras catorce no son inocentes:
+ * `input { height: auto }` le saca la altura fija a todos los campos y
+ * `button[type=roll] { font-size: 1.3em }` les cambia el cuerpo. Medido contra
+ * la hoja sin tocar: el botón de SALVACIONES CONTRA MUERTE pasaba de 24px de
+ * alto a 8, el de DADOS DE GOLPE de 12 a 8, y BONIFICACIÓN POR COMPETENCIA
+ * ocupaba dos renglones en una caja de uno. Catorce reglas ajenas de daño para
+ * conseguir una.
+ *
+ * Así que la que hace falta se escribe en `parches.css`, que es donde va lo
+ * nuestro, y las otras catorce se quedan afuera, que es donde estaban.
  */
-function dropDialog(text) {
-  return text.replace(/\.charsheet\s+\.ui-dialog\s+\.charsheet\b/g, ".charsheet .charsheet");
-}
 
 function useDarkArt(text) {
   let changed = 0;
@@ -183,11 +201,9 @@ const hasCss = existsSync(css);
 const patches = readFileSync(join(vendor, "parches.css"), "utf8");
 
 const art = useDarkArt(
-  dropDialog(
-    hasCss
-      ? readFileSync(css, "utf8")
-      : "/* Falta apps/web/vendor/roll20-ogl/sheet.css — ver ORIGEN.md */\n",
-  ),
+  hasCss
+    ? readFileSync(css, "utf8")
+    : "/* Falta apps/web/vendor/roll20-ogl/sheet.css — ver ORIGEN.md */\n",
 );
 
 mkdirSync(out, { recursive: true });
