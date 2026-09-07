@@ -26,23 +26,39 @@ lo vuelva a buscar:
 
 Por eso el punto de partida es el DOM renderizado y no el fuente.
 
-## Qué le falta: la hoja de estilos
+## La hoja de estilos
 
-**`sheet.css` no está acá y sin ella la hoja se dibuja como una columna de
-campos sin formato.** No se puede sacar de ningún repositorio público (ver
-arriba) y `app.roll20.net` responde 403 sin sesión.
+`sheet.css` está acá, sacada del mismo navegador que la captura el 2026-09-07.
+Son 737 KB y no sale de ningún repositorio público (ver arriba): roll20 la
+inyecta como un `<style>` sin archivo, y `app.roll20.net` responde 403 sin
+sesión.
 
-Sale del mismo navegador de donde salió la captura: con la hoja abierta, en la
-consola de DevTools,
+Cuelga todo de `.charsheet`, que es una de las clases del nodo raíz del recorte
+(`<div class="charactersheet tab-pane charsheet …">`). Sus `url()` apuntan a
+`app.roll20.net` en absoluto, así que las imágenes de fondo cargan sin
+vendorizar nada.
+
+**Para volver a sacarla**, con la hoja abierta y en la consola de DevTools, hay
+que encontrar primero cuál de las hojas de estilo es — el índice cambia en cada
+carga y las de otro origen tiran `SecurityError`:
 
 ```js
-copy([...document.styleSheets]
-  .flatMap(s => { try { return [...s.cssRules] } catch { return [] } })
-  .map(r => r.cssText).join("\n"))
+[...document.styleSheets].forEach((s, i) => {
+  try {
+    const hit = [...s.cssRules].filter(r => /charsheet|repcontainer/.test(r.selectorText ?? ""));
+    if (hit.length) console.log(i, s.href ?? "(inline <style>)", hit.length);
+  } catch (e) { console.log(i, s.href ?? "(inline)", "BLOQUEADA " + e.name); }
+})
 ```
 
-y lo pegado se guarda como `apps/web/vendor/roll20-ogl/sheet.css`. Mientras no
-esté, `scripts/build-ogl-sheet.mjs` avisa y emite una CSS vacía.
+La nuestra es la inline con miles de reglas. Con ese índice,
+`copy([...document.styleSheets[N].cssRules].map(r => r.cssText).join("\n"))`, y
+lo pegado va tal cual en este archivo — **sin una línea de texto adelante**: un
+`@import` sólo vale al principio de la hoja, y cualquier cosa antes se lleva
+puestas las cuatro importaciones de fuentes.
+
+Si el archivo no está, `scripts/build-ogl-sheet.mjs` avisa y emite una CSS
+vacía; la hoja se dibuja como una columna de campos sin formato.
 
 ## Qué hace el build con esto
 
