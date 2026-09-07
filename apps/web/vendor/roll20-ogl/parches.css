@@ -65,6 +65,21 @@
 }
 
 /*
+ * `.container`, que es todo el blanco que quedaba.
+ *
+ * `.charsheet .container { background-color: white }` es la hoja entera —750px
+ * de ancho, 5692 de alto— y el modo oscuro de roll20 no la pisa: en su página
+ * el blanco queda tapado por su CSS global, que no tenemos.
+ *
+ * Medido en Chrome sobre la hoja armada: de los 12.066 nodos, éste era el
+ * **único** con fondo claro computado, y ninguna imagen quedaba en su versión
+ * clara. Todo lo que se veía blanco salía de acá.
+ */
+.charsheet .container {
+  background-color: var(--dark-background);
+}
+
+/*
  * Los iconos.
  *
  * La hoja los dibuja con dos fuentes de iconos de roll20 —`pictos` y
