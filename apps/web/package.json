@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "predev": "node ../../scripts/build-ogl-sheet.mjs",
+    "prebuild": "node ../../scripts/build-ogl-sheet.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "pretest": "node ../../scripts/build-ogl-sheet.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
     "probe": "vite build --ssr probes/conformance.ts --outDir .probe --logLevel error && node .probe/conformance.js"
@@ -29,6 +32,7 @@
   "devDependencies": {
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.6",
+    "@types/jsdom": "^30.0.0",
     "@types/node": "^26.3.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",

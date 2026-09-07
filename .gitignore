@@ -29,3 +29,6 @@ packages/domain/src/*.d.ts.map
 
 # Salida del conformance del front (`pnpm --filter @bertinis-vault/web probe`).
 .probe
+
+# La hoja de roll20 se recorta desde apps/web/vendor/roll20-ogl en cada build
+apps/web/public/hoja/

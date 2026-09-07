@@ -18,6 +18,8 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 import type { GearProficiencies } from "./gear-proficiencies";
 import { isWeaponProficient } from "./gear-warnings";
 import { itemInfoFor } from "./index-options";
+import { weaponFacts } from "./item-facts";
+import { foundryWeaponId } from "./weapon-mastery";
 
 /** How the catalogue spells damage types, in the language the sheet speaks. */
 const DAMAGE_TYPE: Record<string, string> = {
@@ -32,6 +34,16 @@ export type AttackLine = WeaponAttack & {
   quantity: number;
   /** "cortante", or the raw code when the catalogue uses one this does not. */
   damageType: string | null;
+  /** The weapon's properties, for the 2024 sheet's Notes column. */
+  properties: string[];
+  /**
+   * The mastery this character actually has with this weapon, or null.
+   *
+   * A weapon carries its mastery in 2024 whether or not anyone can use it, so
+   * printing the weapon's own is a claim about the character that is often
+   * false. Only a weapon the player spent a mastery slot on gets one here.
+   */
+  mastery: string | null;
 };
 
 /**
@@ -45,6 +57,8 @@ export function attackLinesFor(
   build: CharacterBuild,
   rulesVersion: RulesVersion,
   proficiencies: GearProficiencies | null,
+  /** `state.weaponMasteryIds`, the dnd5e base-item ids the player chose. */
+  masteryIds: readonly string[] = [],
 ): AttackLine[] {
   const equipment = build.choices.normalized?.equipment ?? [];
   const sourceBooks = build.sourceBooks ?? {};
@@ -74,11 +88,16 @@ export function attackLinesFor(
       proficient: isWeaponProficient(row, proficiencies),
     });
 
+    const facts = weaponFacts(row);
+    const hasMastery = masteryIds.includes(foundryWeaponId(row.name));
+
     lines.push({
       ...attack,
       name: row.name,
       quantity: entry.quantity,
       damageType: row.damageType ? (DAMAGE_TYPE[row.damageType] ?? row.damageType) : null,
+      properties: facts.properties.map((property) => property.label),
+      mastery: hasMastery ? (facts.masteries[0]?.name ?? null) : null,
     });
   }
 

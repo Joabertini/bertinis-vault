@@ -12,6 +12,9 @@
  * suman el bonificador y la hoja miente en la unica linea que se tira.
  */
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { afterEach, beforeAll, beforeEach, describe, expect, test } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -26,6 +29,17 @@ import { useVault, type SealedCharacter } from "../src/lib/vault-store";
 import type { BuilderState } from "../src/lib/builder";
 
 const pageText = () => (document.body.textContent ?? "").replace(/\s+/g, " ");
+
+/*
+ * La hoja vive en un shadow root, así que `document.body.textContent` no la ve.
+ * Estos dos ayudantes miran adentro: `sheetHost` es el div que la sostiene y su
+ * ausencia es lo que significa "la hoja no está".
+ */
+const sheetHost = () => [...document.querySelectorAll("div")].find((element) => element.shadowRoot);
+const sheetText = () => (sheetHost()?.shadowRoot?.textContent ?? "").replace(/\s+/g, " ");
+
+/** Un rótulo que sólo puede venir de la hoja de roll20. */
+const EN_LA_HOJA = "FUERZA";
 
 /** Un personaje entero, con un arma en la mochila. */
 function characterWith(overrides: Partial<BuilderState>): BuilderState {
@@ -64,6 +78,16 @@ beforeAll(() => {
     },
   );
   HTMLCanvasElement.prototype.getContext = (() => noop) as never;
+
+  // La hoja se busca en `public/hoja`, que en un navegador sirve Vite y acá no
+  // sirve nadie. El build ya la dejó en disco (`pretest`), así que el `fetch`
+  // de la prueba la lee de ahí.
+  const hoja = join(process.cwd(), "public", "hoja");
+  globalThis.fetch = ((input: RequestInfo | URL) => {
+    const name = String(input).replace("/hoja/", "");
+    const body = readFileSync(join(hoja, name), "utf8");
+    return Promise.resolve({ ok: true, text: () => Promise.resolve(body) } as Response);
+  }) as typeof fetch;
 });
 
 beforeEach(() => {
@@ -139,14 +163,14 @@ describe("el tomo abre en un selector", () => {
     await user.click(screen.getByLabelText(/Abrir Kaelen Thorne/));
     await user.click(screen.getByText("La hoja"));
 
-    const text = pageText();
-    expect(text).toContain("Puntos de golpe");
+    // La hoja se busca antes de dibujarse, así que "está" es cuando llegó.
+    await waitFor(() => expect(sheetText()).toContain(EN_LA_HOJA));
+
+    const text = sheetText();
     expect(text).toContain(String(resolved.snapshot.derived.hp));
     expect(text).toContain(String(resolved.snapshot.derived.ac));
-    expect(text).toContain("Ataques");
-    // Las seis puntuaciones, cada una con su modificador.
-    expect(text).toContain("FUE");
-    expect(text).toContain("CAR");
+    // Las seis puntuaciones, cada una con su rótulo.
+    expect(text).toContain("CARISMA");
   });
 
   test("se puede pasar a los recordatorios sin cerrar la ventana", async () => {
@@ -155,10 +179,10 @@ describe("el tomo abre en un selector", () => {
 
     await user.click(screen.getByLabelText(/Abrir Kaelen Thorne/));
     await user.click(screen.getByText("La hoja"));
-    expect(pageText()).toContain("Puntos de golpe");
+    await waitFor(() => expect(sheetText()).toContain(EN_LA_HOJA));
 
     await user.click(screen.getByText("Recordatorios"));
-    expect(pageText()).not.toContain("Puntos de golpe");
+    expect(sheetHost()).toBeUndefined();
   });
 
   /*
@@ -173,11 +197,11 @@ describe("el tomo abre en un selector", () => {
 
     await user.click(screen.getByLabelText(/Abrir Kaelen Thorne/));
     await user.click(screen.getByText("La hoja"));
-    expect(pageText()).toContain("Puntos de golpe");
+    await waitFor(() => expect(sheetText()).toContain(EN_LA_HOJA));
 
     await user.keyboard("{Escape}");
 
-    await waitFor(() => expect(pageText()).not.toContain("Puntos de golpe"));
+    await waitFor(() => expect(sheetHost()).toBeUndefined());
   });
 
   test("la ventana se cierra y devuelve la estanteria", async () => {
@@ -190,6 +214,6 @@ describe("el tomo abre en un selector", () => {
 
     // La ventana sale con animacion, asi que "cerrada" es cuando termina de
     // desmontarse y no en el click.
-    await waitFor(() => expect(pageText()).not.toContain("Puntos de golpe"));
+    await waitFor(() => expect(sheetHost()).toBeUndefined());
   });
 });
