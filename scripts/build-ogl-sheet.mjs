@@ -98,6 +98,48 @@ if (clipped.length < source.length * 0.8) {
 
 const sheet = wrapInDarkmode(clipped);
 
+/**
+ * El arte de la hoja, cambiado por el del modo oscuro.
+ *
+ * Los fondos de la hoja son imágenes —el papel, los marcos, las cajas de
+ * característica— y roll20 publica cada una en dos versiones. Encender
+ * `.sheet-darkmode` cambia sólo las que sus propias reglas alcanzan, y las
+ * suyas suponen un DOM que nuestro recorte no tiene entero: quedaban claras la
+ * caja de las constantes, el borde de la bio, las monedas.
+ *
+ * Como acá **no hay modo claro** —la hoja se muestra siempre oscura—, no hace
+ * falta pelear especificidad con cada selector suyo: alcanza con cambiar la
+ * imagen en la única CSS que servimos.
+ *
+ * La lista es la de las que existen de verdad. Se comprobó una por una contra
+ * el bucket, y de las 40 imágenes que usa el modo claro, 29 tienen par oscuro;
+ * las 11 que faltan son plantillas de tirada del chat y el logo, que no se ven
+ * en la hoja.
+ */
+const DARK_ART = [
+  "vitals", "vital-box", "vital-top", "vital-mid", "vital-bottom",
+  "CharScroll", "BioScroll", "SpellScroll", "ScrollRight",
+  "CharBox", "SpellBox", "SpellHeadBlock", "5eBorder",
+  "ability-back", "ability-STR", "ability-DEX", "ability-CNS",
+  "ability-INT", "ability-WIS", "ability-CHA",
+  "inspiration", "proficency-bonus", "proficiency-block", "saves",
+  "AC", "perception", "copper", "silver", "electrum",
+];
+
+const DARK_BASE = "https://storage.googleapis.com/char-sheet-app-images-6e101411/D%26D5e/images/darkmode";
+
+function useDarkArt(text) {
+  let changed = 0;
+  const swapped = text.replace(/url\("(https:\/\/[^"]*?)\/([^"/]+)\.(svg|png)"\)/g, (whole, base, name, ext) => {
+    // Las que ya son oscuras se dejan como están.
+    if (base.endsWith("/darkmode") || !DARK_ART.includes(name)) return whole;
+    changed += 1;
+    return `url("${DARK_BASE}/${name}_dm.${ext}")`;
+  });
+
+  return { swapped, changed };
+}
+
 const css = join(vendor, "sheet.css");
 const hasCss = existsSync(css);
 
@@ -106,19 +148,21 @@ const hasCss = existsSync(css);
 // `sheet.css` es ajena y se vuelve a bajar entera cuando haga falta.
 const patches = readFileSync(join(vendor, "parches.css"), "utf8");
 
+const art = useDarkArt(
+  hasCss
+    ? readFileSync(css, "utf8")
+    : "/* Falta apps/web/vendor/roll20-ogl/sheet.css — ver ORIGEN.md */\n",
+);
+
 mkdirSync(out, { recursive: true });
 writeFileSync(join(out, "sheet.html"), sheet);
 writeFileSync(
   join(out, "sheet.css"),
-  `${
-    hasCss
-      ? readFileSync(css, "utf8")
-      : "/* Falta apps/web/vendor/roll20-ogl/sheet.css — ver ORIGEN.md */\n"
-  }\n${patches}`,
+  `${art.swapped}\n${patches}`,
 );
 
 const kb = (text) => `${Math.round(text.length / 1024)}KB`;
-console.log(`hoja: ${kb(sheet)} de ${kb(source)}`);
+console.log(`hoja: ${kb(sheet)} de ${kb(source)}, ${art.changed} imágenes al modo oscuro`);
 if (!hasCss) {
   console.warn("hoja: SIN estilos. Falta apps/web/vendor/roll20-ogl/sheet.css (ver ORIGEN.md)");
 }
