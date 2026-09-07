@@ -100,56 +100,110 @@
  * hermanas: las seis puntuaciones de característica se dibujarían a tamaño
  * cero. Un span atado a un atributo es un dato, nunca un icono.
  */
-.charsheet [class*="-flag"] + span:not([name]),
-.charsheet .inventorysubflag + span:not([name]),
-.charsheet button.pictos.repcontrol_del {
+.charsheet .charsheet [class*="-flag"] + span:not([name]),
+.charsheet .charsheet .inventorysubflag + span:not([name]),
+.charsheet .charsheet button.pictos.repcontrol_del {
   font-size: 0 !important;
 }
 
-.charsheet [class*="-flag"] + span:not([name])::before,
-.charsheet .inventorysubflag + span:not([name])::before,
-.charsheet button.pictos.repcontrol_del::before {
+.charsheet .charsheet [class*="-flag"] + span:not([name])::before,
+.charsheet .charsheet .inventorysubflag + span:not([name])::before,
+.charsheet .charsheet button.pictos.repcontrol_del::before {
   font-family: inherit;
   font-size: 13px;
   line-height: 1;
 }
 
 /* Desplegar la sección. La casilla marcada es la que está abierta. */
-.charsheet [class*="options-flag"] + span:not([name])::before {
+.charsheet .charsheet [class*="options-flag"] + span:not([name])::before {
   content: "\25B8"; /* ▸ */
   display: inline-block;
   transition: transform 120ms;
 }
 
-.charsheet [class*="options-flag"]:checked + span:not([name])::before {
+.charsheet .charsheet [class*="options-flag"]:checked + span:not([name])::before {
   transform: rotate(90deg);
 }
 
 /* Ver detalles. */
-.charsheet .details-flag + span:not([name])::before,
-.charsheet .inventorysubflag + span:not([name])::before {
+.charsheet .charsheet .details-flag + span:not([name])::before,
+.charsheet .charsheet .inventorysubflag + span:not([name])::before {
   content: "\24D8"; /* ⓘ */
 }
 
 /* Borrar la fila. Es el `#` que aparecía 205 veces. */
-.charsheet button.pictos.repcontrol_del::before {
+.charsheet .charsheet button.pictos.repcontrol_del::before {
   content: "\00D7"; /* × */
   font-size: 16px;
 }
 
-.charsheet .repcontrol .repcontrol_add::before {
+.charsheet .charsheet .repcontrol .repcontrol_add::before {
   content: "+";
   font-family: inherit;
 }
 
-.charsheet .repcontrol .repcontrol_edit::after {
+.charsheet .charsheet .repcontrol .repcontrol_edit::after {
   content: "\270E"; /* ✎ */
   font-family: inherit;
 }
 
-.charsheet .spell .options-done::before {
+.charsheet .charsheet .spell .options-done::before {
   content: "\2713"; /* ✓ */
   font-family: inherit;
+}
+
+/*
+ * Los que quedaban.
+ *
+ * Medidos en Chrome, no deducidos: 22 nodos seguían dibujando su letra porque
+ * el glifo es el texto del elemento y ninguno tiene una casilla al lado que
+ * sirviera de gancho. Los cinco selectores salen de la ruta real de cada uno.
+ */
+.charsheet .charsheet button.output,
+.charsheet .charsheet span.npc-init-die,
+.charsheet .charsheet span.pictos,
+.charsheet .charsheet .info-popup,
+.charsheet .charsheet input.tab-button.options + span {
+  font-size: 0 !important;
+}
+
+.charsheet .charsheet button.output::before,
+.charsheet .charsheet span.pictos::before,
+.charsheet .charsheet .info-popup::before,
+.charsheet .charsheet input.tab-button.options + span::before {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Manda el rasgo al chat. Fuera de roll20 no hay chat, pero ocupa su lugar. */
+.charsheet .charsheet button.output::before {
+  content: "\00BB"; /* » */
+}
+
+/* Cabecera de la lista de equipo. */
+.charsheet .charsheet span.pictos::before {
+  content: "\2261"; /* ≡ */
+}
+
+.charsheet .charsheet .info-popup::before {
+  content: "\24D8"; /* ⓘ */
+}
+
+/* La pestaña de opciones de la hoja. */
+.charsheet .charsheet input.tab-button.options + span::before {
+  content: "\2699"; /* ⚙ */
+}
+
+/* El d20 otra vez, acá como texto del elemento y no como pseudo de un botón. */
+.charsheet .charsheet span.npc-init-die::before {
+  content: "";
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  background-color: currentColor;
+  mask: var(--vault-d20) center / contain no-repeat;
+  -webkit-mask: var(--vault-d20) center / contain no-repeat;
 }
 
 /*
@@ -163,7 +217,7 @@
  * Los botones no tiran nada fuera de roll20 (ver `OglSheet.tsx`); el icono está
  * porque su lugar en la grilla es parte del dibujo de la hoja.
  */
-.charsheet button[type="roll"]::before {
+.charsheet .charsheet button[type="roll"]::before {
   content: "";
   display: inline-block;
   width: 13px;
@@ -177,4 +231,39 @@
 :host,
 .charsheet {
   --vault-d20: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cg%20fill='none'%20stroke='black'%20stroke-width='1.5'%20stroke-linejoin='round'%3E%3Cpath%20d='M12%201.8%2021.5%207v10L12%2022.2%202.5%2017V7z'/%3E%3Cpath%20d='M12%201.8%206.6%209.4l5.4%208.2%205.4-8.2z'/%3E%3Cpath%20d='M2.5%207l4.1%202.4M21.5%207l-4.1%202.4M12%2017.6V22.2'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/*
+ * Las pestañas y los interruptores, que no entran en su caja.
+ *
+ * Están posicionados en absoluto con ancho fijo por idioma, y con la clase
+ * `lang-es` puesta (ver el build) ya usan los del español. Pero siguen
+ * quedando cortos porque el ancho está calibrado contra la fuente de roll20 y
+ * nosotros dibujamos con la de respaldo, que es más ancha.
+ *
+ * Medido: a 16px, DESVENTAJA pide 106 en una caja de 93, VENTAJA 74 en 69,
+ * NORMAL 73 en 67, PÚBLICO 73 en 69. Bajar el cuerpo es lo que respeta el
+ * layout absoluto; ensanchar las cajas las haría chocar entre sí, porque cada
+ * una tiene su `right` fijo.
+ */
+.charsheet .advantagetoggle > span,
+.charsheet input[type="radio"].tab-button + span {
+  font-size: 13px;
+  letter-spacing: -0.2px;
+  line-height: 17px;
+}
+
+/*
+ * El interruptor de "a quién se le muestra" quedaba fuera de la hoja.
+ *
+ * Con las etiquetas ya entrando en su caja, PÚBLICO arranca en x=-13: el grupo
+ * está anclado por la derecha y en español la primera etiqueta es más larga
+ * que en inglés, así que el borde izquierdo se sale. Se corre el grupo entero
+ * y no la etiqueta, que es lo que mantiene la separación entre las dos.
+ *
+ * Hay lugar de sobra: entre PÚBLICO y AL DJ quedan 71px libres, y el siguiente
+ * grupo (VENTAJA) empieza recién en 287.
+ */
+.charsheet .advantagetoggle.whispertoggle {
+  transform: translateX(16px);
 }

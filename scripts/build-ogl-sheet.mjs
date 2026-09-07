@@ -96,7 +96,20 @@ if (clipped.length < source.length * 0.8) {
   throw new Error(`el recorte quedó en ${clipped.length} de ${source.length} bytes`);
 }
 
-const sheet = wrapInDarkmode(clipped);
+/**
+ * El idioma, que la captura trae sin resolver.
+ *
+ * La raíz vino con `lang-undefined` —roll20 la escribe antes de saber el
+ * idioma y no la vuelve a tocar—, y la hoja tiene **27 reglas `.lang-es`**: las
+ * pestañas y los interruptores están posicionados en absoluto con anchos
+ * calibrados por idioma, porque "SPELLS" mide 60px y "CONJUROS" 88.
+ *
+ * Con la clase mal, esas 27 reglas quedan muertas y las etiquetas en español
+ * se dibujan en las cajas del inglés: por eso PÚBLICO se comía a AL DJ y
+ * CONJUROS quedaba cortada. No hacía falta escribir CSS, hacía falta que la
+ * hoja supiera en qué idioma está.
+ */
+const sheet = wrapInDarkmode(clipped).replace("lang-undefined", "lang-es");
 
 /**
  * El arte de la hoja, cambiado por el del modo oscuro.
