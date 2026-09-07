@@ -1,0 +1,65 @@
+/*
+ * Lo que la hoja de roll20 da por sentado y en nuestra página no existe.
+ *
+ * Este archivo es **nuestro**: `sheet.css` es de roll20 y no se toca, así el
+ * día que haya que volver a sacarla se pisa entera sin perder nada de esto.
+ * `scripts/build-ogl-sheet.mjs` los concatena en ese orden.
+ *
+ * Cada bloque de acá abajo tapa un agujero medido, no un gusto.
+ */
+
+/*
+ * Las variables del modo oscuro.
+ *
+ * `sheet.css` las declara en `.charsheet :root`, un selector que no puede
+ * matchear nada: `:root` es el `<html>` y nunca es descendiente de nada. En
+ * roll20 no se nota porque su CSS global las define de verdad; nosotros no
+ * tenemos esa hoja, así que sin esto los 241 `var(--dark-*)` quedan vacíos y el
+ * modo oscuro sale sin colores.
+ *
+ * Los valores son los de roll20, leídos de su `vtt.css` y de
+ * `editorDarkMode.css`, salvo `--dark-text`, que no aparece en ninguna de las
+ * dos y acá vale lo mismo que el texto primario.
+ */
+:host,
+.charsheet {
+  --dark-background: #0c0c0c;
+  --dark-surface1: #1f1f1f;
+  --dark-surface2: #353535;
+  --dark-gamecard: #2b2130;
+  --dark-primary: #702c91;
+  --dark-primary-highlight: #8d56a7;
+  --dark-40: #431a57;
+  --dark-primarytext: #e6e6e6;
+  --dark-secondarytext: #b3b3b3;
+  --dark-text: #e6e6e6;
+  --dark-purple-text: #a980bd;
+  --dark-gray-text: #666666;
+  --dark-gray-enabled: #666666;
+  --dark-gray-disabled: #333333;
+  --dark-grayscale2: #b3b3b3;
+  --dark-grayscale3: #a5a1a7;
+  --dark-grayscale4: #e9e8e9;
+  --dark-card-green: #0a4525;
+  --dark-red-l20: #e1757b;
+  --dark-green-l20: #48bd7d;
+  --dark-yellow-d60: #664400;
+}
+
+/*
+ * El fondo de la hoja entera.
+ *
+ * La regla de roll20 que lo pinta cuelga de `.sheetform`, que es un nodo de su
+ * ventana y no del `.charsheet` que recortamos. Sin esto la hoja queda oscura
+ * sobre el blanco del contenedor, que se ve peor que el blanco entero.
+ */
+:host {
+  display: block;
+  background: var(--dark-background);
+}
+
+.charsheet,
+.charsheet .sheet-darkmode {
+  background: var(--dark-background);
+  color: var(--dark-primarytext);
+}
