@@ -361,6 +361,13 @@ function TomeWindow({
   );
 
   const race = entryById("race", rulesVersion, state.raceId, state.sourceBooks[`race:${state.raceId}`]);
+  // La cheatsheet la muestra como una píldora al lado de la de la clase.
+  const subclass = entryById(
+    "subclass",
+    rulesVersion,
+    state.subclassId,
+    state.sourceBooks[`subclass:${state.subclassId}`],
+  );
   const background = entryById(
     "background",
     rulesVersion,
@@ -416,10 +423,11 @@ function TomeWindow({
         <>
           <Vision
             playbook={playbook}
-            accent={accent}
+            classId={state.classId}
+            className={className}
+            subclassLabel={subclass?.label ?? null}
             name={state.characterName}
             subtitle={subtitle}
-            sigilName={state.classId || state.raceId}
           />
 
           <dl className="flex flex-wrap gap-x-8 gap-y-2 border-t border-iron/30 px-8 py-5 font-mono text-xs">
