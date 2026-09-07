@@ -20,7 +20,16 @@ import {
   handleSync,
   type AuthEnv,
 } from "./auth-routes.js";
-import { format, generateCode, normalizeCode, storageKey } from "./code.js";
+import {
+  format,
+  generateCode,
+  generateWriteToken,
+  hashToken,
+  normalizeCode,
+  ownerKey,
+  secretsMatch,
+  storageKey,
+} from "./code.js";
 
 /** The slice of Workers KV this handler uses. */
 export type BuildStore = {
@@ -28,8 +37,30 @@ export type BuildStore = {
   put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
 };
 
+/**
+ * Cloudflare's rate limiter, as much of it as this uses.
+ *
+ * A binding rather than a counter in KV on purpose: counting in KV would spend
+ * a write on every failed read, and the free tier allows a thousand writes a
+ * day — so the cheapest way to take the store down would be to ask it for
+ * codes that do not exist.
+ */
+export type RateLimiter = {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+};
+
 export type Env = {
   BUILDS: BuildStore;
+  /**
+   * Budget for *failed* reads, per caller.
+   *
+   * Enumeration is the attack a short code invites, and a wrong guess is the
+   * only thing it produces. Successful reads never touch this: a DM opening
+   * thirty characters before a session is doing the thing the store is for.
+   *
+   * Absent in development and in tests, where there is nobody to enumerate.
+   */
+  READ_LIMIT?: RateLimiter;
   /** Comma-separated origins allowed to call this. `*` in development. */
   ALLOWED_ORIGINS?: string;
   /** Accounts, sessions and saved characters. Absent until D1 is bound. */
@@ -210,6 +241,15 @@ type StoredBuild = {
    */
   state?: unknown;
   createdAt: string;
+  /**
+   * Whether a write token stands behind this code.
+   *
+   * An owned build does not expire: the code is the character's name now, and a
+   * name that stops working ninety days after the last time anybody looked at
+   * it is not a name. It also means a read does not have to write — the TTL
+   * refresh below exists only for the codes minted before ownership did.
+   */
+  owned?: true;
 };
 
 /**
@@ -220,17 +260,35 @@ type StoredBuild = {
  * build posts a payload with no envelope, and refusing it would break sharing
  * for that window.
  */
-function envelopeOf(parsed: unknown): { payload: unknown; state?: unknown } {
+function envelopeOf(parsed: unknown): {
+  payload: unknown;
+  state?: unknown;
+  code?: unknown;
+  token?: unknown;
+} {
   if (parsed && typeof parsed === "object" && "payload" in parsed) {
-    const envelope = parsed as { payload: unknown; state?: unknown };
-    return "state" in envelope
-      ? { payload: envelope.payload, state: envelope.state }
-      : { payload: envelope.payload };
+    const envelope = parsed as { payload: unknown; state?: unknown; code?: unknown; token?: unknown };
+    return {
+      payload: envelope.payload,
+      ...("state" in envelope ? { state: envelope.state } : {}),
+      ...("code" in envelope ? { code: envelope.code } : {}),
+      ...("token" in envelope ? { token: envelope.token } : {}),
+    };
   }
 
   return { payload: parsed };
 }
 
+/**
+ * Store a build, either under a fresh code or back into the one it already has.
+ *
+ * The second half is what makes a code belong to a character rather than to a
+ * send. Before this, every publish minted a new code: sending the same
+ * character twice left two live codes, and the one written on the player's
+ * sheet was whichever they happened to keep. Now the builder sends back the
+ * code and the write token it was given, and the character is replaced where it
+ * already lives.
+ */
 async function handleCreate(request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
   const body = await request.text();
 
@@ -269,25 +327,35 @@ async function handleCreate(request: Request, env: Env, headers: Record<string, 
     payload: result.data,
     ...(state ? { state } : {}),
     createdAt: new Date().toISOString(),
+    owned: true,
   };
   const serialized = JSON.stringify(stored);
 
+  if (envelope.code !== undefined) {
+    return replaceExisting(envelope, serialized, result.data, env, headers);
+  }
+
   for (let attempt = 0; attempt < MAX_CODE_ATTEMPTS; attempt++) {
-    const code = generateCode();
-    const normalized = normalizeCode(code) as string;
+    const normalized = generateCode();
     const key = storageKey(normalized);
 
-    // Fifty bits makes a collision vanishingly unlikely, but a silent
-    // overwrite would destroy someone else's character, so it is still checked.
+    // Thirty-two bits makes a collision unlikely rather than impossible, and a
+    // silent overwrite would destroy someone else's character.
     if ((await env.BUILDS.get(key, "text")) !== null) continue;
 
-    await env.BUILDS.put(key, serialized, { expirationTtl: BUILD_TTL_SECONDS });
+    const token = generateWriteToken();
+    // The owner mark goes down first. The other order can leave a build with no
+    // owner if the second write fails, and a build with no owner is one nobody
+    // can ever replace.
+    await env.BUILDS.put(ownerKey(normalized), await hashToken(token));
+    await env.BUILDS.put(key, serialized);
 
     return json(
       {
         code: format(normalized),
+        writeToken: token,
         characterName: result.data.identity.characterName,
-        expiresAt: new Date(Date.now() + BUILD_TTL_SECONDS * 1000).toISOString(),
+        expiresAt: null,
       },
       201,
       headers,
@@ -297,26 +365,123 @@ async function handleCreate(request: Request, env: Env, headers: Record<string, 
   return error("Could not allocate a code. Try again.", 503, headers);
 }
 
-async function handleRead(code: string, env: Env, headers: Record<string, string>): Promise<Response> {
+/**
+ * Put a character back where its code already points.
+ *
+ * The token is the whole check. A code travels — that is what it is for — so
+ * holding one cannot be what grants the right to overwrite what it names.
+ */
+async function replaceExisting(
+  envelope: { code?: unknown; token?: unknown },
+  serialized: string,
+  payload: ImportPayload,
+  env: Env,
+  headers: Record<string, string>,
+): Promise<Response> {
+  if (typeof envelope.code !== "string") {
+    return error("That is not a valid build code.", 400, headers);
+  }
+
+  const normalized = normalizeCode(envelope.code);
+  if (!normalized) {
+    return error("That is not a valid build code.", 400, headers);
+  }
+
+  if (typeof envelope.token !== "string" || envelope.token === "") {
+    return error("Replacing a build needs the write token it was published with.", 400, headers);
+  }
+
+  const owner = await env.BUILDS.get(ownerKey(normalized), "text");
+  if (owner === null) {
+    /*
+     * Either the code never existed, or it was minted before write tokens did.
+     * Both answer the same, and both answer 404 rather than 403: a store that
+     * distinguishes "wrong token" from "no such code" tells an enumerator which
+     * codes are real, which is the one thing the rate limiter is there to stop
+     * them learning.
+     */
+    return error("No build found for that code. It may have expired.", 404, headers);
+  }
+
+  if (!secretsMatch(owner, await hashToken(envelope.token))) {
+    return error("That code belongs to another character.", 403, headers);
+  }
+
+  await env.BUILDS.put(storageKey(normalized), serialized);
+
+  return json(
+    {
+      code: format(normalized),
+      characterName: payload.identity.characterName,
+      expiresAt: null,
+    },
+    200,
+    headers,
+  );
+}
+
+/**
+ * Whether this caller has spent its budget of wrong guesses.
+ *
+ * Only failures are counted, so the limit never falls on somebody reading
+ * characters they actually have codes for. With the limiter unbound — every
+ * test, and `wrangler dev` — nothing is limited, which is the right answer on a
+ * machine with one caller on it.
+ */
+async function tooManyMisses(request: Request, env: Env): Promise<boolean> {
+  if (!env.READ_LIMIT) return false;
+
+  const caller = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  const { success } = await env.READ_LIMIT.limit({ key: caller });
+  return !success;
+}
+
+async function handleRead(
+  request: Request,
+  code: string,
+  env: Env,
+  headers: Record<string, string>,
+): Promise<Response> {
   const normalized = normalizeCode(code);
   if (!normalized) {
+    if (await tooManyMisses(request, env)) {
+      return error("Too many wrong codes. Wait a minute and try again.", 429, headers);
+    }
     return error("That is not a valid build code.", 400, headers);
   }
 
   const key = storageKey(normalized);
   const raw = await env.BUILDS.get(key, "text");
   if (raw === null) {
+    if (await tooManyMisses(request, env)) {
+      return error("Too many wrong codes. Wait a minute and try again.", 429, headers);
+    }
     return error("No build found for that code. It may have expired.", 404, headers);
   }
 
-  // Reading keeps a character alive: a build in use should not expire under a
-  // player who imports it every few weeks.
-  await env.BUILDS.put(key, raw, { expirationTtl: BUILD_TTL_SECONDS });
+  /*
+   * A build minted before ownership existed still expires, and reading it still
+   * pushes that expiry back: a character in use should not vanish under a
+   * player who imports it every few weeks. An owned build has no expiry to
+   * refresh, so reading it writes nothing at all.
+   */
+  if (!isOwned(raw)) {
+    await env.BUILDS.put(key, raw, { expirationTtl: BUILD_TTL_SECONDS });
+  }
 
   return new Response(raw, {
     status: 200,
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store", ...headers },
   });
+}
+
+/** Whether a stored record carries the owner mark. Malformed reads as not owned. */
+function isOwned(raw: string): boolean {
+  try {
+    return (JSON.parse(raw) as StoredBuild).owned === true;
+  } catch {
+    return false;
+  }
 }
 
 export async function handle(request: Request, env: Env, deps: Deps = {}): Promise<Response> {
@@ -405,7 +570,7 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
 
   const match = /^\/builds\/([^/]+)$/.exec(url.pathname);
   if (match && request.method === "GET") {
-    return handleRead(decodeURIComponent(match[1] as string), env, headers);
+    return handleRead(request, decodeURIComponent(match[1] as string), env, headers);
   }
 
   return error("Not found.", 404, headers);

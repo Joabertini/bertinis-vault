@@ -37,6 +37,7 @@ import {
   type RealmId,
 } from "@/lib/export-targets";
 import { VaultRequestError, publishBuild } from "@/lib/vault-client";
+import { reasonUnready } from "@/lib/share";
 import { shareLinkFor } from "@/lib/share-link";
 import { rulesVersionOf, useVault } from "@/lib/vault-store";
 import { PAGE } from "@/styles/recipes";
@@ -49,7 +50,7 @@ type Phase =
 
 export default function Ritual() {
   const [params] = useSearchParams();
-  const { characters } = useVault();
+  const { characters, rememberShare } = useVault();
   const characterId = params.get("id");
 
   const character = useMemo(
@@ -102,32 +103,17 @@ export default function Ritual() {
       return;
     }
 
-    if (resolved.status !== "ready") {
-      setPhase({
-        kind: "refused",
-        reason: `Este personaje todavia no esta completo. Falta: ${resolved.missing.join(", ")}.`,
-      });
+    // The same sentence the Codex's share button says, from the same place:
+    // two copies of this wording is how a player gets told two different
+    // things about one character.
+    const refusal = reasonUnready(resolved);
+    if (refusal) {
+      setPhase({ kind: "refused", reason: refusal });
       return;
     }
 
-    if (!resolved.payload) {
-      // Every blocking reason, not just the first: a character held back by
-      // three unresolved picks would otherwise be fixed one refusal at a time.
-      const shown = resolved.problems.slice(0, 3).join(" ");
-      const rest = resolved.problems.length - 3;
-
-      setPhase({
-        kind: "refused",
-        reason: shown
-          ? rest > 0
-            ? `${shown} Y ${rest} mas.`
-            : shown
-          : "Faltan datos obligatorios: linaje, clase o trasfondo no se pudieron resolver.",
-      });
-      return;
-    }
-
-    const { payload, snapshot } = resolved;
+    const { payload, snapshot } = resolved as Extract<typeof resolved, { status: "ready" }>;
+    if (!payload) return;
     setPhase({ kind: "channeling" });
 
     // The two local realms need no network, but the circle still turns: the
@@ -159,7 +145,14 @@ export default function Ritual() {
     // The draft goes with it, so the same code opens the tome in the builder
     // for whoever it is passed to — a DM, or another player at the table.
     try {
-      const published = await publishBuild(payload, state);
+      // With the code this character already has, so a crossing does not mint a
+      // second one. A character sent to Foundry on Tuesday and shared in chat
+      // on Friday is one character under one code.
+      const published = await publishBuild(payload, state, character.share);
+      rememberShare(character.id, {
+        code: published.code,
+        writeToken: published.writeToken ?? character.share?.writeToken ?? "",
+      });
       setPhase({ kind: "arrived", code: published.code });
     } catch (error) {
       setPhase({

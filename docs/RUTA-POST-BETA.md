@@ -30,10 +30,19 @@ Tres PRs el 2026-09-02:
 contrario. Un código abierto en la web se puede editar, porque el caso real no
 es que el DM mire la ficha sino que la arregle, y lo mismo entre jugadores.
 
-La cañería ya existe entera — `POST /builds`, `GET /builds/{código}`, base32 de
-Crockford de diez caracteres — porque nació para que un jugador dictara el
-código en Foundry. Falta la ruta web que abra el personaje en la Forja en vez
-de que solo Foundry lo consuma.
+La cañería ya existe entera — `POST /builds`, `GET /builds/{código}` — porque
+nació para que un jugador dictara el código en Foundry. Falta la ruta web que
+abra el personaje en la Forja en vez de que solo Foundry lo consuma.
+
+**Corregido el 2026-09-07.** Acá decía "base32 de Crockford de diez
+caracteres". Ya no: el código son ocho caracteres alternando letra y número
+(`A7K2-M9X4`), es del personaje y no del envío, y no caduca. Los de diez siguen
+resolviendo. La forma, el tamaño y lo que ese cambio arrastró están en
+[`CODIGOS.md`](CODIGOS.md).
+
+**Y el código ya no sale del Ritual.** El Códice tiene un botón que publica y
+copia el link; el Ritual queda para la travesía a Foundry, que es de lo que
+siempre fue. Los dos escriben en el mismo código.
 
 **No es un espejo y no se sincroniza.** Abrir un código carga ese personaje y
 desde ahí es del que lo abrió: editarlo no toca el original, y el original que

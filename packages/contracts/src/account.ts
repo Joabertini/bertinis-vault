@@ -35,10 +35,37 @@ export type Account = z.infer<typeof accountSchema>;
  * is compared as a string, which is correct for ISO timestamps and gives an
  * entry with no date the loss it should have.
  */
+/**
+ * The code a character is published under, and the secret that keeps it.
+ *
+ * Kept beside the state rather than inside it, and the reason is not tidiness:
+ * the state is sent to the build store on every publish and handed back to
+ * anyone who opens the code. A write token in there would be printed on the
+ * thing it is meant to protect.
+ *
+ * Both are optional because a character only has them once it has been shared
+ * at least once, and most never are.
+ */
+export const characterShareSchema = z.object({
+  code: z.string().min(1).max(24),
+  /** Never leaves the owner's own Codex and account. See `handler.ts`. */
+  writeToken: z.string().min(1).max(64),
+});
+
+export type CharacterShare = z.infer<typeof characterShareSchema>;
+
 export const storedCharacterSchema = z.object({
   id: z.string().min(1).max(64),
   sealedAt: z.string().max(40),
   state: z.record(z.unknown()),
+  /**
+   * Synced so a character keeps one code across machines.
+   *
+   * Without this, signing in on a phone and sharing the same character there
+   * would mint a second code for it — and the first one, the one written on
+   * somebody's sheet, would quietly stop being the current version.
+   */
+  share: characterShareSchema.optional(),
 });
 
 export type StoredCharacter = z.infer<typeof storedCharacterSchema>;
