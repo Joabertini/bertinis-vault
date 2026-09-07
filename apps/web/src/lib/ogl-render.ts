@@ -174,11 +174,39 @@ export function applyRows(root: ParentNode, rows: Record<string, OglRow[]>): voi
 }
 
 /**
+ * Cierra las caras de edición que la captura trajo abiertas.
+ *
+ * La hoja tiene dos caras por bloque y las conmuta con una casilla escondida:
+ * `.attack .options` es `display: none` hasta que aparece
+ * `.attacks .options-flag:checked ~ .options`. La captura se sacó con varios
+ * bloques abiertos, y ese estado viaja en el HTML — 83 casillas marcadas.
+ *
+ * Abierto, un bloque no muestra el dato: muestra el formulario para escribirlo,
+ * con sus botones de fijar, editar, borrar y el candado de la lista. Todo eso
+ * es de una hoja que se edita, y ésta se pidió para leerla. Cerrarlas es lo que
+ * deja a la vista la cara de lectura, que es la que tiene los datos.
+ *
+ * Se cierran por clase y no por nombre de atributo: `attr_options-flag` se
+ * repite en cada fila, mientras que la clase es lo que la CSS mira.
+ */
+function closeEditors(root: ParentNode): void {
+  for (const element of root.querySelectorAll(
+    "input[class*='options-flag'], input.details-flag, input.inventorysubflag",
+  )) {
+    if (!(element instanceof HTMLInputElement)) continue;
+    element.checked = false;
+    element.removeAttribute("checked");
+  }
+}
+
+/**
  * La pasada entera, en el orden en que los pasos dependen entre sí.
  *
  * Las filas primero: su contenido son clones que se hacen acá, y borrar o
  * escribir antes de que existan no llega a nada. Después el borrado global, que
- * saltea las filas para no vaciar lo que se acaba de escribir en ellas.
+ * saltea las filas para no vaciar lo que se acaba de escribir en ellas. El
+ * cierre de las caras de edición va al final, cuando ya existen las filas
+ * nuevas: cada una hereda del clon la casilla que traía la de la captura.
  */
 export function renderOgl(root: ParentNode, data: OglData): void {
   applyRows(root, data.rows);
@@ -191,4 +219,6 @@ export function renderOgl(root: ParentNode, data: OglData): void {
     const value = data.attrs[name];
     if (value !== undefined) writeValue(element, value);
   }
+
+  closeEditors(root);
 }

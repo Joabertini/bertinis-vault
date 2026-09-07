@@ -141,6 +141,27 @@ const DARK_ART = [
 
 const DARK_BASE = "https://storage.googleapis.com/char-sheet-app-images-6e101411/D%26D5e/images/darkmode";
 
+/**
+ * Saca el diálogo de roll20 de los selectores que hablan de la hoja.
+ *
+ * En roll20 la hoja vive dentro de su ventana, así que 16 reglas están escritas
+ * como `.charsheet .ui-dialog .charsheet …`: el primero es la ventana, el
+ * segundo la hoja. Nosotros recortamos la hoja y dejamos la ventana afuera, así
+ * que esas 16 no matchean nunca.
+ *
+ * Entre ellas está la que esconde los controles de fila —mover, borrar, el
+ * candado—, que roll20 sólo muestra cuando la lista se pone en modo edición.
+ * Sin esa regla el `<div>` queda en su `display: block` de fábrica y los
+ * botones se dibujan sobre cada fila.
+ *
+ * No alcanza con ponerle la clase `ui-dialog` al envoltorio: probado, enciende
+ * las mismas 16 pero además trae el layout de la ventana y la hoja colapsa a
+ * cero de alto. Se saca el trozo del selector, que es lo que sobra.
+ */
+function dropDialog(text) {
+  return text.replace(/\.charsheet\s+\.ui-dialog\s+\.charsheet\b/g, ".charsheet .charsheet");
+}
+
 function useDarkArt(text) {
   let changed = 0;
   const swapped = text.replace(/url\("(https:\/\/[^"]*?)\/([^"/]+)\.(svg|png)"\)/g, (whole, base, name, ext) => {
@@ -162,9 +183,11 @@ const hasCss = existsSync(css);
 const patches = readFileSync(join(vendor, "parches.css"), "utf8");
 
 const art = useDarkArt(
-  hasCss
-    ? readFileSync(css, "utf8")
-    : "/* Falta apps/web/vendor/roll20-ogl/sheet.css — ver ORIGEN.md */\n",
+  dropDialog(
+    hasCss
+      ? readFileSync(css, "utf8")
+      : "/* Falta apps/web/vendor/roll20-ogl/sheet.css — ver ORIGEN.md */\n",
+  ),
 );
 
 mkdirSync(out, { recursive: true });
