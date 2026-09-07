@@ -58,11 +58,21 @@ function extractCharsheet(html) {
 /**
  * Enciende el modo oscuro de la propia hoja.
  *
- * La hoja lo trae hecho —281 selectores, y 28 de ellos cambian el arte de
+ * La hoja lo trae hecho —281 selectores, y 44 de ellos cambian el arte de
  * fondo por su versión `_dm.svg`—, pero cuelga de `.sheet-darkmode` puesta en
  * un **descendiente** de `.charsheet`, no en la raíz. Así que hay que meter un
  * nivel. Ninguna regla usa `.charsheet > algo`, así que el nivel de más no
  * desacomoda nada; se verificó sobre la CSS antes de escribir esto.
+ *
+ * Y son dos niveles, no uno. 59 de esos selectores nombran `.charsheet` **dos
+ * veces** —`.charsheet .sheet-darkmode .charsheet .label`— porque en roll20 el
+ * primero es su diálogo y el segundo la hoja de adentro. En un recorte con un
+ * solo `.charsheet` no matchean, y entre ellos está el que le da color a los
+ * rótulos: quedaban en el gris #333 del modo claro, ilegibles sobre negro.
+ *
+ * Medido sobre la CSS: con un nivel enganchan 140 de 281; con los dos, 180.
+ * Los 101 que faltan son kingmaker, NPC y el charmancer, caras que no
+ * mostramos.
  *
  * Es envolver el contenido, no reemplazarlo: la raíz sigue siendo el
  * `.charsheet` del que cuelga todo lo demás.
@@ -72,7 +82,8 @@ function wrapInDarkmode(html) {
   const close = html.lastIndexOf("</div>");
   if (open < 1 || close < open) throw new Error("no se pudo envolver el .charsheet");
 
-  return `${html.slice(0, open)}<div class="sheet-darkmode">${html.slice(open, close)}</div>${html.slice(close)}`;
+  const inner = html.slice(open, close);
+  return `${html.slice(0, open)}<div class="sheet-darkmode"><div class="charsheet">${inner}</div></div>${html.slice(close)}`;
 }
 
 const source = readFileSync(join(vendor, "captura-v4.21.html"), "utf8");
