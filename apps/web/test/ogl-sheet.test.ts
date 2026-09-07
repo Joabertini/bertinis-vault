@@ -18,7 +18,7 @@ import { beforeAll, describe, expect, test } from "vitest";
 import { initialState, type BuilderState } from "../src/lib/builder";
 import { resolveDraft } from "../src/lib/derive";
 import { oglDataFor } from "../src/lib/ogl-attrs";
-import { renderOgl } from "../src/lib/ogl-render";
+import { applyRows, renderOgl } from "../src/lib/ogl-render";
 import { sheetDataFor } from "../src/lib/sheet-data";
 
 const hoja = join(process.cwd(), "public", "hoja");
@@ -181,6 +181,83 @@ describe("la hoja llena", () => {
 
     for (const rastro of ["Gritko", "Glaive", "Battle Master", "Gladiator"]) {
       expect(visible).not.toContain(rastro);
+    }
+  });
+
+  /*
+   * Lo de arriba es una lista de cuatro cadenas y por eso no alcanza: dejaba
+   * pasar las herramientas de Gritko —Cook's Utensils, Disguise Kit— y su
+   * "Second Wind", que viven en grupos que el mapa no cubre. Un grupo sin
+   * entrada no se llenaba *ni se vaciaba*, y `clearBound` saltea el interior de
+   * las filas, así que quedaban dibujadas.
+   *
+   * La comprobación que sí cierra no nombra a nadie: después de la pasada, una
+   * fila existe sólo si la pusimos nosotros.
+   */
+  test("ninguna fila sobrevive a la pasada sin ser nuestra", () => {
+    const { root, data } = renderedSheet();
+
+    const nuestros = new Set(Object.keys(oglDataFor(data).rows));
+
+    for (const container of root.querySelectorAll(".repcontainer[data-groupname]")) {
+      const group = container.getAttribute("data-groupname") ?? "";
+      const filas = container.querySelectorAll(".repitem").length;
+
+      if (!nuestros.has(group)) expect({ group, filas }).toEqual({ group, filas: 0 });
+    }
+
+    // Y cada fila nuestra lleva la marca que le ponemos, no un `data-reprowid`
+    // de roll20: una fila heredada de la captura no la tiene.
+    for (const item of root.querySelectorAll(".repitem")) {
+      expect(item.getAttribute("data-reprowid")).toMatch(/^vault-/);
+    }
+  });
+
+  /*
+   * Los conjuros son el único grupo que se arma por el otro camino.
+   *
+   * Gritko es un guerrero: sus `repeating_spell-*` vienen vacíos, así que no
+   * hay `.repitem` que clonar y la fila sale del `<fieldset>` plantilla. Ese
+   * `??` no lo ejercitaba nada — el personaje de los demás tests tampoco lanza.
+   */
+  test("una lista vacía en la captura se arma desde el fieldset plantilla", () => {
+    const parsed = new DOMParser().parseFromString(html, "text/html");
+    const root = parsed.body.firstElementChild!;
+
+    expect(rowsOf(root, "repeating_spell-1")).toHaveLength(0);
+
+    applyRows(root, {
+      "repeating_spell-1": [
+        { attr_spellname: "Escudo", attr_spelllevel: 1, attr_spellprepared: "1" },
+        { attr_spellname: "Proyectil Mágico", attr_spelllevel: 1, attr_spellprepared: "0" },
+      ],
+    });
+
+    const nombres = rowsOf(root, "repeating_spell-1").map(
+      (row) => row.querySelector('[name="attr_spellname"]')?.textContent?.trim() ?? "",
+    );
+
+    expect(nombres).toContain("Escudo");
+    expect(nombres).toContain("Proyectil Mágico");
+  });
+
+  /*
+   * El desplegable se monta con `importNode` y clonar devuelve cada opción a su
+   * atributo `selected`. Escribir sólo la propiedad se pierde en ese salto: el
+   * dado de golpe volvía a d4 y la característica de conjuro a NINGUNA, con los
+   * tests en verde porque miden antes del clon.
+   */
+  test("lo que se elige en un desplegable sobrevive al clon", () => {
+    const { root } = renderedSheet();
+    const clon = root.ownerDocument.importNode(root, true);
+
+    const leer = (nodo: ParentNode, name: string) =>
+      nodo.querySelector<HTMLSelectElement>(`select[name="${name}"]`)?.value;
+
+    for (const name of ["attr_hitdietype", "attr_spell_ability"]) {
+      const antes = leer(root, name);
+      if (antes === undefined) continue;
+      expect(leer(clon, name)).toBe(antes);
     }
   });
 

@@ -71,6 +71,13 @@ export function writeValue(element: Element, value: OglValue): void {
 
   if (element instanceof HTMLSelectElement) {
     element.value = text;
+    // La propiedad sola no llega: la hoja se monta con `importNode`, y clonar
+    // devuelve cada opción a su atributo `selected`. Sin mover el atributo, el
+    // desplegable vuelve al de la captura — o a la primera opción si la
+    // captura no marcaba ninguna, que es como el dado de golpe terminaba en d4.
+    for (const option of element.options) {
+      option.toggleAttribute("selected", option.value === text);
+    }
     return;
   }
 
@@ -129,12 +136,18 @@ export function clearBound(root: ParentNode, insideRows: boolean): void {
  * que ya están: trae el `.itemcontrol` y las clases que roll20 le puso, que es
  * lo que la CSS busca. Si no hay ninguna, sirve el `<fieldset>` plantilla que
  * la hoja deja escondido al lado.
+ *
+ * Se vacían **todos** los contenedores, también los grupos que el mapa no
+ * cubre. Una fila de la captura es del personaje con el que se sacó, y no hay
+ * quién la borre después: `clearBound` saltea el interior de las filas para no
+ * pisar lo que acá se escribe, así que una fila que sobreviva a esta pasada
+ * queda a la vista para siempre. Es lo que pasaba con las herramientas y los
+ * recursos de Gritko, que no son grupos nuestros y se dibujaban igual.
  */
 export function applyRows(root: ParentNode, rows: Record<string, OglRow[]>): void {
   for (const container of root.querySelectorAll(".repcontainer[data-groupname]")) {
     const group = container.getAttribute("data-groupname") ?? "";
     const entries = rows[group];
-    if (!entries) continue;
 
     const existing = container.querySelector(".repitem");
     const template =
@@ -143,7 +156,7 @@ export function applyRows(root: ParentNode, rows: Record<string, OglRow[]>): voi
       null;
 
     container.replaceChildren();
-    if (template === null) continue;
+    if (!entries || template === null) continue;
 
     for (const [index, entry] of entries.entries()) {
       const item = container.ownerDocument.createElement("div");
