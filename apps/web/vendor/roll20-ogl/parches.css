@@ -63,3 +63,103 @@
   background: var(--dark-background);
   color: var(--dark-primarytext);
 }
+
+/*
+ * Los iconos.
+ *
+ * La hoja los dibuja con dos fuentes de iconos de roll20 —`pictos` y
+ * `dicefontd20`— que no vienen con la CSS: las declara su hoja global, que no
+ * tenemos. Sin la fuente, cada glifo se lee como la letra cruda: la flecha de
+ * desplegar salía "y", el botón de borrar "#", el dado de tirada "t".
+ *
+ * No se buscan las fuentes: son de roll20 y traen su propia pregunta de
+ * licencia. Se reemplaza el glifo por uno nuestro, igual de reconocible.
+ *
+ * Dos formas, según dónde viva el glifo. Cuando es texto del HTML
+ * —`<span>y</span>` al lado de una casilla— hay que achicarlo a cero y dibujar
+ * encima; cuando ya es un `::before` de la hoja, alcanza con pisarle el
+ * `content` y la familia.
+ *
+ * El `:not([name])` no es defensa por las dudas. Sin él, `.attr-flag + span`
+ * también agarra a `span.finalattr[name="attr_strength"]` y sus cinco
+ * hermanas: las seis puntuaciones de característica se dibujarían a tamaño
+ * cero. Un span atado a un atributo es un dato, nunca un icono.
+ */
+.charsheet [class*="-flag"] + span:not([name]),
+.charsheet .inventorysubflag + span:not([name]),
+.charsheet button.pictos.repcontrol_del {
+  font-size: 0 !important;
+}
+
+.charsheet [class*="-flag"] + span:not([name])::before,
+.charsheet .inventorysubflag + span:not([name])::before,
+.charsheet button.pictos.repcontrol_del::before {
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1;
+}
+
+/* Desplegar la sección. La casilla marcada es la que está abierta. */
+.charsheet [class*="options-flag"] + span:not([name])::before {
+  content: "\25B8"; /* ▸ */
+  display: inline-block;
+  transition: transform 120ms;
+}
+
+.charsheet [class*="options-flag"]:checked + span:not([name])::before {
+  transform: rotate(90deg);
+}
+
+/* Ver detalles. */
+.charsheet .details-flag + span:not([name])::before,
+.charsheet .inventorysubflag + span:not([name])::before {
+  content: "\24D8"; /* ⓘ */
+}
+
+/* Borrar la fila. Es el `#` que aparecía 205 veces. */
+.charsheet button.pictos.repcontrol_del::before {
+  content: "\00D7"; /* × */
+  font-size: 16px;
+}
+
+.charsheet .repcontrol .repcontrol_add::before {
+  content: "+";
+  font-family: inherit;
+}
+
+.charsheet .repcontrol .repcontrol_edit::after {
+  content: "\270E"; /* ✎ */
+  font-family: inherit;
+}
+
+.charsheet .spell .options-done::before {
+  content: "\2713"; /* ✓ */
+  font-family: inherit;
+}
+
+/*
+ * El dado de las tiradas.
+ *
+ * Este no se puede resolver con un carácter: no hay un d20 en Unicode que se
+ * dibuje igual en Windows, macOS y Linux. Va un SVG nuestro, pintado con
+ * `currentColor` vía máscara para que siga heredando el color del botón —
+ * incluido el del modo oscuro.
+ *
+ * Los botones no tiran nada fuera de roll20 (ver `OglSheet.tsx`); el icono está
+ * porque su lugar en la grilla es parte del dibujo de la hoja.
+ */
+.charsheet button[type="roll"]::before {
+  content: "";
+  display: inline-block;
+  width: 13px;
+  height: 13px;
+  vertical-align: -2px;
+  background-color: currentColor;
+  mask: var(--vault-d20) center / contain no-repeat;
+  -webkit-mask: var(--vault-d20) center / contain no-repeat;
+}
+
+:host,
+.charsheet {
+  --vault-d20: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%3E%3Cg%20fill='none'%20stroke='black'%20stroke-width='1.5'%20stroke-linejoin='round'%3E%3Cpath%20d='M12%201.8%2021.5%207v10L12%2022.2%202.5%2017V7z'/%3E%3Cpath%20d='M12%201.8%206.6%209.4l5.4%208.2%205.4-8.2z'/%3E%3Cpath%20d='M2.5%207l4.1%202.4M21.5%207l-4.1%202.4M12%2017.6V22.2'/%3E%3C/g%3E%3C/svg%3E");
+}
