@@ -64,3 +64,21 @@ DISCORD_CLIENT_ID = "1544171626973892688"
 [[routes]]
 pattern = "api.bertinilabs.xyz"
 custom_domain = true
+
+# The budget of wrong codes a caller gets, counted at the edge.
+#
+# A code is now eight alternating characters — 4.569.760.000 of them, against
+# the 1.126 billones the ten-character base32 scheme had. That is enough for
+# every character anyone will ever build and not enough to leave enumeration
+# purely to arithmetic, so a caller gets thirty misses a minute and nothing
+# after that. Successful reads never touch this: `handler.ts` only spends the
+# budget on a read that failed.
+#
+# Cloudflare counts this in its own edge state rather than in KV, which matters:
+# a counter in KV would spend one of the day's thousand writes on every wrong
+# guess, and the cheapest way to take the store down would be to ask it for
+# codes that do not exist.
+[[ratelimits]]
+name = "READ_LIMIT"
+namespace_id = "1001"
+simple = { limit = 30, period = 60 }

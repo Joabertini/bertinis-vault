@@ -20,6 +20,7 @@ import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
+import ShareButton from "@/components/codex/ShareButton";
 import Sigil from "@/components/sigils/Sigil";
 import Vision from "@/components/codex/Vision";
 import CharacterSheet from "@/components/sheet/CharacterSheet";
@@ -266,7 +267,7 @@ function TomeMenu({
             ← Cerrar
           </button>
 
-          <div className="flex items-center gap-5">
+          <div className="flex flex-wrap items-start gap-5">
             <button
               onClick={onReforge}
               className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
@@ -274,6 +275,8 @@ function TomeMenu({
             >
               ⚒ Reforjar
             </button>
+            {/* The link, without the ceremony. The Ritual keeps the crossing. */}
+            <ShareButton character={character} accent={accent} />
             <Link
               to={`/ritual?id=${character.id}`}
               className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold transition-colors hover:text-ember"

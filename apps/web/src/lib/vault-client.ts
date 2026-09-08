@@ -6,12 +6,20 @@
  * from Plutonium inside Foundry.
  */
 
-import type { ImportPayload } from "@bertinis-vault/contracts";
+import type { CharacterShare, ImportPayload } from "@bertinis-vault/contracts";
 
 export type PublishedBuild = {
   code: string;
+  /**
+   * The secret that makes this code the character's own, minted once.
+   *
+   * Absent from a republish: the character already has one, and the store does
+   * not hand out a second. See `apps/worker/src/code.ts`.
+   */
+  writeToken?: string;
   characterName: string;
-  expiresAt: string;
+  /** Null for every code with an owner, which is every code minted since. */
+  expiresAt: string | null;
 };
 
 export type ValidationIssue = { path: string; message: string };
@@ -121,6 +129,7 @@ async function readError(response: Response): Promise<VaultRequestError> {
 export async function publishBuild(
   payload: ImportPayload,
   state?: unknown,
+  share?: CharacterShare,
   baseUrl = vaultBaseUrl(),
 ): Promise<PublishedBuild> {
   const controller = new AbortController();
@@ -135,7 +144,13 @@ export async function publishBuild(
     response = await fetch(`${root}/builds`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
-      body: JSON.stringify(state === undefined ? { payload } : { payload, state }),
+      body: JSON.stringify({
+        payload,
+        ...(state === undefined ? {} : { state }),
+        // Sent together or not at all: the store rejects a code with no token,
+        // which is the shape a stranger's overwrite would have.
+        ...(share ? { code: share.code, token: share.writeToken } : {}),
+      }),
       signal: controller.signal,
     });
   } catch (error) {
@@ -153,7 +168,23 @@ export async function publishBuild(
     clearTimeout(timer);
   }
 
-  if (!response.ok) throw await readError(response);
+  if (!response.ok) {
+    /*
+     * The code this character used to have is gone.
+     *
+     * That happens for real: every code minted before codes had owners still
+     * expires, and one that ran out its ninety days leaves a Codex holding a
+     * code that points at nothing. Minting a new one is better than telling
+     * somebody their character cannot be shared any more — the old code was
+     * already dead when they pressed the button.
+     *
+     * Only 404. A 403 means the code is alive and belongs to someone else, and
+     * quietly publishing elsewhere would hide that.
+     */
+    const failure = await readError(response);
+    if (failure.status === 404 && share) return publishBuild(payload, state, undefined, baseUrl);
+    throw failure;
+  }
 
   return readPublished(response);
 }
@@ -186,8 +217,9 @@ async function readPublished(response: Response): Promise<PublishedBuild> {
 
   return {
     code: candidate.code,
+    ...(typeof candidate.writeToken === "string" ? { writeToken: candidate.writeToken } : {}),
     characterName: typeof candidate.characterName === "string" ? candidate.characterName : "",
-    expiresAt: typeof candidate.expiresAt === "string" ? candidate.expiresAt : "",
+    expiresAt: typeof candidate.expiresAt === "string" ? candidate.expiresAt : null,
   };
 }
 

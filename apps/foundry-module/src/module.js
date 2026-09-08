@@ -78,7 +78,7 @@ export async function promptForCode() {
   const content = `
     <div class="${MODULE_ID}-prompt">
       <p>${t("ui.promptHelp")}</p>
-      <input type="text" name="code" placeholder="XXXXX-XXXXX" autocomplete="off" spellcheck="false" />
+      <input type="text" name="code" placeholder="A7K2-M9X4" autocomplete="off" spellcheck="false" />
       <p class="notes">${t("ui.promptNote")}</p>
     </div>`;
 

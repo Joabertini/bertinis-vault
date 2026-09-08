@@ -31,6 +31,10 @@ function asStored(characters: SealedCharacter[]): StoredCharacter[] {
     id: entry.id,
     sealedAt: entry.sealedAt,
     state: entry.state as unknown as Record<string, unknown>,
+    // Sent so a character keeps one code across machines. The account is the
+    // only place it goes: the store never returns it and the shared tome never
+    // carries it.
+    ...(entry.share ? { share: entry.share } : {}),
   }));
 }
 

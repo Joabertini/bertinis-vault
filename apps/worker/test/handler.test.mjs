@@ -8,16 +8,20 @@ import { format, generateCode, normalizeCode, storageKey } from "../dist/code.js
 function makeStore(initial = {}) {
   const data = new Map(Object.entries(initial));
   const ttls = new Map();
+  const writes = { count: 0 };
 
   return {
     data,
     ttls,
+    writes,
     async get(key) {
       return data.has(key) ? data.get(key) : null;
     },
     async put(key, value, options) {
+      writes.count++;
       data.set(key, value);
       if (options?.expirationTtl) ttls.set(key, options.expirationTtl);
+      else ttls.delete(key);
     },
   };
 }
@@ -70,63 +74,91 @@ const get = (code) => new Request(`https://vault.test/builds/${encodeURIComponen
 
 /* ---------------------------------------------------------------- codes -- */
 
-test("a code is ten base32 characters shown in two groups", () => {
-  const code = generateCode();
+test("a code alternates letter and digit, in two groups of four", () => {
+  const code = format(generateCode());
 
-  assert.match(code, /^[0-9A-HJKMNP-TV-Z]{5}-[0-9A-HJKMNP-TV-Z]{5}$/);
-  assert.equal(normalizeCode(code)?.length, 10);
+  assert.match(code, /^[A-Z][0-9][A-Z][0-9]-[A-Z][0-9][A-Z][0-9]$/);
+  assert.equal(normalizeCode(code)?.length, 8);
 });
 
 test("codes do not repeat across many draws", () => {
-  const seen = new Set(Array.from({ length: 2000 }, () => generateCode()));
-  assert.equal(seen.size, 2000);
+  // Five hundred draws from 4.569.760.000 codes collide about once every
+  // thirty-seven thousand runs, which is what testing this at all costs.
+  const seen = new Set(Array.from({ length: 500 }, () => generateCode()));
+  assert.equal(seen.size, 500);
 });
 
-test("the alphabet excludes the characters people misread", () => {
-  const codes = Array.from({ length: 500 }, () => generateCode()).join("");
-  for (const char of ["I", "L", "O", "U"]) {
-    assert.ok(!codes.includes(char), `generated a code containing ${char}`);
-  }
+test("every letter and every digit can be drawn", () => {
+  // The alphabet no longer drops I, L, O and U: position says which kind of
+  // character a slot holds, so none of the four is ambiguous any more.
+  const codes = Array.from({ length: 4000 }, () => generateCode());
+
+  assert.equal(new Set(codes.map((code) => code[0])).size, 26);
+  assert.equal(new Set(codes.map((code) => code[1])).size, 10);
 });
 
-test("a code survives being retyped in any case, spacing or substitution", () => {
-  const canonical = "K7M2XQF9AB";
+test("a code survives being retyped in any case or spacing", () => {
+  const canonical = "K7M2X9F4";
 
-  for (const typed of ["K7M2X-QF9AB", "k7m2x qf9ab", "K7M2XQF9AB", " k7m2x-qf9ab "]) {
+  for (const typed of ["K7M2-X9F4", "k7m2 x9f4", "K7M2X9F4", " k7m2-x9f4 "]) {
     assert.equal(normalizeCode(typed), canonical, typed);
   }
+});
 
-  // Read off a screen: I and L become 1, O becomes 0.
-  assert.equal(normalizeCode("K7M2X-QF9AB".replace("1", "I")), canonical);
+test("a misread character is corrected by the slot it landed in", () => {
+  // In a letter slot a 0 can only have been an O, and in a digit slot an O can
+  // only have been a 0. Neither is ambiguous once position fixes the kind.
+  assert.equal(normalizeCode("07M2X9F4"), "O7M2X9F4");
+  assert.equal(normalizeCode("K7M2XOF4"), "K7M2X0F4");
+  assert.equal(normalizeCode("57B2Z9F4"), "S7B2Z9F4");
+  assert.equal(normalizeCode("K7M2X9F4"), "K7M2X9F4");
+});
+
+test("a character that cannot be either kind is rejected", () => {
+  // 4 is a digit and there is no letter it could have been misread from.
+  assert.equal(normalizeCode("47M2X9F4"), null);
+  // W is a letter and stands for no digit.
+  assert.equal(normalizeCode("KWM2X9F4"), null);
+});
+
+test("codes minted under the old scheme still resolve", () => {
+  // Ten characters is never a new code and eight is never an old one, so
+  // length alone tells the two schemes apart.
+  assert.equal(normalizeCode("K7M2X-QF9AB"), "K7M2XQF9AB");
+  assert.equal(normalizeCode("k7m2x qf9ab"), "K7M2XQF9AB");
   assert.equal(normalizeCode("I7M2X-QF9AB"), "17M2XQF9AB");
   assert.equal(normalizeCode("O7M2X-QF9AB"), "07M2XQF9AB");
 });
 
 test("something that cannot be a code is rejected", () => {
-  for (const bad of ["", "TOOSHORT", "WAYTOOLONGACODE", "!!!!!-!!!!!"]) {
+  for (const bad of ["", "SHORT", "WAYTOOLONGACODE", "!!!!!-!!!!!"]) {
     assert.equal(normalizeCode(bad), null, bad);
   }
 });
 
-test("format groups a raw code without altering it", () => {
+test("format groups a code by the scheme it belongs to", () => {
+  assert.equal(format("K7M2X9F4"), "K7M2-X9F4");
   assert.equal(format("K7M2XQF9AB"), "K7M2X-QF9AB");
 });
 
 /* -------------------------------------------------------------- storing -- */
 
-test("posting a build returns a code and stores it", async () => {
+test("posting a build returns a code, a write token, and no expiry", async () => {
   const env = { BUILDS: makeStore() };
   const response = await handle(post(payload()), env);
 
   assert.equal(response.status, 201);
 
   const body = await response.json();
-  assert.match(body.code, /^[0-9A-HJKMNP-TV-Z]{5}-[0-9A-HJKMNP-TV-Z]{5}$/);
+  assert.match(body.code, /^[A-Z][0-9][A-Z][0-9]-[A-Z][0-9][A-Z][0-9]$/);
+  assert.match(body.writeToken, /^[0-9a-f]{32}$/);
   assert.equal(body.characterName, "Seraphina Vale");
-  assert.ok(Date.parse(body.expiresAt) > Date.now());
+  // The code is the character's name now, and a name does not expire.
+  assert.equal(body.expiresAt, null);
 
-  assert.equal(env.BUILDS.data.size, 1);
-  assert.equal([...env.BUILDS.ttls.values()][0], BUILD_TTL_SECONDS);
+  // The build, and the mark that says who owns it.
+  assert.equal(env.BUILDS.data.size, 2);
+  assert.equal(env.BUILDS.ttls.size, 0);
 });
 
 test("a stored build comes back byte for byte", async () => {
@@ -210,15 +242,31 @@ test("a code round-trips however the player retypes it", async () => {
   }
 });
 
-test("reading a build pushes back its expiry", async () => {
-  const env = { BUILDS: makeStore() };
-  const created = await (await handle(post(payload()), env)).json();
-  const key = storageKey(normalizeCode(created.code));
+test("reading a build minted before ownership pushes back its expiry", async () => {
+  // No `owned` mark: this is what every record written before write tokens
+  // existed looks like, and those still expire.
+  const key = storageKey("K7M2XQF9AB");
+  const env = {
+    BUILDS: makeStore({
+      [key]: JSON.stringify({ payload: payload(), createdAt: "2026-01-01T00:00:00.000Z" }),
+    }),
+  };
 
   env.BUILDS.ttls.set(key, 60);
-  await handle(get(created.code), env);
+  await handle(get("K7M2X-QF9AB"), env);
 
   assert.equal(env.BUILDS.ttls.get(key), BUILD_TTL_SECONDS);
+});
+
+test("reading an owned build writes nothing at all", async () => {
+  const env = { BUILDS: makeStore() };
+  const created = await (await handle(post(payload()), env)).json();
+
+  const before = env.BUILDS.writes.count;
+  const response = await handle(get(created.code), env);
+
+  assert.equal(response.status, 200);
+  assert.equal(env.BUILDS.writes.count, before);
 });
 
 test("a colliding code is regenerated rather than overwriting a character", async () => {
@@ -228,7 +276,104 @@ test("a colliding code is regenerated rather than overwriting a character", asyn
   const second = await (await handle(post(payload({ identity: { characterName: "Other" } })), env)).json();
 
   assert.notEqual(first.code, second.code);
+  // Two builds and two owner marks.
+  assert.equal(env.BUILDS.data.size, 4);
+});
+
+/* --------------------------------------------------- one code per character -- */
+
+test("a character sent twice keeps the code it already had", async () => {
+  const env = { BUILDS: makeStore() };
+  const first = await (await handle(post(payload()), env)).json();
+
+  const again = await handle(
+    post({
+      payload: payload({ identity: { characterName: "Seraphina Vale, later" } }),
+      code: first.code,
+      token: first.writeToken,
+    }),
+    env,
+  );
+
+  assert.equal(again.status, 200);
+  assert.equal((await again.json()).code, first.code);
+
+  // Replaced where it lived. Nothing new was allocated.
   assert.equal(env.BUILDS.data.size, 2);
+
+  const read = await (await handle(get(first.code), env)).json();
+  assert.equal(read.payload.identity.characterName, "Seraphina Vale, later");
+});
+
+test("holding a code is not permission to overwrite what it names", async () => {
+  const env = { BUILDS: makeStore() };
+  const first = await (await handle(post(payload()), env)).json();
+
+  const response = await handle(
+    post({ payload: payload(), code: first.code, token: "0".repeat(32) }),
+    env,
+  );
+
+  assert.equal(response.status, 403);
+
+  const read = await (await handle(get(first.code), env)).json();
+  assert.equal(read.payload.identity.characterName, "Seraphina Vale");
+});
+
+test("replacing without a token is refused before storage is touched", async () => {
+  const env = { BUILDS: makeStore() };
+  const first = await (await handle(post(payload()), env)).json();
+  const before = env.BUILDS.writes.count;
+
+  const response = await handle(post({ payload: payload(), code: first.code }), env);
+
+  assert.equal(response.status, 400);
+  assert.equal(env.BUILDS.writes.count, before);
+});
+
+test("a code nobody owns answers 404, not 403", async () => {
+  // Telling a stranger apart from a wrong token would tell them which codes
+  // are real, which is the one thing enumeration is trying to learn.
+  const env = { BUILDS: makeStore() };
+
+  const response = await handle(
+    post({ payload: payload(), code: "K7M2-X9F4", token: "0".repeat(32) }),
+    env,
+  );
+
+  assert.equal(response.status, 404);
+});
+
+test("the write token is never handed back by a read", async () => {
+  const env = { BUILDS: makeStore() };
+  const created = await (await handle(post(payload()), env)).json();
+
+  const body = await (await handle(get(created.code), env)).text();
+
+  assert.ok(!body.includes(created.writeToken));
+  assert.ok(!body.includes("token"));
+});
+
+test("wrong codes run out of budget before the store does", async () => {
+  let allowed = 2;
+  const env = {
+    BUILDS: makeStore(),
+    READ_LIMIT: {
+      async limit() {
+        return { success: allowed-- > 0 };
+      },
+    },
+  };
+
+  const created = await (await handle(post(payload()), env)).json();
+
+  assert.equal((await handle(get("K7M2-X9F4"), env)).status, 404);
+  assert.equal((await handle(get("K7M2-X9F5"), env)).status, 404);
+  assert.equal((await handle(get("K7M2-X9F6"), env)).status, 429);
+
+  // A code that resolves never spends the budget, so a table full of real
+  // codes is never what trips the limit.
+  assert.equal((await handle(get(created.code), env)).status, 200);
 });
 
 /* --------------------------------------------------------------- errors -- */

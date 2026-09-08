@@ -25,7 +25,7 @@ import {
   type BuilderState,
 } from "./builder-state";
 import type { Pace } from "./chambers";
-import type { Account, StoredCharacter } from "@bertinis-vault/contracts";
+import type { Account, CharacterShare, StoredCharacter } from "@bertinis-vault/contracts";
 
 import { mergeCodex, type CodexMerge } from "./codex-file";
 
@@ -42,6 +42,14 @@ export type SealedCharacter = {
    * cannot be recovered from the result at all.
    */
   state: BuilderState;
+  /**
+   * The code this character is published under, once it has been.
+   *
+   * Beside the state and never inside it: the state is what gets sent to the
+   * store and handed to whoever opens the code, so a write token in there would
+   * be printed on the thing it protects.
+   */
+  share?: CharacterShare;
 };
 
 /**
@@ -136,6 +144,14 @@ type VaultStore = {
    * someone else must not lose the half-forged one.
    */
   admit: (state: BuilderState) => string;
+  /**
+   * Remember the code a character was published under.
+   *
+   * Kept so the next publish replaces that code instead of minting another.
+   * Without it every share would hand out a different address for the same
+   * character, and the one already pasted in a chat would stop being current.
+   */
+  rememberShare: (id: string, share: CharacterShare) => void;
   burn: (id: string) => void;
   /**
    * Fold an imported Codex into this one.
@@ -154,6 +170,25 @@ type VaultStore = {
    */
   adoptCharacters: (incoming: StoredCharacter[]) => void;
 };
+
+/**
+ * Whether what came out of `localStorage` is a share.
+ *
+ * Checked rather than trusted: this is the one field whose absence is silently
+ * recoverable — a missing code just means the next share mints one — and whose
+ * half-presence is not. A code with no token would be sent to the store on
+ * every publish and refused every time.
+ */
+function isShare(value: unknown): value is CharacterShare {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<CharacterShare>;
+  return (
+    typeof candidate.code === "string" &&
+    candidate.code.length > 0 &&
+    typeof candidate.writeToken === "string" &&
+    candidate.writeToken.length > 0
+  );
+}
 
 function freshDraft(rulesVersion: BuilderRulesVersion): BuilderState {
   return {
@@ -306,6 +341,17 @@ export const useVault = create<VaultStore>()(
         return id;
       },
 
+      rememberShare: (id, share) =>
+        set((s) => ({
+          characters: s.characters.map((entry) =>
+            entry.id === id ? { ...entry, share } : entry,
+          ),
+          // `sealedAt` is deliberately untouched. It is the version marker a
+          // sync compares, and sharing does not change the character — bumping
+          // it here would make every share look like an edit to every other
+          // machine.
+        })),
+
       importCharacters: (incoming) => {
         const result = mergeCodex(get().characters, incoming);
         set({ characters: result.characters });
@@ -334,6 +380,9 @@ export const useVault = create<VaultStore>()(
             // comes back was written by whichever version of the builder sealed
             // it, which may not be this one.
             state: coerceBuilderState(entry.state),
+            // Carried, or the character comes back from a sync without its code
+            // and the next share mints a second one.
+            ...(entry.share ? { share: entry.share } : {}),
           })),
           burned: [],
           // A tome that is no longer on the shelf cannot be the one being
@@ -357,6 +406,7 @@ export const useVault = create<VaultStore>()(
               id: entry.id,
               sealedAt: entry.sealedAt,
               state: coerceBuilderState(entry.state),
+              ...(isShare(entry.share) ? { share: entry.share } : {}),
             }))
           : [];
 

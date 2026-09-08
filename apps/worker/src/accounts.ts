@@ -113,7 +113,10 @@ export function d1Store(db: D1Like): Store {
 
     async charactersFor(accountId) {
       const { results } = await db
-        .prepare(`select id, sealed_at, state from character where account_id = ? order by sealed_at desc`)
+        .prepare(
+          `select id, sealed_at, state, share_code, share_token from character
+           where account_id = ? order by sealed_at desc`,
+        )
         .bind(accountId)
         .all();
 
@@ -125,6 +128,11 @@ export function d1Store(db: D1Like): Store {
         // right outcome: silently dropping a character is how a player loses
         // one without being told.
         state: JSON.parse(String(row.state)) as Record<string, unknown>,
+        // Both columns or neither: a code with no token cannot be republished
+        // and a token with no code points at nothing.
+        ...(row.share_code && row.share_token
+          ? { share: { code: String(row.share_code), writeToken: String(row.share_token) } }
+          : {}),
       }));
     },
 
@@ -135,12 +143,26 @@ export function d1Store(db: D1Like): Store {
         characters.map((character) =>
           db
             .prepare(
-              `insert into character (id, account_id, sealed_at, state) values (?, ?, ?, ?)
+              `insert into character (id, account_id, sealed_at, state, share_code, share_token)
+               values (?, ?, ?, ?, ?, ?)
                on conflict (account_id, id) do update set
                  sealed_at = excluded.sealed_at,
-                 state = excluded.state`,
+                 state = excluded.state,
+                 -- A machine that has never shared this character sends no
+                 -- code. Taking its null would drop the code the other machine
+                 -- holds, and the character would be republished under a new
+                 -- one the next time anybody pressed share.
+                 share_code = coalesce(excluded.share_code, character.share_code),
+                 share_token = coalesce(excluded.share_token, character.share_token)`,
             )
-            .bind(character.id, accountId, character.sealedAt, JSON.stringify(character.state)),
+            .bind(
+              character.id,
+              accountId,
+              character.sealedAt,
+              JSON.stringify(character.state),
+              character.share?.code ?? null,
+              character.share?.writeToken ?? null,
+            ),
         ),
       );
     },
