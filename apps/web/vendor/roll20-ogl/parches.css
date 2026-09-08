@@ -267,3 +267,93 @@
 .charsheet .advantagetoggle.whispertoggle {
   transform: translateX(16px);
 }
+
+/*
+ * Los controles de fila, escondidos.
+ *
+ * En roll20 cada `.repitem` —cada conjuro, cada objeto, cada ataque— lleva
+ * encima un `.itemcontrol` con mover, borrar y el candado, y roll20 lo tapa con
+ * `display: none` hasta que la lista entra en modo edición. Esa regla suya vive
+ * bajo `.charsheet .ui-dialog .charsheet`, que es su ventana, y nuestra hoja
+ * está recortada sin ventana: sin nada que la reemplace, el `<div>` se queda en
+ * su `display: block` de fábrica y los 27 controles se dibujan sobre las filas.
+ *
+ * Se escribe acá y no encendiendo la regla suya. Encenderla significaba
+ * reescribir el trozo del selector, y eso arrastraba otras catorce reglas
+ * pensadas para una ventana que no tenemos — `input { height: auto }` entre
+ * ellas, que le sacaba la altura fija a todos los campos. Ver el comentario en
+ * `scripts/build-ogl-sheet.mjs`.
+ *
+ * No hay modo edición acá: la hoja es de lectura y las filas se editan en la
+ * Fragua. Así que no hay contraparte que las vuelva a mostrar.
+ */
+.charsheet .repcontainer .repitem .itemcontrol {
+  display: none;
+}
+
+/*
+ * Los dos botones de la caja de dados de golpe, que el modo oscuro achica.
+ *
+ * `.sheet-darkmode .hdice-dsaves-container button.btn { height: 10px }` es de
+ * roll20 y está calibrada contra el inglés: HIT DICE y DEATH SAVES entran en un
+ * renglón de 10px. En español no. SALVACIONES CONTRA MUERTE ocupa dos renglones
+ * de 12px y se le corta el segundo; DADOS DE GOLPE ocupa uno de 12 y se le
+ * cortan 2px.
+ *
+ * Medido contra la hoja sin modo oscuro, donde los mismos botones miden 24 y 12
+ * de alto y no desbordan. Se les devuelve la altura que el texto pide en vez de
+ * fijar un número: el rótulo cambia de largo con el idioma, y un 24 escrito acá
+ * sería el mismo error una vuelta más tarde.
+ *
+ * El ancho se deja como está. Están anclados abajo a la izquierda, así que
+ * crecen hacia arriba y hay lugar.
+ */
+.charsheet .sheet-darkmode .hdice-dsaves-container button.btn {
+  height: auto;
+}
+
+/*
+ * CLASE ARMADURA, que no entra en media caja.
+ *
+ * roll20 le da al rótulo de la CA la mitad del ancho de su caja y un interlineado
+ * de 8px:
+ *
+ *   .ac .pc-ac { margin: 0 auto; width: 50% !important; line-height: 8px !important }
+ *
+ * En inglés eso es exacto y es deliberado: ARMOR CLASS parte en dos renglones de
+ * 8px y los dos entran en los 16px de alto que tiene la caja. En español no hay
+ * corte que sirva — ARMADURA sola mide 54px a 9px, y la mitad de la caja son 36.
+ * Se sale 18px, que es medio rótulo colgando por fuera.
+ *
+ * La caja mide 72px, así que 75% son 54: ARMADURA entra justo, CLASE va arriba,
+ * y los dos renglones siguen sumando los mismos 16px de alto. Centrado con el
+ * `margin: 0 auto` que ya estaba, quedan 9px libres de cada lado.
+ *
+ * Va con `.lang-es` porque el 50% es correcto para el inglés: esto no arregla la
+ * regla de roll20, la adapta al idioma en el que servimos la hoja.
+ */
+.charsheet.lang-es .licensecontainer .container:not(.npc) .ac-init-speed-container .ac .pc-ac {
+  width: 75% !important;
+}
+
+/*
+ * BONIFICACIÓN POR COMPETENCIA, que se sale por abajo.
+ *
+ * La caja tiene `height: 30px` fija y el `span` de adentro `line-height: 30px`:
+ * un renglón, del alto de la caja. En inglés eso es exacto —PROFICIENCY BONUS
+ * entra en uno— y en español no: son dos, y el segundo se dibuja fuera, encima
+ * del borde de las tiradas de salvación.
+ *
+ * Achicar el cuerpo no alcanza. Medido: a 8px el rótulo sigue pidiendo unos
+ * 151px en una caja de 121, y bajarlo hasta que entre en un renglón lo deja
+ * en 6px, que no se lee.
+ *
+ * Así que se le dan los dos renglones: interlineado 15, que por dos son los
+ * mismos 30px de alto que la caja ya tenía. Nada se mueve de lugar y el texto
+ * queda adentro.
+ *
+ * Sólo en español, que es donde el problema existe.
+ */
+.charsheet.lang-es .insp-prof-container .label span {
+  line-height: 15px;
+}

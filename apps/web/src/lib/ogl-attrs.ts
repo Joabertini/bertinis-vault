@@ -156,10 +156,21 @@ export function oglDataFor(data: SheetData): OglData {
     ...traitsFrom(data.backgroundFeatures, "Background", data.backgroundLabel),
   ];
 
+  /*
+   * El tipo de competencia, con las palabras que la hoja tiene.
+   *
+   * `attr_prof_type` es un `<select>` y sus cuatro opciones vienen traducidas en
+   * la captura: IDIOMA, ARMA, ARMADURA, OTRO. Escribir "LANGUAGE" ahí no
+   * selecciona ninguna —no existe esa opción— y deja la fila diciendo una
+   * palabra en inglés en una hoja que está entera en español.
+   *
+   * Son las etiquetas y no un código: la hoja guarda el texto visible de la
+   * opción, así que lo que se escribe acá es lo que hay que ver.
+   */
   const proficiencies: OglRow[] = [
-    ...data.languages.map((name) => ({ attr_name: name, attr_prof_type: "LANGUAGE" })),
-    ...data.weaponProficiencies.map((name) => ({ attr_name: name, attr_prof_type: "WEAPON" })),
-    ...data.toolProficiencies.map((name) => ({ attr_name: name, attr_prof_type: "OTHER" })),
+    ...data.languages.map((name) => ({ attr_name: name, attr_prof_type: "IDIOMA" })),
+    ...data.weaponProficiencies.map((name) => ({ attr_name: name, attr_prof_type: "ARMA" })),
+    ...data.toolProficiencies.map((name) => ({ attr_name: name, attr_prof_type: "OTRO" })),
   ];
 
   const rows: Record<string, OglRow[]> = {

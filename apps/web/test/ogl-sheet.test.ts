@@ -313,3 +313,73 @@ describe("la hoja llena", () => {
     expect(named.some((name) => name.includes("Kaelen"))).toBe(false);
   });
 });
+
+/**
+ * La hoja en español, que es en el idioma en el que la servimos.
+ *
+ * Tres fallos distintos con la misma forma: algo escrito para el inglés que en
+ * español no cierra. Uno es de roll20 —un espacio que falta en su propia
+ * traducción—, otro es nuestro —escribíamos el tipo de competencia en inglés en
+ * un desplegable cuyas opciones están en español—, y el tercero es la lista de
+ * reglas ajenas que un atajo del build encendía de más.
+ *
+ * Ninguno rompe nada: la hoja se dibuja igual, con una palabra en el idioma
+ * equivocado o un rótulo por fuera de su caja. Por eso van acá.
+ */
+describe("la hoja en español", () => {
+  test("el rótulo de clase y nivel lleva su espacio", () => {
+    // roll20 traduce `class-level-u` como `CLASEY NIVEL`, sin el espacio, y así
+    // viene en la captura. Se corrige en el build: es texto, no hay CSS que lo
+    // arregle.
+    expect(html).not.toContain("CLASEY NIVEL");
+    expect(html).toContain("CLASE Y NIVEL");
+  });
+
+  test("el tipo de competencia es una de las opciones que la hoja ofrece", () => {
+    // `attr_prof_type` es un `<select>` y la hoja guarda el texto visible de la
+    // opción. Escribir "LANGUAGE" no selecciona ninguna —esa opción no existe—
+    // y deja la fila diciendo una palabra en inglés.
+    const state = character();
+    const resolved = resolveDraft(state);
+    if (resolved.status !== "ready") throw new Error("no derivó");
+
+    const data = oglDataFor(sheetDataFor(state, resolved.snapshot, "2014"));
+    const escritos = new Set(
+      (data.rows?.repeating_proficiencies ?? []).map((row) => String(row.attr_prof_type)),
+    );
+
+    expect(escritos.size).toBeGreaterThan(0);
+
+    // Las opciones tal como están en la captura, leídas de ella y no escritas
+    // de memoria.
+    const select = /<select name="attr_prof_type">([\s\S]*?)<\/select>/.exec(html);
+    const opciones = new Set(
+      [...(select?.[1] ?? "").matchAll(/>([^<]+)</g)].map((m) => m[1]?.trim() ?? ""),
+    );
+
+    for (const escrito of escritos) {
+      expect(opciones.has(escrito), `"${escrito}" no es una opción de la hoja`).toBe(true);
+    }
+  });
+});
+
+describe("la CSS servida", () => {
+  const css = () => readFileSync(join(hoja, "sheet.css"), "utf8");
+
+  test("no trae las reglas del diálogo de roll20", () => {
+    /*
+     * Hubo un atajo: reescribir `.charsheet .ui-dialog .charsheet` para
+     * encender la regla que esconde los controles de fila. Encendía quince, y
+     * las otras catorce están pensadas para una ventana que no tenemos —
+     * `input { height: auto }` entre ellas, que le sacaba la altura fija a
+     * todos los campos y le cortaba el segundo renglón a SALVACIONES CONTRA
+     * MUERTE.
+     */
+    expect(css()).not.toContain(".charsheet .charsheet .repcontainer");
+    expect(css()).not.toContain(".charsheet .charsheet input {");
+  });
+
+  test("esconde los controles de fila, que es lo que hacía falta", () => {
+    expect(css()).toContain(".charsheet .repcontainer .repitem .itemcontrol");
+  });
+});
