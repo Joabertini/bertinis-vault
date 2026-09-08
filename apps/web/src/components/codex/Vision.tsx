@@ -1,393 +1,679 @@
 /**
- * What this character can actually do on its turn.
+ * La cheatsheet, con el diseño de `Joabertini/dnd-cheatsheet`.
  *
- * The cheat sheet, narrowed to one character — its class notes, its subclass
- * among the hundred and one, only the feats it took, and only the
- * combinations those feats and that class actually assemble.
+ * Este archivo es una reproducción de esa hoja, no una interpretación suya: la
+ * tipografía Georgia, el fondo teñido por la clase, la fila de píldoras, las
+ * tres pestañas con la línea del color de la clase, las secciones con cabecera
+ * tintada, las tarjetas con píldora de recurso y el pie. Los valores —cada
+ * padding, cada opacidad en hexadecimal, cada tamaño de letra— están copiados
+ * del original y no reelegidos. El diseño ya se probó contra jugadores; el que
+ * había acá no.
  *
- * Laid out the way the cheat sheet lays itself out: wide, dark, tinted by
- * class, two columns where two columns help and full width where they do not.
- * It was tried once inside the tome's two-page spread and the folio was the
- * wrong shape for it — a column narrow enough to make every note wrap twice,
- * beside a page of whitespace. The book stays on the shelf; what opens out of
- * it is this.
+ * Los estilos van **en línea**, como en el original, y no en clases del Vault.
+ * Es a propósito: la hoja se construye componiendo un color de clase con una
+ * opacidad (`${color}30`), que es algo que un tema de utilidades no expresa, y
+ * mantenerlo así deja la comparación contra el original directa.
  *
- * Split across three tabs rather than run as one column: Core is what holds
- * whether or not anyone is swinging, Combate is what a turn gets spent on,
- * Movimiento is moving and what moving provokes. Scrolling past a rule to
- * reach the rule beside it is the thing tabs exist to stop.
+ * **Tres cosas del original no se reproducen, porque el tomo ya las contesta.**
+ * Allá la fila de doce clases y la de subclases son un selector, el nivel es un
+ * campo editable y hay un recuadro para arrastrar la hoja: son las preguntas
+ * que un personaje sellado ya respondió. Quedan las píldoras de su clase y su
+ * subclase, con el mismo estilo, como lo que son acá — una etiqueta.
  *
- * The name and the numbers sit above the tabs, because those are read no
- * matter which one is open.
- *
- * Where the sheet has nothing written — the Artificer, the sidekick classes —
- * the page says so rather than padding with generalities. Same for a tab that
- * a particular character has nothing on.
+ * Y una que el original no tenía: los números. La cheatsheet se escribió para
+ * imprimirse una vez y leerse en cualquier mesa, así que no podía cargar el
+ * ataque, la CA ni los PG. Un tomo es de un personaje y sí puede.
  */
 
-import { useMemo, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useState } from "react";
 
-import Sigil from "@/components/sigils/Sigil";
-import {
-  tabForFeat,
-  tabForNote,
-  tabForRule,
-  type Playbook,
-  type PlayNote,
-  type VisionTab,
-} from "@/lib/playbook";
-import { HEADING } from "@/styles/recipes";
+import type { ComboNote, FeatNote, PlayNote, Playbook } from "@/lib/playbook";
+import { paletteFor, type ClassPalette } from "@/lib/playbook-palette";
 
-/** What each feat costs to use, in the sheet's own vocabulary. */
-const CATEGORY_LABEL: Record<string, string> = {
-  passive: "pasiva",
-  active: "accion",
-  bonus_action: "accion adicional",
-  reaction: "reaccion",
-};
+/** Las tres pestañas del original, en su orden y con sus iconos. */
+const TABS = [
+  { id: "combat", label: "⚔️ Combate" },
+  { id: "features", label: "✨ Features" },
+  { id: "rules", label: "📖 Reglas" },
+] as const;
 
-/*
- * The three tabs, in the order a turn happens.
+type TabId = (typeof TABS)[number]["id"];
+
+/**
+ * Una sección con cabecera teñida.
  *
- * Core first because it is the frame: the numbers, the shape of a turn, the
- * rules that hold whether or not anyone is swinging. Then what you spend the
- * turn on, then moving and what moving provokes.
+ * El borde y el fondo de la cabecera salen del `color` de la clase; el texto,
+ * del `accent`. Sobre negro el `color` no se lee, y por eso son dos tonos y no
+ * uno.
  */
-const TABS: Array<{ id: VisionTab; label: string; blurb: string }> = [
-  { id: "core", label: "Core", blurb: "Tus numeros y las reglas que valen siempre." },
-  { id: "combate", label: "Combate", blurb: "Lo que gastas en tu turno para pegar o ayudar." },
-  { id: "movimiento", label: "Movimiento", blurb: "Moverte, y lo que moverse provoca." },
-];
-
-export default function Vision({
-  playbook,
-  accent,
-  name,
-  subtitle,
-  sigilName,
+function Section({
+  title,
+  palette,
+  children,
 }: {
-  playbook: Playbook;
-  accent: string;
-  name: string;
-  /** "Nivel 5 · Humano · Guerrero", already assembled. */
-  subtitle: string;
-  sigilName: string;
+  title: string;
+  palette: ClassPalette;
+  children: React.ReactNode;
 }) {
-  const [tab, setTab] = useState<VisionTab>("core");
-
-  /*
-   * Everything sorted into its tab once, not on every render and not on every
-   * tab change. The classification is pure string work over a few hundred
-   * notes, which is cheap, but it is also the same answer every time.
-   */
-  const sorted = useMemo(() => {
-    const on = (which: VisionTab) => ({
-      bonusActions: playbook.bonusActions.filter((note) => tabForNote(note) === which),
-      reactions: playbook.reactions.filter((note) => tabForNote(note) === which),
-      features: playbook.features.filter((note) => tabForNote(note) === which),
-      feats: playbook.feats.filter((entry) => tabForFeat(entry.name, entry.note) === which),
-      rules: playbook.rules
-        .map((block) => ({
-          ...block,
-          items: block.items.filter((item) => tabForRule(item.label) === which),
-        }))
-        .filter((block) => block.items.length > 0),
-    });
-
-    return { core: on("core"), combate: on("combate"), movimiento: on("movimiento") };
-  }, [playbook]);
-
-  const shown = sorted[tab];
-
   return (
-    <div>
-      {/* ---- the band across the top: who, and the numbers ---- */}
-      <header
-        className="border-b px-8 py-6"
-        style={{ borderColor: `${accent}33`, background: `linear-gradient(150deg, ${accent}12, transparent 60%)` }}
+    <div
+      style={{
+        border: `1px solid ${palette.color}30`,
+        borderRadius: 6,
+        overflow: "hidden",
+        height: "100%",
+      }}
+    >
+      <div
+        style={{
+          padding: "6px 12px",
+          background: `${palette.color}20`,
+          borderBottom: `1px solid ${palette.color}30`,
+          fontSize: 11,
+          fontWeight: "bold",
+          letterSpacing: "0.08em",
+          color: palette.accent,
+        }}
       >
-        <div className="flex flex-wrap items-center gap-5">
-          <Sigil name={sigilName} size={44} />
-          <div className="min-w-0 flex-1">
-            <h2 className="font-display text-2xl font-black leading-tight text-bone">{name}</h2>
-            <p className="mt-1 font-body text-sm text-bone/75">
-              {subtitle}
-              {playbook.role && <span className="text-bone/60"> — {playbook.role}</span>}
-            </p>
-          </div>
-        </div>
+        {title}
+      </div>
+      <div style={{ padding: 10, display: "flex", flexDirection: "column", gap: 6 }}>
+        {children}
+      </div>
+    </div>
+  );
+}
 
-        {playbook.vitals.length > 0 && (
-          <dl className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-            {playbook.vitals.map((vital) => (
-              <div
-                key={vital.label}
-                className="border border-iron/40 bg-void/50 px-3 py-2"
-                title={vital.from}
-              >
-                <dt className="font-mono text-[10px] uppercase tracking-[0.18em] text-bone/60">
-                  {vital.label}
-                </dt>
-                <dd className="mt-0.5 font-display text-xl font-black" style={{ color: accent }}>
-                  {vital.value}
-                </dd>
-              </div>
-            ))}
-          </dl>
-        )}
-      </header>
-
-      {playbook.unwritten ? (
-        <p className="px-8 py-12 font-body text-sm leading-relaxed text-bone/60">
-          La hoja de trucos todavia no cubre esta clase.
-        </p>
-      ) : (
-        <>
-          {/* ---- the tabs ---- */}
-          <div
-            className="flex flex-wrap items-center gap-1 border-b px-8"
-            style={{ borderColor: `${accent}22` }}
-            role="tablist"
+/** Una acción adicional o una reacción. La más chica de las tres tarjetas. */
+function ActionCard({ note, palette }: { note: PlayNote; palette: ClassPalette }) {
+  return (
+    <div
+      style={{
+        padding: "7px 10px",
+        background: note.highlight ? `${palette.color}18` : "#ffffff06",
+        border: `1px solid ${note.highlight ? `${palette.color}50` : "#ffffff15"}`,
+        borderRadius: 4,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+        <span
+          style={{ fontSize: 12, fontWeight: "bold", color: note.highlight ? palette.accent : "#ddd" }}
+        >
+          {note.name}
+        </span>
+        {note.resource && (
+          <span
+            style={{
+              fontSize: 10,
+              padding: "1px 6px",
+              background: `${palette.color}25`,
+              border: `1px solid ${palette.color}40`,
+              borderRadius: 10,
+              color: palette.accent,
+            }}
           >
-            {TABS.map((entry) => {
-              const active = entry.id === tab;
-              return (
-                <button
-                  key={entry.id}
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setTab(entry.id)}
-                  title={entry.blurb}
-                  className="relative px-4 py-3 font-mono text-[11px] uppercase tracking-[0.25em] transition-colors"
-                  style={{ color: active ? accent : "#8a857c" }}
-                >
-                  {entry.label}
-                  {active && (
-                    // One shared element, so the underline slides between tabs
-                    // rather than blinking out on one and in on the next.
-                    <motion.span
-                      layoutId="vision-tab"
-                      className="absolute inset-x-2 -bottom-px h-px"
-                      style={{ background: accent }}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
+            {note.resource}
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.4 }}>{note.desc}</div>
+    </div>
+  );
+}
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={tab}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
-              transition={{ duration: 0.18 }}
-              className="space-y-8 px-8 py-8"
-            >
-              {/* Only on Core: the sheet's warning that this class is hard to
-                  run well is a standing property of the character, not a
-                  thing that happens on a turn. */}
-              {tab === "core" && playbook.warnings.length > 0 && (
-                <div className="space-y-2">
-                  {playbook.warnings.map((warning) => (
-                    <p
-                      key={warning}
-                      className="border-l-2 border-ember/60 pl-4 font-body text-sm leading-relaxed text-bone/75"
-                    >
-                      {warning}
-                    </p>
-                  ))}
-                </div>
-              )}
+/** Un rasgo de clase o de subclase. La píldora de recurso se va a la derecha. */
+function FeatureCard({ note, palette }: { note: PlayNote; palette: ClassPalette }) {
+  return (
+    <div
+      style={{
+        padding: "10px 12px",
+        background: note.highlight ? `${palette.color}12` : "#ffffff05",
+        border: `1px solid ${note.highlight ? `${palette.color}40` : "#ffffff10"}`,
+        borderRadius: 6,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+        {note.highlight && <span style={{ color: palette.accent, fontSize: 14 }}>★</span>}
+        <span
+          style={{ fontSize: 14, fontWeight: "bold", color: note.highlight ? palette.accent : "#ddd" }}
+        >
+          {note.name}
+        </span>
+        {note.resource && (
+          <span
+            style={{
+              marginLeft: "auto",
+              fontSize: 11,
+              padding: "2px 8px",
+              background: `${palette.color}20`,
+              border: `1px solid ${palette.color}40`,
+              borderRadius: 10,
+              color: palette.accent,
+            }}
+          >
+            {note.resource}
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 13, color: "#bbb", lineHeight: 1.5 }}>{note.desc}</div>
+    </div>
+  );
+}
 
-              {/*
-                The two action types side by side, because the choice between
-                them is the one a player makes every round.
-              */}
-              {(shown.bonusActions.length > 0 || shown.reactions.length > 0) && (
-                <div className="grid gap-8 md:grid-cols-2">
-                  <Section title="Accion adicional" notes={shown.bonusActions} accent={accent} />
-                  <Section title="Reaccion" notes={shown.reactions} accent={accent} />
-                </div>
-              )}
-
-              {shown.features.length > 0 && (
-                <Block title="Rasgos">
-                  <div className="grid gap-x-8 gap-y-4 md:grid-cols-2">
-                    {shown.features.map((note) => (
-                      <Note key={note.name} note={note} accent={accent} />
-                    ))}
-                  </div>
-                </Block>
-              )}
-
-              {shown.feats.length > 0 && (
-                <Block title="Tus dotes">
-                  <div className="grid gap-x-8 gap-y-5 md:grid-cols-2">
-                    {shown.feats.map(({ name: featName, note }) => (
-                      <div key={featName}>
-                        <p className={HEADING} style={{ color: accent }}>
-                          {note.icon} {featName}
-                          <span className="ml-2 font-mono text-[10px] font-normal uppercase tracking-[0.15em] text-bone/60">
-                            {CATEGORY_LABEL[note.category] ?? note.category}
-                          </span>
-                        </p>
-                        <p className="mt-1 font-body text-sm leading-relaxed text-bone/75">
-                          {note.desc}
-                        </p>
-                        {note.tip && (
-                          <p className="mt-1.5 font-body text-sm leading-relaxed text-gold/85">
-                            {note.tip}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </Block>
-              )}
-
-              {/* Combinations are how a fight is won, so they live on Combate
-                  even when a piece of one is a movement feat. */}
-              {tab === "combate" && playbook.combos.length > 0 && (
-                <Block title={playbook.combos.length === 1 ? "Tu combinacion" : "Tus combinaciones"}>
-                  <div className="grid gap-5 md:grid-cols-2">
-                    {playbook.combos.map((combo) => (
-                      <div
-                        key={combo.id}
-                        className="border-l-2 bg-void/40 p-4"
-                        style={{ borderColor: accent }}
-                      >
-                        <p className={HEADING} style={{ color: accent }}>
-                          {combo.icon} {combo.name}
-                        </p>
-                        <p className="mt-1.5 font-body text-sm leading-relaxed text-bone/75">
-                          {combo.what}
-                        </p>
-                        <p className="mt-2 font-body text-sm leading-relaxed text-bone/65">
-                          <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">
-                            como se juega{" "}
-                          </span>
-                          {combo.how}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </Block>
-              )}
-
-              {tab === "combate" && playbook.tips.length > 0 && (
-                <div className="grid gap-3 md:grid-cols-2">
-                  {playbook.tips.map((tip) => (
-                    <p
-                      key={tip}
-                      className="border border-ember/30 bg-ember/[0.06] p-4 font-body text-sm leading-relaxed text-bone/65"
-                    >
-                      {tip}
-                    </p>
-                  ))}
-                </div>
-              )}
-
-              {shown.rules.map((block) => (
-                <Block key={block.title} title={block.title}>
-                  <dl className="grid gap-x-8 gap-y-3 md:grid-cols-2">
-                    {block.items.map((item) => (
-                      <div key={item.label}>
-                        <dt
-                          className="font-mono text-[10px] uppercase tracking-[0.2em]"
-                          style={{ color: item.color ?? "#8a857c" }}
-                        >
-                          {item.label}
-                        </dt>
-                        <dd className="mt-0.5 font-body text-sm leading-relaxed text-bone/75">
-                          {item.desc}
-                        </dd>
-                      </div>
-                    ))}
-                  </dl>
-                </Block>
-              ))}
-
-              {/* The extras only render on their own tab, so they count
-                  towards it being empty — a character whose whole Combate tab
-                  is one combination has not got an empty tab. */}
-              {isEmpty(shown) &&
-                !(tab === "core" && playbook.warnings.length > 0) &&
-                !(tab === "combate" && (playbook.combos.length > 0 || playbook.tips.length > 0)) && (
-                  <p className="font-body text-sm leading-relaxed text-bone/60">
-                    Nada anotado en esta pestana.
-                  </p>
-                )}
-            </motion.div>
-          </AnimatePresence>
-        </>
+/** Una dote. Va en dorado y no en el color de la clase, como en el original. */
+function FeatCard({ name, note }: { name: string; note: FeatNote }) {
+  const gold = "#c8a832";
+  return (
+    <div
+      style={{
+        padding: "8px 11px",
+        background: note.highlight ? "#2a2000" : "#1a1800",
+        border: `1px solid ${note.highlight ? `${gold}50` : `${gold}25`}`,
+        borderRadius: 5,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 7, marginBottom: 3 }}>
+        <span style={{ fontSize: 14 }}>{note.icon || "⚡"}</span>
+        <span style={{ fontSize: 13, fontWeight: "bold", color: note.highlight ? gold : "#d4b84a" }}>
+          {name}
+        </span>
+        {note.resource && (
+          <span
+            style={{
+              marginLeft: "auto",
+              fontSize: 10,
+              padding: "1px 7px",
+              background: `${gold}20`,
+              border: `1px solid ${gold}40`,
+              borderRadius: 10,
+              color: "#d4b84a",
+              flexShrink: 0,
+            }}
+          >
+            {note.resource}
+          </span>
+        )}
+      </div>
+      <div style={{ fontSize: 12, color: "#bba", lineHeight: 1.4 }}>{note.desc}</div>
+      {note.tip && (
+        <div style={{ marginTop: 4, fontSize: 11, color: "#8a7a40", fontStyle: "italic" }}>
+          💡 {note.tip}
+        </div>
       )}
     </div>
   );
 }
 
-/** Whether a tab would render nothing but its own heading. */
-function isEmpty(shown: {
-  bonusActions: unknown[];
-  reactions: unknown[];
-  features: unknown[];
-  feats: unknown[];
-  rules: unknown[];
-}): boolean {
+/** Una combinación. Violeta fijo: no es de la clase, es de cómo se juegan dos. */
+function ComboCard({ combo }: { combo: ComboNote }) {
   return (
-    shown.bonusActions.length === 0 &&
-    shown.reactions.length === 0 &&
-    shown.features.length === 0 &&
-    shown.feats.length === 0 &&
-    shown.rules.length === 0
-  );
-}
-
-/** A run of play notes, absent entirely when the class has none of that kind. */
-function Section({ title, notes, accent }: { title: string; notes: PlayNote[]; accent: string }) {
-  if (notes.length === 0) return null;
-
-  return (
-    <Block title={title}>
-      <div className="space-y-4">
-        {notes.map((note) => (
-          <Note key={note.name} note={note} accent={accent} />
-        ))}
-      </div>
-    </Block>
-  );
-}
-
-function Note({ note, accent }: { note: PlayNote; accent: string }) {
-  return (
-    <div>
-      <p
-        className={HEADING}
-        style={{ color: note.highlight ? accent : "#E6DFCE" }}
-      >
-        {note.name}
-        {note.resource && (
-          <span className="ml-2 font-mono text-[10px] font-normal uppercase tracking-[0.15em] text-bone/60">
-            {note.resource}
+    <div
+      style={{
+        padding: "11px 14px",
+        background: combo.highlight ? "#150025" : "#0d0d1a",
+        border: `1px solid ${combo.highlight ? "#8e44ad60" : "#44447060"}`,
+        borderLeft: `3px solid ${combo.highlight ? "#8e44ad" : "#4444aa"}`,
+        borderRadius: 6,
+        marginBottom: 8,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+        <span style={{ fontSize: 18 }}>{combo.icon}</span>
+        <span
+          style={{ fontSize: 14, fontWeight: "bold", color: combo.highlight ? "#b060e8" : "#8888cc" }}
+        >
+          {combo.name}
+        </span>
+        {combo.highlight && (
+          <span
+            style={{
+              fontSize: 9,
+              padding: "2px 7px",
+              background: "#8e44ad30",
+              border: "1px solid #8e44ad60",
+              borderRadius: 10,
+              color: "#b060e8",
+              letterSpacing: "0.05em",
+            }}
+          >
+            ⭐ CONOCIDO
           </span>
         )}
-      </p>
-      <p className="mt-1 font-body text-sm leading-relaxed text-bone/75">{note.desc}</p>
+      </div>
+      <div style={{ fontSize: 12, color: "#ccc", lineHeight: 1.5, marginBottom: 6 }}>{combo.what}</div>
+      <div
+        style={{
+          padding: "6px 10px",
+          background: "#ffffff08",
+          borderRadius: 4,
+          fontSize: 12,
+          color: "#aaa",
+          lineHeight: 1.4,
+        }}
+      >
+        <span style={{ color: "#8888cc", fontWeight: "bold" }}>🎯 Cómo usarlo: </span>
+        {combo.how}
+      </div>
     </div>
   );
 }
 
-function Block({ title, children }: { title: string; children: React.ReactNode }) {
+/** El aviso rojo de lo que la clase suele olvidarse. */
+function Tip({ text }: { text: string }) {
   return (
-    <motion.section
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
+    <div
+      style={{
+        padding: "9px 12px",
+        marginBottom: 14,
+        background: "#1a0f00",
+        border: "1px solid #c0392b80",
+        borderLeft: "3px solid #c0392b",
+        borderRadius: 4,
+        fontSize: 12,
+        color: "#e88",
+      }}
     >
-      <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.3em] text-gold/85">{title}</p>
-      {children}
-    </motion.section>
+      {text}
+    </div>
+  );
+}
+
+/** El encabezado de un grupo suelto: dorado para dotes, violeta para combos. */
+function GroupTitle({ text, color }: { text: string; color: string }) {
+  return (
+    <div
+      style={{
+        fontSize: 11,
+        fontWeight: "bold",
+        color,
+        letterSpacing: "0.1em",
+        marginBottom: 8,
+        borderBottom: `1px solid ${color}40`,
+        paddingBottom: 4,
+      }}
+    >
+      {text}
+    </div>
+  );
+}
+
+export default function Vision({
+  playbook,
+  classId,
+  className,
+  subclassLabel,
+  name,
+  subtitle,
+}: {
+  playbook: Playbook;
+  /** El id canónico, que es con lo que la cheatsheet elige el color. */
+  classId: string;
+  /** "Guerrero", ya traducido. */
+  className: string;
+  subclassLabel: string | null;
+  name: string;
+  /** "Nivel 5 · Humano · Guerrero", ya armado. */
+  subtitle: string;
+}) {
+  const [tab, setTab] = useState<TabId>("combat");
+  const palette = paletteFor(classId);
+
+  if (playbook.unwritten) {
+    return (
+      <div
+        style={{
+          background: palette.bg,
+          fontFamily: "Georgia, serif",
+          color: "#e8e0d0",
+          padding: "48px 20px",
+          textAlign: "center",
+          fontSize: 13,
+          lineHeight: 1.6,
+        }}
+      >
+        La cheatsheet no tiene nada escrito para esta clase todavía.
+      </div>
+    );
+  }
+
+  /** Una píldora del color de la clase. La fila de arriba del original. */
+  const pill = (text: string, big: boolean) => (
+    <span
+      key={text}
+      style={{
+        padding: big ? "3px 9px" : "2px 8px",
+        borderRadius: big ? 20 : 4,
+        border: `1px solid ${palette.color}`,
+        background: `${palette.color}${big ? "30" : "25"}`,
+        color: palette.accent,
+        fontSize: big ? 11 : 10,
+      }}
+    >
+      {text}
+    </span>
+  );
+
+  return (
+    <div
+      style={{
+        background: palette.bg,
+        fontFamily: "Georgia, serif",
+        color: "#e8e0d0",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* ---- HEADER ---- */}
+      <div
+        style={{
+          borderBottom: `2px solid ${palette.color}60`,
+          background: `linear-gradient(180deg, ${palette.bg} 0%, transparent 100%)`,
+          padding: "16px 20px 12px",
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 10 }}>
+          <div
+            style={{
+              fontSize: 28,
+              width: 44,
+              height: 44,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: `${palette.color}30`,
+              borderRadius: 8,
+              border: `1px solid ${palette.color}50`,
+              flexShrink: 0,
+            }}
+          >
+            {playbook.icon ?? "⚔️"}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontSize: 20, fontWeight: "bold", color: "#fff" }}>{name}</div>
+            <div style={{ fontSize: 12, color: palette.accent, marginTop: 2 }}>
+              {subtitle}
+              {playbook.role && ` — ${playbook.role}`}
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", marginBottom: 7 }}>
+          {pill(`${playbook.icon ?? ""} ${className}`.trim(), true)}
+        </div>
+        {subclassLabel && (
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            {pill(subclassLabel, false)}
+          </div>
+        )}
+      </div>
+
+      {/* ---- los números, que el original no podía tener ---- */}
+      {playbook.vitals.length > 0 && (
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+            padding: "10px 16px 0",
+          }}
+        >
+          {playbook.vitals.map((vital) => (
+            <div
+              key={vital.label}
+              style={{
+                padding: "5px 12px",
+                border: `1px solid ${palette.color}30`,
+                borderRadius: 6,
+                background: "#ffffff06",
+                minWidth: 78,
+              }}
+            >
+              <div style={{ fontSize: 10, color: "#888", letterSpacing: "0.08em" }}>
+                {vital.label}
+              </div>
+              <div style={{ fontSize: 18, fontWeight: "bold", color: palette.accent }}>
+                {vital.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ---- avisos de dificultad ---- */}
+      {playbook.warnings.length > 0 && (
+        <div
+          style={{
+            margin: "10px 16px 0",
+            padding: "8px 12px",
+            background: "#2d1500",
+            border: "1px solid #e67e2260",
+            borderRadius: 6,
+          }}
+        >
+          {playbook.warnings.map((warning, i) => (
+            <div
+              key={warning}
+              style={{
+                fontSize: 11,
+                color: "#f39c12",
+                marginBottom: i < playbook.warnings.length - 1 ? 3 : 0,
+              }}
+            >
+              {warning}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* ---- TABS ---- */}
+      <div
+        style={{
+          display: "flex",
+          gap: 0,
+          borderBottom: "1px solid #333",
+          margin: "10px 0 0",
+          padding: "0 16px",
+        }}
+      >
+        {TABS.map((entry) => (
+          <button
+            key={entry.id}
+            type="button"
+            onClick={() => setTab(entry.id)}
+            style={{
+              padding: "7px 12px",
+              fontSize: 12,
+              fontFamily: "Georgia, serif",
+              background: "transparent",
+              border: "none",
+              borderBottom: tab === entry.id ? `2px solid ${palette.color}` : "2px solid transparent",
+              color: tab === entry.id ? palette.accent : "#777",
+              cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+          >
+            {entry.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ---- CONTENIDO ---- */}
+      <div style={{ padding: "14px 16px", maxWidth: 900 }}>
+        {tab === "combat" && (
+          <div>
+            {playbook.tips.map((tip) => (
+              <Tip key={tip} text={tip} />
+            ))}
+
+            {playbook.combos.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <GroupTitle
+                  text={`🔗 COMBOS DETECTADOS (${playbook.combos.length})`}
+                  color="#9b59b6"
+                />
+                {playbook.combos.map((combo) => (
+                  <ComboCard key={combo.id} combo={combo} />
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <Section title="⚡ ACCIONES ADICIONALES" palette={palette}>
+                {playbook.bonusActions.length > 0 ? (
+                  playbook.bonusActions.map((note) => (
+                    <ActionCard key={note.name} note={note} palette={palette} />
+                  ))
+                ) : (
+                  <p style={{ color: "#666", fontSize: 11, fontStyle: "italic", margin: 0 }}>
+                    Sin acciones adicionales de clase.
+                  </p>
+                )}
+              </Section>
+              <Section title="🔄 REACCIONES" palette={palette}>
+                {playbook.reactions.map((note) => (
+                  <ActionCard key={note.name} note={note} palette={palette} />
+                ))}
+                <div
+                  style={{
+                    marginTop: 4,
+                    padding: "5px 8px",
+                    background: "#ffffff08",
+                    borderRadius: 4,
+                    fontSize: 10,
+                    color: "#888",
+                  }}
+                >
+                  + Siempre:{" "}
+                  <span style={{ color: "#aaa" }}>
+                    Ataque de oportunidad cuando enemigo sale de tu alcance sin Disengage
+                  </span>
+                </div>
+              </Section>
+            </div>
+
+            {playbook.feats.length > 0 && (
+              <div style={{ marginTop: 14 }}>
+                <GroupTitle text={`⚡ FEATS ACTIVAS (${playbook.feats.length})`} color="#c8a832" />
+                <div style={{ display: "grid", gap: 6 }}>
+                  {playbook.feats.map((entry) => (
+                    <FeatCard key={entry.name} name={entry.name} note={entry.note} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div
+              style={{
+                marginTop: 10,
+                padding: "9px 12px",
+                background: "#ffffff06",
+                border: "1px solid #ffffff15",
+                borderRadius: 6,
+              }}
+            >
+              <div
+                style={{ fontSize: 11, fontWeight: "bold", color: palette.accent, marginBottom: 5 }}
+              >
+                TU TURNO — economía de acción
+              </div>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 5 }}>
+                {[
+                  { label: "MOVIMIENTO", color: "#3498db" },
+                  { label: "ACCIÓN", color: "#e74c3c" },
+                  { label: "ACCIÓN ADICIONAL", color: "#f39c12" },
+                  { label: "INTERACCIÓN GRATIS", color: "#27ae60" },
+                ].map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      padding: "2px 7px",
+                      borderRadius: 4,
+                      background: `${item.color}20`,
+                      border: `1px solid ${item.color}50`,
+                      fontSize: 10,
+                      color: item.color,
+                    }}
+                  >
+                    {item.label}
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: 10, color: "#666" }}>
+                La REACCIÓN se usa fuera de tu turno (1 por ronda) · Bonus Action ≠ Action
+              </div>
+            </div>
+          </div>
+        )}
+
+        {tab === "features" && (
+          <div>
+            {playbook.tips.map((tip) => (
+              <Tip key={tip} text={tip} />
+            ))}
+            <div style={{ display: "grid", gap: 8 }}>
+              {playbook.features.map((note) => (
+                <FeatureCard key={note.name} note={note} palette={palette} />
+              ))}
+            </div>
+            {playbook.feats.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <GroupTitle text="⚡ FEATS DE ESTE PERSONAJE" color="#c8a832" />
+                <div style={{ display: "grid", gap: 6 }}>
+                  {playbook.feats.map((entry) => (
+                    <FeatCard key={entry.name} name={entry.name} note={entry.note} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {tab === "rules" && (
+          <div style={{ display: "grid", gap: 10 }}>
+            {playbook.rules.map((block) => (
+              <Section key={block.title} title={block.title} palette={palette}>
+                {block.items.map((item) => (
+                  <div
+                    key={item.label}
+                    style={{
+                      padding: "7px 10px",
+                      background: "#ffffff06",
+                      border: "1px solid #ffffff15",
+                      borderRadius: 4,
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 12,
+                        fontWeight: "bold",
+                        color: item.color ?? palette.accent,
+                        marginBottom: 3,
+                      }}
+                    >
+                      {item.label}
+                    </div>
+                    <div style={{ fontSize: 12, color: "#aaa", lineHeight: 1.4 }}>{item.desc}</div>
+                  </div>
+                ))}
+              </Section>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* ---- PIE ---- */}
+      <div
+        style={{
+          textAlign: "center",
+          padding: 10,
+          borderTop: "1px solid #222",
+          fontSize: 10,
+          color: "#444",
+          marginTop: 8,
+        }}
+      >
+        {`Bertini's · Cheat Sheet de ${name} · ${playbook.icon ?? ""} ${subtitle}`}
+      </div>
+    </div>
   );
 }

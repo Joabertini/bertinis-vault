@@ -209,12 +209,20 @@ function OpenSharedTome({
       >
         <Vision
           playbook={playbook}
-          accent={accent}
+          classId={state.classId}
+          className={className}
+          subclassLabel={
+            entryById(
+              "subclass",
+              rulesVersion,
+              state.subclassId,
+              state.sourceBooks[`subclass:${state.subclassId}`],
+            )?.label ?? null
+          }
           name={state.characterName}
           subtitle={`Nivel ${characterLevelFor(state)} · ${race?.label ?? "—"} · ${className}${
             background ? ` · ${background.label}` : ""
           }`}
-          sigilName={state.classId || state.raceId}
         />
       </div>
 
