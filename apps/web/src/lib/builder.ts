@@ -29,6 +29,7 @@ import { collapseGearLines } from "./gear-lines";
 import { gearProficienciesFor } from "./gear-proficiencies";
 import { speciesProficienciesFor } from "./species";
 import { expertisePlanFor } from "./expertise";
+import { armorClassOptionsFor } from "./armor-class-options";
 import { backgroundFeatIdsFor, featIdsFor } from "./feats";
 import { grantedSpellsFor } from "./granted-spells";
 import { hitPointsInputFor } from "./hit-points";
@@ -829,16 +830,29 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
           features: features.map((entry) => normalizeFeatureEntry(entry, state)),
           /*
            * Unarmored Defense and its relatives, which the contract started
-           * asking for on 2026-08-26.
+           * asking for on 2026-08-26 and which nothing filled until now.
            *
-           * Empty is the honest value today: no chamber offers the choice
-           * between "10 + DEX + CON" and a worn breastplate, so claiming an
-           * alternative armour class here would put a number on the sheet the
-           * player never picked. The index does carry `armorClass` rows for
-           * the barbarian, the monk and five species, so this is wiring that
-           * is missing rather than data that is.
+           * The comment that used to be here said empty was the honest value
+           * because no chamber offers the choice. That was the wrong reading:
+           * a monk does not *choose* Unarmored Defense, the class hands it to
+           * them, and `bestArmorClass` already picks the better of it and the
+           * worn armour. Nothing was being asked of the player and a number
+           * was going missing — a monk 5 with 18 Dexterity and 15 Wisdom read
+           * 14 instead of 16, with nothing on the sheet to say why.
+           *
+           * See `armor-class-options.ts` for what is collected and how it is
+           * filtered by level.
            */
-          armorClassOptions: [],
+          armorClassOptions: armorClassOptionsFor(
+            [
+              { classId: state.classId, subclassId: state.subclassId, level: state.level },
+              ...state.extraClasses,
+            ],
+            state.raceId,
+            state.subraceId,
+            characterLevelFor(state),
+            rulesVersionOf(state),
+          ),
       },
     },
     ...(Object.keys(state.sourceBooks).length > 0 ? { sourceBooks: state.sourceBooks } : {}),
