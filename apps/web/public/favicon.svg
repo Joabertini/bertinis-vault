@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- El faro, reducido a lo que sobrevive a 16px: el haz y la luz.
+       Colores de apps/web/src/styles/base.css — Void, carmesí, oro. -->
+  <rect width="32" height="32" rx="7" fill="#030202"/>
+  <path d="M16 6 L25 26 H7 Z" fill="#6E0F0F"/>
+  <path d="M16 11 L21.5 23.5 H10.5 Z" fill="#030202"/>
+  <circle cx="16" cy="9.5" r="3.4" fill="#B08A3E"/>
+</svg>
