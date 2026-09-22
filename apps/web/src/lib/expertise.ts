@@ -22,10 +22,12 @@ import {
   type ExpertiseGrantLike,
   type ExpertiseProblem,
 } from "@bertinis-vault/domain";
+import { collections, forRulesVersion, type FeatRow } from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import { classesFor, classifyProficiencyKind, type BuilderState } from "./builder";
-import { classInfoFor, subclassInfoFor } from "./index-options";
+import { featIdsFor } from "./feats";
+import { classInfoFor, slugOf, subclassInfoFor } from "./index-options";
 import { proficiencyPlan } from "./grants";
 import { parseLineList, uniqueEntries } from "./builder";
 
@@ -135,6 +137,42 @@ export function expertisePlanFor(state: BuilderState, rulesVersion: RulesVersion
         });
       }
     }
+  }
+
+  /*
+   * What the character's feats hand over.
+   *
+   * Skill Expert's own line is expertise in a skill you already hold — a
+   * second question past the proficiency `grants.ts` already offers, on the
+   * exact shape `ExpertiseGrantLike.sets` expects: the index stores a feat's
+   * `expertise` as that array already. Nothing read it, so the picker never
+   * asked and the feat's second half went unanswered without saying so.
+   *
+   * Unlike a class grant, a feat is not gated by a class level — it is active
+   * the moment it is taken — so it is pushed as its own slot rather than run
+   * through `activeExpertiseGrants`.
+   */
+  const featRows = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
+  for (const featId of featIdsFor(state)) {
+    const feat = featRows.find((row) => slugOf(row.name) === featId);
+    if (!feat?.expertise?.length) continue;
+
+    const grant: ExpertiseGrantLike = {
+      name: feat.name,
+      source: "feat",
+      level: 1,
+      isVariant: false,
+      sets: feat.expertise,
+    };
+    const key = keyOf(featId, grant);
+    slots.push({
+      key,
+      grant,
+      from: feat.name,
+      isChoice: isExpertiseChoice(grant),
+      answer: state.expertiseChoices[key] ?? null,
+      problems: [],
+    });
   }
 
   // Checked in earned order, each against what the ones before it took.
