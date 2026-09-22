@@ -32,3 +32,6 @@ packages/domain/src/*.d.ts.map
 
 # La hoja de roll20 se recorta desde apps/web/vendor/roll20-ogl en cada build
 apps/web/public/hoja/
+
+# cache de fuentes que baja scripts/build-og-image.py
+scripts/.fuentes-og/

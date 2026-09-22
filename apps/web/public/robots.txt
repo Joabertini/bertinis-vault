@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Las fichas compartidas se abren con un código en la URL y son contenido de
+# quien las compartió, no páginas del sitio.
+Disallow: /tomo/
+
+Sitemap: https://alba.bertinilabs.xyz/sitemap.xml
