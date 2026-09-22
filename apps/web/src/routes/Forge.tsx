@@ -60,6 +60,7 @@ import { armorWarningFor, weaponWarningFor } from "@/lib/gear-warnings";
 import { gearProficienciesFor } from "@/lib/gear-proficiencies";
 import { speciesProficienciesFor } from "@/lib/species";
 import { assignLanguages, languagePlanFor, languagesSatisfied } from "@/lib/languages";
+import { branchIsRequiredFor } from "@/lib/species-branch";
 import StartingKit from "@/components/forge/StartingKit";
 import { grantedOptions, kitItemIds, startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
 import PointBuy from "@/components/forge/PointBuy";
@@ -548,6 +549,24 @@ export default function Forge() {
     // rebuild an identical object each keystroke.
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [draft.raceId, draft.subraceId, rulesVersion],
+  );
+
+  /**
+   * Whether skipping the branch leaves nothing at all.
+   *
+   * Every 2014 species with branches was labelled "Optional" the same way,
+   * on the assumption that the race row always carries its own bonus and the
+   * branch only adds flavour on top — true for the ones a table plays every
+   * week. It is not true for all 91: a handful print nothing at the race
+   * level at all, so a player who trusted "Optional" and skipped the branch
+   * got no ability increase and, for some, no species language either. See
+   * `species-branch.ts` for the check, which reads the index rather than
+   * naming a race.
+   */
+  const branchIsRequired = useMemo(
+    () => branchIsRequiredFor(draft, rulesVersion),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [draft.raceId, draft.backgroundId, draft.sourceBooks, rulesVersion],
   );
 
   /** Whether the increase has been moved off what the book prints. */
@@ -1441,7 +1460,11 @@ export default function Forge() {
                   {subraces.length > 0 && (
                     <SubChoice
                       title="Rama"
-                      hint={`${selectedRace?.label} se divide en ${subraces.length}. Opcional.`}
+                      hint={
+                        branchIsRequired
+                          ? `${selectedRace?.label} se divide en ${subraces.length}. Sin elegir una no hay bono de caracteristica ni idioma de especie — no es opcional.`
+                          : `${selectedRace?.label} se divide en ${subraces.length}. Opcional.`
+                      }
                       options={subraces}
                       selectedId={draft.subraceId}
                       onPick={(entry) => pick("subrace", entry)}
