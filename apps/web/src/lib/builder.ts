@@ -30,7 +30,12 @@ import { gearProficienciesFor } from "./gear-proficiencies";
 import { speciesProficienciesFor } from "./species";
 import { expertisePlanFor } from "./expertise";
 import { armorClassOptionsFor } from "./armor-class-options";
-import { backgroundFeatIdsFor, featFeatureEntriesFor, featIdsFor } from "./feats";
+import {
+  backgroundFeatIdsFor,
+  featFeatureEntriesFor,
+  featIdsFor,
+  savingThrowFromResilient,
+} from "./feats";
 import { grantedSpellsFor } from "./granted-spells";
 import { hitPointsInputFor } from "./hit-points";
 export { backgroundFeatIdsFor } from "./feats";
@@ -814,6 +819,21 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
               id: ability,
               label: abilityLabels[ability] ?? ability,
             })),
+            // Resilient's half the class list never grants: the save
+            // proficiency the feat adds on top, at whichever ability its own
+            // increase was pointed at.
+            ...(() => {
+              const resilientAbility = savingThrowFromResilient(state);
+              return resilientAbility && !savingThrowsForClass(state.classId).includes(resilientAbility)
+                ? [
+                    {
+                      kind: "savingThrow" as const,
+                      id: resilientAbility,
+                      label: abilityLabels[resilientAbility] ?? resilientAbility,
+                    },
+                  ]
+                : [];
+            })(),
           ],
         spells,
         // Both weapon and armour are optional — a wizard may carry neither.

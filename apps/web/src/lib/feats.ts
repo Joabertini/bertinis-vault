@@ -10,7 +10,8 @@
  * asking that question imported the module that asks it.
  */
 
-import { featsFromChoices } from "@bertinis-vault/domain";
+import { featsFromChoices, isAbilityId } from "@bertinis-vault/domain";
+import type { AbilityId } from "@bertinis-vault/contracts";
 import { getBackgroundCatalogEntry } from "@bertinis-vault/data-engine";
 import { collections, forRulesVersion, type FeatRow } from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
@@ -82,4 +83,27 @@ export function featFeatureEntriesFor(
     const feat = feats.find((row) => slugOf(row.name) === featId);
     return feat ? [{ featureId: featId, label: feat.name, source: "feat" as const }] : [];
   });
+}
+
+/**
+ * The saving throw Resilient adds proficiency in.
+ *
+ * The index has no field for it — `ability`, `expertise`, `skills` and
+ * `tools` all came off 5etools data, and none of them says which feats touch
+ * saving throws because in the current data only this one does. Special-
+ * cased by id rather than invented as a schema nobody else would fill, the
+ * same call `playbook.ts` and `counsel.ts` already made for this feat.
+ *
+ * The ability is not asked twice: Resilient's own increase already points at
+ * one of the six abilities (`featAbilityChoices`), and the proficiency
+ * follows the same answer. A character who has not placed the increase yet
+ * has not answered the proficiency either, which is the correct reading —
+ * there is nothing to grant until the choice exists.
+ */
+export function savingThrowFromResilient(state: BuilderState): AbilityId | null {
+  if (!featIdsFor(state).includes("resilient")) return null;
+
+  const chosen = state.featAbilityChoices.resilient ?? {};
+  const ability = Object.entries(chosen).find(([, amount]) => (amount ?? 0) > 0)?.[0];
+  return ability && isAbilityId(ability) ? ability : null;
 }
