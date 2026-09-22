@@ -21,6 +21,7 @@
  */
 
 import { collections, forRulesVersion } from "@bertinis-vault/vetools-index";
+import type { RaceRow, SubraceRow } from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import { seedSpeciesBonus } from "./improvements";
@@ -41,14 +42,14 @@ const languageOfferCount = (
 export function branchIsRequiredFor(state: BuilderState, rulesVersion: RulesVersion): boolean {
   if (rulesVersion !== "2014" || !state.raceId) return false;
 
-  const races = forRulesVersion(collections.race ?? [], "2014") as { name: string }[];
+  const races = forRulesVersion(collections.race ?? [], "2014") as RaceRow[];
   const raceRow = races.find((row) => slugOf(row.name) === state.raceId);
   if (!raceRow) return false;
 
   // Matched on the subrace's own `raceName`, not a name prefix: "Human
   // (Innistrad)" starts with "Human (" too, and is a separate race entirely
   // — a prefix match would file its branches under plain Human.
-  const subraces = (forRulesVersion(collections.subrace ?? [], "2014") as { name: string; raceName: string }[]).filter(
+  const subraces = (forRulesVersion(collections.subrace ?? [], "2014") as SubraceRow[]).filter(
     (row) => row.raceName === raceRow.name,
   );
   if (!subraces.length) return false;
