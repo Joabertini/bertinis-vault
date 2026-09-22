@@ -144,3 +144,36 @@ describe("lo que llega al payload y a la ficha", () => {
     expect(doubled - plain).toBe(buildCanonicalSnapshot(rogue(1)).derived.proficiencyBonus);
   });
 });
+
+/*
+ * Skill Expert grants two things: a new skill proficiency (`grants.ts`
+ * already offered that) and expertise in a skill the character already has.
+ * Nothing read the second half, so a fighter who took the feat never saw the
+ * expertise question at all.
+ */
+describe("los dotes que dan maestria", () => {
+  const featTaker = () => ({
+    ...base,
+    rulesVersion: "5e-2014" as const,
+    classId: "fighter",
+    subclassId: "",
+    level: 4,
+    featId: "skill-expert",
+  });
+
+  test("Skill Expert abre una concesion de maestria", () => {
+    const slots = expertisePlanFor(featTaker(), "2014").slots;
+    expect(slots).toHaveLength(1);
+    expect(slots[0]?.from).toBe("Skill Expert");
+  });
+
+  test("solo pide una pericia entre las que el personaje ya tiene", () => {
+    const [slot] = expertisePlanFor(featTaker(), "2014").slots;
+    expect(slot?.problems.map((problem) => problem.kind)).toEqual(["unchosen"]);
+  });
+
+  test("un personaje sin el dote no ve esa concesion", () => {
+    const slots = expertisePlanFor({ ...featTaker(), featId: "" }, "2014").slots;
+    expect(slots).toHaveLength(0);
+  });
+});
