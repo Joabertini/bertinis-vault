@@ -30,7 +30,7 @@ import { gearProficienciesFor } from "./gear-proficiencies";
 import { speciesProficienciesFor } from "./species";
 import { expertisePlanFor } from "./expertise";
 import { armorClassOptionsFor } from "./armor-class-options";
-import { backgroundFeatIdsFor, featIdsFor } from "./feats";
+import { backgroundFeatIdsFor, featFeatureEntriesFor, featIdsFor } from "./feats";
 import { grantedSpellsFor } from "./granted-spells";
 import { hitPointsInputFor } from "./hit-points";
 export { backgroundFeatIdsFor } from "./feats";
@@ -827,7 +827,20 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
               withAttunement(normalizeEquipmentEntry(entry.id, entry.quantity, state), entry.id, attuned),
             ),
         ],
-          features: features.map((entry) => normalizeFeatureEntry(entry, state)),
+          features: (() => {
+            const featEntries = featFeatureEntriesFor(state, rulesVersionOf(state));
+            // A feat's label reaches the sheet from the index now, not from
+            // the features box. A player who also typed its name there —
+            // muscle memory from before this existed — would otherwise print
+            // it twice.
+            const taken = new Set(featEntries.map((entry) => entry.label.toLowerCase()));
+            return [
+              ...featEntries,
+              ...features
+                .map((entry) => normalizeFeatureEntry(entry, state))
+                .filter((entry) => !taken.has(entry.label.toLowerCase())),
+            ];
+          })(),
           /*
            * Unarmored Defense and its relatives, which the contract started
            * asking for on 2026-08-26 and which nothing filled until now.

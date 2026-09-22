@@ -12,6 +12,7 @@
 
 import { featsFromChoices } from "@bertinis-vault/domain";
 import { getBackgroundCatalogEntry } from "@bertinis-vault/data-engine";
+import { collections, forRulesVersion, type FeatRow } from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder-state";
@@ -59,4 +60,26 @@ export function featIdsFor(state: BuilderState): string[] {
       ].filter(Boolean),
     ),
   ];
+}
+
+/**
+ * The feats a character has, as feature entries the sheet can print.
+ *
+ * A feat is chosen structurally — a level's improvement, a background's grant —
+ * never by typing its name into the features box. Nothing else turns that
+ * choice into a labeled entry, so a taken feat reached `featIdsFor` and
+ * stopped there: recorded for prerequisites and ability bonuses, invisible on
+ * the sheet. This is the missing conversion, read off the same index row
+ * `grants.ts` already matches ids against.
+ */
+export function featFeatureEntriesFor(
+  state: BuilderState,
+  rulesVersion: RulesVersion,
+): { featureId: string; label: string; source: "feat" }[] {
+  const feats = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
+
+  return featIdsFor(state).flatMap((featId) => {
+    const feat = feats.find((row) => slugOf(row.name) === featId);
+    return feat ? [{ featureId: featId, label: feat.name, source: "feat" as const }] : [];
+  });
 }
