@@ -61,6 +61,13 @@ export type Env = {
    * Absent in development and in tests, where there is nobody to enumerate.
    */
   READ_LIMIT?: RateLimiter;
+  /**
+   * Budget for publishes, per caller.
+   *
+   * Publishing needs no account and an owned build never expires, so without
+   * this a script could spend the day's KV writes and fill the store.
+   */
+  WRITE_LIMIT?: RateLimiter;
   /** Comma-separated origins allowed to call this. `*` in development. */
   ALLOWED_ORIGINS?: string;
   /** Accounts, sessions and saved characters. Absent until D1 is bound. */
@@ -498,6 +505,12 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
   }
 
   if (url.pathname === "/builds" && request.method === "POST") {
+    if (env.WRITE_LIMIT) {
+      const caller = request.headers.get("CF-Connecting-IP") ?? "unknown";
+      if (!(await env.WRITE_LIMIT.limit({ key: caller })).success) {
+        return error("Too many publishes. Wait a minute and try again.", 429, headers);
+      }
+    }
     return handleCreate(request, env, headers);
   }
 
