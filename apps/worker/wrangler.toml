@@ -82,3 +82,10 @@ custom_domain = true
 name = "READ_LIMIT"
 namespace_id = "1001"
 simple = { limit = 30, period = 60 }
+
+# Publishing is anonymous and owned builds never expire: ten a minute per caller
+# is far above a player re-sending a sheet and far below filling the store.
+[[ratelimits]]
+name = "WRITE_LIMIT"
+namespace_id = "1002"
+simple = { limit = 10, period = 60 }

@@ -376,6 +376,25 @@ test("wrong codes run out of budget before the store does", async () => {
   assert.equal((await handle(get(created.code), env)).status, 200);
 });
 
+test("publishes run out of budget before the store does", async () => {
+  let allowed = 1;
+  const store = makeStore();
+  const env = {
+    BUILDS: store,
+    WRITE_LIMIT: {
+      async limit() {
+        return { success: allowed-- > 0 };
+      },
+    },
+  };
+
+  assert.equal((await handle(post(payload()), env)).status, 201);
+  const writes = store.writes.count;
+
+  assert.equal((await handle(post(payload()), env)).status, 429);
+  assert.equal(store.writes.count, writes);
+});
+
 /* --------------------------------------------------------------- errors -- */
 
 test("an unknown code is a 404 that says the build may have expired", async () => {
