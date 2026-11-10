@@ -732,7 +732,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
    * prepare stays prepared, and the grant only adds what was not already
    * there.
    */
-  const spells = [...new Map(spellEntries.map((entry) => [entry.spellId, entry])).values()];
+  const spells = firstOfEachSpell(spellEntries);
   const backgroundGrantedFeatIds = backgroundFeatIdsFor(state);
   // A feat can arrive two ways: chosen at a level in place of an improvement,
   // or granted outside the levels entirely — the variant human's, and in 2024
@@ -1010,4 +1010,30 @@ function parseSpellEntry(line: string): { label: string; level: number } {
     label: (match[2] ?? line).trim(),
     level: Number.parseInt(match[1] ?? "1", 10),
   };
+}
+
+/**
+ * One entry per spell, the first one kept.
+ *
+ * `new Map(entries.map(...))` keeps the *last* value for a repeated key, so the
+ * grant won over the spell the player chose — the opposite of what the comment
+ * at the call site promised. The written entry wins now, and takes one thing
+ * from a later copy: `always`. A domain or oath spell the player also picked
+ * is always prepared whoever put it there, and leaving it `prepared` would
+ * charge it against the preparations the subclass exists to save.
+ */
+export function firstOfEachSpell<T extends { spellId: string; preparation?: SpellPreparation }>(
+  entries: T[],
+): T[] {
+  const byId = new Map<string, T>();
+
+  for (const entry of entries) {
+    const kept = byId.get(entry.spellId);
+    if (!kept) byId.set(entry.spellId, entry);
+    else if (entry.preparation === "always" && kept.preparation !== "always") {
+      byId.set(entry.spellId, { ...kept, preparation: "always" });
+    }
+  }
+
+  return [...byId.values()];
 }
