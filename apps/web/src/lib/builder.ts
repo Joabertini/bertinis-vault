@@ -343,32 +343,6 @@ function normalizeFeatureEntry(entry: string, state: BuilderState) {
   };
 }
 
-/**
- * One entry per spell, the first one kept.
- *
- * `new Map(entries.map(...))` keeps the *last* value for a repeated key, so the
- * grant won over the spell the player chose — the opposite of what the comment
- * at the call site promised. The written entry wins now, and takes one thing
- * from a later copy: `always`. A domain or oath spell the player also picked
- * is always prepared whoever put it there, and leaving it `prepared` would
- * charge it against the preparations the subclass exists to save.
- */
-export function firstOfEachSpell<T extends { spellId: string; preparation?: SpellPreparation }>(
-  entries: T[],
-): T[] {
-  const byId = new Map<string, T>();
-
-  for (const entry of entries) {
-    const kept = byId.get(entry.spellId);
-    if (!kept) byId.set(entry.spellId, entry);
-    else if (entry.preparation === "always" && kept.preparation !== "always") {
-      byId.set(entry.spellId, { ...kept, preparation: "always" });
-    }
-  }
-
-  return [...byId.values()];
-}
-
 export const builderDraftStorageKey = "bertinis-vault:web-builder:draft";
 
 /**
@@ -971,4 +945,30 @@ function parseSpellEntry(line: string): { label: string; level: number } {
     label: (match[2] ?? line).trim(),
     level: Number.parseInt(match[1] ?? "1", 10),
   };
+}
+
+/**
+ * One entry per spell, the first one kept.
+ *
+ * `new Map(entries.map(...))` keeps the *last* value for a repeated key, so the
+ * grant won over the spell the player chose — the opposite of what the comment
+ * at the call site promised. The written entry wins now, and takes one thing
+ * from a later copy: `always`. A domain or oath spell the player also picked
+ * is always prepared whoever put it there, and leaving it `prepared` would
+ * charge it against the preparations the subclass exists to save.
+ */
+export function firstOfEachSpell<T extends { spellId: string; preparation?: SpellPreparation }>(
+  entries: T[],
+): T[] {
+  const byId = new Map<string, T>();
+
+  for (const entry of entries) {
+    const kept = byId.get(entry.spellId);
+    if (!kept) byId.set(entry.spellId, entry);
+    else if (entry.preparation === "always" && kept.preparation !== "always") {
+      byId.set(entry.spellId, { ...kept, preparation: "always" });
+    }
+  }
+
+  return [...byId.values()];
 }
