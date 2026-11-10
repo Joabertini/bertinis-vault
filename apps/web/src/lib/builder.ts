@@ -343,6 +343,70 @@ function normalizeFeatureEntry(entry: string, state: BuilderState) {
   };
 }
 
+/** One line of the normalized bag, as `settleEquipment` reads it. */
+type BagEntry = {
+  itemId?: string;
+  label: string;
+  quantity: number;
+  category: "weapon" | "armor" | "shield" | "gear" | "other";
+  armorFormula?: string;
+  grantsShieldBonus?: boolean;
+  attuned?: boolean;
+};
+
+/**
+ * The bag as the character actually has it: one of each thing, one suit worn.
+ *
+ * Two corrections, both about what reaches Foundry as `equipped`:
+ *
+ * - **The weapon and armour slots name something, they do not add it.** The
+ *   kit puts the fighter's chain mail in the bag, and a player who then picks
+ *   Chain Mail as their armour means that suit, not a second one. A slot item
+ *   also found in the bag takes one copy from the bag rather than adding one.
+ * - **Only one suit and one shield are worn.** Every armour in the bag was
+ *   filed `armor`, and `to-payload` equips whatever is filed `armor`, so a
+ *   ranger with studded leather in the slot and the kit's leather in the bag
+ *   reached Foundry wearing both — and dnd5e computes armour class from
+ *   whichever it reads first. The first suit (the slot's, when there is one)
+ *   is worn; the rest is luggage, filed `gear` and without the formula, so the
+ *   builder's own armour class reads the same suit Foundry will.
+ */
+export function settleEquipment(slots: BagEntry[], bag: BagEntry[]): BagEntry[] {
+  const carried = bag.map((entry) => ({ ...entry }));
+
+  for (const slot of slots) {
+    const copy = carried.find((entry) => entry.itemId === slot.itemId && entry.quantity > 0);
+    if (copy) copy.quantity -= 1;
+  }
+
+  let wornArmor = false;
+  let heldShield = false;
+
+  return [...slots, ...carried.filter((entry) => entry.quantity > 0)].map((entry) => {
+    if (entry.category === "armor") {
+      if (!wornArmor) {
+        wornArmor = true;
+        return entry;
+      }
+      const luggage: BagEntry = { ...entry, category: "gear" };
+      delete luggage.armorFormula;
+      return luggage;
+    }
+
+    if (entry.category === "shield") {
+      if (!heldShield) {
+        heldShield = true;
+        return entry;
+      }
+      const luggage: BagEntry = { ...entry, category: "gear" };
+      delete luggage.grantsShieldBonus;
+      return luggage;
+    }
+
+    return entry;
+  });
+}
+
 export const builderDraftStorageKey = "bertinis-vault:web-builder:draft";
 
 /**
@@ -766,11 +830,11 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       // The objects to resolve, once each — how many of each is `normalized`'s
       // job, and asking the catalogs for the same arrow twenty times resolves
       // to the same arrow twenty times.
-      equipment: [
+      equipment: uniqueEntries([
         state.weaponId,
         state.armorId,
         ...extraEquipment.map((entry) => entry.id),
-      ].filter(Boolean),
+      ]),
       features,
         // Only what the character may actually have: a draft that kept a
       // mastery from a class the player has since left would export a
@@ -840,13 +904,15 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         // An unguarded entry here normalizes to `itemId: ""`, which the
         // schema rejects outright, so skipping the Gear chamber used to throw
         // rather than produce an unarmed character.
-        equipment: [
+        equipment: settleEquipment(
+          [
             ...(state.weaponId ? [withAttunement(normalizedWeapon, state.weaponId, attuned)] : []),
             ...(state.armorId ? [withAttunement(normalizedArmor, state.armorId, attuned)] : []),
-            ...extraEquipment.map((entry) =>
-              withAttunement(normalizeEquipmentEntry(entry.id, entry.quantity, state), entry.id, attuned),
-            ),
-        ],
+          ],
+          extraEquipment.map((entry) =>
+            withAttunement(normalizeEquipmentEntry(entry.id, entry.quantity, state), entry.id, attuned),
+          ),
+        ),
           features: (() => {
             const featEntries = featFeatureEntriesFor(state, rulesVersionOf(state));
             // A feat's label reaches the sheet from the index now, not from
