@@ -58,12 +58,17 @@ export function deriveCharacterBuild(
    * from what the player rolled if they rolled. A build that says nothing gets
    * the average, which is what every build written before the field did.
    */
-  const hp = multiclassHitPoints({
-    entries,
-    constitutionModifier: modifiers.con,
-    ...(parsedInput.hitPoints?.method ? { method: parsedInput.hitPoints.method } : {}),
-    ...(parsedInput.hitPoints?.rolls ? { rolls: parsedInput.hitPoints.rolls } : {}),
-  });
+  const hp =
+    multiclassHitPoints({
+      entries,
+      constitutionModifier: modifiers.con,
+      ...(parsedInput.hitPoints?.method ? { method: parsedInput.hitPoints.method } : {}),
+      ...(parsedInput.hitPoints?.rolls ? { rolls: parsedInput.hitPoints.rolls } : {}),
+    }) +
+    // Tough, Dwarven Toughness and the rest: totalled by the builder, which
+    // knows the feats and traits. Missing them is the "class and Constitution
+    // only" gap the model documents.
+    (parsedInput.hitPoints?.bonus ?? 0);
 
   // An armour picked from the index brings its own formula; the catalog is the
   // fallback for builds written before the index carried armour class.
