@@ -15,13 +15,11 @@
 import { characterLevel } from "./classing";
 import {
   abilityScoreCap,
-  bonusesFromChoices,
   bonusesFromFeats,
   improvementLevels,
   maxPointsPerAbility,
   pointsPerImprovement,
   suggestedAbilityBonuses,
-  unansweredImprovementLevels,
   type AbilityBonusMap,
   type LevelChoice,
   featPrerequisiteProblems,
@@ -43,6 +41,12 @@ import {
   subraceBonusFromIndex,
 } from "./index-options";
 import { parseLineList, uniqueEntries } from "./builder";
+import {
+  improvementSlotsFor,
+  levelBonusesFor,
+  unansweredSlotsFor,
+  type ImprovementSlot,
+} from "./level-choices";
 
 export { maxPointsPerAbility, pointsPerImprovement };
 
@@ -196,7 +200,7 @@ export type AbilitySource = {
  * apart. If they ever do, the sum is the one that is wrong.
  */
 export function abilitySources(state: BuilderState): Record<AbilityId, AbilitySource> {
-  const fromLevels = bonusesFromChoices(state.levelChoices);
+  const fromLevels = levelBonusesFor(state);
   const fromFeats = bonusesFromFeats(takenFeatsFor(state));
 
   const out = {} as Record<AbilityId, AbilitySource>;
@@ -239,8 +243,15 @@ export function bonusShape(bonuses: AbilityBonusMap): string {
 export type ImprovementPlan = {
   /** Every level that grants an increase and has been reached. */
   levels: number[];
-  /** Those still unanswered — no choice, or a partial one. */
-  unanswered: number[];
+  /**
+   * Every slot every class grants, the first class's and the others'.
+   *
+   * `levels` is the first class alone, kept for what still reads it; a
+   * multiclass character's other improvements are only here.
+   */
+  slots: ImprovementSlot[];
+  /** The keys of the slots still unanswered — no choice, or a partial one. */
+  unanswered: string[];
 };
 
 export function improvementPlan(
@@ -251,7 +262,8 @@ export function improvementPlan(
 
   return {
     levels: improvementLevels(levelling, state.level),
-    unanswered: unansweredImprovementLevels(levelling, state.level, state.levelChoices),
+    slots: improvementSlotsFor(state),
+    unanswered: unansweredSlotsFor(state).map((slot) => slot.key),
   };
 }
 
@@ -287,8 +299,9 @@ export function pointsSpent(bonuses: AbilityBonusMap): number {
  */
 export function scoresBefore(
   state: BuilderState,
-  exceptLevel?: number,
+  exceptLevel?: number | string,
 ): Record<AbilityId, number> {
+  const exceptKey = exceptLevel === undefined ? undefined : String(exceptLevel);
   const raw: Record<AbilityId, number> = {
     str: state.str,
     dex: state.dex,
@@ -298,19 +311,13 @@ export function scoresBefore(
     cha: state.cha,
   };
 
-  const choices =
-    exceptLevel === undefined
-      ? state.levelChoices
-      : Object.fromEntries(
-          Object.entries(state.levelChoices).filter(([level]) => Number(level) !== exceptLevel),
-        );
-
-  const fromLevels = bonusesFromChoices(choices);
+  // Only the answers a class actually asked for, and not the one being edited.
+  const fromLevels = levelBonusesFor(state, exceptKey);
 
   // The feat this level bought, if it bought one. Excluded by id rather than
   // by level because a feat is a feat wherever it came from, and the same one
   // cannot be held twice.
-  const excluded = exceptLevel === undefined ? null : state.levelChoices[exceptLevel];
+  const excluded = exceptKey === undefined ? null : state.levelChoices[exceptKey];
   const editedFeatId = excluded?.kind === "feat" ? excluded.featId : null;
 
   const fromFeats = bonusesFromFeats(
@@ -328,8 +335,8 @@ export function scoresBefore(
 }
 
 /** The choice recorded at a level, defaulted to an empty improvement. */
-export function choiceAt(state: BuilderState, level: number): LevelChoice {
-  return state.levelChoices[level] ?? { kind: "improvement", bonuses: {} };
+export function choiceAt(state: BuilderState, key: number | string): LevelChoice {
+  return state.levelChoices[String(key)] ?? { kind: "improvement", bonuses: {} };
 }
 
 
