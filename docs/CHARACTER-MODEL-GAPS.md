@@ -544,8 +544,9 @@ What became of each, in the order they were done:
 
 Finding H — hit points from class and Constitution only — was closed on
 2026-08-28 by asking the question instead: the method is the player's, per
-level, with each level's own die. Tough and Dwarven Toughness are still not
-modelled, and are the remaining half of it.
+level, with each level's own die. Tough, Dwarven Toughness, Draconic
+Resilience and the Boon of Fortitude followed on 2026-11-10 (auditoría,
+PR #115), which closes the other half.
 
 ## The index, and what it now carries
 
