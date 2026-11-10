@@ -586,15 +586,56 @@ async function featuresFor({ entry, api }) {
  * Matching is by name because the importer assigns its own ids.
  */
 async function applyItemState(actor, payload) {
+  const updates = itemStateUpdates([...actor.items], payload);
+  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+}
+
+/** dnd5e's item types for things a character carries, as opposed to knows. */
+export const PHYSICAL_ITEM_TYPES = new Set([
+  "weapon",
+  "equipment",
+  "consumable",
+  "tool",
+  "loot",
+  "container",
+]);
+
+/**
+ * The per-item updates, each entry matched to its own item.
+ *
+ * Matched by name, as before, but no longer to the first item of that name.
+ * Two things went wrong with first-match:
+ *
+ * - **A spell and an item can share a name.** Spells are imported before
+ *   equipment, so an Eldritch Knight's Shield spell was the first "Shield" on
+ *   the actor: the shield's `equipped` and `quantity` were written onto the
+ *   spell, and the shield itself kept whatever Plutonium gave it.
+ * - **Two entries can share a name** and then both updates landed on one item
+ *   and the second copy got none.
+ *
+ * So equipment only matches what a character carries, spells only match
+ * spells, and an item that already took an entry's state is not reused. An
+ * item with no type — a test double — matches either, which is what the old
+ * behaviour was.
+ */
+export function itemStateUpdates(items, payload) {
+  const used = new Set();
   const updates = [];
 
-  const byName = new Map();
-  for (const item of actor.items) {
-    if (!byName.has(item.name)) byName.set(item.name, item);
-  }
+  const take = (ref, accepts) => {
+    const name = refName(ref);
+    const item = items.find(
+      (candidate) =>
+        !used.has(candidate.id) &&
+        (candidate.type === undefined || accepts(candidate.type)) &&
+        `${candidate.name ?? ""}`.toLowerCase() === name,
+    );
+    if (item) used.add(item.id);
+    return item ?? null;
+  };
 
   for (const entry of payload.equipment ?? []) {
-    const item = findByRef(byName, entry.ref);
+    const item = take(entry.ref, (type) => PHYSICAL_ITEM_TYPES.has(type));
     if (!item) continue;
 
     const update = { _id: item.id, ...equipmentUpdates(entry) };
@@ -602,14 +643,20 @@ async function applyItemState(actor, payload) {
   }
 
   for (const entry of payload.spells ?? []) {
-    const item = findByRef(byName, entry.ref);
+    const item = take(entry.ref, (type) => type === "spell");
     if (!item) continue;
 
     const update = { _id: item.id, ...spellUpdates(entry) };
     if (Object.keys(update).length > 1) updates.push(update);
   }
 
-  if (updates.length) await actor.updateEmbeddedDocuments("Item", updates);
+  return updates;
+}
+
+/** The entity name a reference's hash carries, decoded and lowercased. */
+function refName(ref) {
+  const [encodedName] = `${ref?.hash ?? ""}`.split("_");
+  return decodeURIComponent(encodedName ?? "").toLowerCase();
 }
 
 /**
