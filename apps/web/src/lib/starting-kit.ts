@@ -237,3 +237,45 @@ export function swapKitAnswer(
 
   return [...kept, ...(next ? kitItemIds(next) : [])];
 }
+
+/** The three things a kit depends on, as `kitAppliedFor` stores them. */
+export type KitSignature = { classId: string; backgroundId: string; rulesVersion: RulesVersion };
+
+/** `"fighter|acolyte|5e-2014"` read back. Null for a draft that never applied a kit. */
+export function parseKitSignature(signature: string): KitSignature | null {
+  if (!signature) return null;
+  const [classId = "", backgroundId = "", edition = ""] = signature.split("|");
+  if (!classId && !backgroundId) return null;
+  return { classId, backgroundId, rulesVersion: edition === "5e-2024" ? "2024" : "2014" };
+}
+
+/**
+ * The bag after the kit itself changes: a new class, background or edition.
+ *
+ * Everything the old kit put in — its granted rows and the answers the player
+ * gave — comes out one copy at a time, and the new kit's granted rows go in.
+ * Before this, changing kit only added: the kit is applied when the class is
+ * picked and again when the background is, so a 2014 rogue reached the table
+ * with two suits of leather, four daggers and two sets of thieves' tools, and a
+ * fighter remade as a wizard kept the chain mail.
+ *
+ * One copy at a time for the same reason `swapKitAnswer` does it: a dagger the
+ * player added by hand survives the kit that also granted one.
+ */
+export function rekitBag(
+  carried: string[],
+  previousRows: KitRow[],
+  previousChoices: Record<string, string>,
+  nextRows: KitRow[],
+): string[] {
+  const kept = [...carried];
+
+  for (const option of takenOptions(previousRows, previousChoices)) {
+    for (const id of kitItemIds(option)) {
+      const at = kept.indexOf(id);
+      if (at >= 0) kept.splice(at, 1);
+    }
+  }
+
+  return [...kept, ...grantedOptions(nextRows).flatMap(kitItemIds)];
+}
