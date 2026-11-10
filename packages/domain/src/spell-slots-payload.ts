@@ -96,3 +96,27 @@ function halfCasterLevel(level: number, classId: string, rulesVersion: SlotRules
 
   return Math.ceil(level / 2);
 }
+
+/** Where the Eldritch Knight and the Arcane Trickster start casting, in both editions. */
+const THIRD_CASTER_FIRST_LEVEL = 3;
+
+/**
+ * A third-caster's slots when it is the character's only class.
+ *
+ * Not the multiclass contribution. Multiclassing counts a third of the levels
+ * rounded *down*; the Eldritch Knight's own table reads the full-caster table at
+ * a third rounded *up* — fighter 4 has three 1st level slots, fighter 7 has four
+ * 1st and two 2nd. Sending a lone Eldritch Knight through the multiclass path
+ * gave a fighter 7 three 1st level slots and no 2nd.
+ */
+export function thirdCasterSlotsForPayload(level: number): PayloadSpellSlots {
+  if (level < THIRD_CASTER_FIRST_LEVEL) return { slots: {} };
+
+  const table = spellSlotsFullCasterTable[Math.min(Math.ceil(level / 3), 20)] ?? [];
+  const slots: Record<string, number> = {};
+  table.forEach((count, index) => {
+    if (count > 0) slots[String(index + 1)] = count;
+  });
+
+  return { slots };
+}
