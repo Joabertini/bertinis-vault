@@ -1007,8 +1007,10 @@ export default function Forge() {
     // down from 8 to 4 would keep the points they earned at 6 and 8 — the sheet
     // would show scores the rules never granted, and the Growth chamber would
     // report nothing pending because those levels are answered.
+    // Only the first class's own keys are levels of this class. Another
+    // class's answers (`wizard:4`) belong to that class's level, not this one.
     const levelChoices = Object.fromEntries(
-      Object.entries(draft.levelChoices).filter(([at]) => Number(at) <= level),
+      Object.entries(draft.levelChoices).filter(([at]) => at.includes(":") || Number(at) <= level),
     );
 
     patchDraft({
@@ -1141,8 +1143,8 @@ export default function Forge() {
     patchDraft({ hpRolls });
   };
 
-  const setLevelChoice = (level: number, choice: (typeof draft.levelChoices)[number]) => {
-    patchDraft({ levelChoices: { ...draft.levelChoices, [level]: choice } });
+  const setLevelChoice = (key: string, choice: (typeof draft.levelChoices)[string]) => {
+    patchDraft({ levelChoices: { ...draft.levelChoices, [key]: choice } });
   };
 
   const setFeatAbilities = (featId: string, bonuses: Record<string, number>) => {
@@ -1808,7 +1810,7 @@ export default function Forge() {
 
                   <Improvements
                     state={draft}
-                    levels={growth.levels}
+                    slots={growth.slots}
                     rulesVersion={rulesVersion}
                     accent={accent}
                     onSetChoice={setLevelChoice}

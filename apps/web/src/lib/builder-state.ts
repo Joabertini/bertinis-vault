@@ -270,7 +270,7 @@ export type BuilderState = {
    * the level: a fighter who drops from 14 to 12 should lose the answers they
    * gave at 14, and find them again if they go back up.
    */
-  levelChoices: Record<number, LevelChoice>;
+  levelChoices: Record<string, LevelChoice>;
   /**
    * Level-up picks, by the id the index resolves: fighting styles, eldritch
    * invocations, the pact boon, metamagic, maneuvers.
@@ -604,16 +604,18 @@ function coerceFeatAbilityChoices(
   return result;
 }
 
-function coerceLevelChoices(value: unknown, legacyPool: unknown): Record<number, LevelChoice> {
+function coerceLevelChoices(value: unknown, legacyPool: unknown): Record<string, LevelChoice> {
   if (!value || typeof value !== "object") {
     const pool = coerceAbilityBonuses(legacyPool);
     return Object.keys(pool).length > 0 ? { 4: { kind: "improvement", bonuses: pool } } : {};
   }
 
-  const result: Record<number, LevelChoice> = {};
+  const result: Record<string, LevelChoice> = {};
   for (const [key, raw] of Object.entries(value as Record<string, unknown>)) {
-    const level = Number.parseInt(key, 10);
-    if (!Number.isInteger(level) || !raw || typeof raw !== "object") continue;
+    // A bare level is the first class's; `wizard:4` is another class's.
+    const shape = /^(?:([a-z0-9-]+):)?(\d+)$/.exec(key);
+    if (!shape || !raw || typeof raw !== "object") continue;
+    const level = shape[1] ? `${shape[1]}:${Number(shape[2])}` : String(Number(shape[2]));
 
     const candidate = raw as { kind?: unknown; featId?: unknown; bonuses?: unknown };
     if (candidate.kind === "feat") {

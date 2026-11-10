@@ -31,6 +31,7 @@ describe("the scores the sheet uses", () => {
     const snapshot = buildCanonicalSnapshot({
       ...noBonuses,
       int: 16,
+      level: 4,
       levelChoices: { 4: { kind: "improvement", bonuses: { int: 2 } } },
     });
 
@@ -45,6 +46,7 @@ describe("the scores the sheet uses", () => {
       ...noBonuses,
       featId: "",
       con: 13,
+      level: 4,
       levelChoices: { 4: { kind: "feat", featId: "resilient" } },
       featAbilityChoices: { resilient: { con: 1 } },
     });
@@ -81,6 +83,7 @@ describe("the scores the sheet uses", () => {
       ...noBonuses,
       featId: "",
       con: 13,
+      level: 4,
       levelChoices: { 4: { kind: "feat", featId: "resilient", bonuses: { con: 1 } } },
     });
 
@@ -96,11 +99,12 @@ describe("the scores the sheet uses", () => {
   });
 
   test("change the spell save DC", () => {
-    const plain = buildCanonicalSnapshot({ ...noBonuses, classId: "wizard", int: 16 });
+    const plain = buildCanonicalSnapshot({ ...noBonuses, classId: "wizard", int: 16, level: 4 });
     const sharper = buildCanonicalSnapshot({
       ...noBonuses,
       classId: "wizard",
       int: 16,
+      level: 4,
       levelChoices: { 4: { kind: "improvement", bonuses: { int: 2 } } },
     });
 

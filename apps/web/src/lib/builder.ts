@@ -38,6 +38,7 @@ import {
 } from "./feats";
 import { grantedSpellsFor } from "./granted-spells";
 import { hitPointsInputFor } from "./hit-points";
+import { levelBonusesFor, levelFeatsFor } from "./level-choices";
 export { backgroundFeatIdsFor } from "./feats";
 import { foundrySizeFor } from "./table-numbers";
 import { kitCopper, startingKitFor, takenOptions } from "./starting-kit";
@@ -59,10 +60,8 @@ import {
 } from "@bertinis-vault/data-engine";
 import {
   applyAbilityBonuses,
-  bonusesFromChoices,
   deriveCharacterBuild,
   bonusesFromFeats,
-  featsFromChoices,
   unansweredFeatAbilities,
   type TakenFeat,
   savingThrowsForClass,
@@ -467,7 +466,7 @@ export function unmetMulticlassRequirementsFor(state: BuilderState) {
   const scores = applyAbilityBonuses(
     { str: state.str, dex: state.dex, con: state.con, int: state.int, wis: state.wis, cha: state.cha },
     state.abilityBonuses,
-    bonusesFromChoices(state.levelChoices),
+    levelBonusesFor(state),
     bonusesFromFeats(takenFeatsFor(state)),
   );
 
@@ -676,7 +675,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   // the background's. Both land in the same list, and a feat the background
   // already granted is not counted twice.
   const chosenFeatIds = uniqueEntries(
-    [state.featId, ...featsFromChoices(state.levelChoices)].filter(
+    [state.featId, ...levelFeatsFor(state)].filter(
       (featId) => featId && !backgroundGrantedFeatIds.includes(featId),
     ),
   );
@@ -747,7 +746,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
       final: applyAbilityBonuses(
         baseScores,
         state.abilityBonuses,
-        bonusesFromChoices(state.levelChoices),
+        levelBonusesFor(state),
         // Half-feats. Until this line existed, Resilient, Fey Touched and
         // Telekinetic raised nothing and the sheet did not say so.
         bonusesFromFeats(takenFeatsFor(state)),

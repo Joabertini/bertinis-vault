@@ -25,6 +25,7 @@ import { characterLevelFor } from "./builder";
 import { entryById } from "./catalog";
 import { modifierOf, primaryAbilityOf, signed } from "./counsel";
 import { slugOf } from "./index-options";
+import { levelChoicesInEffect } from "./level-choices";
 import {
   CLASS_NOTES,
   COMBO_NOTES,
@@ -200,7 +201,7 @@ export function featNamesOf(state: BuilderState): string[] {
   for (const name of Object.keys(FEAT_NOTES)) byId.set(slugOf(name), name);
 
   const featIds = [
-    ...Object.values(state.levelChoices)
+    ...levelChoicesInEffect(state)
       .filter((choice) => choice.kind === "feat")
       .map((choice) => choice.featId),
     state.featId,

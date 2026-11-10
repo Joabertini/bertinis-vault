@@ -10,7 +10,7 @@
  * asking that question imported the module that asks it.
  */
 
-import { featsFromChoices, isAbilityId } from "@bertinis-vault/domain";
+import { isAbilityId } from "@bertinis-vault/domain";
 import type { AbilityId } from "@bertinis-vault/contracts";
 import { getBackgroundCatalogEntry } from "@bertinis-vault/data-engine";
 import { collections, forRulesVersion, type FeatRow } from "@bertinis-vault/vetools-index";
@@ -18,6 +18,7 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder-state";
 import { featChoiceForBackground, slugOf } from "./index-options";
+import { levelFeatsFor } from "./level-choices";
 
 /**
  * The feat a background hands over, if it has settled on one.
@@ -57,7 +58,7 @@ export function featIdsFor(state: BuilderState): string[] {
       [
         ...backgroundFeatIdsFor(state),
         state.featId,
-        ...featsFromChoices(state.levelChoices),
+        ...levelFeatsFor(state),
       ].filter(Boolean),
     ),
   ];

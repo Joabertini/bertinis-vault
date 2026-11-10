@@ -21,7 +21,8 @@ import ScryPicker from "@/components/forge/ScryPicker";
 import { ABILITY_IDS, abilityLabels, type AbilityId } from "@/lib/abilities";
 import type { BuilderState } from "@/lib/builder";
 import type { CatalogEntry } from "@/lib/catalog";
-import { featAbilityGrantsFor, optionsFor } from "@/lib/index-options";
+import { classInfoFor, featAbilityGrantsFor, optionsFor } from "@/lib/index-options";
+import type { ImprovementSlot } from "@/lib/level-choices";
 import {
   choiceAt,
   maxPointsPerAbility,
@@ -34,20 +35,21 @@ import { DIVIDER_TIGHT, LABEL, LABEL_MB2, WHISPER } from "@/styles/recipes";
 
 export default function Improvements({
   state,
-  levels,
+  slots,
   rulesVersion,
   accent,
   onSetChoice,
   onSetFeatAbilities,
 }: {
   state: BuilderState;
-  levels: number[];
+  /** Every class's slots, not only the first class's: each class grants its own. */
+  slots: ImprovementSlot[];
   rulesVersion: RulesVersion;
   accent: string;
-  onSetChoice: (level: number, choice: BuilderState["levelChoices"][number]) => void;
+  onSetChoice: (key: string, choice: BuilderState["levelChoices"][string]) => void;
   onSetFeatAbilities: (featId: string, bonuses: AbilityBonusMap) => void;
 }) {
-  if (levels.length === 0) {
+  if (slots.length === 0) {
     return (
       <p className={WHISPER}>
         A nivel {state.level} todavia no hay mejoras. La primera llega a nivel 4.
@@ -57,10 +59,18 @@ export default function Improvements({
 
   return (
     <div className="space-y-12">
-      {levels.map((level) => (
+      {slots.map((slot) => (
         <LevelSlot
-          key={level}
-          level={level}
+          key={slot.key}
+          slotKey={slot.key}
+          level={slot.level}
+          // Named by class only when there is more than one, so a single-class
+          // sheet reads exactly as it did.
+          classLabel={
+            slots.some((other) => !other.primary)
+              ? (classInfoFor(slot.classId, rulesVersion)?.name ?? slot.classId)
+              : null
+          }
           state={state}
           rulesVersion={rulesVersion}
           accent={accent}
@@ -73,21 +83,25 @@ export default function Improvements({
 }
 
 function LevelSlot({
+  slotKey,
   level,
+  classLabel,
   state,
   rulesVersion,
   accent,
   onSetChoice,
   onSetFeatAbilities,
 }: {
+  slotKey: string;
   level: number;
+  classLabel: string | null;
   state: BuilderState;
   rulesVersion: RulesVersion;
   accent: string;
-  onSetChoice: (level: number, choice: BuilderState["levelChoices"][number]) => void;
+  onSetChoice: (key: string, choice: BuilderState["levelChoices"][string]) => void;
   onSetFeatAbilities: (featId: string, bonuses: AbilityBonusMap) => void;
 }) {
-  const choice = choiceAt(state, level);
+  const choice = choiceAt(state, slotKey);
   const isFeat = choice.kind === "feat";
 
   /*
@@ -97,7 +111,7 @@ function LevelSlot({
    * character with an 18 was told they had 19 and refused the second point for
    * reaching 20. 18 + 2 = 20 is legal.
    */
-  const before = useMemo(() => scoresBefore(state, level), [state, level]);
+  const before = useMemo(() => scoresBefore(state, slotKey), [state, slotKey]);
 
   const featSearch = useMemo(
     /*
@@ -124,21 +138,21 @@ function LevelSlot({
     <div className={DIVIDER_TIGHT}>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         <span className={LABEL}>
-          Nivel {level}
+          {classLabel ? `${classLabel} — nivel ${level}` : `Nivel ${level}`}
         </span>
 
         <div className="flex border border-iron/60">
           <Tab
             active={!isFeat}
             accent={accent}
-            onClick={() => onSetChoice(level, { kind: "improvement", bonuses: {} })}
+            onClick={() => onSetChoice(slotKey, { kind: "improvement", bonuses: {} })}
           >
             Mejora
           </Tab>
           <Tab
             active={isFeat}
             accent={accent}
-            onClick={() => onSetChoice(level, { kind: "feat", featId: "" })}
+            onClick={() => onSetChoice(slotKey, { kind: "feat", featId: "" })}
           >
             Dote
           </Tab>
@@ -160,7 +174,7 @@ function LevelSlot({
               budget={pointsPerImprovement}
               maxPerAbility={maxPointsPerAbility}
               accent={accent}
-              onChange={(bonuses) => onSetChoice(level, { kind: "improvement", bonuses })}
+              onChange={(bonuses) => onSetChoice(slotKey, { kind: "improvement", bonuses })}
             />
           ) : (
             <div className="max-w-xl space-y-6">
@@ -170,7 +184,7 @@ function LevelSlot({
                 search={featSearch}
                 selectedId={featId}
                 onPick={(entry: CatalogEntry) =>
-                  onSetChoice(level, { kind: "feat", featId: entry.id })
+                  onSetChoice(slotKey, { kind: "feat", featId: entry.id })
                 }
                 accent={accent}
               />
