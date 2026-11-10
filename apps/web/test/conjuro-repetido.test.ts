@@ -34,7 +34,7 @@ describe("en la exportacion", () => {
       subclassId: "life-domain",
       level: 3,
       featId: "",
-      backgroundId: "",
+      backgroundId: "acolyte",
       cantripsText: "",
       spellsText: "Nv1: Bless",
       spellbookText: "",
