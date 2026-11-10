@@ -114,7 +114,16 @@ export default function Multiclass({
                 >
                   <option value="">Elegi una clase…</option>
                   {classes
-                    .filter((entry) => entry.id !== primaryClassId || entry.id === extra.classId)
+                    // A class is taken once: the first class, and every other
+                    // row's, are not offered again. Two fighter rows are one
+                    // fighter with the levels split, and nothing downstream
+                    // reads them that way.
+                    .filter(
+                      (entry) =>
+                        entry.id === extra.classId ||
+                        (entry.id !== primaryClassId &&
+                          !extras.some((other, at) => at !== index && other.classId === entry.id)),
+                    )
                     .map((entry) => (
                       <option key={entry.id} value={entry.id}>
                         {entry.label}
@@ -143,9 +152,17 @@ export default function Multiclass({
                     // the others have not taken.
                     max={Math.max(1, extra.level + roomLeft)}
                     value={extra.level}
-                    onChange={(event) =>
-                      onChange(index, { ...extra, level: Number(event.target.value) })
-                    }
+                    onChange={(event) => {
+                      const level = Number(event.target.value);
+                      // Below the level that grants it, the subclass is not
+                      // one the character has — and the list that would show
+                      // it is gone, so it could not be seen to be cleared.
+                      onChange(index, {
+                        ...extra,
+                        level,
+                        subclassId: level >= subclassLevel ? extra.subclassId : "",
+                      });
+                    }}
                     className="w-full accent-gold"
                     aria-label={`Niveles de ${taken?.label ?? "la clase"}`}
                   />

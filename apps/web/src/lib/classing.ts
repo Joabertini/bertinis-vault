@@ -74,15 +74,20 @@ export function classEntryFor(
   rulesVersion: RulesVersion,
 ): ClassEntry {
   const row = classInfoFor(entry.classId, rulesVersion);
-  const subclass = entry.subclassId
-    ? subclassInfoFor(entry.subclassId, entry.classId, rulesVersion)
-    : null;
+  // A subclass the class has not reached yet is not one the character has.
+  // The Forge clears it when the level drops; this is the same rule for a
+  // draft that reached here some other way, so it cannot export a subclass
+  // and its spells at a level that does not grant them.
+  const reached =
+    !row || row.subclassLevel === null || row.subclassLevel === undefined || entry.level >= row.subclassLevel;
+  const subclassId = reached ? entry.subclassId : "";
+  const subclass = subclassId ? subclassInfoFor(subclassId, entry.classId, rulesVersion) : null;
   const hitDie = row?.hitDie ?? hitDieFor(entry.classId, rulesVersion);
   const castingAbility = castingAbilityOf(row, subclass);
 
   return {
     classId: entry.classId,
-    ...(entry.subclassId ? { subclassId: entry.subclassId } : {}),
+    ...(subclassId ? { subclassId } : {}),
     level: entry.level,
     casterProgression: progressionOf(row?.casterProgression),
     subclassCasterProgression: progressionOf(subclass?.casterProgression),
