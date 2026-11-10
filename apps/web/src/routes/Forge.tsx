@@ -636,10 +636,36 @@ export default function Forge() {
     draft.sourceBooks[`subclass:${draft.subclassId}`],
   );
 
-  /** Styles, invocations, metamagic, maneuvers — whatever this class asks. */
+  /**
+   * Styles, invocations, metamagic, maneuvers — whatever every class asks.
+   *
+   * Every class, not the first one: a fighter who took two levels of warlock
+   * has two invocations, and asking only the fighter left them with none on
+   * the sheet. Another class's pools are counted at its own level and named
+   * after it, so the two "Fighting Style" questions of a fighter/paladin read
+   * as two.
+   */
   const pools = useMemo(
-    () =>
-      talentPools(draft, rulesVersion, selectedClass?.label ?? "", selectedSubclass?.label ?? ""),
+    () => [
+      ...talentPools(draft, rulesVersion, selectedClass?.label ?? "", selectedSubclass?.label ?? ""),
+      ...draft.extraClasses
+        .filter((extra) => extra.classId && extra.level >= 1)
+        .flatMap((extra) => {
+          const taken = entryById("class", rulesVersion, extra.classId);
+          const sub = extra.subclassId
+            ? entryById(
+                "subclass",
+                rulesVersion,
+                extra.subclassId,
+                draft.sourceBooks[`subclass:${extra.subclassId}`],
+              )
+            : null;
+          const label = taken?.label ?? extra.classId;
+          return talentPools(draft, rulesVersion, label, sub?.label ?? "", extra.level).map(
+            (pool) => ({ ...pool, name: `${pool.name} (${label})` }),
+          );
+        }),
+    ],
     [draft, rulesVersion, selectedClass, selectedSubclass],
   );
 
