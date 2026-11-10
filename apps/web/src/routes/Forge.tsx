@@ -62,7 +62,7 @@ import { speciesProficienciesFor } from "@/lib/species";
 import { assignLanguages, languagePlanFor, languagesSatisfied } from "@/lib/languages";
 import { branchIsRequiredFor } from "@/lib/species-branch";
 import StartingKit from "@/components/forge/StartingKit";
-import { grantedOptions, kitItemIds, startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
+import { parseKitSignature, rekitBag, startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
 import PointBuy from "@/components/forge/PointBuy";
 import {
   ROLL_ATTEMPTS,
@@ -650,11 +650,18 @@ export default function Forge() {
   useEffect(() => {
     if (draft.kitAppliedFor === kitSignature) return;
 
-    const granted = grantedOptions(kitRows).flatMap(kitItemIds);
+    // The old kit comes out before the new one goes in. Only adding is what
+    // put a second rogue's kit in the bag the moment a background was picked.
+    const previous = parseKitSignature(draft.kitAppliedFor);
+    const previousRows = previous
+      ? startingKitFor(previous.classId, previous.backgroundId, previous.rulesVersion, draft.sourceBooks)
+      : [];
     patchDraft({
       kitChoices: {},
       kitAppliedFor: kitSignature,
-      extraEquipmentText: fromLines([...toLines(draft.extraEquipmentText), ...granted]),
+      extraEquipmentText: fromLines(
+        rekitBag(toLines(draft.extraEquipmentText), previousRows, draft.kitChoices, kitRows),
+      ),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kitSignature, kitRows]);
