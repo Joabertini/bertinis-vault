@@ -583,3 +583,60 @@ test("a refusal we cannot explain is still reported as a refusal", async () => {
   assert.equal(result.ok, false);
   assert.match(result.reason, /console/);
 });
+
+test("the Shield spell does not take the shield's equipped state", async () => {
+  // Spells import before equipment, so the spell is the first "Shield" on the
+  // actor. First-match by name wrote `equipped` onto the spell and left the
+  // shield as Plutonium had it.
+  const { itemStateUpdates } = await import("../src/import.js");
+  const items = [
+    { id: "spell", name: "Shield", type: "spell" },
+    { id: "armour", name: "Shield", type: "equipment" },
+  ];
+  const updates = itemStateUpdates(items, {
+    equipment: [{ ref: ref("item", "items.html", "Shield", "PHB"), quantity: 1, equipped: true }],
+    spells: [{ ref: ref("spell", "spells.html", "Shield", "PHB"), preparation: "prepared" }],
+  });
+
+  const forArmour = updates.find((update) => update._id === "armour");
+  const forSpell = updates.find((update) => update._id === "spell");
+  assert.equal(forArmour["system.equipped"], true);
+  assert.equal(forSpell["system.equipped"], undefined);
+  assert.equal(forSpell["system.prepared"], 1);
+});
+
+test("two entries of the same name each reach their own item", async () => {
+  const { itemStateUpdates } = await import("../src/import.js");
+  const items = [
+    { id: "worn", name: "Leather Armor", type: "equipment" },
+    { id: "spare", name: "Leather Armor", type: "equipment" },
+  ];
+  const leather = ref("item", "items.html", "Leather Armor", "PHB");
+  const updates = itemStateUpdates(items, {
+    equipment: [
+      { ref: leather, quantity: 1, equipped: true },
+      { ref: leather, quantity: 1, equipped: false },
+    ],
+  });
+
+  assert.deepEqual(
+    updates.map((update) => [update._id, update["system.equipped"]]),
+    [
+      ["worn", true],
+      ["spare", false],
+    ],
+  );
+});
+
+test("a class feature that shares an item's name is left alone", async () => {
+  const { itemStateUpdates } = await import("../src/import.js");
+  const items = [
+    { id: "feature", name: "Shield", type: "feat" },
+    { id: "armour", name: "Shield", type: "equipment" },
+  ];
+  const updates = itemStateUpdates(items, {
+    equipment: [{ ref: ref("item", "items.html", "Shield", "PHB"), equipped: true }],
+  });
+
+  assert.deepEqual(updates.map((update) => update._id), ["armour"]);
+});
