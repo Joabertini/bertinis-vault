@@ -516,3 +516,39 @@ export function parseSpellLine(line: string): { level: number; name: string } | 
 export function formatSpellLine(level: number, name: string): string {
   return `Nv${level}: ${name}`;
 }
+
+/** Picks no current class offers any more, by list. */
+export type StrayChoices = { cantrips: string[]; spells: string[]; book: string[] };
+
+/**
+ * The chosen lines that no class the character still has can offer.
+ *
+ * The lists are flat text and the pickers only show what a class offers, so a
+ * pick whose class left — a wizard level removed from a fighter, a level lost
+ * below where a spell level opens, a patron unpicked — stayed in the text,
+ * invisible on the page and still in the export. A fighter 3 / wizard 2 who
+ * dropped the wizard reached Foundry with the wizard's spells.
+ *
+ * A wizard's prepared spell is a stray when its page leaves the book, even if
+ * some other list would still have it: preparing comes out of the book.
+ */
+export function strayChoices(
+  plans: readonly SpellPlan[],
+  chosen: { cantrips: string[]; spells: string[]; book: string[] },
+): StrayChoices {
+  const lines = (groups: SpellsByLevel) =>
+    groups.flatMap(({ level, names }) => names.map((name) => formatSpellLine(level, name)));
+
+  const cantrips = new Set(plans.flatMap((plan) => plan.cantripOptions));
+  const book = new Set(plans.flatMap((plan) => (plan.book ? lines(plan.book.options) : [])));
+  const strayBook = chosen.book.filter((line) => !book.has(line));
+
+  const spells = new Set(plans.flatMap((plan) => lines(plan.spellsByLevel)));
+  for (const line of strayBook) spells.delete(line);
+
+  return {
+    cantrips: chosen.cantrips.filter((line) => !cantrips.has(line)),
+    spells: chosen.spells.filter((line) => !spells.has(line)),
+    book: strayBook,
+  };
+}

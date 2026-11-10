@@ -81,7 +81,7 @@ import {
   proficiencyPlan,
   toLines,
 } from "@/lib/grants";
-import { attributeSpells, spellPlansFor } from "@/lib/spells";
+import { attributeSpells, spellPlansFor, strayChoices } from "@/lib/spells";
 import SpellClassSection from "@/components/forge/SpellClassSection";
 import {
   abilityOptionsOf,
@@ -199,6 +199,15 @@ export default function Forge() {
   const allRaces = useMemo(() => allOptions("race", rulesVersion), [rulesVersion]);
   const allClasses = useMemo(() => allOptions("class", rulesVersion), [rulesVersion]);
   const allBackgrounds = useMemo(() => allOptions("background", rulesVersion), [rulesVersion]);
+
+  /** A class's name and book, for the spell plans. */
+  const classLabelFor = useCallback(
+    (classId: string) => {
+      const found = allClasses.find((entry) => entry.id === classId);
+      return { label: found?.label ?? classId, source: found?.source ?? "" };
+    },
+    [allClasses],
+  );
 
   const weaponSearch = useMemo(
     () => (query: string) =>
@@ -389,10 +398,7 @@ export default function Forge() {
           draft.extraClasses,
           rulesVersion,
         ),
-        labelFor: (classId) => {
-          const found = allClasses.find((entry) => entry.id === classId);
-          return { label: found?.label ?? classId, source: found?.source ?? "" };
-        },
+        labelFor: classLabelFor,
         rulesVersion,
         snapshot,
         spellbook: toLines(draft.spellbookText),
@@ -410,6 +416,50 @@ export default function Forge() {
   );
 
   const castsAnything = spellPlans.length > 0;
+
+  /**
+   * What a change of classes or levels takes with it from the spell lists.
+   *
+   * Asked of the draft as it will be, against the plans it will have: the
+   * spells only a class that is leaving offered, and the ones above the spell
+   * level a lower level reaches. Done on the change itself rather than in an
+   * effect, so a list brought in from a Foundry actor is never pruned behind
+   * the player's back — only what their own change made illegal goes.
+   */
+  const releaseStraySpells = (
+    next: typeof draft,
+  ): { patch: Partial<typeof draft>; shed: string[] } => {
+    const plans = spellPlansFor({
+      entries: classEntriesFor(
+        { classId: next.classId, subclassId: next.subclassId, level: next.level },
+        next.extraClasses,
+        rulesVersion,
+      ),
+      labelFor: classLabelFor,
+      rulesVersion,
+      snapshot,
+      spellbook: toLines(next.spellbookText),
+    });
+    const stray = strayChoices(plans, {
+      cantrips: toLines(next.cantripsText),
+      spells: toLines(next.spellsText),
+      book: toLines(next.spellbookText),
+    });
+    const count = stray.cantrips.length + stray.spells.length + stray.book.length;
+    if (count === 0) return { patch: {}, shed: [] };
+
+    const without = (text: string, drop: string[]) =>
+      fromLines(toLines(text).filter((line) => !drop.includes(line)));
+
+    return {
+      patch: {
+        cantripsText: without(next.cantripsText, stray.cantrips),
+        spellsText: without(next.spellsText, [...stray.spells, ...stray.book]),
+        spellbookText: without(next.spellbookText, stray.book),
+      },
+      shed: [count === 1 ? "un conjuro que ya no te ofrece ninguna clase" : `${count} conjuros que ya no te ofrece ninguna clase`],
+    };
+  };
 
   const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
   const chosenSpells = useMemo(() => toLines(draft.spellsText), [draft.spellsText]);
@@ -995,14 +1045,21 @@ export default function Forge() {
         ? releasedByPick(prop, draft)
         : { patch: {}, shed: [] };
 
-    setShedByPick(released.shed);
+    const value = current === entry.id ? "" : entry.id;
+    // A subclass widens the spell list — a patron's, a domain's — and its
+    // spells leave with it.
+    const strays =
+      prop === "subclass" ? releaseStraySpells({ ...draft, subclassId: value }) : { patch: {}, shed: [] };
+
+    setShedByPick([...released.shed, ...strays.shed]);
 
     patchDraft({
       // Picking the same entry twice clears it, which is the only way to
       // un-choose an optional pick once one is set.
-      [field]: current === entry.id ? "" : entry.id,
+      [field]: value,
       sourceBooks: { ...draft.sourceBooks, [`${bookProp}:${entry.id}`]: entry.source },
       ...released.patch,
+      ...strays.patch,
     } as Parameters<typeof patchDraft>[0]);
   };
 
@@ -1020,11 +1077,15 @@ export default function Forge() {
       Object.entries(draft.levelChoices).filter(([at]) => at.includes(":") || Number(at) <= level),
     );
 
-    patchDraft({
+    const patch = {
       level,
       levelChoices,
       ...(stillEntitled ? {} : { subclassId: "" }),
-    });
+    };
+    const released = releaseStraySpells({ ...draft, ...patch });
+    if (released.shed.length) setShedByPick(released.shed);
+
+    patchDraft({ ...patch, ...released.patch });
   };
 
   const toggleProficiency = (value: string) => {
@@ -1081,9 +1142,11 @@ export default function Forge() {
   };
 
   const changeClass = (index: number, next: ExtraClass) => {
-    patchDraft({
-      extraClasses: draft.extraClasses.map((extra, at) => (at === index ? next : extra)),
-    });
+    const extraClasses = draft.extraClasses.map((extra, at) => (at === index ? next : extra));
+    const released = releaseStraySpells({ ...draft, extraClasses });
+    if (released.shed.length) setShedByPick(released.shed);
+
+    patchDraft({ extraClasses, ...released.patch });
   };
 
   /**
@@ -1132,7 +1195,11 @@ export default function Forge() {
   };
 
   const removeClass = (index: number) => {
-    patchDraft({ extraClasses: draft.extraClasses.filter((_, at) => at !== index) });
+    const extraClasses = draft.extraClasses.filter((_, at) => at !== index);
+    const released = releaseStraySpells({ ...draft, extraClasses });
+    if (released.shed.length) setShedByPick(released.shed);
+
+    patchDraft({ extraClasses, ...released.patch });
   };
 
   /**
