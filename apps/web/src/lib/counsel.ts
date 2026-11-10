@@ -28,6 +28,7 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 import { savingThrowsForClass } from "@bertinis-vault/domain";
 
 import { ABILITY_IDS, abilityLabels, type AbilityId } from "./abilities";
+import { levelChoicesInEffect } from "./level-choices";
 import type { BuilderState } from "./builder";
 import { characterLevelFor } from "./builder";
 import { classInfoFor } from "./index-options";
@@ -117,7 +118,7 @@ function isAbilityId(value: string): value is AbilityId {
 function holdsConSave(state: BuilderState): boolean {
   if (state.classId && savingThrowsForClass(state.classId).includes("con")) return true;
 
-  for (const choice of Object.values(state.levelChoices)) {
+  for (const choice of levelChoicesInEffect(state)) {
     if (choice.kind !== "feat") continue;
     if (choice.featId === "war-caster") return true;
     if (choice.featId === "resilient" && (state.featAbilityChoices.resilient?.con ?? 0) > 0) {
