@@ -16,6 +16,8 @@ import type { HitPointsInput } from "@bertinis-vault/contracts";
 
 import type { BuilderState } from "./builder-state";
 import { classEntriesFor } from "./classing";
+import { featIdsFor } from "./feats";
+import { raceInfoFor, subclassInfoFor } from "./index-options";
 import { rulesVersionOf } from "./vault-store";
 
 /*
@@ -81,13 +83,66 @@ export function hitPointLevelsFor(state: BuilderState): HitPointLevel[] {
  * thrown for it.
  */
 export function hitPointsInputFor(state: BuilderState): HitPointsInput | null {
-  if (state.hpMethod !== "rolled") return null;
+  const bonus = hitPointBonusesFor(state).reduce((sum, entry) => sum + entry.amount, 0);
+  const levels = state.hpMethod === "rolled" ? hitPointLevelsFor(state) : [];
 
-  const levels = hitPointLevelsFor(state);
-  if (!levels.length) return null;
+  if (!levels.length && bonus === 0) return null;
 
   return {
-    method: "rolled",
+    method: levels.length ? "rolled" : "average",
     rolls: levels.map((row) => (row.roll !== null && row.roll <= row.die ? row.roll : null)),
+    ...(bonus > 0 ? { bonus } : {}),
   };
+}
+
+/** Hit points from somewhere other than the dice, and what gave them. */
+export type HitPointBonus = { source: string; amount: number };
+
+/**
+ * Every hit point a feat or a trait adds on top of dice and Constitution.
+ *
+ * The model's standing gap, and a wrong number rather than a missing one: a
+ * hill dwarf fighter 5 with Tough is ten plus five hit points over what the
+ * sheet showed, and nothing on it said so.
+ *
+ * - **Tough**, both editions: two per character level.
+ * - **Dwarven Toughness**, the 2014 hill dwarf and the 2024 dwarf: one per
+ *   character level. Read off the species' own trait list, so any species
+ *   that carries the trait gets it without a name kept here.
+ * - **Draconic Resilience**, the draconic sorcerer of both editions: one per
+ *   sorcerer level once the subclass has it (2024's "3, then 1 a level" is
+ *   the same number from level 3).
+ * - **Boon of Fortitude**, 2024's epic boon: forty.
+ */
+export function hitPointBonusesFor(state: BuilderState): HitPointBonus[] {
+  const rulesVersion = rulesVersionOf(state);
+  const entries = classesOf(state);
+  const level = entries.reduce((sum, entry) => sum + entry.level, 0);
+  const feats = featIdsFor(state);
+  const bonuses: HitPointBonus[] = [];
+
+  if (feats.includes("tough")) bonuses.push({ source: "Duro", amount: 2 * level });
+
+  if (state.raceId) {
+    const traits = [
+      ...(raceInfoFor(state.raceId, "", rulesVersion)?.traits ?? []),
+      ...(state.subraceId ? (raceInfoFor(state.raceId, state.subraceId, rulesVersion)?.traits ?? []) : []),
+    ];
+    if (traits.includes("Dwarven Toughness")) {
+      bonuses.push({ source: "Dureza enana", amount: level });
+    }
+  }
+
+  for (const entry of entries) {
+    if (!entry.subclassId) continue;
+    const subclass = subclassInfoFor(entry.subclassId, entry.classId, rulesVersion);
+    const resilience = (subclass?.armorClass ?? []).find((option) => option.name === "Draconic Resilience");
+    if (resilience && entry.level >= resilience.level) {
+      bonuses.push({ source: "Resiliencia draconica", amount: entry.level });
+    }
+  }
+
+  if (feats.includes("boon-of-fortitude")) bonuses.push({ source: "Don de fortaleza", amount: 40 });
+
+  return bonuses;
 }

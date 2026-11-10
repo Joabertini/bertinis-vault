@@ -480,6 +480,13 @@ export const sourceBooksSchema = z.record(z.string(), z.string());
 export const hitPointsSchema = z.object({
   method: z.enum(["average", "rolled"]).default("average"),
   rolls: z.array(z.number().int().min(1).max(12).nullable()).default([]),
+  /**
+   * Hit points that come from neither the dice nor Constitution: Tough, a
+   * dwarf's Dwarven Toughness, a draconic sorcerer's Draconic Resilience, the
+   * Boon of Fortitude. Already totalled by the builder, which is where the
+   * feats and traits are known. Absent means none.
+   */
+  bonus: z.number().int().min(0).optional(),
 });
 
 export const characterBuildInputSchema = z.object({
