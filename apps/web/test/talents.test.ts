@@ -207,3 +207,36 @@ describe("every spell prerequisite in the data, read as the readers read it", ()
     }
   });
 });
+
+describe("a second class asks at its own level", () => {
+  test("a fighter 5 / warlock 2 has a warlock 2's invocations", () => {
+    const state = build({
+      classId: "fighter",
+      level: 5,
+      extraClasses: [{ classId: "warlock", subclassId: "", level: 2 }],
+    });
+
+    const asWarlock2 = named(talentPools(state, "2014", "Warlock", "", 2), "invocation");
+    const asWarlock7 = named(talentPools(state, "2014", "Warlock", "", 7), "invocation");
+    const alone = named(pools({ classId: "warlock", level: 2 }, "Warlock"), "invocation");
+
+    expect(asWarlock2?.count).toBe(alone?.count);
+    expect(asWarlock7!.count).toBeGreaterThan(asWarlock2!.count);
+  });
+
+  test("a level prerequisite reads that class's level, not the first class's", () => {
+    // Thirsting Blade asks for warlock 5. A fighter 5 / warlock 2 is not one.
+    const state = build({
+      classId: "fighter",
+      level: 5,
+      extraClasses: [{ classId: "warlock", subclassId: "", level: 2 }],
+    });
+    const invocations = named(talentPools(state, "2014", "Warlock", "", 2), "invocation");
+    const thirsting = invocations?.options.find((option) => option.id === "thirsting-blade");
+
+    expect(thirsting?.eligible).toBe(false);
+    // The level is what is missing, not only the pact: read at the first
+    // class's level 5 it passed.
+    expect(thirsting?.blockedBy).toBe("Requiere nivel 5");
+  });
+});

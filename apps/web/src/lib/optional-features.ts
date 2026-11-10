@@ -67,6 +67,12 @@ export function talentPools(
   rulesVersion: RulesVersion,
   classLabel: string,
   subclassLabel: string,
+  /**
+   * The level of *this* class. The first class's by default; another class's
+   * pools are counted at that class's own level — a fighter 5 / warlock 2 has
+   * a warlock 2's invocations, not a warlock 7's.
+   */
+  level: number = state.level,
 ): TalentPool[] {
   if (!state.classId) return [];
 
@@ -87,13 +93,13 @@ export function talentPools(
 
   return progressions
     .map((progression) => {
-      const count = progression.countByLevel[state.level - 1] ?? 0;
+      const count = progression.countByLevel[level - 1] ?? 0;
       if (count <= 0) return null;
 
       const pools = new Set(progression.featureType);
       const options = allFeatures
         .filter((row) => row.featureType.some((type) => pools.has(type)))
-        .map((row) => toOption(row, state, taken, classLabel))
+        .map((row) => toOption(row, state, taken, classLabel, level))
         .sort((a, b) => Number(b.eligible) - Number(a.eligible) || a.label.localeCompare(b.label));
 
       return { name: progression.name, count, options };
@@ -106,9 +112,10 @@ function toOption(
   state: BuilderState,
   taken: Set<string>,
   classLabel: string,
+  level: number,
 ): TalentOption {
   const unmet = row.prerequisites
-    .map((prerequisite) => unmetReason(prerequisite, state, taken, classLabel))
+    .map((prerequisite) => unmetReason(prerequisite, state, taken, classLabel, level))
     .filter((reason): reason is string => reason !== null);
 
   return {
@@ -148,12 +155,13 @@ function unmetReason(
   state: BuilderState,
   taken: Set<string>,
   classLabel: string,
+  level: number,
 ): string | null {
   switch (prerequisite.kind) {
     case "level": {
       // A level prerequisite naming another class does not apply here.
       if (prerequisite.className && prerequisite.className !== classLabel) return null;
-      return state.level >= prerequisite.level ? null : `Requiere nivel ${prerequisite.level}`;
+      return level >= prerequisite.level ? null : `Requiere nivel ${prerequisite.level}`;
     }
 
     case "pact": {
