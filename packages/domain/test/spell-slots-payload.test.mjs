@@ -81,3 +81,13 @@ test("a non-caster has nothing at any level", () => {
     assert.equal(spellSlotsForPayload("fighter", level).pactLevel, undefined);
   }
 });
+
+test("a lone third-caster reads the full table at a third of its level, rounded up", async () => {
+  const { thirdCasterSlotsForPayload } = await import("../dist/index.js");
+
+  assert.deepEqual(thirdCasterSlotsForPayload(2).slots, {});
+  assert.deepEqual(thirdCasterSlotsForPayload(3).slots, { 1: 2 });
+  assert.deepEqual(thirdCasterSlotsForPayload(4).slots, { 1: 3 });
+  assert.deepEqual(thirdCasterSlotsForPayload(7).slots, { 1: 4, 2: 2 });
+  assert.deepEqual(thirdCasterSlotsForPayload(20).slots, { 1: 4, 2: 3, 3: 3, 4: 1 });
+});

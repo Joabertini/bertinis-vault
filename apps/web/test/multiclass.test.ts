@@ -219,6 +219,26 @@ describe("a subclass that casts when its class does not", () => {
     expect(snapshot.derived.spellcasting?.slots).toEqual({ 1: 4, 2: 3 });
   });
 
+  test("a lone Eldritch Knight reads its own table, a third rounded up", () => {
+    // Fighter 12 hides it: a third of 12 is 4 either way. At 7 the multiclass
+    // rounding gave three 1st level slots and no 2nd; the printed table gives
+    // four and two.
+    const at = (level: number) =>
+      buildCanonicalSnapshot({
+        ...base,
+        classId: "fighter",
+        subclassId: "eldritch-knight",
+        level,
+        extraClasses: [],
+      }).derived.spellcasting?.slots;
+
+    expect(at(3)).toEqual({ 1: 2 });
+    expect(at(4)).toEqual({ 1: 3 });
+    expect(at(7)).toEqual({ 1: 4, 2: 2 });
+    expect(at(13)).toEqual({ 1: 4, 2: 3, 3: 2 });
+    expect(at(19)).toEqual({ 1: 4, 2: 3, 3: 3, 4: 1 });
+  });
+
   test("a fighter with no such subclass still casts nothing", () => {
     const snapshot = buildCanonicalSnapshot({
       ...base,

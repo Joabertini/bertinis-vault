@@ -21,7 +21,7 @@ import {
   getSpellProgressionForClass,
   normalizeClassId,
 } from "./dnd5e-2014.js";
-import { spellSlotsForPayload } from "./spell-slots-payload.js";
+import { spellSlotsForPayload, thirdCasterSlotsForPayload } from "./spell-slots-payload.js";
 import { getCharacterLevel, getProficiencyBonus } from "./progression.js";
 
 export function deriveCharacterBuild(
@@ -117,8 +117,16 @@ export function deriveCharacterBuild(
     (entry) => !entry.casterProgression && entry.subclassCasterProgression,
   );
 
-  const payloadSlots =
-    isMulticlass || subclassCarriesTheCasting
+  // Alone, a third-caster reads its own table, which rounds the other way from
+  // the multiclass contribution: see `thirdCasterSlotsForPayload`.
+  const loneThirdCaster =
+    !isMulticlass &&
+    subclassCarriesTheCasting &&
+    entries[0]?.subclassCasterProgression === "1/3";
+
+  const payloadSlots = loneThirdCaster
+    ? thirdCasterSlotsForPayload(primaryClassLevel)
+    : isMulticlass || subclassCarriesTheCasting
       ? multiclassSpellSlots(entries)
       : spellSlotsForPayload(primaryClassId, primaryClassLevel, slotRules);
 
