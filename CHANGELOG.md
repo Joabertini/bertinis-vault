@@ -1,5 +1,24 @@
 # Changelog
 
+## [Front] — 2026-11-11
+
+Estructura y panel de información. Detalle en [`docs/FARO-FRONT.md`](docs/FARO-FRONT.md).
+
+- **Panel de información** (#141, #142, #154): elegir o hacer clic en un conjuro, objeto,
+  trasfondo, especie, subraza, clase o subclase abre a la izquierda el texto completo de
+  los libros (`public/rules/`, generado con `scripts/build-rules-text.mjs`); cada nombre
+  dentro del texto —una condición, un conjuro— es un vínculo a su propia entrada.
+  Las subclases y las especies copiadas con `_copy` ya traen su texto; las subrazas abren
+  por su especie.
+- **Armas y maestría** (#139, #140): la maestría sale de las armas que lleva el personaje y
+  los buscadores de arma, armadura y equipo abren en lo mundano, con chips de rareza.
+- **Registro en vivo y Códice** (#142, #147): el registro crece hacia la derecha en
+  secciones; el estante se navega con flechas visibles a los costados.
+- **Forge.tsx partido** (#144 a #153): 2816 → 1797 líneas. Cada cámara es un componente en
+  `components/forge/`; sin cambio de comportamiento.
+- Se quitó la nota falsa de que la subraza no cruza a Foundry (#155).
+- **En pausa:** migración de Vercel a Cloudflare (plan en `docs/MIGRACION-CLOUDFLARE.md`, #143).
+
 ## [Foundry module 0.3.0] — 2026-11-11
 
 - La imagen que el jugador sube en la web como tapa del personaje viaja dentro

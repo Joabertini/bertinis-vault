@@ -1,6 +1,6 @@
 # Migración del front de Vercel a Cloudflare
 
-> **Estado: PLAN. Nada de esto está aplicado.** Cambiar el hosting toca producción
+> **Estado: PLAN, EN PAUSA por decisión del dueño (2026-11-11). Nada de esto está aplicado.** Cambiar el hosting toca producción
 > (`alba.bertinilabs.xyz`), así que cada paso con efecto espera un OK explícito.
 
 Escrito el 2026-11-11 sobre `main`, a partir de lo que el repo dice y de lo que midió

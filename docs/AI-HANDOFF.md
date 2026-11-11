@@ -24,6 +24,9 @@ Fast start for the next agent working on this repo.
 5. [`CHARACTER-SHEET-FIELDS.md`](./CHARACTER-SHEET-FIELDS.md) — every field a
    gap fix has to land on, read from the `dnd5e` actor data model itself, with
    which ones `import.js` actually writes today.
+5b. [`FARO-FRONT.md`](./FARO-FRONT.md) — how `apps/web` is laid out today: the
+   Forge and its chamber components, the rules-text info panel and how its data is
+   regenerated, how changes are verified, and the decisions in force.
 6. [`PORTABILIDAD.md`](./PORTABILIDAD.md) — what in this repository can run
    outside a browser, and the rule that keeps it that way. The downloadable
    product depends on it and cannot enforce it from its own repository.
