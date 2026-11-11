@@ -27,10 +27,10 @@ import Sigil from "@/components/sigils/Sigil";
 import RuneButton from "@/components/ui/RuneButton";
 import RuleNote from "@/components/ui/RuleNote";
 import SigilCard from "@/components/forge/SigilCard";
-import SigilShelf from "@/components/forge/SigilShelf";
 import ScryPicker from "@/components/forge/ScryPicker";
 import InfoPanel from "@/components/info/InfoPanel";
 import { InfoProvider, InfoReset } from "@/components/info/info-context";
+import CallingChamber from "@/components/forge/CallingChamber";
 import AncestryChamber from "@/components/forge/AncestryChamber";
 import GiftsChamber from "@/components/forge/GiftsChamber";
 import OriginChamber from "@/components/forge/OriginChamber";
@@ -39,8 +39,6 @@ import GearChamber from "@/components/forge/GearChamber";
 import AttributesChamber from "@/components/forge/AttributesChamber";
 import IdentityChamber from "@/components/forge/IdentityChamber";
 import ChamberArrows from "@/components/forge/ChamberArrows";
-import SubChoice from "@/components/forge/SubChoice";
-import VariantChoices from "@/components/forge/VariantChoices";
 import LiveSheet from "@/components/forge/LiveSheet";
 
 import { ABILITY_IDS, type AbilityId } from "@/lib/abilities";
@@ -97,8 +95,6 @@ import {
   unansweredSpellChoices,
   type SpellGrantSource,
 } from "@/lib/granted-spells";
-import TalentPools from "@/components/forge/TalentPools";
-import Multiclass from "@/components/forge/Multiclass";
 import type { ExtraClass } from "@/lib/classing";
 import { classEntriesFor, emptyExtraClass } from "@/lib/classing";
 import { suggestAppearance, type Appearance } from "@/lib/appearance";
@@ -124,8 +120,7 @@ import { hitPointLevelsFor } from "@/lib/hit-points";
 import { carriedLoadFor } from "@/lib/carrying";
 import { attunementStateFor } from "@/lib/attunement";
 import { foundrySizeFor, sizeFor, sizeOptionsFor } from "@/lib/table-numbers";
-import HitPoints from "@/components/forge/HitPoints";
-import { DIVIDER, DIVIDER_TIGHT, PAGE } from "@/styles/recipes";
+import { PAGE } from "@/styles/recipes";
 
 const CHAMBER_LABEL: Record<ChamberKey, string> = {
   ancestry: "Raza",
@@ -1580,135 +1575,37 @@ export default function Forge() {
 
               {/* ---------- Calling ---------- */}
               {chamberKey === "calling" && (
-                <div className="space-y-10">
-                  <SigilShelf
-                    entries={allClasses}
-                    selectedId={draft.classId}
-                    selectedSource={draft.sourceBooks[`class:${draft.classId}`]}
-                    groupFor={sidekickHeading}
-                    onPick={(entry) => pick("class", entry)}
-                    accent={accent}
-                    infoKind="class"
-                    label="Buscar clase"
-                    placeholder="Buscar entre todas las clases…"
-                    noteFor={(entry) => {
-                      const die = hitDieFor(entry.id, rulesVersion);
-                      // The die is the shortest true thing that separates one
-                      // class from another before you have read either.
-                      return die ? `d${die} · ${entry.source}` : entry.source;
-                    }}
-                  />
-
-                  {draft.classId && (
-                    <div className={DIVIDER}>
-                      <label className="mb-4 block font-mono text-[13px] tracking-[0.1em] uppercase text-bone">
-                        Nivel de poder — <span style={{ color: accent }}>{draft.level}</span>
-                      </label>
-                      <input
-                        type="range"
-                        min={1}
-                        // Twenty levels between every class. Letting this reach
-                        // 20 with levels already spent elsewhere would show a
-                        // level the sheet then silently clamps back down.
-                        max={primaryLevelCeiling}
-                        value={draft.level}
-                        onChange={(event) => setLevel(Number(event.target.value))}
-                        className="w-full accent-gold"
-                        aria-label="Nivel"
-                      />
-                    </div>
-                  )}
-
-                  {draft.classId &&
-                    (subclassUnlocked ? (
-                      subclasses.length > 0 && (
-                        <SubChoice
-                          infoClass={selectedClass?.label ?? ""}
-                          title="Senda"
-                          hint={`${selectedClass?.label} elige a nivel ${subclassLevel}. ${subclasses.length} disponibles.`}
-                          options={subclasses}
-                          selectedId={draft.subclassId}
-                          onPick={(entry) => pick("subclass", entry)}
-                          accent={accent}
-                        />
-                      )
-                    ) : (
-                      <div className={DIVIDER_TIGHT}>
-                        <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
-                          Senda
-                        </p>
-                        <p className="mt-3 font-body text-bone">
-                          {selectedClass?.label} no elige senda hasta el nivel {subclassLevel}.
-                        </p>
-                      </div>
-                    ))}
-
-                  <VariantChoices
-                    sources={spellGrants.filter((source) => source.chamber === "class")}
-                    chosen={draft.spellVariantChoices}
-                    chosenAbilities={draft.spellAbilityChoices}
-                    questions={spellChoices}
-                    answers={draft.grantedSpellChoices}
-                    onToggleSpell={toggleGrantedSpell}
-                    accent={accent}
-                    onPick={chooseVariant}
-                    onPickAbility={chooseSpellAbility}
-                  />
-
-                  {/*
-                    A fighting style is a level 1 class feature, and it used to
-                    be asked in Mejoras — the chamber a player opens at level 4
-                    to spend an improvement. So the builder answered a question
-                    about the level they had just reached with a question about
-                    the level they started at, and refused to move on until
-                    they settled it. Players read that as a bug in the
-                    improvement, which is a fair reading of where it appeared.
-
-                    It belongs with the rest of what the class hands over:
-                    after the subclass and its variants, before the hit points.
-                  */}
-                  {pools.length > 0 && (
-                    <div className={DIVIDER}>
-                      <p className="mb-6 font-body text-[15px] leading-relaxed text-bone">
-                        Lo que {selectedClass?.label} te deja elegir a nivel {draft.level}.
-                      </p>
-                      <TalentPools
-                        pools={pools}
-                        chosen={draft.optionalFeatureIds}
-                        accent={accent}
-                        onToggle={toggleTalent}
-                      />
-                    </div>
-                  )}
-
-                  {draft.classId && (
-                    <HitPoints
-                      method={draft.hpMethod}
-                      levels={hitPointLevels}
-                      firstDie={firstHitDie}
-                      constitutionModifier={Math.floor((snapshot?.abilities.final.con ?? 10) / 2) - 5}
-                      classLabel={(id) => allClasses.find((entry) => entry.id === id)?.label ?? id}
-                      accent={accent}
-                      onPickMethod={(hpMethod) => patchDraft({ hpMethod })}
-                      onRoll={setHitPointRoll}
-                    />
-                  )}
-
-                  {draft.classId && (
-                    <Multiclass
-                      extras={draft.extraClasses}
-                      classes={allClasses}
-                      primaryClassId={draft.classId}
-                      primaryLevel={draft.level}
-                      rulesVersion={rulesVersion}
-                      accent={accent}
-                      problems={multiclassProblems}
-                      onChange={changeClass}
-                      onRemove={removeClass}
-                      onAdd={addClass}
-                    />
-                  )}
-                </div>
+                <CallingChamber
+                  draft={draft}
+                  patchDraft={patchDraft}
+                  rulesVersion={rulesVersion}
+                  classes={allClasses}
+                  classLabel={selectedClass?.label}
+                  groupFor={sidekickHeading}
+                  primaryLevelCeiling={primaryLevelCeiling}
+                  subclassUnlocked={subclassUnlocked}
+                  subclassLevel={subclassLevel}
+                  subclasses={subclasses}
+                  variantSources={spellGrants.filter((source) => source.chamber === "class")}
+                  spellChoices={spellChoices}
+                  pools={pools}
+                  hitPointLevels={hitPointLevels}
+                  firstHitDie={firstHitDie}
+                  constitutionModifier={Math.floor((snapshot?.abilities.final.con ?? 10) / 2) - 5}
+                  multiclassProblems={multiclassProblems}
+                  accent={accent}
+                  onPickClass={(entry) => pick("class", entry)}
+                  onSetLevel={setLevel}
+                  onPickSubclass={(entry) => pick("subclass", entry)}
+                  onToggleGrantedSpell={toggleGrantedSpell}
+                  onChooseVariant={chooseVariant}
+                  onChooseSpellAbility={chooseSpellAbility}
+                  onToggleTalent={toggleTalent}
+                  onSetHitPointRoll={setHitPointRoll}
+                  onChangeClass={changeClass}
+                  onRemoveClass={removeClass}
+                  onAddClass={addClass}
+                />
               )}
 
               {/* ---------- Origin ---------- */}
