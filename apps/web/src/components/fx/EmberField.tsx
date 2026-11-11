@@ -55,7 +55,7 @@ export default function EmberField({ density = 36 }: { density?: number }) {
       y: fromBottom ? canvas.height + Math.random() * 100 : Math.random() * canvas.height,
       vx: (Math.random() - 0.5) * 0.3,
       vy: -(0.2 + Math.random() * 0.7),
-      r: 3 + Math.random() * 6,
+      r: 2 + Math.random() * 4,
       sprite: Math.random() < COLORS[0]!.weight ? 0 : 1,
       phase: Math.random() * 6.28,
     });

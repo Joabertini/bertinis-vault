@@ -20,12 +20,14 @@ function noiseTile(): string {
   const ctx = canvas.getContext("2d");
   if (!ctx) return "";
   const image = ctx.createImageData(TILE, TILE);
+  // White specks on nothing: a quarter of the pixels carry a random amount of
+  // white and the rest stay clear, so the ground stays black. Opaque grey noise
+  // would lift the whole page off black.
   for (let i = 0; i < image.data.length; i += 4) {
-    const v = Math.random() * 255;
-    image.data[i] = v;
-    image.data[i + 1] = v;
-    image.data[i + 2] = v;
-    image.data[i + 3] = 255;
+    image.data[i] = 255;
+    image.data[i + 1] = 255;
+    image.data[i + 2] = 255;
+    image.data[i + 3] = Math.random() < 0.25 ? Math.random() * 255 : 0;
   }
   ctx.putImageData(image, 0, 0);
   return canvas.toDataURL("image/png") || "";
@@ -39,7 +41,7 @@ export default function GrainOverlay() {
     <>
       <div
         aria-hidden
-        className="pointer-events-none fixed inset-0 z-[60] opacity-[0.035]"
+        className="pointer-events-none fixed inset-0 z-[60] opacity-[0.07]"
         style={tile ? { backgroundImage: `url(${tile})`, backgroundSize: `${TILE}px ${TILE}px` } : undefined}
       />
       {/* vignette */}
