@@ -18,6 +18,7 @@
 import { useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { coverFromPortrait, fitCoverImage } from "@/lib/cover-image";
 import { readFoundryActor, type ActorImport } from "@/lib/foundry-import";
 import { useVault } from "@/lib/vault-store";
 
@@ -25,15 +26,50 @@ type Outcome =
   | { kind: "idle" }
   | { kind: "reading" }
   | { kind: "failed"; reason: string }
-  | { kind: "read"; name: string; report: ActorImport };
+  | {
+      kind: "read";
+      id: string;
+      name: string;
+      report: ActorImport;
+      /** Whether the book already has a picture. */
+      covered: boolean;
+      /** Set when a picture was refused, so the player is told rather than left guessing. */
+      coverProblem?: string;
+    };
 
 export default function DropActor() {
-  const { admit } = useVault();
+  const { admit, setCover } = useVault();
   const input = useRef<HTMLInputElement>(null);
+  const pictureInput = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
   const [outcome, setOutcome] = useState<Outcome>({ kind: "idle" });
 
-  async function take(file: File | undefined) {
+  /**
+   * Whatever was dropped: the actor's `.json`, and optionally its picture.
+   *
+   * A Foundry export only names its picture by a path inside the server's Data
+   * folder — the bytes are not in the file — so the picture can come along as a
+   * second file in the same drop, or afterwards from the notice below.
+   */
+  async function takeMany(files: File[]) {
+    const picture = files.find((file) => file.type.startsWith("image/"));
+    const file = files.find((candidate) => candidate.name.toLowerCase().endsWith(".json"));
+    if (!file && picture && outcome.kind === "read") return attach(picture);
+    await take(file ?? files[0], picture);
+  }
+
+  async function attach(picture: File) {
+    if (outcome.kind !== "read") return;
+    try {
+      setCover(outcome.id, await fitCoverImage(picture));
+      const { coverProblem: _cleared, ...rest } = outcome;
+      setOutcome({ ...rest, covered: true });
+    } catch (error) {
+      setOutcome({ ...outcome, coverProblem: error instanceof Error ? error.message : "No pude usar esa imagen." });
+    }
+  }
+
+  async function take(file: File | undefined, picture?: File) {
     if (!file) return;
 
     if (!file.name.toLowerCase().endsWith(".json")) {
@@ -65,8 +101,30 @@ export default function DropActor() {
       return;
     }
 
-    admit(report.state);
-    setOutcome({ kind: "read", name: report.state.characterName, report });
+    // The picture, in the order it can be had: a file dropped with the json,
+    // then what the actor itself carries (a data URL, or a URL this page may
+    // read). A path inside Foundry's Data folder needs the file, asked for
+    // below.
+    let coverImage = "";
+    let coverProblem: string | undefined;
+    if (picture) {
+      try {
+        coverImage = await fitCoverImage(picture);
+      } catch (error) {
+        coverProblem = error instanceof Error ? error.message : "No pude usar esa imagen.";
+      }
+    }
+    if (!coverImage) coverImage = (await coverFromPortrait(report.portrait)) ?? "";
+
+    const id = admit({ ...report.state, coverImage });
+    setOutcome({
+      kind: "read",
+      id,
+      name: report.state.characterName,
+      report,
+      covered: Boolean(coverImage),
+      ...(coverProblem ? { coverProblem } : {}),
+    });
   }
 
   return (
@@ -80,7 +138,7 @@ export default function DropActor() {
         onDrop={(event) => {
           event.preventDefault();
           setOver(false);
-          void take(event.dataTransfer.files[0]);
+          void takeMany([...event.dataTransfer.files]);
         }}
         onClick={() => input.current?.click()}
         role="button"
@@ -98,16 +156,17 @@ export default function DropActor() {
           Traer de Foundry
         </p>
         <p className="mt-2 font-body text-[15px] text-bone">
-          Solta aca el json que exporta Foundry.
+          Solta aca el json que exporta Foundry. Si querés su imagen, soltala junto.
         </p>
 
         <input
           ref={input}
           type="file"
-          accept=".json,application/json"
+          accept=".json,application/json,image/*"
+          multiple
           className="hidden"
           onChange={(event) => {
-            void take(event.target.files?.[0]);
+            void takeMany([...(event.target.files ?? [])]);
             // Cleared so choosing the same file twice fires the change again.
             event.target.value = "";
           }}
@@ -146,6 +205,47 @@ export default function DropActor() {
                 </p>
               ))}
             </div>
+
+            {/* The picture: taken on its own when the file carries it, asked for
+                when it only names a path inside Foundry's Data folder. */}
+            {outcome.covered ? (
+              <p className="mt-3 font-body text-sm text-bone">
+                <span className="text-gold">·</span> Imagen de la tapa tomada
+              </p>
+            ) : (
+              <div className="mt-4 border-t border-iron/40 pt-3">
+                <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-gold">Imagen de la tapa</p>
+                <p className="mt-1.5 font-body text-[15px] text-bone">
+                  {outcome.report.portrait
+                    ? `El json solo dice dónde está la imagen en tu Foundry (${decodeURI(outcome.report.portrait)}); no trae la imagen. Elegila y queda de tapa.`
+                    : "Este personaje no trae imagen. Podés elegir una para la tapa."}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => pictureInput.current?.click()}
+                  className="mt-2 border border-gold bg-[#17120A] px-5 py-2 font-display text-[13px] font-semibold uppercase tracking-[0.1em] text-bone transition-colors hover:bg-[#241C0D] hover:text-gold"
+                >
+                  Elegir imagen
+                </button>
+              </div>
+            )}
+            {outcome.coverProblem && (
+              <p role="alert" className="mt-2 font-body text-[15px] text-ember">
+                {outcome.coverProblem}
+              </p>
+            )}
+            <input
+              ref={pictureInput}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              aria-label="Elegir imagen para la tapa"
+              onChange={(event) => {
+                const picked = event.target.files?.[0];
+                if (picked) void attach(picked);
+                event.target.value = "";
+              }}
+            />
 
             {/* Named, not swallowed. These are the parts the player has to
                 pick again by hand in the Forge. */}

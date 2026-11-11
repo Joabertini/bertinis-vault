@@ -70,3 +70,23 @@ export async function fitCoverImage(file: File): Promise<string> {
   }
   throw new CoverImageError("No logré achicar la imagen lo suficiente. Probá con otra.");
 }
+
+/**
+ * The cover for a picture an imported actor points at, or null when it cannot
+ * be had from here.
+ *
+ * A `data:` URL always can. An absolute URL can when its server allows this
+ * page to read it. A path inside a Foundry server's Data folder never can: the
+ * server sits behind its own gate, so the player supplies the file instead.
+ */
+export async function coverFromPortrait(src: string): Promise<string | null> {
+  if (!src.startsWith("data:image/") && !/^https?:\/\//i.test(src)) return null;
+  try {
+    const response = await fetch(src);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await fitCoverImage(new File([blob], "retrato", { type: blob.type || "image/png" }));
+  } catch {
+    return null;
+  }
+}
