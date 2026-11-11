@@ -12,6 +12,7 @@
 
 import {
   buildRef,
+  bookLibrary,
   buildSubclassRef,
   isSourceAllowed,
   rulesVersionOf,
@@ -1056,7 +1057,17 @@ export function rulesVersionOfRow(row: IndexRow): RulesVersion {
  * which would import as a different document than the player expects.
  */
 export function forRulesVersion<T extends IndexRow>(rows: T[], rulesVersion: RulesVersion): T[] {
-  return rows.filter((row) => isSourceAllowed(row.source, rulesVersion));
+  const legal = rows.filter((row) => isSourceAllowed(row.source, rulesVersion));
+  if (rulesVersion !== "2024" || bookLibrary() !== "all") return legal;
+
+  // An older supplement can print something the 2024 books reprinted (the
+  // Aasimar, Gloom Stalker). The reprint wins, so a name is offered once.
+  const modern = new Set(
+    legal.filter((row) => rulesVersionOf(row.source) === "2024").map((row) => row.name.toLowerCase()),
+  );
+  return legal.filter(
+    (row) => rulesVersionOf(row.source) === "2024" || !modern.has(row.name.toLowerCase()),
+  );
 }
 
 /** Normalise a name for searching: casefolded and stripped of accents. */
