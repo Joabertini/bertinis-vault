@@ -127,7 +127,11 @@ export default function SpellClassSection({
           {plan.spellsByLevel.map(({ level, names }) => (
             <PickList
               key={level}
-              title={`Nivel ${level}`}
+              title={levelTitle(
+                level,
+                names.filter((name) => spells.includes(formatSpellLine(level, name))).length,
+                plan.slotsByLevel[level] ?? 0,
+              )}
               options={names.map((name) => formatSpellLine(level, name))}
               selected={spells}
               limit={picker.spellLimit}
@@ -145,4 +149,12 @@ export default function SpellClassSection({
       )}
     </div>
   );
+}
+
+/** "Nivel 2 · 1 elegido · 3 espacios": what was chosen in this level beside what the level is worth. */
+function levelTitle(level: number, chosen: number, slots: number): string {
+  const picked = `${chosen} ${chosen === 1 ? "elegido" : "elegidos"}`;
+  return slots > 0
+    ? `Nivel ${level} · ${picked} · ${slots} ${slots === 1 ? "espacio" : "espacios"}`
+    : `Nivel ${level} · ${picked}`;
 }

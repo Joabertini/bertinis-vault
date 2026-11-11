@@ -69,6 +69,12 @@ export type SpellPlan = {
    * prepares straight from the class list, so the two are the same.
    */
   spellsByLevel: SpellsByLevel;
+  /**
+   * How many spell slots the character has at each spell level, so the picker
+   * can say what a level is worth beside what the player chose in it. A
+   * warlock's pact slots count at the level they are worth.
+   */
+  slotsByLevel: Record<number, number>;
   /** Null for every class but the wizard. */
   book: SpellbookPlan | null;
 };
@@ -78,6 +84,7 @@ const NONE: SpellPlan = {
   picker: null,
   cantripOptions: [],
   spellsByLevel: [],
+  slotsByLevel: {},
   book: null,
 };
 
@@ -291,8 +298,26 @@ export function spellPlan(input: {
     spellsByLevel: groupByLevel(
       picker.filteredSpellOptions.map((entry) => ({ name: entry.label, level: entry.level })),
     ),
+    slotsByLevel: slotsByLevelOf(slots, input.ownPactLevel ?? spellcasting?.pactLevel ?? 0),
     book: bookPlan,
   };
+}
+
+/**
+ * The slots as a count per spell level.
+ *
+ * The slot map is keyed three ways depending on where it came from — `spell3`,
+ * a bare `3`, and `pact` for a warlock, whose slots are worth whatever level
+ * the pact says — so this reads all of them rather than trusting one.
+ */
+export function slotsByLevelOf(slots: Record<string, number>, pactLevel: number): Record<number, number> {
+  const out: Record<number, number> = {};
+  for (const [key, count] of Object.entries(slots)) {
+    if (!(count > 0)) continue;
+    const level = key === "pact" ? pactLevel : Number(/(\d+)$/.exec(key)?.[1] ?? 0);
+    if (level > 0) out[level] = (out[level] ?? 0) + count;
+  }
+  return out;
 }
 
 /**
