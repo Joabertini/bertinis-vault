@@ -96,7 +96,7 @@ export default function CoverPicker({
             )}
           </div>
           <p className="font-body text-[13px] leading-snug text-bone/70">
-            Sigilos: game-icons.net, de Lorc y Delapouite (CC BY 3.0).
+            Sigilos: game-icons.net, de varios autores (CC BY 3.0).
           </p>
           {problem && (
             <p role="alert" className="font-body text-[15px] text-[#FF7043]">
