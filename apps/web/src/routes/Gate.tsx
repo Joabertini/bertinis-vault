@@ -20,7 +20,7 @@ import { motion, AnimatePresence, useMotionValue, useScroll, useSpring, useTrans
 import { useRef } from "react";
 
 import CinematicIntro from "@/components/fx/CinematicIntro";
-import EmberField from "@/components/fx/EmberField";
+import LightfallBackdrop from "@/components/fx/LightfallBackdrop";
 import GrainOverlay from "@/components/fx/GrainOverlay";
 import Sigil from "@/components/sigils/Sigil";
 import RuneButton from "@/components/ui/RuneButton";
@@ -88,19 +88,7 @@ function GateContent() {
       className={PAGE}
     >
       <GrainOverlay />
-      <EmberField density={60} />
-
-      {/* God rays from above */}
-      <motion.div
-        animate={{ opacity: [0.05, 0.09, 0.05] }}
-        transition={{ duration: 8, repeat: Infinity }}
-        className="pointer-events-none absolute -top-40 left-1/2 h-[80vh] w-[60vw] -translate-x-1/2"
-        style={{
-          background:
-            "conic-gradient(from 180deg at 50% 0%, transparent 40%, rgba(176,138,62,0.5) 49%, rgba(230,223,206,0.6) 50%, rgba(176,138,62,0.5) 51%, transparent 60%)",
-          maskImage: "linear-gradient(to bottom, black, transparent 75%)",
-        }}
-      />
+      <LightfallBackdrop variant="gate" fallbackDensity={60} />
 
       {/* Ground fog */}
       <motion.div style={{ y: fogY }} className="pointer-events-none absolute bottom-0 h-64 w-full">

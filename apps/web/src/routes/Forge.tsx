@@ -21,6 +21,7 @@ import { setBookLibrary } from "@bertinis-vault/vetools-ref";
 import { motion, AnimatePresence } from "framer-motion";
 
 import EmberField from "@/components/fx/EmberField";
+import LightfallBackdrop from "@/components/fx/LightfallBackdrop";
 import GrainOverlay from "@/components/fx/GrainOverlay";
 import StokeEmbers from "@/components/fx/StokeEmbers";
 import Sigil from "@/components/sigils/Sigil";
@@ -1404,7 +1405,7 @@ export default function Forge() {
   return (
     <main className={PAGE}>
       <GrainOverlay />
-      <EmberField density={36} />
+      <LightfallBackdrop variant="forge" fallbackDensity={36} />
       <StokeEmbers trigger={stokeKey} />
 
       <motion.div
