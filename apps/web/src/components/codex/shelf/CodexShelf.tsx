@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import Tome from "@/components/codex/Tome";
 import { BooksShowcase, type BookCfg } from "./BooksShowcase";
 import { entryById } from "@/lib/catalog";
 import { characterLevelFor, classingLabelFor } from "@/lib/builder";
 import { tintFor } from "@/lib/class-tint";
+import { sigilFor, type RoleSigil } from "@/lib/role-sigil";
 import { rulesVersionOf, type SealedCharacter } from "@/lib/vault-store";
 
 /**
@@ -29,8 +30,53 @@ function wrap(x: CanvasRenderingContext2D, text: string, maxWidth: number): stri
   return lines.slice(0, 4);
 }
 
-/** The cover: black leather, a thin rule in the class colour, the name. */
-function paintFront(accent: string, name: string, line: string) {
+/**
+ * The sigil in the middle of the cover: a soft dark pool, no frame, and the
+ * class glyph lit from within. A round drawing fills the circle; the rest keep
+ * their own size.
+ */
+function paintSigil(x: CanvasRenderingContext2D, sigil: RoleSigil, cx: number, cy: number, radius: number) {
+  x.save();
+  const pool = x.createRadialGradient(cx, cy, 0, cx, cy, radius);
+  pool.addColorStop(0, "rgba(0,0,0,0.78)");
+  pool.addColorStop(0.7, "rgba(0,0,0,0.55)");
+  pool.addColorStop(1, "rgba(0,0,0,0)");
+  x.fillStyle = pool;
+  x.beginPath();
+  x.arc(cx, cy, radius, 0, Math.PI * 2);
+  x.fill();
+
+  const scale = (sigil.fills ? radius * 2 : radius * 1.6) / 512;
+  x.translate(cx - 256 * scale, cy - 256 * scale);
+  x.scale(scale, scale);
+  x.shadowColor = sigil.color;
+  x.shadowBlur = 40;
+  x.fillStyle = sigil.color;
+  x.strokeStyle = sigil.core;
+  x.lineWidth = 6;
+  for (const d of sigil.paths) {
+    const path = new Path2D(d);
+    x.fill(path);
+    x.globalAlpha = 0.55;
+    x.stroke(path);
+    x.globalAlpha = 1;
+  }
+  x.restore();
+}
+
+/** `drawImage` source rectangle that fills the cover from the middle of the picture. */
+function coverRect(image: HTMLImageElement, w: number, h: number) {
+  const scale = Math.max(w / image.naturalWidth, h / image.naturalHeight);
+  const sw = w / scale;
+  const sh = h / scale;
+  return [(image.naturalWidth - sw) / 2, (image.naturalHeight - sh) / 2, sw, sh] as const;
+}
+
+/**
+ * The cover: the player's picture when there is one (otherwise black leather),
+ * darkened toward the bottom for the name, with the role sigil in the middle.
+ */
+function paintFront(accent: string, sigil: RoleSigil, name: string, line: string, picture?: HTMLImageElement) {
   return (x: CanvasRenderingContext2D, w: number, h: number) => {
     const bg = x.createLinearGradient(0, 0, w, h);
     bg.addColorStop(0, "#2a2118");
@@ -38,35 +84,42 @@ function paintFront(accent: string, name: string, line: string) {
     bg.addColorStop(1, "#000000");
     x.fillStyle = bg;
     x.fillRect(0, 0, w, h);
+    if (picture) {
+      const [sx, sy, sw, sh] = coverRect(picture, w, h);
+      x.drawImage(picture, sx, sy, sw, sh, 0, 0, w, h);
+      const shade = x.createLinearGradient(0, h * 0.45, 0, h);
+      shade.addColorStop(0, "rgba(0,0,0,0)");
+      shade.addColorStop(1, "rgba(0,0,0,0.88)");
+      x.fillStyle = shade;
+      x.fillRect(0, 0, w, h);
+    }
+
     x.strokeStyle = accent;
     x.globalAlpha = 0.55;
     x.lineWidth = 6;
     x.strokeRect(48, 48, w - 96, h - 96);
     x.lineWidth = 2;
     x.strokeRect(70, 70, w - 140, h - 140);
-
-    x.fillStyle = accent;
-    x.beginPath();
-    x.arc(w / 2, h * 0.3, 70, 0, Math.PI * 2);
-    x.globalAlpha = 0.18;
-    x.fill();
-    x.globalAlpha = 0.9;
-    x.lineWidth = 4;
-    x.stroke();
     x.globalAlpha = 1;
 
+    paintSigil(x, sigil, w / 2, h * 0.38, 190);
+
     x.textAlign = "center";
+    x.shadowColor = "rgba(0,0,0,0.9)";
+    x.shadowBlur = 18;
     x.fillStyle = "#FFFFFF";
-    x.font = `700 92px ${SERIF}`;
+    x.font = `700 88px ${SERIF}`;
     const lines = wrap(x, name, w - 220);
-    lines.forEach((text, i) => x.fillText(text, w / 2, h * 0.52 + i * 104));
+    const top = h - 150 - lines.length * 100;
+    lines.forEach((text, i) => x.fillText(text, w / 2, top + i * 100));
     x.fillStyle = accent;
-    x.font = `600 46px ${SERIF}`;
-    x.fillText(line, w / 2, h * 0.52 + lines.length * 104 + 40);
+    x.font = `600 44px ${SERIF}`;
+    x.fillText(line, w / 2, h - 110);
+    x.shadowBlur = 0;
   };
 }
 
-function bookFor(character: SealedCharacter): BookCfg {
+function bookFor(character: SealedCharacter, picture?: HTMLImageElement): BookCfg {
   const { state } = character;
   const accent = tintFor(state.classId);
   const rulesVersion = rulesVersionOf(state);
@@ -83,7 +136,7 @@ function bookFor(character: SealedCharacter): BookCfg {
     year: `Nivel ${level}`,
     stars: 0,
     desc: `${classLine || "Sin clase"}${race ? `, ${race}` : ""}. Nivel ${level}.`,
-    front: paintFront(accent, state.characterName, `Nivel ${level}`),
+    front: paintFront(accent, sigilFor(state.classId), state.characterName, `Nivel ${level}`, picture),
     spineBg: "#0B0B0B",
     spineInk: accent,
     spineFont: `700 42px ${SERIF}`,
@@ -91,6 +144,41 @@ function bookFor(character: SealedCharacter): BookCfg {
     backInk: "255,255,255",
     edge: "#d8cfb8",
   };
+}
+
+/** Decodes every cover picture; `null` while any is still loading. A broken one is skipped. */
+function usePictures(characters: SealedCharacter[]): Map<string, HTMLImageElement> | null {
+  const key = characters.map((entry) => `${entry.id}:${entry.state.coverImage.length}`).join("|");
+  const [loaded, setLoaded] = useState<{ key: string; map: Map<string, HTMLImageElement> } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const map = new Map<string, HTMLImageElement>();
+    void Promise.all(
+      characters
+        .filter((entry) => entry.state.coverImage)
+        .map(
+          (entry) =>
+            new Promise<void>((resolve) => {
+              const image = new Image();
+              image.onload = () => {
+                map.set(entry.id, image);
+                resolve();
+              };
+              image.onerror = () => resolve();
+              image.src = entry.state.coverImage;
+            }),
+        ),
+    ).then(() => {
+      if (!cancelled) setLoaded({ key, map });
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  return loaded?.key === key ? loaded.map : null;
 }
 
 export default function CodexShelf({
@@ -102,7 +190,13 @@ export default function CodexShelf({
   onBurn: (id: string) => (origin: { x: number; y: number }) => void;
   onReforge: (id: string) => () => void;
 }) {
-  const books = useMemo(() => characters.map(bookFor), [characters]);
+  const pictures = usePictures(characters);
+  // The 3D scene is built once per set of books, so wait for the pictures
+  // rather than build it, then build it again when they arrive.
+  const books = useMemo(
+    () => (pictures ? characters.map((entry) => bookFor(entry, pictures.get(entry.id))) : []),
+    [characters, pictures],
+  );
   const [open, setOpen] = useState<string | null>(null);
   const openCharacter = characters.find((entry) => entry.id === open);
 
@@ -111,7 +205,7 @@ export default function CodexShelf({
       <div className="relative h-[56vh] max-h-[620px] min-h-[380px] w-full">
         <BooksShowcase
           books={books}
-          heroTitle="Códice"
+          heroTitle=""
           navTitle={`${characters.length} ${characters.length === 1 ? "tomo" : "tomos"}`}
           className="!font-display"
           themeColors={{

@@ -126,6 +126,7 @@ import { foundrySizeFor, sizeFor, sizeNameOf, sizeOptionsFor } from "@/lib/table
 import Attunement from "@/components/forge/Attunement";
 import CarryingLoad from "@/components/forge/CarryingLoad";
 import HitPoints from "@/components/forge/HitPoints";
+import CoverPicker from "@/components/codex/CoverPicker";
 import { DIVIDER, DIVIDER_TIGHT, HEADING, ITEM_META, ITEM_NAME, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
 
 const CHAMBER_LABEL: Record<ChamberKey, string> = {
@@ -2323,6 +2324,13 @@ export default function Forge() {
                       className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                     />
                   </Field>
+
+                  <CoverPicker
+                    value={draft.coverImage}
+                    classId={draft.classId}
+                    name={draft.characterName}
+                    onChange={(coverImage) => patchDraft({ coverImage })}
+                  />
 
                   {/* These travel in the payload's `identity.biography` and
                       were being dropped entirely. */}
