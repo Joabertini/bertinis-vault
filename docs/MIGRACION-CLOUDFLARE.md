@@ -1,8 +1,7 @@
 # Migración del front de Vercel a Cloudflare
 
 > **Estado: PLAN. Nada de esto está aplicado.** Cambiar el hosting toca producción
-> (`alba.bertinilabs.xyz`) y el manifiesto que Foundry consulta, así que cada paso
-> con efecto espera un OK explícito.
+> (`alba.bertinilabs.xyz`), así que cada paso con efecto espera un OK explícito.
 
 Escrito el 2026-11-11 sobre `main`, a partir de lo que el repo dice y de lo que midió
 `docs/DEPLOY.md`. Lo que no se pudo comprobar desde el repo está marcado **[verificar]**.
@@ -44,19 +43,18 @@ separado.
 El router sigue funcionando: `/forge`, `/codex`, `/ritual` y `/tomo/:code` se
 escriben "en frío" y caen en `index.html` por la regla de SPA.
 
-## Lo que no puede cambiar de dirección
+## Lo que no cambia
 
-Estas URLs están grabadas fuera del repo, así que el cambio de hosting no puede mover
-ninguna:
-
-1. `https://alba.bertinilabs.xyz/foundry/module.json` y `.../foundry/bertinis-vault.zip`.
-   Cada instalación del módulo las consulta para actualizar. Se publican con
-   `pnpm foundry:package` al final del build, y ese paso **tiene que seguir en el
-   build** (va dentro de `dist/foundry/`).
-2. `https://api.bertinilabs.xyz`: no se toca (el Worker no cambia).
-3. Sesión y OAuth: `COOKIE_DOMAIN = bertinilabs.xyz`, `AUTH_ORIGIN` y
+1. `https://api.bertinilabs.xyz`: el Worker no se toca.
+2. Sesión y OAuth: `COOKIE_DOMAIN = bertinilabs.xyz`, `AUTH_ORIGIN` y
    `ALLOWED_ORIGINS` dependen del **nombre** `alba.bertinilabs.xyz`, no del host.
    Mientras el nombre sea el mismo, no cambia nada en Discord ni en CORS.
+
+**El módulo de Foundry ya no condiciona la migración.** El módulo cambia de versión
+en la próxima actualización y se redirige entonces: la URL del manifiesto
+(`/foundry/module.json`) y del zip pueden cambiar de lugar. Mientras tanto
+`pnpm foundry:package` sigue en el build, para que lo que hoy está instalado
+no se rompa antes de esa actualización.
 
 ## Fases
 
@@ -85,8 +83,8 @@ ninguna:
 
 ### 2. Comprobar equivalencia (sin efecto)
 Contra la dirección `workers.dev`, antes de cualquier cambio de DNS:
-- [ ] `diff` byte a byte de `/foundry/module.json` y `/foundry/bertinis-vault.zip`
-      contra los que sirve producción hoy.
+- [ ] `/foundry/module.json` y `/foundry/bertinis-vault.zip` se sirven (el `diff`
+      byte a byte solo importa hasta que salga la versión nueva del módulo).
 - [ ] Rutas en frío: `/forge`, `/codex`, `/tomo/ABCD1234` devuelven `index.html` con 200.
 - [ ] Los headers de seguridad y el `immutable` salen iguales (`curl -I` en ambos).
 - [ ] Un recorrido completo del Faro (forja, sellar, código, importar en Foundry).
@@ -111,7 +109,7 @@ Contra la dirección `workers.dev`, antes de cualquier cambio de DNS:
 
 | Riesgo | Cobertura |
 |---|---|
-| Módulos instalados no encuentran el manifiesto | Fase 2 compara byte a byte antes del cambio; la dirección no cambia |
+| Módulos ya instalados dejan de actualizar | El empaquetado sigue en el build hasta la versión nueva del módulo |
 | Rutas 404 al recargar | Regla de SPA, probada en frío en fase 2 |
 | Headers de seguridad perdidos | `_headers` copiado de `vercel.json`, verificado con `curl -I` |
 | Sesión/Discord dejan de funcionar | El nombre del sitio no cambia; se prueba un login en fase 3 |
