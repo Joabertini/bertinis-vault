@@ -32,6 +32,10 @@ export default function DiceTray({
 }) {
   const [rolls, setRolls] = useState<number[]>([]);
   const [rolling, setRolling] = useState(false);
+  /** Each die's six faces: the result on the front, filler on the rest. */
+  const [faces, setFaces] = useState<number[][]>([]);
+  /** Bumped on every throw, so each die remounts and tumbles again. */
+  const [spin, setSpin] = useState(0);
   const shake = useAnimationControls();
 
   const left = ROLL_ATTEMPTS - sets.length;
@@ -40,6 +44,8 @@ export default function DiceTray({
     if (rolling || left <= 0) return;
     setRolling(true);
     const result = rollStatArray();
+    setFaces(result.map((value) => [value, ...Array.from({ length: 5 }, () => 3 + Math.floor(Math.random() * 16))]));
+    setSpin((n) => n + 1);
 
     // Screen shake at impact moment
     setTimeout(() => {
@@ -50,11 +56,12 @@ export default function DiceTray({
       });
     }, 750);
 
+    // The last die lands at 1.1s plus its stagger.
     setTimeout(() => {
       setRolls(result);
       onRoll(result);
       setRolling(false);
-    }, 950);
+    }, DIE_MS + 5 * DIE_STAGGER_MS);
   };
 
   return (
@@ -90,32 +97,13 @@ export default function DiceTray({
 
         <div className="flex flex-wrap gap-5">
           {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="relative">
-              {/* Die body — angular, not a circle */}
-              <motion.div
-                animate={
-                  rolling
-                    ? {
-                        rotateX: [0, 360 * (1 + i * 0.2)],
-                        rotateY: [0, 360 * (1 + (5 - i) * 0.2)],
-                        scale: [1, 1.15, 1],
-                      }
-                    : {}
-                }
-                transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1], delay: i * 0.04 }}
-                style={{ transformStyle: "preserve-3d" }}
-                className={`flex h-16 w-16 items-center justify-center border font-num text-2xl font-bold ${
-                  rolling || !rolls[i]
-                    ? "border-[#5A5A5A] text-transparent"
-                    : "border-[#F2C14E]/70 bg-[#F2C14E]/[0.06] text-[#F2C14E]"
-                }`}
-              >
-                {!rolling && rolls[i] ? rolls[i] : ""}
-                {/* corner notches */}
-                <span className={`absolute left-0 top-0 h-2 w-2 border-l border-t ${rolling ? "border-[#5A5A5A]" : "border-[#F2C14E]"}`} />
-                <span className={`absolute right-0 bottom-0 h-2 w-2 border-b border-r ${rolling ? "border-[#5A5A5A]" : "border-[#F2C14E]"}`} />
-              </motion.div>
-            </div>
+            <Die
+              key={`${i}-${spin}`}
+              index={i}
+              faces={faces[i]}
+              tumbling={spin > 0}
+              settled={!rolling && Boolean(rolls[i])}
+            />
           ))}
         </div>
 
@@ -189,5 +177,81 @@ export default function DiceTray({
         </AnimatePresence>
       </div>
     </motion.div>
+  );
+}
+
+const DIE_MS = 1100;
+const DIE_STAGGER_MS = 60;
+const HALF = 32;
+
+/** The six faces of a cube, the first one toward the player. */
+const FACE_TRANSFORMS = [
+  `translateZ(${HALF}px)`,
+  `rotateY(90deg) translateZ(${HALF}px)`,
+  `rotateY(180deg) translateZ(${HALF}px)`,
+  `rotateY(-90deg) translateZ(${HALF}px)`,
+  `rotateX(90deg) translateZ(${HALF}px)`,
+  `rotateX(-90deg) translateZ(${HALF}px)`,
+];
+
+/**
+ * A die as a real cube.
+ *
+ * It tumbles a whole number of turns on each axis, so whatever angle it
+ * starts from it lands with the front face, which carries the result, square
+ * to the player. Each die has its own perspective: a shared one would show the
+ * side faces of the dice at the ends of the row even at rest.
+ */
+function Die({
+  index,
+  faces,
+  tumbling,
+  settled,
+}: {
+  index: number;
+  faces: number[] | undefined;
+  tumbling: boolean;
+  settled: boolean;
+}) {
+  const turnsX = 360 * (2 + (index % 2));
+  const turnsY = 360 * (3 - (index % 3));
+  const startX = (index * 97) % 360;
+  const startY = (index * 53) % 360;
+
+  return (
+    <div className="h-16 w-16" style={{ perspective: 420 }}>
+      <motion.div
+        className="relative h-16 w-16"
+        style={{ transformStyle: "preserve-3d" }}
+        {...(tumbling
+          ? {
+              initial: { y: -40, rotateX: startX, rotateY: startY },
+              animate: {
+                y: [-40, 6, -4, 0],
+                rotateX: [startX, turnsX - 25, turnsX + 6, turnsX],
+                rotateY: [startY, turnsY + 20, turnsY - 5, turnsY],
+              },
+            }
+          : {})}
+        transition={{
+          duration: DIE_MS / 1000,
+          delay: (index * DIE_STAGGER_MS) / 1000,
+          times: [0, 0.7, 0.85, 1],
+          ease: [0.2, 0.7, 0.2, 1],
+        }}
+      >
+        {FACE_TRANSFORMS.map((transform, face) => (
+          <span
+            key={face}
+            className={`absolute inset-0 flex items-center justify-center border font-num text-2xl font-bold [backface-visibility:hidden] ${
+              faces ? "border-[#F2C14E] text-[#F2C14E]" : "border-[#5A5A5A] text-transparent"
+            } ${face === 0 && settled ? "bg-[#1d1708] shadow-[inset_0_0_18px_#F2C14E33]" : "bg-raised"}`}
+            style={{ transform }}
+          >
+            {faces?.[face] ?? ""}
+          </span>
+        ))}
+      </motion.div>
+    </div>
   );
 }
