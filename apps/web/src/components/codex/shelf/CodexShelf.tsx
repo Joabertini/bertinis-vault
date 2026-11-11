@@ -113,7 +113,7 @@ export default function CodexShelf({
           books={books}
           heroTitle="Códice"
           navTitle={`${characters.length} ${characters.length === 1 ? "tomo" : "tomos"}`}
-          className="font-display"
+          className="!font-display"
           themeColors={{
             navy: "#0B0B0B",
             pink: "#F2C14E",

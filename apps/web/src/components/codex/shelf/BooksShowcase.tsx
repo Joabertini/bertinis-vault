@@ -9,6 +9,8 @@
  *   - New prop `renderActions`: what the detail panel shows under the title.
  *     The published panel was a bookshop (stars, "Goodreads", Buy Now), which
  *     has no meaning for a character.
+ *   - ADAPTED: scene lights and the drifting leaves use the project's gold/ember
+ *     instead of the blue/pink/green defaults.
  *   - The "Open" slip and the empty-state text are in Spanish.
  * Type checking is off for this file only: it is third-party code written
  * without `noUncheckedIndexedAccess`, which the rest of this app turns on.
@@ -277,7 +279,7 @@ export function BooksShowcase({
       pmrem.dispose();
     })();
 
-    const hemi = new THREE.HemisphereLight(0x8fa0d8, 0x0d1024, 0.32);
+    const hemi = new THREE.HemisphereLight(0xd8c8a0, 0x120d06, 0.32);
     scene.add(hemi);
     const key = new THREE.DirectionalLight(0xffffff, 0.82);
     key.position.set(3.5, 5, 6);
@@ -292,10 +294,10 @@ export function BooksShowcase({
     key.shadow.bias = -0.0004;
     key.shadow.normalBias = 0.02;
     scene.add(key);
-    const fillLight = new THREE.DirectionalLight(0xa9b6ff, 0.2);
+    const fillLight = new THREE.DirectionalLight(0xffd9a0, 0.2);
     fillLight.position.set(-4, 1, 4);
     scene.add(fillLight);
-    const rim = new THREE.DirectionalLight(0xff9db8, 0.3);
+    const rim = new THREE.DirectionalLight(0xff7043, 0.3);
     rim.position.set(-2, 3, -5);
     scene.add(rim);
 
@@ -842,7 +844,7 @@ export function BooksShowcase({
       shape.bezierCurveTo(0.3, -0.28, 0.3, 0.22, 0, 0.55);
       shape.bezierCurveTo(-0.3, 0.22, -0.3, -0.28, 0, -0.5);
       const geo = new THREE.ShapeGeometry(shape, 10);
-      const cols = [0x3e7c3f, 0x57944a, 0x2f6136, 0x6aa557];
+      const cols = [0xf2c14e, 0xff7043, 0xb8862a, 0xffb089];
       for (let i = 0; i < 16; i++) {
         const mat = std({ color: cols[i % 4], roughness: 0.55, envMapIntensity: 0.3, side: THREE.DoubleSide });
         const mesh = new THREE.Mesh(geo, mat);

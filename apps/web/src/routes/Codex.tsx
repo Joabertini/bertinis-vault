@@ -105,7 +105,16 @@ export default function Codex() {
           </div>
         </div>
 
-        {/* Above the shelves, and shown even when they are empty: an empty
+        {/* The shelf is the page: full width, above the tools. */}
+        {filtered.length > 0 && (
+          <div className="relative left-1/2 mb-14 w-screen -translate-x-1/2">
+            <Suspense fallback={<div className="h-[78vh] min-h-[560px]" />}>
+              <CodexShelf characters={filtered} onBurn={handleBurn} onReforge={handleReforge} />
+            </Suspense>
+          </div>
+        )}
+
+        {/* Below the shelf, and shown even when it is empty: an empty
             Codex is exactly when a player most wants to bring characters in
             rather than start from nothing. */}
         <OpenCode />
@@ -120,13 +129,7 @@ export default function Codex() {
           <p className="py-24 text-center font-body text-xl italic text-bone">
             Ningun tomo con ese nombre.
           </p>
-        ) : (
-          <>
-            <Suspense fallback={<div className="h-[78vh] min-h-[560px]" />}>
-              <CodexShelf characters={filtered} onBurn={handleBurn} onReforge={handleReforge} />
-            </Suspense>
-          </>
-        )}
+        ) : null}
       </div>
     </main>
   );
