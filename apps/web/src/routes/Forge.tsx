@@ -33,6 +33,7 @@ import ScryPicker from "@/components/forge/ScryPicker";
 import InfoPanel from "@/components/info/InfoPanel";
 import { InfoProvider, InfoReset } from "@/components/info/info-context";
 import PickList from "@/components/forge/PickList";
+import GrowthChamber from "@/components/forge/GrowthChamber";
 import GearChamber from "@/components/forge/GearChamber";
 import AttributesChamber from "@/components/forge/AttributesChamber";
 import IdentityChamber from "@/components/forge/IdentityChamber";
@@ -96,9 +97,6 @@ import {
   unansweredSpellChoices,
   type SpellGrantSource,
 } from "@/lib/granted-spells";
-import BonusEditor from "@/components/forge/BonusEditor";
-import OriginBonus from "@/components/forge/OriginBonus";
-import Improvements from "@/components/forge/Improvements";
 import TalentPools from "@/components/forge/TalentPools";
 import Multiclass from "@/components/forge/Multiclass";
 import Expertise from "@/components/forge/Expertise";
@@ -115,11 +113,9 @@ import { expertisePlanFor } from "@/lib/expertise";
 import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
 import { talentPools, talentsSatisfied } from "@/lib/optional-features";
 import {
-  bonusOrigin,
   originAbilityAllowanceFor,
   bonusShape,
   improvementPlan,
-  maxPointsPerAbility,
   seedSpeciesBonus,
   speciesBonusBudgetFor,
 } from "@/lib/improvements";
@@ -130,7 +126,7 @@ import { carriedLoadFor } from "@/lib/carrying";
 import { attunementStateFor } from "@/lib/attunement";
 import { foundrySizeFor, sizeFor, sizeOptionsFor } from "@/lib/table-numbers";
 import HitPoints from "@/components/forge/HitPoints";
-import { DIVIDER, DIVIDER_TIGHT, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
+import { DIVIDER, DIVIDER_TIGHT, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
 
 const CHAMBER_LABEL: Record<ChamberKey, string> = {
   ancestry: "Raza",
@@ -1835,87 +1831,23 @@ export default function Forge() {
 
               {/* ---------- Growth ---------- */}
               {chamberKey === "growth" && (
-                <div className="space-y-12">
-                  <div>
-                    <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
-                      <span className={LABEL}>
-                        Aumento de {bonusOrigin(rulesVersion)}
-                      </span>
-                      <span className={WHISPER}>
-                        {rulesVersion === "2024"
-                          ? "En 2024 el aumento lo da el trasfondo: repartilo vos."
-                          : "Sembrado desde el indice. Podes cambiarlo."}
-                      </span>
-                    </div>
-                    <p className="mb-3 font-body text-[15px] leading-relaxed text-bone">
-                      Se suma a los puntajes ligados. Sin esto un enano exporta sin su +2 a
-                      Constitucion.
-                    </p>
-
-                    {/*
-                      2014 hands out blocks and Tasha's moves them whole; 2024
-                      moved the increase to the background, where it really is
-                      a small budget the player spends. Two rules, two editors —
-                      one editor for both was what let a gnome be +1/+1/+1.
-                    */}
-                    {rulesVersion === "2014" ? (
-                      <OriginBonus
-                        printed={printedBonus}
-                        bonuses={draft.abilityBonuses}
-                        custom={draft.customOrigin}
-                        accent={accent}
-                        onToggleCustom={(customOrigin) =>
-                          patchDraft({
-                            customOrigin,
-                            // Turning it off puts the increase back where the
-                            // book prints it, which is the whole meaning of
-                            // turning it off.
-                            ...(customOrigin ? {} : { abilityBonuses: printedBonus }),
-                          })
-                        }
-                        onChange={(abilityBonuses) => patchDraft({ abilityBonuses })}
-                      />
-                    ) : (
-                      <BonusEditor
-                        bonuses={draft.abilityBonuses}
-                        scoresBefore={{
-                          str: draft.str,
-                          dex: draft.dex,
-                          con: draft.con,
-                          int: draft.int,
-                          wis: draft.wis,
-                          cha: draft.cha,
-                        }}
-                        budget={speciesBudget}
-                        maxPerAbility={maxPointsPerAbility}
-                        allowed={originAllowance}
-                        accent={accent}
-                        onChange={(abilityBonuses) => patchDraft({ abilityBonuses })}
-                      />
-                    )}
-                  </div>
-
-                  <Improvements
-                    state={draft}
-                    slots={growth.slots}
-                    rulesVersion={rulesVersion}
-                    accent={accent}
-                    onSetChoice={setLevelChoice}
-                    onSetFeatAbilities={setFeatAbilities}
-                  />
-                  <VariantChoices
-                    sources={spellGrants.filter((source) => source.chamber === "growth")}
-                    chosen={draft.spellVariantChoices}
-                    chosenAbilities={draft.spellAbilityChoices}
-                    questions={spellChoices}
-                    answers={draft.grantedSpellChoices}
-                    onToggleSpell={toggleGrantedSpell}
-                    accent={accent}
-                    onPick={chooseVariant}
-                    onPickAbility={chooseSpellAbility}
-                  />
-
-                </div>
+                <GrowthChamber
+                  draft={draft}
+                  patchDraft={patchDraft}
+                  rulesVersion={rulesVersion}
+                  printedBonus={printedBonus}
+                  speciesBudget={speciesBudget}
+                  originAllowance={originAllowance}
+                  slots={growth.slots}
+                  variantSources={spellGrants.filter((source) => source.chamber === "growth")}
+                  spellChoices={spellChoices}
+                  accent={accent}
+                  onSetChoice={setLevelChoice}
+                  onSetFeatAbilities={setFeatAbilities}
+                  onToggleGrantedSpell={toggleGrantedSpell}
+                  onChooseVariant={chooseVariant}
+                  onChooseSpellAbility={chooseSpellAbility}
+                />
               )}
 
               {/* ---------- Gifts ---------- */}
