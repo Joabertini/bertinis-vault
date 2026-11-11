@@ -36,6 +36,7 @@ const KIND_LABEL: Record<RulesKind, string> = {
   sense: "Sentido",
   language: "Idioma",
   mastery: "Maestría",
+  itemProperty: "Propiedad",
 };
 
 type View =

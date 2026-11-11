@@ -135,4 +135,11 @@ describe("rules meta lines", () => {
     expect(lines.find((line) => line.label === "Maestría")?.text).toBe("{@itemMastery Sap|XPHB}");
     expect(lines.find((line) => line.label === "Daño")?.text).toBe("1d8 slashing");
   });
+
+  it("links each weapon property to its explanation", () => {
+    const lines = metaLinesFor("item", { name: "Longsword", source: "XPHB", type: "M|XPHB", property: ["V|XPHB"] });
+
+    expect(lines.find((line) => line.label === "Propiedades")?.text).toBe("{@itemProperty Versatile|XPHB}");
+    expect(linksIn("{@itemProperty Versatile|XPHB}")[0]).toMatchObject({ kind: "itemProperty", name: "Versatile" });
+  });
 });

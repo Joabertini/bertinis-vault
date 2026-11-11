@@ -206,7 +206,11 @@ function itemLines(record: RulesRecord): MetaLine[] {
   const kind = ITEM_TYPES[typeCode];
   const rarity = RARITIES[String(record["rarity"] ?? "none")];
   const category = record["weaponCategory"] ? `${String(record["weaponCategory"])} ` : "";
-  lines.push({ label: "Tipo", text: `${category}${kind ?? "Item"}${rarity && rarity !== "Mundane" ? ` · ${rarity}` : ""}` });
+  const typeText = `${category}${kind ?? "Item"}`;
+  lines.push({
+    label: "Tipo",
+    text: `${typeText.charAt(0).toUpperCase()}${typeText.slice(1).toLowerCase()}${rarity && rarity !== "Mundane" ? ` · ${rarity}` : ""}`,
+  });
 
   if (record["dmg1"]) {
     const type = DAMAGE_TYPES[String(record["dmgType"] ?? "")] ?? "";
@@ -219,10 +223,15 @@ function itemLines(record: RulesRecord): MetaLine[] {
     lines.push({ label: "CA", text: `${String(record["ac"])}${strength}${stealth}` });
   }
   const properties = asArray<string | { uid?: string }>(record["property"])
-    .map((entry) => (typeof entry === "string" ? entry : String(entry.uid ?? "")).split("|")[0] ?? "")
-    .map((code) => PROPERTIES[code] ?? "")
-    .filter(Boolean);
-  if (properties.length) lines.push({ label: "Propiedades", text: properties.join(", ") });
+    .map((entry) => (typeof entry === "string" ? entry : String(entry.uid ?? "")).split("|"))
+    .map(([code = "", book]) => ({ name: PROPERTIES[code] ?? "", book: book ?? "PHB" }))
+    .filter((property) => property.name);
+  if (properties.length) {
+    lines.push({
+      label: "Propiedades",
+      text: properties.map((property) => `{@itemProperty ${property.name}|${property.book}}`).join(", "),
+    });
+  }
   const masteries = asArray<string>(record["mastery"]);
   if (masteries.length) {
     lines.push({

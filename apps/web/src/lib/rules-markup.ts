@@ -47,6 +47,7 @@ const LINK_KINDS: Record<string, RulesKind> = {
   optfeature: "optionalfeature",
   language: "language",
   itemMastery: "mastery",
+  itemProperty: "itemProperty",
 };
 
 const FORMAT_STYLES: Record<string, "b" | "i" | "s" | "u" | "note"> = {

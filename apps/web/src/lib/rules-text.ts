@@ -28,7 +28,8 @@ export type RulesKind =
   | "skill"
   | "sense"
   | "language"
-  | "mastery";
+  | "mastery"
+  | "itemProperty";
 
 /** A record as the extractor wrote it. Fields differ by kind, so it is read through helpers. */
 export type RulesRecord = Record<string, unknown> & { name: string; source: string };

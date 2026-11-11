@@ -117,6 +117,11 @@ const kinds = {
 
   sense: collect(readFile("senses.json", "sense"), COMMON),
 
+  itemProperty: collect(
+    readFile("items-base.json", "itemProperty").map((row) => ({ ...row, name: row.name ?? row.entries?.[0]?.name })),
+    [...COMMON, "abbreviation"],
+  ),
+
   mastery: collect(readFile("items-base.json", "itemMastery"), COMMON),
 
   language: collect(readFile("languages.json", "language"), [...COMMON, "type", "typicalSpeakers", "script"]),
