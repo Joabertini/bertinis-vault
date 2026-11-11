@@ -31,6 +31,7 @@ import SigilShelf from "@/components/forge/SigilShelf";
 import ScryPicker from "@/components/forge/ScryPicker";
 import InfoPanel from "@/components/info/InfoPanel";
 import { InfoProvider, InfoReset } from "@/components/info/info-context";
+import AncestryChamber from "@/components/forge/AncestryChamber";
 import GiftsChamber from "@/components/forge/GiftsChamber";
 import OriginChamber from "@/components/forge/OriginChamber";
 import GrowthChamber from "@/components/forge/GrowthChamber";
@@ -38,7 +39,6 @@ import GearChamber from "@/components/forge/GearChamber";
 import AttributesChamber from "@/components/forge/AttributesChamber";
 import IdentityChamber from "@/components/forge/IdentityChamber";
 import ChamberArrows from "@/components/forge/ChamberArrows";
-import SizeChoice from "@/components/forge/SizeChoice";
 import SubChoice from "@/components/forge/SubChoice";
 import VariantChoices from "@/components/forge/VariantChoices";
 import LiveSheet from "@/components/forge/LiveSheet";
@@ -1560,66 +1560,22 @@ export default function Forge() {
 
               {/* ---------- Ancestry ---------- */}
               {chamberKey === "ancestry" && (
-                <div className="space-y-10">
-                  <SigilShelf
-                    entries={allRaces}
-                    selectedId={draft.raceId}
-                    selectedSource={draft.sourceBooks[`race:${draft.raceId}`]}
-                    onPick={(entry) => pick("race", entry)}
-                    accent={VAULT_GOLD}
-                    infoKind="race"
-                    label="Buscar raza"
-                    placeholder="Buscar entre todas las razas…"
-                    // The book is what tells two same-named species apart, and
-                    // a build stores it, so it belongs on the card.
-                    noteFor={(entry) => entry.source}
-                  />
-
-                  <VariantChoices
-                    sources={spellGrants.filter((source) => source.chamber === "species")}
-                    chosen={draft.spellVariantChoices}
-                    chosenAbilities={draft.spellAbilityChoices}
-                    questions={spellChoices}
-                    answers={draft.grantedSpellChoices}
-                    onToggleSpell={toggleGrantedSpell}
-                    accent={VAULT_GOLD}
-                    onPick={chooseVariant}
-                    onPickAbility={chooseSpellAbility}
-                  />
-
-                  {/* Only 2014 has these; 2024 folded them into the species. */}
-                  {subraces.length > 0 && (
-                    <SubChoice
-                      title="Rama"
-                      hint={
-                        branchIsRequired
-                          ? `${selectedRace?.label} se divide en ${subraces.length}. Sin elegir una no hay bono de caracteristica ni idioma de especie — no es opcional.`
-                          : `${selectedRace?.label} se divide en ${subraces.length}. Opcional.`
-                      }
-                      options={subraces}
-                      selectedId={draft.subraceId}
-                      onPick={(entry) => pick("subrace", entry)}
-                      accent={VAULT_GOLD}
-                      note="La subraza queda guardada, pero todavia no cruza a Foundry."
-                    />
-                  )}
-
-                  {/* Thirty species offer two sizes and the books hand the
-                      choice to the player. Until this existed the first letter
-                      won, and every one of them exported as Small.
-
-                      Below the branch because the offer is read off the merged
-                      row: no subrace states a size today, and the day one does
-                      the question has to be asked about the merged species. */}
-                  {sizeOptions.length > 1 && (
-                    <SizeChoice
-                      options={sizeOptions}
-                      value={draft.sizeChoice}
-                      accent={VAULT_GOLD}
-                      onPick={(letter) => patchDraft({ sizeChoice: letter })}
-                    />
-                  )}
-                </div>
+                <AncestryChamber
+                  draft={draft}
+                  patchDraft={patchDraft}
+                  races={allRaces}
+                  raceLabel={selectedRace?.label}
+                  subraces={subraces}
+                  branchIsRequired={branchIsRequired}
+                  sizeOptions={sizeOptions}
+                  variantSources={spellGrants.filter((source) => source.chamber === "species")}
+                  spellChoices={spellChoices}
+                  onPickRace={(entry) => pick("race", entry)}
+                  onPickSubrace={(entry) => pick("subrace", entry)}
+                  onToggleGrantedSpell={toggleGrantedSpell}
+                  onChooseVariant={chooseVariant}
+                  onChooseSpellAbility={chooseSpellAbility}
+                />
               )}
 
               {/* ---------- Calling ---------- */}
