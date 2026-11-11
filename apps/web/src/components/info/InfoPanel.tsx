@@ -5,8 +5,8 @@
  * long sword they hover, the background they pick — with every condition, spell and item named in
  * it a link that opens its own entry on top. Back walks the trail; the cross clears it.
  *
- * Wide screens get it as a column in the margin that follows hover. Narrower ones get a sheet at
- * the bottom that opens only on a deliberate choice, since a hover there would cover the page.
+ * Wide screens get it as a column in the margin. Narrower ones get a sheet at
+ * the bottom. Both open only on a deliberate choice: a click or a pick.
  */
 
 import { useEffect, useState } from "react";

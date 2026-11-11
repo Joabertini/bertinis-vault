@@ -2775,9 +2775,6 @@ function SubChoice({
                 onPick(entry);
                 info.show({ kind: "subclass", name: entry.label, source: entry.source, extra: [infoClass ?? ""] });
               }}
-              onMouseEnter={() =>
-                info.show({ kind: "subclass", name: entry.label, source: entry.source, extra: [infoClass ?? ""] }, { hover: true })
-              }
               className="flex items-baseline justify-between gap-3 border-l-2 px-4 py-2.5 text-left transition-colors"
               style={{
                 borderLeftColor: active ? accent : "transparent",

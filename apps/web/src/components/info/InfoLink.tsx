@@ -27,7 +27,6 @@ export default function InfoLink({
     <button
       type="button"
       onClick={() => show(target)}
-      onMouseEnter={() => show(target, { hover: true })}
       title={target.name}
       className={`cursor-pointer text-left underline decoration-dotted underline-offset-4 transition-colors hover:decoration-solid ${className}`}
       style={{ color: accent }}
