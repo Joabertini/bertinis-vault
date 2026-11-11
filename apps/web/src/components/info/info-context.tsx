@@ -9,7 +9,7 @@
  * link inside the panel pushes, because that is a trail the reader wants to walk back.
  */
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import type { RuleRef } from "@/lib/rules-markup";
 import type { Edition } from "@/lib/rules-text";
@@ -59,4 +59,11 @@ export function InfoProvider({ edition, children }: { edition: Edition; children
 
 export function useInfo(): InfoApi {
   return useContext(InfoContext);
+}
+
+/** Clears the panel when `scope` changes — moving to another chamber leaves what was shown behind. */
+export function InfoReset({ scope }: { scope: string }) {
+  const { close } = useInfo();
+  useEffect(() => close(), [scope, close]);
+  return null;
 }

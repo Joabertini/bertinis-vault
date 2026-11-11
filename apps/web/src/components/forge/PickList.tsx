@@ -16,6 +16,9 @@ import { useInfo } from "@/components/info/info-context";
 import type { RulesKind } from "@/lib/rules-text";
 import { LABEL, META, WHISPER_MB4 } from "@/styles/recipes";
 
+/** A spell is listed as "Nv2: Hold Person"; the book knows it as "Hold Person". */
+const infoNameOf = (option: string) => option.replace(/^Nv\d+:\s*/, "");
+
 export default function PickList({
   title,
   hint,
@@ -89,11 +92,11 @@ export default function PickList({
             <motion.button
               key={option}
               onClick={() => {
-                if (infoKind) info.show({ kind: infoKind, name: option });
+                if (infoKind) info.show({ kind: infoKind, name: infoNameOf(option) });
                 if (!disabled) onToggle(option);
               }}
-              onMouseEnter={() => infoKind && info.show({ kind: infoKind, name: option }, { hover: true })}
-              onFocus={() => infoKind && info.show({ kind: infoKind, name: option }, { hover: true })}
+              onMouseEnter={() => infoKind && info.show({ kind: infoKind, name: infoNameOf(option) }, { hover: true })}
+              onFocus={() => infoKind && info.show({ kind: infoKind, name: infoNameOf(option) }, { hover: true })}
               disabled={disabled}
               {...(disabled ? {} : { whileTap: { scale: 0.97 } })}
               className="flex items-center gap-3 border-l-2 px-3 py-2 text-left transition-colors disabled:cursor-not-allowed"

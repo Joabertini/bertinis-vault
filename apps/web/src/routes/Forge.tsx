@@ -34,7 +34,7 @@ import BackgroundGrant from "@/components/forge/BackgroundGrant";
 import ScryPicker from "@/components/forge/ScryPicker";
 import RarityScry from "@/components/forge/RarityScry";
 import InfoPanel from "@/components/info/InfoPanel";
-import { InfoProvider, useInfo } from "@/components/info/info-context";
+import { InfoProvider, InfoReset, useInfo } from "@/components/info/info-context";
 import PickList from "@/components/forge/PickList";
 import LiveSheet from "@/components/forge/LiveSheet";
 
@@ -2504,6 +2504,7 @@ export default function Forge() {
         </footer>
       </div>
     </main>
+      <InfoReset scope={chamberKey} />
       <InfoPanel accent={accent} />
     </InfoProvider>
   );
