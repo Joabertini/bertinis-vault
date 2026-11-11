@@ -73,9 +73,7 @@ export default function AttributesChamber({
           scores={rawScores}
           bonuses={abilityBonuses}
           accent={accent}
-          onChange={(ability, score) =>
-            patchDraft({ [ability]: score } as Parameters<typeof patchDraft>[0])
-          }
+          onChange={onScore}
         />
       ) : (
         <>
