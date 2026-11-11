@@ -30,10 +30,10 @@ import SigilCard from "@/components/forge/SigilCard";
 import SigilShelf from "@/components/forge/SigilShelf";
 import BackgroundGrant from "@/components/forge/BackgroundGrant";
 import ScryPicker from "@/components/forge/ScryPicker";
-import RarityScry from "@/components/forge/RarityScry";
 import InfoPanel from "@/components/info/InfoPanel";
 import { InfoProvider, InfoReset } from "@/components/info/info-context";
 import PickList from "@/components/forge/PickList";
+import GearChamber from "@/components/forge/GearChamber";
 import AttributesChamber from "@/components/forge/AttributesChamber";
 import IdentityChamber from "@/components/forge/IdentityChamber";
 import ChamberArrows from "@/components/forge/ChamberArrows";
@@ -62,7 +62,6 @@ import {
   startingEquipmentForClass,
 } from "@/lib/index-options";
 import { featIdsFor } from "@/lib/feats";
-import ItemFacts from "@/components/forge/ItemFacts";
 import { collapseGearLines } from "@/lib/gear-lines";
 import { factsFor, nameFor } from "@/lib/item-facts";
 import { armorWarningFor, weaponWarningFor } from "@/lib/gear-warnings";
@@ -70,7 +69,6 @@ import { gearProficienciesFor } from "@/lib/gear-proficiencies";
 import { speciesProficienciesFor } from "@/lib/species";
 import { assignLanguages, languagePlanFor, languagesSatisfied } from "@/lib/languages";
 import { branchIsRequiredFor } from "@/lib/species-branch";
-import StartingKit from "@/components/forge/StartingKit";
 import { parseKitSignature, rekitBag, startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
 import {
   ROLL_ATTEMPTS,
@@ -102,9 +100,7 @@ import BonusEditor from "@/components/forge/BonusEditor";
 import OriginBonus from "@/components/forge/OriginBonus";
 import Improvements from "@/components/forge/Improvements";
 import TalentPools from "@/components/forge/TalentPools";
-import GearBag from "@/components/forge/GearBag";
 import Multiclass from "@/components/forge/Multiclass";
-import WeaponMastery from "@/components/forge/WeaponMastery";
 import Expertise from "@/components/forge/Expertise";
 import type { ExtraClass } from "@/lib/classing";
 import { classEntriesFor, emptyExtraClass } from "@/lib/classing";
@@ -133,8 +129,6 @@ import { hitPointLevelsFor } from "@/lib/hit-points";
 import { carriedLoadFor } from "@/lib/carrying";
 import { attunementStateFor } from "@/lib/attunement";
 import { foundrySizeFor, sizeFor, sizeOptionsFor } from "@/lib/table-numbers";
-import Attunement from "@/components/forge/Attunement";
-import CarryingLoad from "@/components/forge/CarryingLoad";
 import HitPoints from "@/components/forge/HitPoints";
 import { DIVIDER, DIVIDER_TIGHT, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
 
@@ -2165,107 +2159,35 @@ export default function Forge() {
 
               {/* ---------- Gear ---------- */}
               {chamberKey === "gear" && (
-                <div className="max-w-xl space-y-10">
-                  {/*
-                    What the class hands you at level 1.
-                    Printed in the class entry and, until now, nowhere in this
-                    front: a fighter arrived at this chamber with three empty
-                    search boxes and no idea that the book already gave them
-                    chain mail, a martial weapon and a shield.
-                  */}
-                  <StartingKit
-                    rows={kitRows}
-                    choices={draft.kitChoices}
-                    accent={accent}
-                    onAnswer={answerKitRow}
-                  />
-
-                  <div className={kitRows.length > 0 ? DIVIDER : ""}>
-                    <p className={LABEL_MB4}>
-                      Arma
-                    </p>
-                    <RarityScry
-                      infoKind="item"
-                      label="Buscar arma"
-                      placeholder="Buscar arma…"
-                      search={weaponSearch}
-                      selectedId={draft.weaponId}
-                      onPick={(entry) => pick("weapon", entry)}
-                      accent={accent}
-                    />
-                    {weaponFacts && <ItemFacts facts={weaponFacts} accent={accent} />}
-                    {weaponWarning && (
-                      <p className="mt-3 font-body text-[15px] text-ember">{weaponWarning}</p>
-                    )}
-                  </div>
-
-                  <div className={DIVIDER}>
-                    <p className={LABEL_MB2}>
-                      Armadura
-                    </p>
-                    <p className={WHISPER_MB4}>Dejala vacia para ir sin armadura.</p>
-                    <RarityScry
-                      infoKind="item"
-                      label="Buscar armadura"
-                      placeholder="Buscar armadura o escudo…"
-                      search={armorSearch}
-                      selectedId={draft.armorId}
-                      onPick={(entry) => pick("armor", entry)}
-                      accent={accent}
-                    />
-                    {armorFacts && <ItemFacts facts={armorFacts} accent={accent} />}
-                    {armorWarning && (
-                      <p className="mt-3 font-body text-[15px] text-ember">{armorWarning}</p>
-                    )}
-                  </div>
-
-                  {masteryPlan.count > 0 && (
-                    <div className={DIVIDER}>
-                      <WeaponMastery
-                        options={masteryPlan.options}
-                        chosen={draft.weaponMasteryIds}
-                        count={masteryPlan.count}
-                        meleeOnly={masteryPlan.meleeOnly}
-                        problems={masteryProblems}
-                        accent={accent}
-                        onToggle={toggleMastery}
-                      />
-                    </div>
-                  )}
-
-                  <div className={DIVIDER}>
-                    <p className={LABEL_MB2}>
-                      Equipo adicional
-                    </p>
-                    <p className={WHISPER_MB4}>
-                      {castsAnything
-                        ? "El libro de conjuros va aca."
-                        : "Mochila, cuerda, raciones, herramientas."}
-                    </p>
-                    <GearBag
-                      carried={carried}
-                      search={gearSearch}
-                      rulesVersion={rulesVersion}
-                      accent={accent}
-                      onAdd={addGear}
-                      onRemove={removeGear}
-                    />
-
-                    <div className={DIVIDER}>
-                      <CarryingLoad load={load} accent={accent} />
-                    </div>
-
-                    {attunement.offered.length > 0 && (
-                      <div className={DIVIDER}>
-                        <Attunement
-                          state={attunement}
-                          accent={accent}
-                          onToggle={toggleAttunement}
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <GearChamber
+                  kitRows={kitRows}
+                  kitChoices={draft.kitChoices}
+                  onAnswerKit={answerKitRow}
+                  weaponSearch={weaponSearch}
+                  armorSearch={armorSearch}
+                  weaponId={draft.weaponId}
+                  armorId={draft.armorId}
+                  onPickWeapon={(entry) => pick("weapon", entry)}
+                  onPickArmor={(entry) => pick("armor", entry)}
+                  weaponFacts={weaponFacts}
+                  armorFacts={armorFacts}
+                  weaponWarning={weaponWarning}
+                  armorWarning={armorWarning}
+                  masteryPlan={masteryPlan}
+                  weaponMasteryIds={draft.weaponMasteryIds}
+                  masteryProblems={masteryProblems}
+                  onToggleMastery={toggleMastery}
+                  castsAnything={castsAnything}
+                  carried={carried}
+                  gearSearch={gearSearch}
+                  rulesVersion={rulesVersion}
+                  onAddGear={addGear}
+                  onRemoveGear={removeGear}
+                  load={load}
+                  attunement={attunement}
+                  onToggleAttunement={toggleAttunement}
+                  accent={accent}
+                />
               )}
 
               {/* ---------- Spells ---------- */}
