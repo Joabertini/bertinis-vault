@@ -227,6 +227,16 @@ export const payloadIdentitySchema = z.object({
   playerName: z.string().trim().max(120).optional(),
   alignment: z.string().trim().max(60).optional(),
   biography: biographySchema.optional(),
+  /**
+   * The picture the player gave the character in the builder: a small data URL
+   * (a 2:3 WebP or JPEG), so it travels in the same code as everything else.
+   * The Foundry module stores it and makes it the actor's portrait and token.
+   */
+  portrait: z
+    .string()
+    .max(100_000)
+    .regex(/^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/)
+    .optional(),
 });
 
 export const importPayloadSchema = z.object({

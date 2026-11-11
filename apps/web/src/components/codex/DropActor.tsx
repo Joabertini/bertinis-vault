@@ -156,7 +156,7 @@ export default function DropActor() {
           Traer de Foundry
         </p>
         <p className="mt-2 font-body text-[15px] text-bone">
-          Solta aca el json que exporta Foundry. Con el botón "Exportar para el Vault" de la ficha viene con su imagen.
+          Solta aca el json que exporta Foundry. Si querés su imagen, soltala junto.
         </p>
 
         <input

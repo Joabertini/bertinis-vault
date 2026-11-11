@@ -31,6 +31,7 @@ import {
   type ResolutionFailure,
 } from "@bertinis-vault/vetools-index";
 
+import { isCoverImage } from "./cover-image";
 import { resolveGearId, resolveSpellId } from "@bertinis-vault/data-engine";
 
 import { buildCanonicalSnapshot, type BuilderState } from "./builder";
@@ -90,6 +91,16 @@ function isDerivable(state: BuilderState): boolean {
   return Boolean(state.raceId && state.classId && state.backgroundId);
 }
 
+/**
+ * The payload with the cover the player uploaded riding in its identity, so the
+ * Foundry module can make it the actor's portrait. `buildToPayload` works from
+ * the canonical snapshot, which has no picture in it.
+ */
+function withPortrait(payload: ImportPayload | null, cover: string): ImportPayload | null {
+  if (!payload || !isCoverImage(cover)) return payload;
+  return { ...payload, identity: { ...payload.identity, portrait: cover } };
+}
+
 export function resolveDraft(state: BuilderState): ResolvedDraft {
   const missing = missingPieces(state);
   if (!isDerivable(state)) return { status: "unforged", missing };
@@ -102,7 +113,7 @@ export function resolveDraft(state: BuilderState): ResolvedDraft {
     status: "ready",
     missing,
     snapshot,
-    payload: conversion.payload ?? null,
+    payload: withPortrait(conversion.payload ?? null, state.coverImage),
     failures: conversion.failures,
     problems: conversion.failures.map((failure) => describeProblem(failure, state)),
   };
