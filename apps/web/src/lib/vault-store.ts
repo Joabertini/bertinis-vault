@@ -127,7 +127,7 @@ type VaultStore = {
   burned: string[];
 
   /** Start a fresh draft for an edition. Called when entering the Forge. */
-  beginDraft: (rulesVersion: BuilderRulesVersion) => void;
+  beginDraft: (rulesVersion: BuilderRulesVersion, supplements: boolean) => void;
   /** Record — or clear, with null — how the Forge should order itself. */
   setPace: (pace: Pace | null) => void;
   patchDraft: (patch: Partial<BuilderState>) => void;
@@ -190,10 +190,11 @@ function isShare(value: unknown): value is CharacterShare {
   );
 }
 
-function freshDraft(rulesVersion: BuilderRulesVersion): BuilderState {
+function freshDraft(rulesVersion: BuilderRulesVersion, supplements = true): BuilderState {
   return {
     ...initialState,
     rulesVersion,
+    supplements,
     createdAt: new Date().toISOString(),
     // The repo's `initialState` is a worked demo character (Seraphina Vale, a
     // level 3 wizard). That is right for a dev harness and wrong for a player
@@ -256,9 +257,9 @@ export const useVault = create<VaultStore>()(
 
       setPace: (pace) => set({ pace }),
 
-      beginDraft: (rulesVersion) =>
+      beginDraft: (rulesVersion, supplements) =>
         set({
-          draft: freshDraft(rulesVersion),
+          draft: freshDraft(rulesVersion, supplements),
           scratch: emptyScratch,
           editingId: null,
         }),
@@ -303,7 +304,7 @@ export const useVault = create<VaultStore>()(
          * one character's, and the player who forges a second character
          * almost always forges it under the same rules.
          */
-        const cleared = { draft: freshDraft(draft.rulesVersion), scratch: emptyScratch };
+        const cleared = { draft: freshDraft(draft.rulesVersion, draft.supplements), scratch: emptyScratch };
 
         // Re-sealing a reforged character overwrites its tome in place, and
         // keeps its shelf position rather than jumping it to the front: the
