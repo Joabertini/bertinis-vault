@@ -28,11 +28,11 @@ import RuneButton from "@/components/ui/RuneButton";
 import RuleNote from "@/components/ui/RuleNote";
 import SigilCard from "@/components/forge/SigilCard";
 import SigilShelf from "@/components/forge/SigilShelf";
-import BackgroundGrant from "@/components/forge/BackgroundGrant";
 import ScryPicker from "@/components/forge/ScryPicker";
 import InfoPanel from "@/components/info/InfoPanel";
 import { InfoProvider, InfoReset } from "@/components/info/info-context";
 import PickList from "@/components/forge/PickList";
+import OriginChamber from "@/components/forge/OriginChamber";
 import GrowthChamber from "@/components/forge/GrowthChamber";
 import GearChamber from "@/components/forge/GearChamber";
 import AttributesChamber from "@/components/forge/AttributesChamber";
@@ -1758,55 +1758,20 @@ export default function Forge() {
 
               {/* ---------- Origin ---------- */}
               {chamberKey === "origin" && (
-                <div className="space-y-10">
-                  <SigilShelf
-                    entries={allBackgrounds}
-                    selectedId={draft.backgroundId}
-                    selectedSource={draft.sourceBooks[`background:${draft.backgroundId}`]}
-                    onPick={(entry) => pick("background", entry)}
-                    accent={accent}
-                    infoKind="background"
-                    label="Buscar trasfondo"
-                    placeholder="Buscar entre todos los trasfondos…"
-                    noteFor={(entry) => entry.source}
-                  />
-
-                  {/* What it hands you. Everything on this panel is read off
-                      the index; the prose that 5etools prints alongside is not
-                      in there at all. See BackgroundGrant.tsx. */}
-                  {selectedBackground && (
-                    <div className={DIVIDER}>
-                      <p className="font-display text-lg font-bold" style={{ color: accent }}>
-                        {selectedBackground.label}
-                        <span className="ml-3 font-mono text-[13px] font-normal uppercase tracking-[0.1em] text-bone">
-                          {selectedBackground.source}
-                        </span>
-                      </p>
-                      <div className="mt-5">
-                        <BackgroundGrant
-                          backgroundId={draft.backgroundId}
-                          rulesVersion={rulesVersion}
-                          sourceBook={draft.sourceBooks[`background:${draft.backgroundId}`]}
-                          accent={accent}
-                          featId={draft.backgroundFeatId}
-                          onPickFeat={(backgroundFeatId) => patchDraft({ backgroundFeatId })}
-                        />
-                      </div>
-                    </div>
-                  )}
-                  <VariantChoices
-                    sources={spellGrants.filter((source) => source.chamber === "origin")}
-                    chosen={draft.spellVariantChoices}
-                    chosenAbilities={draft.spellAbilityChoices}
-                    questions={spellChoices}
-                    answers={draft.grantedSpellChoices}
-                    onToggleSpell={toggleGrantedSpell}
-                    accent={accent}
-                    onPick={chooseVariant}
-                    onPickAbility={chooseSpellAbility}
-                  />
-
-                </div>
+                <OriginChamber
+                  draft={draft}
+                  patchDraft={patchDraft}
+                  rulesVersion={rulesVersion}
+                  backgrounds={allBackgrounds}
+                  selectedBackground={selectedBackground}
+                  variantSources={spellGrants.filter((source) => source.chamber === "origin")}
+                  spellChoices={spellChoices}
+                  accent={accent}
+                  onPickBackground={(entry) => pick("background", entry)}
+                  onToggleGrantedSpell={toggleGrantedSpell}
+                  onChooseVariant={chooseVariant}
+                  onChooseSpellAbility={chooseSpellAbility}
+                />
               )}
 
               {/* ---------- Attributes ---------- */}
