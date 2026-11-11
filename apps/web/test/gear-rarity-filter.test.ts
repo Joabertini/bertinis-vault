@@ -14,8 +14,8 @@ describe("the bag's rarity filter", () => {
     const mundane = names(["none"]);
 
     // The things the owner named when this section offered only what was searched.
-    // By prefix: the index appends the quantity or size ("Caltrops (bag of 20)").
-    for (const wanted of [/^Caltrops/, /^Bell/, /^Rope/, /^Tent/, /^Pole/]) {
+    // By word: the index writes sizes and quantities around the name.
+    for (const wanted of [/Caltrops/, /Bell/, /Rope/, /Tent/, /Pole/]) {
       expect(mundane.some((name) => wanted.test(name)), String(wanted)).toBe(true);
     }
   });
