@@ -56,6 +56,9 @@ export default defineConfig({
           // filed it under `index-data` and the landing paid for the index.
           if (path.includes("packages/contracts")) return "contracts";
           if (path.includes("packages/vetools-index")) return "index-data";
+          // three.js only serves the Codex shelf. Left to the rule below it would
+          // be folded into `vendor`, which every page downloads.
+          if (path.includes("node_modules/three/")) return "three";
           if (path.includes("node_modules")) return "vendor";
           return undefined;
         },

@@ -26,10 +26,13 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.1.1",
+    "three": "0.170.0",
     "zod": "^3.24.2",
     "zustand": "^5.0.2"
   },
   "devDependencies": {
+    "@tailwindcss/container-queries": "0.1.1",
+    "@types/three": "0.170.0",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.6",
     "@types/jsdom": "^30.0.0",

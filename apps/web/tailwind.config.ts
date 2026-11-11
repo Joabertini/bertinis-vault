@@ -1,3 +1,4 @@
+import containerQueries from "@tailwindcss/container-queries";
 import type { Config } from "tailwindcss";
 
 export default {
@@ -44,5 +45,6 @@ export default {
       },
     },
   },
-  plugins: [],
+  // The 3D shelf (components/codex/shelf) styles itself with @min-[…]/@max-[…].
+  plugins: [containerQueries],
 } satisfies Config;
