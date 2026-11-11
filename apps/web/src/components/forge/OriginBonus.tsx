@@ -53,7 +53,7 @@ export default function OriginBonus({
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-3">
-        <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
+        <span className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
           Aumento de especie
         </span>
         {custom && (
@@ -69,18 +69,18 @@ export default function OriginBonus({
         className="mb-5 flex items-start gap-3 text-left"
       >
         <span
-          className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center border text-[10px]"
+          className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center border text-[13px]"
           style={{
-            borderColor: custom ? accent : "#4A4640",
+            borderColor: custom ? accent : "#5A5A5A",
             background: custom ? accent : "transparent",
-            color: "#12100D",
+            color: "#0B0B0B",
           }}
         >
           {custom ? "✓" : ""}
         </span>
-        <span className="font-body text-xs leading-relaxed text-bone/75">
+        <span className="font-body text-sm leading-relaxed text-bone">
           Personalizacion de Origen{" "}
-          <span className="text-bone/60">
+          <span className="text-bone">
             (Tasha). Regla opcional: podes mover cada bloque entero a la caracteristica que
             quieras, pero no juntar dos en la misma. Preguntale a tu DM si la usan.
           </span>
@@ -94,7 +94,7 @@ export default function OriginBonus({
             return amount > 0 ? (
               <span
                 key={ability}
-                className="border px-3 py-1.5 font-body text-sm"
+                className="border px-3 py-1.5 font-body text-[15px]"
                 style={{ borderColor: `${accent}55`, color: accent }}
               >
                 {abilityLabels[ability]} +{amount}
@@ -108,7 +108,7 @@ export default function OriginBonus({
         <div className="space-y-4">
           {blocks.map((block, index) => (
             <div key={`${block}-${index}`}>
-              <p className="mb-1.5 font-mono text-[10px] uppercase tracking-wide text-bone/60">
+              <p className="mb-1.5 font-mono text-[13px] uppercase tracking-wide text-bone">
                 Bloque de +{block}
               </p>
               <div className="flex flex-wrap gap-1.5">
@@ -124,11 +124,11 @@ export default function OriginBonus({
                       key={ability}
                       onClick={() => place(index, ability)}
                       whileTap={{ scale: 0.97 }}
-                      className="border px-2.5 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors"
+                      className="border px-2.5 py-1.5 font-mono text-[13px] uppercase tracking-wider transition-colors"
                       style={{
-                        borderColor: mine ? accent : elsewhere ? "#4A4640" : "#3A3630",
+                        borderColor: mine ? accent : elsewhere ? "#5A5A5A" : "#3A3630",
                         background: mine ? `${accent}18` : "transparent",
-                        color: mine ? accent : elsewhere ? "rgba(230,223,206,0.45)" : "#E6DFCE",
+                        color: mine ? accent : elsewhere ? "rgba(230,223,206,0.45)" : "#FFFFFF",
                       }}
                       title={elsewhere ? "Ocupada por otro bloque — cambiarlos de lugar" : undefined}
                     >

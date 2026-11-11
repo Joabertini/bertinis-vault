@@ -196,7 +196,7 @@ function FeatCard({ name, note }: { name: string; note: FeatNote }) {
       </div>
       <div style={{ fontSize: 12, color: "#bba", lineHeight: 1.4 }}>{note.desc}</div>
       {note.tip && (
-        <div style={{ marginTop: 4, fontSize: 11, color: "#8a7a40", fontStyle: "italic" }}>
+        <div style={{ marginTop: 4, fontSize: 11, color: "#8a7a40", fontStyle: "" }}>
           💡 {note.tip}
         </div>
       )}
@@ -524,7 +524,7 @@ export default function Vision({
                     <ActionCard key={note.name} note={note} palette={palette} />
                   ))
                 ) : (
-                  <p style={{ color: "#666", fontSize: 11, fontStyle: "italic", margin: 0 }}>
+                  <p style={{ color: "#666", fontSize: 11, fontStyle: "", margin: 0 }}>
                     Sin acciones adicionales de clase.
                   </p>
                 )}

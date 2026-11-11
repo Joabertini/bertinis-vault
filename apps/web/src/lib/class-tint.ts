@@ -4,7 +4,7 @@
  * The index carries no colour — it describes rules, not mood — so the tint
  * lives here, keyed by the same slug a build stores.
  *
- * Values are chosen to hold up against the Void (#030202): the palette the
+ * Values are chosen to read at 7:1 or better against the Void (#000000): the palette the
  * first draft used was pitched for a lighter ground, and several tints
  * (a #5C4033 rogue, a #2E5FA3 wizard) went nearly black against this one.
  *
@@ -12,22 +12,22 @@
  * Vault's own colour and reads as "unmarked" rather than as a wrong guess.
  */
 
-export const VAULT_GOLD = "#B08A3E";
+export const VAULT_GOLD = "#F2C14E";
 
 const TINTS: Record<string, string> = {
-  barbarian: "#B03A2E",
+  barbarian: "#FF6A55",
   bard: "#D4A73C",
   cleric: "#DCC990",
-  druid: "#4E9C63",
-  fighter: "#98A0AC",
-  monk: "#5FA3DC",
-  paladin: "#E6DFCE",
-  ranger: "#6B8F5E",
-  rogue: "#8A6A47",
-  sorcerer: "#E25822",
-  warlock: "#9B5DE0",
-  wizard: "#4A7FC1",
-  artificer: "#7FA39B",
+  druid: "#6FD38A",
+  fighter: "#B8C2CF",
+  monk: "#6CC4FF",
+  paladin: "#FFFFFF",
+  ranger: "#9BE08F",
+  rogue: "#D9A86C",
+  sorcerer: "#FF8A4C",
+  warlock: "#C08CFF",
+  wizard: "#6FB2FF",
+  artificer: "#7FD6C4",
 };
 
 export function tintFor(classId: string): string {

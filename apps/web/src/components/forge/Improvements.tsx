@@ -243,7 +243,7 @@ function FeatAbilityPlacement({
   return (
     <div className="border-l-2 pl-4" style={{ borderLeftColor: `${accent}66` }}>
       {fixed.map((grant, index) => (
-        <p key={`fixed-${index}`} className="font-body text-sm text-bone/75">
+        <p key={`fixed-${index}`} className="font-body text-[15px] text-bone">
           Otorga{" "}
           {Object.entries(grant.bonuses)
             .map(([ability, amount]) => `+${amount} a ${abilityLabels[ability as AbilityId] ?? ability}`)
@@ -258,7 +258,7 @@ function FeatAbilityPlacement({
 
         return (
           <div key={`choice-${index}`} className="mt-4">
-            <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.3em] text-ember">
+            <p className="mb-3 font-mono text-[13px] uppercase tracking-[0.1em] text-ember">
               {placed >= grant.count
                 ? "Aumento asignado"
                 : `Falta asignar +${grant.amount} — elegi ${grant.count}`}
@@ -280,10 +280,10 @@ function FeatAbilityPlacement({
                       else next[id] = grant.amount;
                       onChange(next);
                     }}
-                    className="border px-3 py-1.5 font-display text-xs font-bold tracking-[0.2em] transition-colors disabled:cursor-not-allowed disabled:opacity-25"
+                    className="border px-3 py-1.5 font-display text-sm font-bold tracking-[0.1em] transition-colors disabled:cursor-not-allowed disabled:opacity-25"
                     style={{
                       borderColor: active ? accent : "rgba(74,70,64,0.6)",
-                      color: active ? accent : "#E6DFCE",
+                      color: active ? accent : "#FFFFFF",
                       background: active ? `${accent}12` : "transparent",
                     }}
                     title={atCap ? "Ya esta en el tope" : abilityLabels[id]}
@@ -314,7 +314,7 @@ function Tab({
   return (
     <button
       onClick={onClick}
-      className="px-5 py-2 font-mono text-[10px] uppercase tracking-[0.25em] transition-colors"
+      className="px-5 py-2 font-mono text-[13px] uppercase tracking-[0.1em] transition-colors"
       style={{
         background: active ? `${accent}18` : "transparent",
         color: active ? accent : "rgba(230,223,206,0.6)",
@@ -356,7 +356,7 @@ function FeatPrerequisiteNote({ state, featId }: { state: BuilderState; featId: 
           <p className={LABEL_MB2}>Le falta</p>
           <ul className="space-y-1">
             {unmet.map((reason) => (
-              <li key={reason} className="font-body text-sm text-ember">
+              <li key={reason} className="font-body text-[15px] text-ember">
                 {reason}
               </li>
             ))}

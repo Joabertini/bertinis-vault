@@ -78,13 +78,13 @@ export default function ShareButton({
         onClick={share}
         disabled={phase.kind === "sharing"}
         title="Publica este personaje y copia el link que lo abre"
-        className="self-start font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone disabled:text-bone/30"
+        className="self-start font-mono text-[14px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-bone disabled:text-bone/30"
       >
         {phase.kind === "done" && phase.copied ? "✓ link copiado" : label}
       </button>
 
       {phase.kind === "done" && (
-        <p className="font-mono text-[10px] tracking-[0.25em]" style={{ color: accent }}>
+        <p className="font-mono text-[13px] tracking-[0.1em]" style={{ color: accent }}>
           {phase.code}
           {!phase.copied && (
             <span className="ml-2 tracking-normal text-bone/40 normal-case">
@@ -95,7 +95,7 @@ export default function ShareButton({
       )}
 
       {phase.kind === "refused" && (
-        <p className="max-w-md font-body text-[11px] leading-relaxed text-ember/80">
+        <p className="max-w-md font-body text-[14px] leading-relaxed text-ember">
           {phase.reason}
         </p>
       )}

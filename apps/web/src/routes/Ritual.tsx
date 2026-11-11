@@ -72,7 +72,7 @@ export default function Ritual() {
     return (
       <main className="flex min-h-screen flex-col items-center justify-center gap-8 bg-void px-6 text-center">
         <GrainOverlay />
-        <p className="font-body text-xl italic text-bone/75">
+        <p className="font-body text-xl italic text-bone">
           Ningun alma esta atada a este ritual.
         </p>
         <Link to="/codex">
@@ -191,17 +191,17 @@ export default function Ritual() {
         <header className="mb-14 text-center">
           <Link
             to="/codex"
-            className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-gold"
+            className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-gold"
           >
             ← El codice
           </Link>
-          <p className="mt-6 font-mono text-[10px] tracking-[0.6em] uppercase text-gold/85">
+          <p className="mt-6 font-mono text-[13px] tracking-[0.1em] uppercase text-gold">
             Circulo de teletransportacion
           </p>
           <h1 className="mt-3 font-display text-5xl font-black tracking-wide text-bone">
             EL RITUAL
           </h1>
-          <p className="mx-auto mt-4 max-w-md font-body italic text-bone/75">
+          <p className="mx-auto mt-4 max-w-md font-body text-bone">
             Elegi un reino de destino.
           </p>
         </header>
@@ -211,7 +211,7 @@ export default function Ritual() {
           <Sigil name={state.classId || state.raceId} size={34} />
           <div className="text-left">
             <p className="font-display text-lg font-bold text-bone">{state.characterName}</p>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-bone/60">
+            <p className="font-mono text-[13px] uppercase tracking-widest text-bone">
               Nivel {characterLevelFor(state)} · {classLine || "—"} · reglas {rulesVersion}
             </p>
           </div>
@@ -241,11 +241,11 @@ export default function Ritual() {
                 <motion.p
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="mt-8 text-center font-body italic text-bone/75"
+                  className="mt-8 text-center font-body text-bone"
                 >
                   {realm.yields}.
                   {realm.status === "dormant" && (
-                    <span className="ml-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ember">
+                    <span className="ml-2 font-mono text-[13px] uppercase tracking-[0.1em] text-ember">
                       dormido
                     </span>
                   )}
@@ -281,7 +281,7 @@ export default function Ritual() {
               <SummoningCircle size={340} active={false} accent={accent} />
               <GlyphScramble
                 text={`Transmutando ${state.characterName} hacia ${realm?.name ?? ""}`}
-                className="text-xs tracking-[0.25em] text-ember"
+                className="text-sm tracking-[0.1em] text-ember"
               />
               <div className="h-px w-64 bg-iron">
                 <motion.div
@@ -289,7 +289,7 @@ export default function Ritual() {
                   animate={{ width: "100%" }}
                   transition={{ duration: 2.4, ease: "easeInOut" }}
                   className="h-full"
-                  style={{ background: "#FF5A1F", boxShadow: "0 0 10px #FF5A1F" }}
+                  style={{ background: "#FF7043", boxShadow: "0 0 10px #FF7043" }}
                 />
               </div>
             </motion.div>
@@ -315,7 +315,7 @@ export default function Ritual() {
                 </p>
                 <GlyphScramble
                   text={`${state.characterName} llego a ${realm?.name ?? ""}.`}
-                  className="mt-3 block text-xs tracking-[0.2em] text-gold"
+                  className="mt-3 block text-sm tracking-[0.1em] text-gold"
                 />
               </motion.div>
 
@@ -327,7 +327,7 @@ export default function Ritual() {
                   transition={{ delay: 0.7 }}
                   className="w-full max-w-md"
                 >
-                  <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-bone/60">
+                  <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                     Pega esto en el modulo
                   </p>
 
@@ -337,21 +337,21 @@ export default function Ritual() {
                     style={{ boxShadow: "0 0 40px rgba(176,138,62,0.12)" }}
                     title="Copiar codigo"
                   >
-                    <span className="block select-all font-mono text-3xl font-bold tracking-[0.35em] text-gold">
+                    <span className="block select-all font-mono text-3xl font-bold tracking-[0.1em] text-gold">
                       {phase.code}
                     </span>
-                    <span className="mt-3 block font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors group-hover:text-bone/60">
+                    <span className="mt-3 block font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors group-hover:text-bone">
                       {copied ? "✓ copiado" : "click para copiar"}
                     </span>
                   </button>
 
-                  <p className="mt-4 font-body text-sm leading-relaxed text-bone/60">
+                  <p className="mt-4 font-body text-[15px] leading-relaxed text-bone">
                     En Foundry, abri el modulo del Faro del Alba y escribi el codigo.
                   </p>
 
                   {/* The same code, as a link. A DM asked to look at a build
                       should not have to be told where to type ten characters. */}
-                  <p className="mt-6 font-mono text-[10px] uppercase tracking-[0.4em] text-bone/60">
+                  <p className="mt-6 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                     O pasaselo a alguien
                   </p>
                   <button
@@ -359,14 +359,14 @@ export default function Ritual() {
                     className="mt-3 w-full border border-bone/20 bg-ash/60 px-4 py-3 text-left transition-colors hover:border-gold/60"
                     title="Copiar enlace"
                   >
-                    <span className="block break-all font-mono text-xs text-bone/60">
+                    <span className="block break-all font-mono text-sm text-bone">
                       {shareLinkFor(phase.code)}
                     </span>
-                    <span className="mt-2 block font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60">
+                    <span className="mt-2 block font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                       {linkCopied ? "✓ copiado" : "click para copiar"}
                     </span>
                   </button>
-                  <p className="mt-3 font-body text-sm leading-relaxed text-bone/60">
+                  <p className="mt-3 font-body text-[15px] leading-relaxed text-bone">
                     Quien lo abra ve el tomo y puede quedarse una copia para editar. Su copia
                     es suya: no toca este personaje.
                   </p>
@@ -376,7 +376,7 @@ export default function Ritual() {
               <div className="mt-2 flex flex-wrap justify-center gap-6">
                 <button
                   onClick={reset}
-                  className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 hover:text-bone"
+                  className="font-mono text-[14px] uppercase tracking-[0.1em] text-bone hover:text-bone"
                 >
                   ↻ Lanzar de nuevo
                 </button>
@@ -403,7 +403,7 @@ export default function Ritual() {
                 <p className="font-display text-2xl font-black text-bone">
                   El circulo no se abrio
                 </p>
-                <p className="mt-4 font-body italic leading-relaxed text-bone/75">
+                <p className="mt-4 font-body leading-relaxed text-bone">
                   {phase.reason}
                 </p>
               </div>
@@ -411,7 +411,7 @@ export default function Ritual() {
               <div className="flex flex-wrap justify-center gap-6">
                 <button
                   onClick={reset}
-                  className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 hover:text-bone"
+                  className="font-mono text-[14px] uppercase tracking-[0.1em] text-bone hover:text-bone"
                 >
                   ← Elegir otro reino
                 </button>
@@ -448,7 +448,7 @@ function Unresolved({ problems }: { problems: string[] }) {
     <div className="mx-auto mt-6 max-w-xl">
       <button
         onClick={() => setOpen((value) => !value)}
-        className="mx-auto flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ember transition-colors hover:text-ember"
+        className="mx-auto flex items-center gap-2 font-mono text-[13px] uppercase tracking-[0.1em] text-ember transition-colors hover:text-ember"
         aria-expanded={open}
       >
         <span>
@@ -468,13 +468,13 @@ function Unresolved({ problems }: { problems: string[] }) {
             {problems.map((problem) => (
               <li
                 key={problem}
-                className="mt-3 border-l-2 pl-4 font-body text-sm leading-relaxed text-bone/75"
+                className="mt-3 border-l-2 pl-4 font-body text-[15px] leading-relaxed text-bone"
                 style={{ borderColor: "rgba(200, 80, 40, 0.5)" }}
               >
                 {problem}
               </li>
             ))}
-            <li className="mt-5 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">
+            <li className="mt-5 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
               El resto del personaje cruza igual
             </li>
           </motion.ul>
@@ -504,7 +504,7 @@ function PortalRune({
       whileTap={{ scale: 0.96 }}
       className="group relative flex aspect-square flex-col items-center justify-center gap-3 border p-4 text-center transition-all duration-500"
       style={{
-        borderColor: selected ? "#FF5A1F99" : "rgba(74,70,64,0.4)",
+        borderColor: selected ? "#FF704399" : "rgba(74,70,64,0.4)",
         background: selected ? "rgba(110,15,15,0.12)" : "rgba(18,16,13,0.8)",
         boxShadow: selected
           ? "0 0 30px rgba(255,90,31,0.15), inset 0 0 20px rgba(255,90,31,0.08)"
@@ -517,16 +517,16 @@ function PortalRune({
         animate={{ rotate: 360 }}
         transition={{ duration: selected ? 8 : 30, repeat: Infinity, ease: "linear" }}
         className="pointer-events-none absolute inset-1 border border-dashed"
-        style={{ borderColor: selected ? "#FF5A1F55" : "rgba(74,70,64,0.27)" }}
+        style={{ borderColor: selected ? "#FF704355" : "rgba(74,70,64,0.27)" }}
       />
 
       {/* the eye — hollow while the realm sleeps */}
       <span
         className="relative block h-8 w-8 rounded-full border transition-all duration-500"
         style={{
-          borderColor: selected ? "#FF5A1F" : dormant ? "#4A4640" : "#8a857c",
+          borderColor: selected ? "#FF7043" : dormant ? "#5A5A5A" : "#8a857c",
           boxShadow: selected
-            ? "0 0 16px #FF5A1F66, inset 0 0 10px #FF5A1F44"
+            ? "0 0 16px #FF704366, inset 0 0 10px #FF704344"
             : "inset 0 0 6px rgba(0,0,0,0.6)",
           background: selected
             ? "radial-gradient(circle, rgba(255,90,31,0.5), transparent 70%)"
@@ -537,14 +537,14 @@ function PortalRune({
       />
 
       <span
-        className="relative px-1 font-mono text-[10px] uppercase leading-relaxed tracking-[0.15em]"
-        style={{ color: selected ? "#E6DFCE" : "rgba(230,223,206,0.6)" }}
+        className="relative px-1 font-mono text-[13px] uppercase leading-relaxed tracking-[0.06em]"
+        style={{ color: selected ? "#FFFFFF" : "rgba(230,223,206,0.6)" }}
       >
         {realm.name}
       </span>
 
       {dormant && (
-        <span className="absolute bottom-2 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">
+        <span className="absolute bottom-2 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
           dormido
         </span>
       )}

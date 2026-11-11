@@ -103,26 +103,26 @@ function Row({
         {/* One dot trained, two doubled. Quieter than a word and readable in
             the same glance that reads the number. */}
         <span
-          className="font-mono text-[10px] leading-none"
+          className="font-mono text-[13px] leading-none"
           style={{ color: check.proficient ? accent : "transparent" }}
           title={check.expert ? "Maestria" : check.proficient ? "Competente" : ""}
         >
           {check.expert ? "••" : "•"}
         </span>
         <span
-          className="truncate font-body text-xs"
+          className="truncate font-body text-sm"
           style={{ color: check.proficient ? undefined : "rgb(245 240 230 / 0.35)" }}
         >
           {label}
         </span>
         {ability && (
-          <span className="font-mono text-[10px] uppercase tracking-wide text-bone/60">
+          <span className="font-mono text-[13px] uppercase tracking-wide text-bone">
             {ability}
           </span>
         )}
       </span>
       <span
-        className="shrink-0 font-mono text-xs tabular-nums"
+        className="shrink-0 font-mono text-sm tabular-nums"
         style={{ color: check.proficient ? accent : "rgb(245 240 230 / 0.4)" }}
       >
         {signed(check.modifier)}

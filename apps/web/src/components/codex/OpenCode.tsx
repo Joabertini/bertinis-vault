@@ -24,10 +24,10 @@ export default function OpenCode() {
   return (
     <div className="mb-10 flex flex-wrap items-end gap-4 border border-iron/40 bg-ash/40 px-6 py-5">
       <div>
-        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-gold/85">
+        <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-gold">
           Abrir un tomo prestado
         </p>
-        <p className="mt-1 font-body text-sm text-bone/60">
+        <p className="mt-1 font-body text-[15px] text-bone">
           Pega el codigo que te pasaron. Podes quedarte una copia y editarla.
         </p>
       </div>
@@ -41,12 +41,12 @@ export default function OpenCode() {
           }}
           placeholder="ABCDE-12345"
           aria-label="Codigo del tomo"
-          className="w-48 border-b border-iron bg-transparent pb-2 font-mono text-sm uppercase tracking-[0.2em] text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
+          className="w-48 border-b border-iron bg-transparent pb-2 font-mono text-[15px] uppercase tracking-[0.1em] text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
         />
         <button
           onClick={open}
           disabled={code.trim() === ""}
-          className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold transition-colors hover:text-ember disabled:text-bone/30"
+          className="font-mono text-[14px] uppercase tracking-[0.1em] text-gold transition-colors hover:text-ember disabled:text-bone/30"
         >
           Abrir →
         </button>

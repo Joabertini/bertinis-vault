@@ -69,7 +69,7 @@ export default function StatRune({
     <div className="grid gap-8 lg:grid-cols-2">
       {/* ---- the loose scores ---- */}
       <div>
-        <p className="mb-4 font-mono text-[10px] tracking-[0.4em] uppercase text-bone/60">
+        <p className="mb-4 font-mono text-[13px] tracking-[0.1em] uppercase text-bone">
           Puntajes sueltos
         </p>
         <div className="flex flex-wrap gap-4">
@@ -86,14 +86,14 @@ export default function StatRune({
                   ? { borderColor: accent, boxShadow: `0 0 22px ${accent}66` }
                   : { borderColor: "rgba(176,138,62,0.5)", boxShadow: "0 0 16px rgba(176,138,62,0.15)" }
               }
-              className="flex h-14 w-14 select-none items-center justify-center border bg-ash font-display text-xl font-bold text-gold"
+              className="flex h-14 w-14 select-none items-center justify-center border bg-ash font-num text-xl font-bold text-gold"
             >
               {value}
             </motion.button>
           ))}
 
           {pool.length === 0 && (
-            <p className="font-body italic text-bone/75">
+            <p className="font-body text-bone">
               {bound.size === ABILITY_IDS.length
                 ? "Todo ligado. Las aptitudes tienen nombre."
                 : "Todavia no hay puntajes que repartir."}
@@ -102,7 +102,7 @@ export default function StatRune({
         </div>
 
         {pool.length > 0 && (
-          <p className="mt-4 font-body text-[13px] text-bone/60">
+          <p className="mt-4 font-body text-[15px] text-bone">
             {heldValue !== undefined ? (
               <>
                 Tenes el <span style={{ color: accent }}>{heldValue}</span> en la mano. Toca la
@@ -117,7 +117,7 @@ export default function StatRune({
 
       {/* ---- the slots ---- */}
       <div className="space-y-3">
-        <p className="mb-4 font-mono text-[10px] tracking-[0.4em] uppercase text-bone/60">
+        <p className="mb-4 font-mono text-[13px] tracking-[0.1em] uppercase text-bone">
           Ranuras de ligadura
         </p>
         {ABILITY_IDS.map((ability) => {
@@ -148,7 +148,7 @@ export default function StatRune({
               }
             >
               <div className="flex items-baseline gap-3">
-                <span className="font-display text-sm font-semibold tracking-[0.3em] text-bone/80">
+                <span className="font-display text-[15px] font-semibold tracking-[0.1em] text-bone">
                   {ability.toUpperCase()}
                 </span>
                 <span className={WHISPER}>
@@ -158,7 +158,7 @@ export default function StatRune({
 
               <div className="flex items-baseline gap-3">
                 {isBound && (
-                  <span className="font-mono text-[10px] text-bone/60">
+                  <span className="font-mono text-[13px] text-bone">
                     {modifierOf(score) >= 0 ? `+${modifierOf(score)}` : modifierOf(score)}
                   </span>
                 )}
@@ -167,8 +167,8 @@ export default function StatRune({
                   initial={isBound ? { scale: 1.6, filter: "brightness(3)" } : false}
                   animate={{ scale: 1, filter: "brightness(1)" }}
                   transition={{ duration: 0.4 }}
-                  className="w-8 text-right font-display text-2xl font-black"
-                  style={{ color: isBound ? accent : "#4A4640" }}
+                  className="w-8 text-right font-num text-2xl font-black"
+                  style={{ color: isBound ? accent : "#5A5A5A" }}
                 >
                   {isBound ? score : "—"}
                 </motion.span>

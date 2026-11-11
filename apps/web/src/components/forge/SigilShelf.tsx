@@ -108,10 +108,10 @@ export default function SigilShelf({
           onChange={(event) => setQuery(event.target.value)}
           placeholder={placeholder}
           aria-label={label}
-          className="w-full border-b border-iron bg-transparent pb-2.5 pl-8 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
+          className="w-full border-b border-iron bg-transparent pb-2.5 pl-8 font-body text-base text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
         />
         <svg
-          className="absolute left-0 top-1 h-4 w-4 text-gold/85"
+          className="absolute left-0 top-1 h-4 w-4 text-gold"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
@@ -124,20 +124,20 @@ export default function SigilShelf({
       </div>
 
       <div className="mt-3 flex items-baseline justify-between gap-4">
-        <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60">
+        <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
           {shown.length === entries.length
             ? `${entries.length} en total`
             : `${shown.length} de ${entries.length}`}
         </p>
         {selectionHidden && selected && (
-          <p className="font-body text-[13px] text-bone/60">
+          <p className="font-body text-[15px] text-bone">
             Elegido: <span style={{ color: accent }}>{selected.label}</span>
           </p>
         )}
       </div>
 
       {shown.length === 0 ? (
-        <p className="mt-6 font-body text-sm text-bone/60">
+        <p className="mt-6 font-body text-[15px] text-bone">
           Nada con ese nombre en esta edicion.
         </p>
       ) : (
@@ -148,7 +148,7 @@ export default function SigilShelf({
           {grouped.map(({ heading, items }) => (
             <div key={heading ?? "main"} className={heading ? "mt-8" : ""}>
               {heading && (
-                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.35em] text-bone/45">
+                <p className="mb-3 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                   {heading}
                 </p>
               )}

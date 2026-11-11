@@ -182,7 +182,7 @@ export function characterSheetHtml(build: CharacterBuild): string {
          max-width: 760px; margin: 0 auto; padding: 40px 32px; }
   h1 { font-variant: small-caps; letter-spacing:.12em; margin:0 0 4px;
        border-bottom: 3px double #6E0F0F; padding-bottom: 10px; font-size: 30px; }
-  .meta { color:#5a4a30; font-style: italic; margin: 8px 0 28px; }
+  .meta { color:#5a4a30; font-style: ; margin: 8px 0 28px; }
   .grid { display:flex; gap:28px; align-items:flex-start; }
   .grid > * { flex:1; }
   h2 { font-variant: small-caps; letter-spacing:.1em; font-size:15px; color:#6E0F0F;

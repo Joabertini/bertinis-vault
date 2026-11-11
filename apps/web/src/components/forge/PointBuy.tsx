@@ -70,7 +70,7 @@ export default function PointBuy({
       {buying ? (
       <div className="mb-6 flex items-baseline justify-between border-b border-iron/40 pb-4">
         <div className="flex items-center gap-3">
-          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-bone/75">
+          <p className="font-mono text-[14px] uppercase tracking-[0.1em] text-bone">
             Puntos sin gastar
           </p>
           <RuleNote title="Compra de puntos">
@@ -83,17 +83,17 @@ export default function PointBuy({
             </p>
           </RuleNote>
         </div>
-        <p className="font-display text-3xl font-black" style={{ color: left < 0 ? "#C85028" : accent }}>
+        <p className="font-num text-3xl font-black" style={{ color: left < 0 ? "#C85028" : accent }}>
           {left}
-          <span className="ml-1 font-mono text-xs font-normal text-bone/60">/ {POINT_BUY_BUDGET}</span>
+          <span className="ml-1 font-mono text-sm font-normal text-bone">/ {POINT_BUY_BUDGET}</span>
         </p>
       </div>
       ) : (
         <div className="mb-6 border-b border-iron/40 pb-4">
-          <p className="font-mono text-[11px] uppercase tracking-[0.25em] text-bone/75">
+          <p className="font-mono text-[14px] uppercase tracking-[0.1em] text-bone">
             Los seis numeros
           </p>
-          <p className="mt-1 font-body text-[13px] text-bone/60">
+          <p className="mt-1 font-body text-[15px] text-bone">
             Sin presupuesto y sin tope de 15. Escribi lo que tu mesa acordo.
           </p>
         </div>
@@ -124,10 +124,10 @@ export default function PointBuy({
               className="flex items-center gap-4 border border-iron/40 bg-ash/60 px-4 py-2.5"
             >
               <div className="w-28 shrink-0">
-                <p className="font-display text-sm font-semibold tracking-[0.25em] text-bone/80">
+                <p className="font-display text-[15px] font-semibold tracking-[0.1em] text-bone">
                   {ability.toUpperCase()}
                 </p>
-                <p className="font-body text-[11px] text-bone/60">{abilityLabels[ability]}</p>
+                <p className="font-body text-[14px] text-bone">{abilityLabels[ability]}</p>
               </div>
 
               <Step label="−" enabled={down} onClick={() => onChange(ability, score - 1)} />
@@ -136,7 +136,7 @@ export default function PointBuy({
                 key={score}
                 initial={{ scale: 1.3 }}
                 animate={{ scale: 1 }}
-                className="w-8 text-center font-display text-2xl font-black"
+                className="w-8 text-center font-num text-2xl font-black"
                 style={{ color: accent }}
               >
                 {score}
@@ -158,10 +158,10 @@ export default function PointBuy({
 
               <div className="ml-auto flex items-baseline gap-3 text-right">
                 {bonus > 0 && (
-                  <span className="font-mono text-[10px] text-ember">+{bonus} de especie</span>
+                  <span className="font-mono text-[13px] text-ember">+{bonus} de especie</span>
                 )}
-                <span className="w-8 font-display text-lg font-bold text-bone/70">{final}</span>
-                <span className="w-7 font-mono text-[10px] text-bone/60">
+                <span className="w-8 font-num text-lg font-bold text-bone">{final}</span>
+                <span className="w-7 font-mono text-[13px] text-bone">
                   {signed(modifierOf(final))}
                 </span>
               </div>
@@ -191,12 +191,12 @@ function Step({
       <button
         onClick={onClick}
         disabled={!enabled}
-        className="h-8 w-8 border border-iron/60 bg-void/50 font-display text-lg leading-none text-bone/70 transition-colors hover:border-gold hover:text-gold disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:border-iron/60 disabled:hover:text-bone/70"
+        className="h-8 w-8 border border-iron/60 bg-void/50 font-display text-lg leading-none text-bone transition-colors hover:border-gold hover:text-gold disabled:cursor-not-allowed disabled:opacity-25 disabled:hover:border-iron/60 disabled:hover:text-bone"
         aria-label={label === "+" ? "Subir" : "Bajar"}
       >
         {label}
       </button>
-      {note && <span className="mt-1 font-mono text-[10px] text-bone/60">{note}</span>}
+      {note && <span className="mt-1 font-mono text-[13px] text-bone">{note}</span>}
     </div>
   );
 }

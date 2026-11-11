@@ -81,18 +81,18 @@ export default function PickList({
               title={isLocked ? "Ya otorgado" : undefined}
             >
               <span
-                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center border text-[10px]"
+                className="flex h-3.5 w-3.5 shrink-0 items-center justify-center border text-[13px]"
                 style={{
-                  borderColor: isChosen || isLocked ? accent : "#4A4640",
+                  borderColor: isChosen || isLocked ? accent : "#5A5A5A",
                   background: isLocked ? accent : "transparent",
-                  color: "#12100D",
+                  color: "#0B0B0B",
                 }}
               >
                 {isLocked ? "✓" : isChosen ? <span style={{ color: accent }}>✦</span> : ""}
               </span>
               <span
-                className="truncate font-body text-sm"
-                style={{ color: isChosen ? accent : isLocked ? "rgba(230,223,206,0.75)" : "#E6DFCE" }}
+                className="truncate font-body text-[15px]"
+                style={{ color: isChosen ? accent : isLocked ? "rgba(230,223,206,0.75)" : "#FFFFFF" }}
               >
                 {option}
               </span>

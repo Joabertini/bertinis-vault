@@ -27,7 +27,7 @@ import { motion, useDragControls } from "framer-motion";
 export default function FloatingWindow({
   title,
   subtitle,
-  accent = "#B08A3E",
+  accent = "#F2C14E",
   width = 880,
   onClose,
   children,
@@ -77,7 +77,7 @@ export default function FloatingWindow({
           borderColor: `${accent}55`,
           boxShadow: `0 30px 90px rgba(0,0,0,0.75), inset 0 0 60px ${accent}08`,
         }}
-        className="pointer-events-auto flex h-full w-full flex-col border bg-[#0c0a08] md:h-auto md:max-h-[86vh] md:w-auto md:resize md:overflow-auto"
+        className="pointer-events-auto flex h-full w-full flex-col border bg-[#000000] md:h-auto md:max-h-[86vh] md:w-auto md:resize md:overflow-auto"
       >
         <div
           onPointerDown={(event) => {
@@ -89,9 +89,9 @@ export default function FloatingWindow({
           className="flex shrink-0 select-none items-center gap-4 border-b px-4 py-2.5 md:cursor-grab md:active:cursor-grabbing"
         >
           <div className="min-w-0 flex-1">
-            <p className="truncate font-display text-sm font-bold text-bone">{title}</p>
+            <p className="truncate font-display text-[15px] font-bold text-bone">{title}</p>
             {subtitle && (
-              <p className="truncate font-mono text-[10px] tracking-[0.2em] text-bone/60">
+              <p className="truncate font-mono text-[13px] tracking-[0.1em] text-bone">
                 {subtitle}
               </p>
             )}
@@ -100,7 +100,7 @@ export default function FloatingWindow({
           <button
             onClick={onClose}
             aria-label="Cerrar"
-            className="shrink-0 px-2 font-mono text-sm text-bone/60 transition-colors hover:text-ember"
+            className="shrink-0 px-2 font-mono text-[15px] text-bone transition-colors hover:text-ember"
           >
             ✕
           </button>

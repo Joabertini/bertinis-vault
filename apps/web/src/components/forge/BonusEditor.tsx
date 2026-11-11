@@ -76,12 +76,12 @@ export default function BonusEditor({
   return (
     <div>
       <div className="mb-4 flex items-baseline justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
+        <span className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
           Puntos
         </span>
         <span
           className={META}
-          style={{ color: left === 0 ? accent : "#FF5A1F" }}
+          style={{ color: left === 0 ? accent : "#FF7043" }}
         >
           {spent} / {budget}
         </span>
@@ -107,12 +107,12 @@ export default function BonusEditor({
             >
               <div className="min-w-0">
                 <p
-                  className="font-display text-xs font-bold tracking-[0.25em]"
-                  style={{ color: amount > 0 ? accent : "#E6DFCE" }}
+                  className="font-display text-sm font-bold tracking-[0.1em]"
+                  style={{ color: amount > 0 ? accent : "#FFFFFF" }}
                 >
                   {ability.toUpperCase()}
                 </p>
-                <p className="truncate font-mono text-[10px] text-bone/60">
+                <p className="truncate font-mono text-[13px] text-bone">
                   {before}
                   {amount > 0 && (
                     <>
@@ -131,8 +131,8 @@ export default function BonusEditor({
                   key={amount}
                   initial={{ scale: 1.4 }}
                   animate={{ scale: 1 }}
-                  className="w-5 text-center font-display text-sm font-bold"
-                  style={{ color: amount > 0 ? accent : "#4A4640" }}
+                  className="w-5 text-center font-num text-[15px] font-bold"
+                  style={{ color: amount > 0 ? accent : "#5A5A5A" }}
                 >
                   {amount > 0 ? `+${amount}` : "—"}
                 </motion.span>
@@ -163,7 +163,7 @@ function Stepper({
     <button
       onClick={onClick}
       disabled={disabled}
-      className="h-6 w-6 border border-iron/70 font-mono text-xs text-bone/70 transition-colors hover:border-gold hover:text-gold disabled:cursor-not-allowed disabled:opacity-20 disabled:hover:border-iron/70 disabled:hover:text-bone/70"
+      className="h-6 w-6 border border-iron/70 font-mono text-sm text-bone transition-colors hover:border-gold hover:text-gold disabled:cursor-not-allowed disabled:opacity-20 disabled:hover:border-iron/70 disabled:hover:text-bone"
       aria-label={label === "+" ? "Sumar" : "Restar"}
     >
       {label}

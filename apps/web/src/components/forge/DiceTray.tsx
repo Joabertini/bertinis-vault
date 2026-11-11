@@ -70,13 +70,13 @@ export default function DiceTray({
         />
       )}
 
-      <div className="border border-[#4A4640]/60 bg-[#12100D]/80 p-8 backdrop-blur-sm">
+      <div className="border border-[#5A5A5A]/60 bg-[#0B0B0B]/80 p-8 backdrop-blur-sm">
         <div className="mb-6 flex items-center justify-between">
-          <p className="font-mono text-[10px] tracking-[0.4em] uppercase text-gold">
+          <p className="font-mono text-[13px] tracking-[0.1em] uppercase text-gold">
             Rito de aptitudes
           </p>
           <div className="flex items-center gap-3">
-            <p className="font-mono text-[10px] tracking-widest uppercase text-bone/75">
+            <p className="font-mono text-[13px] tracking-widest uppercase text-bone">
               4d6 · descarta el menor
             </p>
             <RuleNote title="La suma de modificadores">
@@ -104,16 +104,16 @@ export default function DiceTray({
                 }
                 transition={{ duration: 0.85, ease: [0.34, 1.56, 0.64, 1], delay: i * 0.04 }}
                 style={{ transformStyle: "preserve-3d" }}
-                className={`flex h-16 w-16 items-center justify-center border font-display text-2xl font-bold ${
+                className={`flex h-16 w-16 items-center justify-center border font-num text-2xl font-bold ${
                   rolling || !rolls[i]
-                    ? "border-[#4A4640] text-transparent"
-                    : "border-[#B08A3E]/70 bg-[#B08A3E]/[0.06] text-[#B08A3E]"
+                    ? "border-[#5A5A5A] text-transparent"
+                    : "border-[#F2C14E]/70 bg-[#F2C14E]/[0.06] text-[#F2C14E]"
                 }`}
               >
                 {!rolling && rolls[i] ? rolls[i] : ""}
                 {/* corner notches */}
-                <span className={`absolute left-0 top-0 h-2 w-2 border-l border-t ${rolling ? "border-[#4A4640]" : "border-[#B08A3E]"}`} />
-                <span className={`absolute right-0 bottom-0 h-2 w-2 border-b border-r ${rolling ? "border-[#4A4640]" : "border-[#B08A3E]"}`} />
+                <span className={`absolute left-0 top-0 h-2 w-2 border-l border-t ${rolling ? "border-[#5A5A5A]" : "border-[#F2C14E]"}`} />
+                <span className={`absolute right-0 bottom-0 h-2 w-2 border-b border-r ${rolling ? "border-[#5A5A5A]" : "border-[#F2C14E]"}`} />
               </motion.div>
             </div>
           ))}
@@ -122,11 +122,11 @@ export default function DiceTray({
         <button
           onClick={roll}
           disabled={rolling || left <= 0}
-          className="group relative mt-8 w-full overflow-hidden border border-[#6E0F0F]/70 bg-[#6E0F0F]/15 py-4 font-display text-xs font-semibold uppercase tracking-[0.35em] text-[#E6DFCE] transition-all hover:bg-[#6E0F0F]/40 disabled:cursor-not-allowed disabled:opacity-40"
+          className="group relative mt-8 w-full overflow-hidden border border-[#6E0F0F]/70 bg-[#6E0F0F]/15 py-4 font-display text-sm font-semibold uppercase tracking-[0.1em] text-[#FFFFFF] transition-all hover:bg-[#6E0F0F]/40 disabled:cursor-not-allowed disabled:opacity-40"
         >
           <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.07] to-transparent transition-transform duration-700 group-hover:translate-x-full" />
           {rolling ? (
-            <span className="font-mono tracking-[0.3em]">los huesos ruedan…</span>
+            <span className="font-mono tracking-[0.1em]">los huesos ruedan…</span>
           ) : left > 0 ? (
             `Tirar los huesos · ${left} ${left === 1 ? "tirada" : "tiradas"}`
           ) : (
@@ -140,9 +140,9 @@ export default function DiceTray({
             <motion.div
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mt-8 border-t border-[#4A4640]/50 pt-6"
+              className="mt-8 border-t border-[#5A5A5A]/50 pt-6"
             >
-              <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
+              <p className="mb-4 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                 Elegi una
               </p>
 
@@ -153,9 +153,9 @@ export default function DiceTray({
                     <button
                       key={index}
                       onClick={() => onKeep(index)}
-                      className="flex w-full items-center gap-4 border border-[#4A4640]/50 bg-[#12100D]/60 px-4 py-3 text-left transition-colors hover:border-[#B08A3E]"
+                      className="flex w-full items-center gap-4 border border-[#5A5A5A]/50 bg-[#0B0B0B]/60 px-4 py-3 text-left transition-colors hover:border-[#F2C14E]"
                     >
-                      <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">
+                      <span className="w-16 shrink-0 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                         Tirada {index + 1}
                       </span>
 
@@ -165,7 +165,7 @@ export default function DiceTray({
                           .map((score, position) => (
                             <span
                               key={`${score}-${position}`}
-                              className="flex h-8 w-8 items-center justify-center border border-[#4A4640] font-display text-sm font-bold"
+                              className="flex h-8 w-8 items-center justify-center border border-[#5A5A5A] font-num text-[15px] font-bold"
                               style={{ color: accent }}
                             >
                               {score}
@@ -173,7 +173,7 @@ export default function DiceTray({
                           ))}
                       </span>
 
-                      <span className="ml-auto shrink-0 text-right font-mono text-[10px] text-bone/75">
+                      <span className="ml-auto shrink-0 text-right font-mono text-[13px] text-bone">
                         modificadores {worth >= 0 ? `+${worth}` : worth}
                       </span>
                     </button>

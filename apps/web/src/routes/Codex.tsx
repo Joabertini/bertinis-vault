@@ -54,11 +54,11 @@ export default function Codex() {
         <header className="mb-4">
           <Link
             to="/"
-            className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-gold"
+            className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-gold"
           >
             ← El umbral
           </Link>
-          <p className="mt-6 font-mono text-[10px] tracking-[0.6em] uppercase text-gold/85">
+          <p className="mt-6 font-mono text-[13px] tracking-[0.1em] uppercase text-gold">
             El archivo de abajo
           </p>
           <div className="mt-3 flex flex-wrap items-end justify-between gap-6">
@@ -70,7 +70,7 @@ export default function Codex() {
         </header>
 
         <div className="mb-14 flex flex-wrap items-end justify-between gap-6 border-b border-iron/40 pb-8">
-          <p className="max-w-md font-body text-lg italic leading-relaxed text-bone/75">
+          <p className="max-w-md font-body text-lg italic leading-relaxed text-bone">
             {characters.length === 0
               ? "Los estantes estan vacios."
               : `${characters.length} ${characters.length === 1 ? "alma" : "almas"} en pena entre tus estantes.`}
@@ -83,10 +83,10 @@ export default function Codex() {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Buscar por nombre…"
                 aria-label="Buscar personaje"
-                className="w-56 border-b border-iron bg-transparent pb-2 pl-8 font-body text-sm text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
+                className="w-56 border-b border-iron bg-transparent pb-2 pl-8 font-body text-[15px] text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
               />
               <svg
-                className="absolute left-0 top-0 h-4 w-4 text-gold/85"
+                className="absolute left-0 top-0 h-4 w-4 text-gold"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
@@ -115,7 +115,7 @@ export default function Codex() {
         {characters.length === 0 ? (
           <EmptyState />
         ) : filtered.length === 0 ? (
-          <p className="py-24 text-center font-body text-xl italic text-bone/75">
+          <p className="py-24 text-center font-body text-xl italic text-bone">
             Ningun tomo con ese nombre.
           </p>
         ) : (
@@ -141,7 +141,7 @@ export default function Codex() {
                 ))}
               </AnimatePresence>
             </div>
-            <div className="mt-[-8px] h-3 w-full bg-gradient-to-b from-[#2a2118] via-[#1a140e] to-[#0c0a08] shadow-[0_10px_30px_rgba(0,0,0,0.7)]" />
+            <div className="mt-[-8px] h-3 w-full bg-gradient-to-b from-[#2a2118] via-[#1a140e] to-[#000000] shadow-[0_10px_30px_rgba(0,0,0,0.7)]" />
           </>
         )}
       </div>
@@ -169,7 +169,7 @@ function EmptyState() {
         <path d="M48 8C34 14 20 30 14 46l-4 10 10-4C36 46 50 30 56 16z" />
         <path d="M20 42l14-14M26 48l14-14" strokeWidth="1" />
       </svg>
-      <p className="mt-8 font-display text-2xl font-bold text-bone/80">
+      <p className="mt-8 font-display text-2xl font-bold text-bone">
         Tu codice espera a su primer heroe.
       </p>
       <Link to="/" className="mt-10 inline-block">

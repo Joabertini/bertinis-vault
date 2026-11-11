@@ -42,18 +42,18 @@ export default function SigilCard({
       }`}
       style={{
         borderColor: active ? `${accent}99` : "rgba(74,70,64,0.4)",
-        background: active ? `linear-gradient(160deg, ${accent}14, #12100D)` : "rgba(18,16,13,0.8)",
+        background: active ? `linear-gradient(160deg, ${accent}14, #0B0B0B)` : "rgba(18,16,13,0.8)",
         boxShadow: active ? `0 0 32px ${accent}26, inset 0 0 24px ${accent}0f` : "none",
       }}
     >
       {/* corner marks */}
       <span
         className="absolute left-1.5 top-1.5 h-2.5 w-2.5 border-l border-t transition-colors"
-        style={{ borderColor: active ? accent : "#4A4640" }}
+        style={{ borderColor: active ? accent : "#5A5A5A" }}
       />
       <span
         className="absolute bottom-1.5 right-1.5 h-2.5 w-2.5 border-b border-r transition-colors"
-        style={{ borderColor: active ? accent : "#4A4640" }}
+        style={{ borderColor: active ? accent : "#5A5A5A" }}
       />
 
       <div
@@ -65,17 +65,17 @@ export default function SigilCard({
 
       <p
         className={`font-display font-bold uppercase ${
-          compact ? "mt-2 text-[11px] leading-tight tracking-[0.12em]" : "mt-4 text-sm tracking-[0.2em]"
+          compact ? "mt-2 text-[14px] leading-tight tracking-[0.06em]" : "mt-4 text-[15px] tracking-[0.1em]"
         }`}
-        style={{ color: active ? accent : "#E6DFCE" }}
+        style={{ color: active ? accent : "#FFFFFF" }}
       >
         {label}
       </p>
 
       {note && (
         <p
-          className={`font-body italic leading-snug text-bone/60 ${
-            compact ? "mt-0.5 text-[10px]" : "mt-1.5 text-sm"
+          className={`font-body leading-snug text-bone ${
+            compact ? "mt-0.5 text-[13px]" : "mt-1.5 text-[15px]"
           }`}
         >
           {note}

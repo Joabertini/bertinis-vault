@@ -195,22 +195,22 @@ export default function LiveSheet({
       {/* ---- identity ---- */}
       <div className="flex items-start justify-between gap-4 border-b border-iron/50 pb-5">
         <div className="min-w-0">
-          <p className="font-mono text-[10px] tracking-[0.5em] uppercase text-bone/60">
+          <p className="font-mono text-[13px] tracking-[0.1em] uppercase text-bone">
             Living Record
           </p>
           <h3 className="mt-2 truncate font-display text-xl font-black text-bone">
             {state.characterName.trim() || "El Innombrado"}
           </h3>
-          <p className="mt-1 font-body text-sm leading-snug text-bone/75">
+          <p className="mt-1 font-body text-[15px] leading-snug text-bone">
             Nivel {characterLevelFor(state)} · {race?.label ?? "sin linaje"}
             {subrace ? ` (${stripParent(subrace.label, race?.label)})` : ""}
             {cls ? ` · ${classLine}` : ""}
           </p>
           {subclass && (
-            <p className="mt-0.5 font-body text-[13px] text-bone/60">{subclass.label}</p>
+            <p className="mt-0.5 font-body text-[15px] text-bone">{subclass.label}</p>
           )}
           {background && (
-            <p className="mt-0.5 font-body text-[13px] text-bone/60">{background.label}</p>
+            <p className="mt-0.5 font-body text-[15px] text-bone">{background.label}</p>
           )}
         </div>
         <Sigil name={state.classId || state.raceId || "fighter"} size={36} className="shrink-0" />
@@ -332,7 +332,7 @@ export default function LiveSheet({
           this species. An Aarakocra's 50 feet of flight was nowhere on the
           sheet. */}
       {senses?.otherSpeeds.length ? (
-        <p className="mt-3 font-body text-[13px] leading-relaxed text-bone/60">
+        <p className="mt-3 font-body text-[15px] leading-relaxed text-bone">
           {senses.otherSpeeds.map((entry, index) => (
             <span key={entry.mode}>
               {index > 0 && ", "}
@@ -346,7 +346,7 @@ export default function LiveSheet({
       {/* The purse, once there is one. A player who took the money instead of
           the gear has nothing else on the sheet to show for that choice. */}
       {snapshot?.choices.startingCopper ? (
-        <p className="mt-4 font-body text-[13px] leading-relaxed text-bone/60">
+        <p className="mt-4 font-body text-[15px] leading-relaxed text-bone">
           Empezas con{" "}
           <span style={{ color: accent }}>{coinLabel(snapshot.choices.startingCopper)}</span>.
         </p>
@@ -373,10 +373,10 @@ export default function LiveSheet({
           <ul className="grid grid-cols-2 gap-x-4 gap-y-1">
             {speciesTraits.map((trait) => (
               <li key={trait} className="flex items-baseline gap-1.5">
-                <span className="font-mono text-[10px] leading-none" style={{ color: accent }}>
+                <span className="font-mono text-[13px] leading-none" style={{ color: accent }}>
                   •
                 </span>
-                <span className="truncate font-body text-xs">{trait}</span>
+                <span className="truncate font-body text-sm">{trait}</span>
               </li>
             ))}
           </ul>
@@ -396,11 +396,11 @@ export default function LiveSheet({
           <ul className="space-y-1">
             {grantedSpells.map((granted) => (
               <li key={`${granted.grantedBy}:${granted.label}`} className="flex items-baseline gap-1.5">
-                <span className="font-mono text-[10px] leading-none" style={{ color: accent }}>
+                <span className="font-mono text-[13px] leading-none" style={{ color: accent }}>
                   •
                 </span>
-                <span className="font-body text-xs capitalize">{granted.label}</span>
-                <span className="font-body text-[10px] text-bone/60">
+                <span className="font-body text-sm capitalize">{granted.label}</span>
+                <span className="font-body text-[13px] text-bone">
                   {granted.uses
                     ? `${granted.grantedBy} · ${granted.uses.max}/${periodLabel(granted.uses.period)}`
                     : granted.grantedBy}
@@ -418,7 +418,7 @@ export default function LiveSheet({
         or not a background has been chosen yet.
       */}
       {hitDie && (
-        <p className="mt-2.5 font-body text-[13px] leading-relaxed text-bone/60">
+        <p className="mt-2.5 font-body text-[15px] leading-relaxed text-bone">
           Dado de golpe <span style={{ color: accent }}>d{hitDie}</span>
         </p>
       )}
@@ -458,16 +458,16 @@ export default function LiveSheet({
       >
         <span
           className="h-1.5 w-1.5 rounded-full"
-          style={{ background: sealed ? "#FF5A1F" : "#4A4640" }}
+          style={{ background: sealed ? "#FF7043" : "#5A5A5A" }}
         />
-        <span className="font-mono text-[10px] tracking-[0.3em] uppercase text-bone/70">
+        <span className="font-mono text-[13px] tracking-[0.1em] uppercase text-bone">
           {sealed ? "Sellado" : "Sin sellar"}
         </span>
       </motion.div>
 
       {/* What the seal is waiting on. Named, not implied by a disabled button. */}
       {resolved.missing.length > 0 && (
-        <p className="mt-3 font-body text-[13px] leading-relaxed text-bone/60">
+        <p className="mt-3 font-body text-[15px] leading-relaxed text-bone">
           Falta: {resolved.missing.join(", ")}.
         </p>
       )}
@@ -478,17 +478,17 @@ export default function LiveSheet({
       {/* A pick the index could not resolve would be dropped on export. */}
       {problems.length > 0 && (
         <div className="mt-3 border-l-2 border-ember/60 pl-3">
-          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-ember">
+          <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-ember">
             {problems.length} sin resolver
           </p>
           <ul className="mt-1.5 space-y-1">
             {problems.slice(0, 3).map((problem) => (
-              <li key={problem} className="font-body text-[13px] leading-snug text-bone/60">
+              <li key={problem} className="font-body text-[15px] leading-snug text-bone">
                 {problem}
               </li>
             ))}
             {problems.length > 3 && (
-              <li className="font-mono text-[10px] text-bone/60">y {problems.length - 3} mas</li>
+              <li className="font-mono text-[13px] text-bone">y {problems.length - 3} mas</li>
             )}
           </ul>
         </div>
@@ -527,7 +527,7 @@ function AbilityRows({
           <div key={ability}>
             <div className="flex items-center justify-between gap-3">
               <span
-                className="font-mono text-[10px] tracking-[0.3em] text-bone/60"
+                className="font-mono text-[13px] tracking-[0.1em] text-bone"
                 title={abilityLabels[ability]}
               >
                 {ability.toUpperCase()}
@@ -541,16 +541,16 @@ function AbilityRows({
                     style={{ background: accent }}
                   />
                 </div>
-                <span className="w-6 text-right font-mono text-[10px] text-ember">
+                <span className="w-6 text-right font-mono text-[13px] text-ember">
                   {added > 0 ? `+${added}` : ""}
                 </span>
                 <span
-                  className="w-6 text-right font-display text-sm font-bold"
+                  className="w-6 text-right font-num text-[15px] font-bold"
                   style={{ color: accent }}
                 >
                   {score}
                 </span>
-                <span className="w-7 text-right font-mono text-[10px] text-bone/60">
+                <span className="w-7 text-right font-mono text-[13px] text-bone">
                   {modifier >= 0 ? `+${modifier}` : modifier}
                 </span>
               </div>
@@ -565,7 +565,7 @@ function AbilityRows({
               with no bonuses keeps the tight six-row list it had.
             */}
             {added > 0 && (
-              <p className="mt-1 pl-1 font-mono text-[10px] leading-none text-bone/60">
+              <p className="mt-1 pl-1 font-mono text-[13px] leading-none text-bone">
                 {source.base} base
                 {source.species > 0 && ` · +${source.species} ${bonusOrigin(rulesVersion)}`}
                 {source.improvements > 0 && ` · +${source.improvements} mejora`}
@@ -610,14 +610,14 @@ function Vital({
       className="flex h-full flex-col border border-iron/50 bg-void/40 px-2 py-2 text-center"
       title={hint}
     >
-      <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">{label}</p>
+      <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">{label}</p>
       <p
         className={
           word
-            ? "mt-0.5 font-display text-[13px] font-bold leading-tight [overflow-wrap:anywhere]"
-            : "mt-0.5 font-display text-lg font-black"
+            ? "mt-0.5 font-display text-[15px] font-bold leading-tight [overflow-wrap:anywhere]"
+            : "mt-0.5 font-num text-lg font-black"
         }
-        style={{ color: dim ? "#4A4640" : accent }}
+        style={{ color: dim ? "#5A5A5A" : accent }}
       >
         {value}
       </p>
@@ -638,7 +638,7 @@ function Counsel({ advice, accent }: { advice: Advice[]; accent: string }) {
 
   return (
     <div className="mt-6 border-t border-iron/40 pt-5">
-      <p className="mb-4 font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
+      <p className="mb-4 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
         Como pelea
       </p>
 
@@ -648,7 +648,7 @@ function Counsel({ advice, accent }: { advice: Advice[]; accent: string }) {
             <p className={HEADING} style={{ color: accent }}>
               {entry.title}
             </p>
-            <p className="mt-0.5 font-body text-xs leading-relaxed text-bone/60">{entry.detail}</p>
+            <p className="mt-0.5 font-body text-sm leading-relaxed text-bone">{entry.detail}</p>
           </div>
         ))}
       </div>
@@ -664,12 +664,12 @@ function Counsel({ advice, accent }: { advice: Advice[]; accent: string }) {
               }}
             >
               <p
-                className="font-mono text-[10px] uppercase tracking-[0.2em]"
-                style={{ color: entry.kind === "smell" ? "#C85028" : "#B08A3E" }}
+                className="font-mono text-[13px] uppercase tracking-[0.1em]"
+                style={{ color: entry.kind === "smell" ? "#C85028" : "#F2C14E" }}
               >
                 {entry.title}
               </p>
-              <p className="mt-1 font-body text-xs leading-relaxed text-bone/60">{entry.detail}</p>
+              <p className="mt-1 font-body text-sm leading-relaxed text-bone">{entry.detail}</p>
             </div>
           ))}
         </div>
