@@ -46,7 +46,7 @@ function paintSigil(x: CanvasRenderingContext2D, sigil: RoleSigil, cx: number, c
   x.arc(cx, cy, radius, 0, Math.PI * 2);
   x.fill();
 
-  const scale = (sigil.fills ? radius * 2 : radius * 1.25) / 512;
+  const scale = (sigil.fills ? radius * 2 : radius * 1.6) / 512;
   x.translate(cx - 256 * scale, cy - 256 * scale);
   x.scale(scale, scale);
   x.shadowColor = sigil.color;

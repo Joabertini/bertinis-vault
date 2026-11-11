@@ -11,7 +11,7 @@ import type { RoleSigil } from "@/lib/role-sigil";
  * disagree.
  */
 export default function SigilMark({ sigil, size = 96 }: { sigil: RoleSigil; size?: number }) {
-  const scale = sigil.fills ? 1 : 0.625;
+  const scale = sigil.fills ? 1 : 0.8;
   const offset = 256 - 256 * scale;
   return (
     <svg
