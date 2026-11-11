@@ -36,13 +36,27 @@ export default function Tome({
   character,
   onBurn,
   onReforge,
+  detached,
+  onDismiss,
 }: {
   character: SealedCharacter;
   onBurn: (origin: { x: number; y: number }) => void;
   /** Put this character back on the anvil. Re-sealing overwrites this tome. */
   onReforge: () => void;
+  /**
+   * Mount already open and without its own cover: the 3D shelf draws the book,
+   * this only supplies what opens from it. `onDismiss` fires when it closes.
+   */
+  detached?: boolean;
+  onDismiss?: () => void;
 }) {
-  const [view, setView] = useState<"closed" | "menu" | "hoja" | "vision">("closed");
+  const [view, setViewState] = useState<"closed" | "menu" | "hoja" | "vision">(
+    detached ? "menu" : "closed",
+  );
+  const setView = (next: "closed" | "menu" | "hoja" | "vision") => {
+    setViewState(next);
+    if (next === "closed") onDismiss?.();
+  };
   const { state } = character;
   const accent = tintFor(state.classId);
 
@@ -59,6 +73,7 @@ export default function Tome({
   return (
     <>
       {/* ---------- closed, on the shelf ---------- */}
+      {!detached && (
       <motion.button
         onClick={() => setView("menu")}
         whileHover="hover"
@@ -153,6 +168,7 @@ export default function Tome({
 
         <div className="absolute -bottom-3 left-2 right-2 h-3 bg-black/60 blur-md" />
       </motion.button>
+      )}
 
       <AnimatePresence>
         {view === "menu" && (

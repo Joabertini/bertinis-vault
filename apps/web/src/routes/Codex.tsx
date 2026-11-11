@@ -5,11 +5,10 @@
  * when a tome burns. The tomes themselves now hold real builds.
  */
 
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-import Tome from "@/components/codex/Tome";
 import DropActor from "@/components/codex/DropActor";
 import OpenCode from "@/components/codex/OpenCode";
 import AshBurst from "@/components/fx/AshBurst";
@@ -20,6 +19,9 @@ import AccountBadge from "@/components/codex/AccountBadge";
 import CodexBackup from "@/components/codex/CodexBackup";
 import { useVault } from "@/lib/vault-store";
 import { PAGE } from "@/styles/recipes";
+
+// three.js comes with the shelf, so it loads here and not with the landing.
+const CodexShelf = lazy(() => import("@/components/codex/shelf/CodexShelf"));
 
 export default function Codex() {
   const navigate = useNavigate();
@@ -103,7 +105,16 @@ export default function Codex() {
           </div>
         </div>
 
-        {/* Above the shelves, and shown even when they are empty: an empty
+        {/* The shelf is the page: full width, above the tools. */}
+        {filtered.length > 0 && (
+          <div className="relative left-1/2 mb-14 w-screen -translate-x-1/2">
+            <Suspense fallback={<div className="h-[78vh] min-h-[560px]" />}>
+              <CodexShelf characters={filtered} onBurn={handleBurn} onReforge={handleReforge} />
+            </Suspense>
+          </div>
+        )}
+
+        {/* Below the shelf, and shown even when it is empty: an empty
             Codex is exactly when a player most wants to bring characters in
             rather than start from nothing. */}
         <OpenCode />
@@ -118,32 +129,7 @@ export default function Codex() {
           <p className="py-24 text-center font-body text-xl italic text-bone">
             Ningun tomo con ese nombre.
           </p>
-        ) : (
-          <>
-            <div className="grid grid-cols-2 gap-x-10 gap-y-16 sm:grid-cols-3 lg:grid-cols-4">
-              <AnimatePresence mode="popLayout">
-                {filtered.map((entry, index) => (
-                  <motion.div
-                    key={entry.id}
-                    layout
-                    initial={{ opacity: 0, y: 40 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ delay: index * 0.06, duration: 0.5 }}
-                    className="flex justify-center"
-                  >
-                    <Tome
-                      character={entry}
-                      onBurn={handleBurn(entry.id)}
-                      onReforge={handleReforge(entry.id)}
-                    />
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-            <div className="mt-[-8px] h-3 w-full bg-gradient-to-b from-[#2a2118] via-[#1a140e] to-[#000000] shadow-[0_10px_30px_rgba(0,0,0,0.7)]" />
-          </>
-        )}
+        ) : null}
       </div>
     </main>
   );
