@@ -83,7 +83,6 @@ export default function AncestryChamber({
           selectedId={draft.subraceId}
           onPick={onPickSubrace}
           accent={VAULT_GOLD}
-          note="La subraza queda guardada, pero todavia no cruza a Foundry."
         />
       )}
 
