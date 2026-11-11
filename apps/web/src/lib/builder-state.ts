@@ -102,7 +102,8 @@ export type BuilderState = {
    * The cover of this character's book, as a data URL, or "" for none.
    *
    * Kept small by `fitCoverImage` (the account store caps one character at
-   * 128 KB), and never sent to Foundry: it is for the shelf only.
+   * 128 KB). It is the shelf's cover and it also travels in the code as
+   * `identity.portrait`, which the Foundry module makes the actor's portrait.
    */
   coverImage: string;
   playerName: string;
