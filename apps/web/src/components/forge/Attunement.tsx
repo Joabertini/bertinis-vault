@@ -34,9 +34,9 @@ export default function Attunement({
     <div>
       <p className={LABEL_MB2}>Sintonizacion</p>
 
-      <p className="mb-3 font-body text-sm text-bone/60">
-        <span style={{ color: over ? "#ff5a1f" : accent }}>{state.used}</span>
-        <span className="text-bone/60"> de {state.slots}</span>
+      <p className="mb-3 font-body text-[15px] text-bone">
+        <span style={{ color: over ? "#FF7043" : accent }}>{state.used}</span>
+        <span className="text-bone"> de {state.slots}</span>
       </p>
 
       <div className="flex flex-wrap gap-2">
@@ -49,13 +49,13 @@ export default function Attunement({
               type="button"
               onClick={() => onToggle(item.id)}
               aria-pressed={on}
-              className="border px-3 py-1.5 font-body text-sm transition-colors"
+              className="border px-3 py-1.5 font-body text-[15px] transition-colors"
               style={{
                 borderColor: on ? accent : "rgba(120,120,120,0.4)",
                 color: on ? accent : "rgba(230,223,206,0.75)",
               }}
             >
-              <span className="mr-1.5 font-mono text-[10px]">{on ? "◆" : "◈"}</span>
+              <span className="mr-1.5 font-mono text-[13px]">{on ? "◆" : "◈"}</span>
               {item.label}
             </button>
           );
@@ -63,7 +63,7 @@ export default function Attunement({
       </div>
 
       {over && (
-        <p className={`mt-3 ${WHISPER}`} style={{ color: "#ff5a1f" }}>
+        <p className={`mt-3 ${WHISPER}`} style={{ color: "#FF7043" }}>
           Tres es el maximo. Llevas {state.used}.
         </p>
       )}

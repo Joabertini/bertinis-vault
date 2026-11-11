@@ -31,7 +31,7 @@ export default function AccountBadge() {
       <div className="flex flex-col items-end gap-1">
         <a
           href={signInUrl("/codex")}
-          className="border border-iron/50 px-4 py-2 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/75 transition-colors hover:border-gold/50 hover:text-gold"
+          className="border border-iron/50 px-4 py-2 font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:border-gold/50 hover:text-gold"
         >
           Entrar con Discord
         </a>
@@ -50,11 +50,11 @@ export default function AccountBadge() {
             className="h-7 w-7 rounded-full border border-iron/50"
           />
         )}
-        <span className="font-body text-sm text-bone/60">{account.displayName}</span>
+        <span className="font-body text-[15px] text-bone">{account.displayName}</span>
         <button
           type="button"
           onClick={() => void signOut()}
-          className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-ember"
+          className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-ember"
         >
           Salir
         </button>

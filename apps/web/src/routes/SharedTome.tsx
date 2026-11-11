@@ -109,24 +109,24 @@ export default function SharedTome() {
         <header className="mb-8">
           <Link
             to="/"
-            className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-gold"
+            className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-gold"
           >
             ← El umbral
           </Link>
-          <p className="mt-6 font-mono text-[10px] tracking-[0.6em] uppercase text-gold/85">
+          <p className="mt-6 font-mono text-[13px] tracking-[0.1em] uppercase text-gold">
             Un tomo prestado
           </p>
-          <p className="mt-2 font-mono text-xs tracking-[0.35em] text-bone/60">{code}</p>
+          <p className="mt-2 font-mono text-sm tracking-[0.1em] text-bone">{code}</p>
         </header>
 
         {phase.kind === "reading" && (
-          <p className="font-body text-sm text-bone/60">Buscando el tomo…</p>
+          <p className="font-body text-[15px] text-bone">Buscando el tomo…</p>
         )}
 
         {phase.kind === "lost" && (
           <div className="max-w-xl">
             <p className="font-display text-2xl font-black text-bone">Ese codigo no abrio nada</p>
-            <p className="mt-3 font-body text-sm leading-relaxed text-bone/60">{phase.reason}</p>
+            <p className="mt-3 font-body text-[15px] leading-relaxed text-bone">{phase.reason}</p>
             <div className="mt-8">
               <Link to="/codex">
                 <RuneButton variant="gold">Ir al Codice</RuneButton>
@@ -140,7 +140,7 @@ export default function SharedTome() {
             <p className="font-display text-2xl font-black text-bone">
               {phase.characterName || "Ese personaje"} solo viaja a Foundry
             </p>
-            <p className="mt-3 font-body text-sm leading-relaxed text-bone/60">
+            <p className="mt-3 font-body text-[15px] leading-relaxed text-bone">
               Ese codigo se creo antes de que un tomo se pudiera abrir acá, asi que trae la
               ficha ya calculada y no las decisiones que la produjeron. Importa en Foundry sin
               problema. Para abrirlo acá, pedile a quien lo armo que lo envie de nuevo por el
@@ -203,7 +203,7 @@ function OpenSharedTome({
         className="border"
         style={{
           borderColor: `${accent}44`,
-          background: "#0c0a08",
+          background: "#000000",
           boxShadow: `0 40px 80px rgba(0,0,0,0.8), inset 0 0 80px ${accent}08`,
         }}
       >
@@ -227,7 +227,7 @@ function OpenSharedTome({
       </div>
 
       <div className="mt-8 max-w-2xl">
-        <p className="font-body text-sm leading-relaxed text-bone/60">
+        <p className="font-body text-[15px] leading-relaxed text-bone">
           Podes quedarte una copia y editarla. Es tuya desde ese momento: lo que cambies no
           toca el personaje de quien te paso el codigo, y lo que esa persona cambie despues no
           llega a tu copia. Para devolver una correccion, envia tu copia por el portal y pasa
@@ -241,14 +241,14 @@ function OpenSharedTome({
           <button
             onClick={onTakeOnly}
             disabled={taken}
-            className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone disabled:text-bone/30"
+            className="font-mono text-[14px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-bone disabled:text-bone/30"
           >
             {taken ? "✓ guardado en tu Codice" : "Guardar sin editar"}
           </button>
           {taken && (
             <Link
               to="/codex"
-              className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold transition-colors hover:text-ember"
+              className="font-mono text-[14px] uppercase tracking-[0.1em] text-gold transition-colors hover:text-ember"
             >
               Ir al Codice →
             </Link>

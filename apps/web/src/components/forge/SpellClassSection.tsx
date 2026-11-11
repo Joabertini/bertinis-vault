@@ -50,14 +50,14 @@ export default function SpellClassSection({
     <div className="space-y-10">
       {showName && (
         <div className="flex items-baseline gap-3">
-          <span className="font-display text-lg font-bold tracking-[0.15em]" style={{ color: accent }}>
+          <span className="font-display text-lg font-bold tracking-[0.06em]" style={{ color: accent }}>
             {plan.label.toUpperCase()}
           </span>
-          <span className={`${META} text-bone/50`}>nivel {plan.classLevel}</span>
+          <span className={`${META} text-bone`}>nivel {plan.classLevel}</span>
         </div>
       )}
 
-      <p className="font-body text-bone/75">
+      <p className="font-body text-bone">
         {picker.modeLabel}
         {picker.maxSpellLevel > 0
           ? ` · hasta nivel ${picker.maxSpellLevel}`
@@ -137,7 +137,7 @@ export default function SpellClassSection({
           ))}
         </div>
       ) : (
-        <p className="border-t border-iron/40 pt-8 font-body text-bone/75">
+        <p className="border-t border-iron/40 pt-8 font-body text-bone">
           {plan.book
             ? "Sin nada escrito en el libro no hay de donde preparar."
             : `A nivel ${characterLevel} ${plan.label} no prepara conjuros todavia.`}

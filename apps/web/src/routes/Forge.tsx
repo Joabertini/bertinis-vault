@@ -1354,13 +1354,13 @@ export default function Forge() {
         <GrainOverlay />
         <EmberField density={22} />
         <div className="relative z-10 w-full max-w-2xl">
-          <p className="font-mono text-[10px] uppercase tracking-[0.6em] text-gold/85">
+          <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-gold">
             Antes de encender la fragua
           </p>
           <h1 className="mt-5 font-display text-3xl font-black tracking-wide text-bone md:text-4xl">
             ¿Cuantos personajes armaste?
           </h1>
-          <p className="mt-4 font-body italic leading-relaxed text-bone/75">
+          <p className="mt-4 font-body leading-relaxed text-bone">
             Podes cambiarlo cuando quieras.
           </p>
 
@@ -1390,7 +1390,7 @@ export default function Forge() {
                 <span className="font-display text-lg font-bold text-bone transition-colors group-hover:text-gold">
                   {option.label}
                 </span>
-                <span className="mt-3 block font-body text-[13px] leading-relaxed text-bone/60">
+                <span className="mt-3 block font-body text-[15px] leading-relaxed text-bone">
                   {option.blurb}
                 </span>
               </button>
@@ -1409,7 +1409,7 @@ export default function Forge() {
 
       <motion.div
         animate={{
-          background: `radial-gradient(ellipse at 75% 20%, ${accent}14, transparent 55%), #030202`,
+          background: "#000000",
         }}
         transition={{ duration: 1.2 }}
         className="pointer-events-none fixed inset-0"
@@ -1426,7 +1426,7 @@ export default function Forge() {
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-14 md:px-10">
         <header className="mb-12 flex items-end justify-between gap-6">
           <div>
-            <p className="font-mono text-[10px] tracking-[0.6em] uppercase text-gold/85">
+            <p className="font-mono text-[13px] tracking-[0.1em] uppercase text-gold">
               Camara {position + 1} de {chambers.length}
             </p>
             <h1 className="mt-3 font-display text-4xl font-black tracking-wide text-bone md:text-5xl">
@@ -1435,7 +1435,7 @@ export default function Forge() {
             {editingId && (
               // Said plainly: sealing again replaces the tome instead of adding
               // one, and that is not something to discover after the fact.
-              <p className="mt-3 font-body text-sm text-bone/60">
+              <p className="mt-3 font-body text-[15px] text-bone">
                 Reforjando a{" "}
                 <span className="not-italic" style={{ color: accent }}>
                   {draft.characterName || "un tomo sin nombre"}
@@ -1445,7 +1445,7 @@ export default function Forge() {
             )}
           </div>
           <div className="text-right">
-            <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60">
+            <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
               {rulesVersion === "2024" ? "Reglas 2024" : "Reglas 2014"}
             </p>
             {/*
@@ -1456,7 +1456,7 @@ export default function Forge() {
             <button
               type="button"
               onClick={() => setPace(null)}
-              className="mt-2 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60 transition-colors hover:text-gold"
+              className="mt-2 font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-gold"
             >
               {pace === "veterano" ? "Aptitudes primero" : "Raza primero"} · cambiar
             </button>
@@ -1483,12 +1483,12 @@ export default function Forge() {
                   }`}
                 />
                 <span
-                  className={`mt-3 whitespace-nowrap font-mono text-[10px] uppercase tracking-[0.3em] transition-colors ${
+                  className={`mt-3 whitespace-nowrap font-mono text-[13px] uppercase tracking-[0.1em] transition-colors ${
                     index === position
                       ? "text-gold"
                       : answered[key]
-                        ? "text-bone/75"
-                        : "text-bone/60"
+                        ? "text-bone"
+                        : "text-bone"
                   }`}
                 >
                   {answered[key] && index !== position ? "✓ " : ""}
@@ -1517,7 +1517,7 @@ export default function Forge() {
                 {CHAMBER_TITLE[chamberKey]}
               </h2>
               {CHAMBER_EPIGRAPH[chamberKey] ? (
-                <p className="mb-8 font-body italic text-bone/70">
+                <p className="mb-8 font-body text-bone">
                   {CHAMBER_EPIGRAPH[chamberKey]}
                 </p>
               ) : (
@@ -1533,7 +1533,7 @@ export default function Forge() {
                   <motion.p
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8 border-l-2 border-ember/60 pl-4 font-body text-sm leading-relaxed text-bone/75"
+                    className="mb-8 border-l-2 border-ember/60 pl-4 font-body text-[15px] leading-relaxed text-bone"
                   >
                     Al cambiar {SHED_SUBJECT[chamberKey]} se solto {shedByPick.join(" y ")}. Eleg
                     {shedByPick.length > 1 ? "ilos" : "ilo"} de nuevo mas adelante.
@@ -1625,7 +1625,7 @@ export default function Forge() {
 
                   {draft.classId && (
                     <div className={DIVIDER}>
-                      <label className="mb-4 block font-mono text-[10px] tracking-[0.4em] uppercase text-bone/60">
+                      <label className="mb-4 block font-mono text-[13px] tracking-[0.1em] uppercase text-bone">
                         Nivel de poder — <span style={{ color: accent }}>{draft.level}</span>
                       </label>
                       <input
@@ -1657,10 +1657,10 @@ export default function Forge() {
                       )
                     ) : (
                       <div className={DIVIDER_TIGHT}>
-                        <p className="font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
+                        <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                           Senda
                         </p>
-                        <p className="mt-3 font-body text-bone/75">
+                        <p className="mt-3 font-body text-bone">
                           {selectedClass?.label} no elige senda hasta el nivel {subclassLevel}.
                         </p>
                       </div>
@@ -1692,7 +1692,7 @@ export default function Forge() {
                   */}
                   {pools.length > 0 && (
                     <div className={DIVIDER}>
-                      <p className="mb-6 font-body text-[13px] leading-relaxed text-bone/60">
+                      <p className="mb-6 font-body text-[15px] leading-relaxed text-bone">
                         Lo que {selectedClass?.label} te deja elegir a nivel {draft.level}.
                       </p>
                       <TalentPools
@@ -1755,7 +1755,7 @@ export default function Forge() {
                     <div className={DIVIDER}>
                       <p className="font-display text-lg font-bold" style={{ color: accent }}>
                         {selectedBackground.label}
-                        <span className="ml-3 font-mono text-[10px] font-normal uppercase tracking-[0.25em] text-bone/60">
+                        <span className="ml-3 font-mono text-[13px] font-normal uppercase tracking-[0.1em] text-bone">
                           {selectedBackground.source}
                         </span>
                       </p>
@@ -1807,11 +1807,11 @@ export default function Forge() {
                         >
                           <p
                             className={HEADING}
-                            style={{ color: active ? accent : "#E6DFCE" }}
+                            style={{ color: active ? accent : "#FFFFFF" }}
                           >
                             {method.label}
                           </p>
-                          <p className="mt-1 font-body text-[13px] leading-snug text-bone/60">
+                          <p className="mt-1 font-body text-[15px] leading-snug text-bone">
                             {method.blurb}
                           </p>
                         </button>
@@ -1870,7 +1870,7 @@ export default function Forge() {
                           : "Sembrado desde el indice. Podes cambiarlo."}
                       </span>
                     </div>
-                    <p className="mb-3 font-body text-[13px] leading-relaxed text-bone/60">
+                    <p className="mb-3 font-body text-[15px] leading-relaxed text-bone">
                       Se suma a los puntajes ligados. Sin esto un enano exporta sin su +2 a
                       Constitucion.
                     </p>
@@ -1962,7 +1962,7 @@ export default function Forge() {
                         {speciesGranted.map((entry) => (
                           <span
                             key={entry}
-                            className="border px-3 py-1.5 font-body text-sm"
+                            className="border px-3 py-1.5 font-body text-[15px]"
                             style={{ borderColor: `${accent}55`, color: accent }}
                           >
                             {entry}
@@ -1981,7 +1981,7 @@ export default function Forge() {
                         {otherGranted.map((entry) => (
                           <span
                             key={entry}
-                            className="border px-3 py-1.5 font-body text-sm"
+                            className="border px-3 py-1.5 font-body text-[15px]"
                             style={{ borderColor: `${accent}55`, color: accent }}
                           >
                             {entry}
@@ -2001,7 +2001,7 @@ export default function Forge() {
                     offer.scope ? (
                       <div key={`${offer.from}-${index}`}>
                         <p className={LABEL_MB2}>Herramientas — {offer.label ?? offer.from}</p>
-                        <p className="font-body text-bone/75">
+                        <p className="font-body text-bone">
                           {/* Named rather than assumed: this used to say "tu
                               especie" for every one of them, and feats offer
                               these too. */}
@@ -2076,7 +2076,7 @@ export default function Forge() {
                       {langPlan.fixed.map((entry) => (
                         <span
                           key={entry}
-                          className="border px-3 py-1.5 font-body text-sm"
+                          className="border px-3 py-1.5 font-body text-[15px]"
                           style={{ borderColor: `${accent}55`, color: accent }}
                         >
                           {entry}
@@ -2139,7 +2139,7 @@ export default function Forge() {
                                     key={entry}
                                     type="button"
                                     onClick={() => toggleLanguage(entry)}
-                                    className="border px-3 py-1.5 font-body text-sm"
+                                    className="border px-3 py-1.5 font-body text-[15px]"
                                     style={{ borderColor: `${accent}55`, color: accent }}
                                   >
                                     {entry} ×
@@ -2155,7 +2155,7 @@ export default function Forge() {
                                 writeLanguage(event.currentTarget.value);
                                 event.currentTarget.value = "";
                               }}
-                              className="w-full border bg-transparent px-3 py-2 font-body text-sm text-bone/80 outline-none"
+                              className="w-full border bg-transparent px-3 py-2 font-body text-[15px] text-bone outline-none"
                               style={{ borderColor: `${accent}33` }}
                             />
                           </div>
@@ -2209,7 +2209,7 @@ export default function Forge() {
                     />
                     {weaponFacts && <ItemFacts facts={weaponFacts} accent={accent} />}
                     {weaponWarning && (
-                      <p className="mt-3 font-body text-[13px] text-ember">{weaponWarning}</p>
+                      <p className="mt-3 font-body text-[15px] text-ember">{weaponWarning}</p>
                     )}
                   </div>
 
@@ -2228,7 +2228,7 @@ export default function Forge() {
                     />
                     {armorFacts && <ItemFacts facts={armorFacts} accent={accent} />}
                     {armorWarning && (
-                      <p className="mt-3 font-body text-[13px] text-ember">{armorWarning}</p>
+                      <p className="mt-3 font-body text-[15px] text-ember">{armorWarning}</p>
                     )}
                   </div>
 
@@ -2310,7 +2310,7 @@ export default function Forge() {
                       value={draft.characterName}
                       onChange={(event) => patchDraft({ characterName: event.target.value })}
                       placeholder="Decilo en la oscuridad…"
-                      className="w-full border-b border-iron bg-transparent pb-3 font-display text-3xl text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
+                      className="w-full border-b border-iron bg-transparent pb-3 font-display text-3xl text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                     />
                   </Field>
 
@@ -2319,7 +2319,7 @@ export default function Forge() {
                       value={draft.playerName}
                       onChange={(event) => patchDraft({ playerName: event.target.value })}
                       placeholder="Quien sostiene la pluma"
-                      className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
+                      className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                     />
                   </Field>
 
@@ -2328,7 +2328,7 @@ export default function Forge() {
                       value={draft.alignment}
                       onChange={(event) => patchDraft({ alignment: event.target.value })}
                       placeholder="Neutral bueno…"
-                      className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
+                      className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                     />
                   </Field>
 
@@ -2352,7 +2352,7 @@ export default function Forge() {
                           value={draft[field]}
                           onChange={(event) => patchDraft({ [field]: event.target.value })}
                           placeholder={placeholder}
-                          className="w-full border-b border-iron bg-transparent pb-2 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
+                          className="w-full border-b border-iron bg-transparent pb-2 font-body text-base text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                         />
                       </Field>
                     ))}
@@ -2363,7 +2363,7 @@ export default function Forge() {
                         onChange={(event) => patchDraft({ notes: event.target.value })}
                         rows={3}
                         placeholder="Lo que no entra en ninguna casilla."
-                        className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
+                        className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                       />
                     </Field>
                   </div>
@@ -2380,7 +2380,7 @@ export default function Forge() {
                         <button
                           type="button"
                           onClick={suggestLooks}
-                          className="border border-iron/70 px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/70 transition-colors hover:border-gold hover:text-gold"
+                          className="border border-iron/70 px-3 py-1.5 font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:border-gold hover:text-gold"
                         >
                           Sugerir por especie
                         </button>
@@ -2405,7 +2405,7 @@ export default function Forge() {
                             value={draft[field]}
                             onChange={(event) => patchDraft({ [field]: event.target.value })}
                             placeholder={placeholder}
-                            className="w-full border-b border-iron bg-transparent pb-2 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
+                            className="w-full border-b border-iron bg-transparent pb-2 font-body text-base text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                           />
                         </Field>
                       ))}
@@ -2417,7 +2417,7 @@ export default function Forge() {
                         onChange={(event) => patchDraft({ appearance: event.target.value })}
                         rows={3}
                         placeholder="Lo primero que nota alguien que te cruza."
-                        className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone/45 focus:border-gold"
+                        className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                       />
                     </Field>
                   </div>
@@ -2433,7 +2433,7 @@ export default function Forge() {
           <button
             onClick={() => go(position - 1)}
             disabled={position === 0}
-            className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone disabled:opacity-20"
+            className="font-mono text-[14px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-bone disabled:opacity-20"
           >
             ← Retroceder
           </button>
@@ -2593,7 +2593,7 @@ function ChamberArrows({
   accent: string;
 }) {
   const base =
-    "fixed top-1/2 z-20 hidden h-14 w-11 -translate-y-1/2 items-center justify-center border border-iron/60 bg-void/80 font-display text-2xl text-bone/60 backdrop-blur-sm transition-colors enabled:hover:text-bone disabled:opacity-25 xl:flex";
+    "fixed top-1/2 z-20 hidden h-14 w-11 -translate-y-1/2 items-center justify-center border border-iron/60 bg-void/80 font-display text-2xl text-bone backdrop-blur-sm transition-colors enabled:hover:text-bone disabled:opacity-25 xl:flex";
 
   return (
     <>
@@ -2661,11 +2661,11 @@ function SizeChoice({
               type="button"
               aria-pressed={chosen}
               onClick={() => onPick(chosen ? "" : letter)}
-              className="border px-3 py-1.5 font-body text-[13px] transition-colors"
+              className="border px-3 py-1.5 font-body text-[15px] transition-colors"
               style={
                 chosen
                   ? { borderColor: accent, background: `${accent}1f`, color: accent }
-                  : { borderColor: "rgba(74,70,64,0.7)", color: "#E6DFCE" }
+                  : { borderColor: "rgba(74,70,64,0.7)", color: "#FFFFFF" }
               }
             >
               {sizeNameOf(letter)}
@@ -2726,7 +2726,7 @@ function SubChoice({
             >
               <span
                 className={ITEM_NAME}
-                style={{ color: active ? accent : "#E6DFCE" }}
+                style={{ color: active ? accent : "#FFFFFF" }}
               >
                 {entry.label}
               </span>
@@ -2739,7 +2739,7 @@ function SubChoice({
       </div>
 
       {note && (
-        <p className="mt-4 border-l-2 border-ember/50 pl-3 font-body text-[13px] leading-relaxed text-bone/60">
+        <p className="mt-4 border-l-2 border-ember/50 pl-3 font-body text-[15px] leading-relaxed text-bone">
           {note}
         </p>
       )}
@@ -2750,7 +2750,7 @@ function SubChoice({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="mb-3 block font-mono text-[10px] tracking-[0.4em] uppercase text-bone/60">
+      <label className="mb-3 block font-mono text-[13px] tracking-[0.1em] uppercase text-bone">
         {label}
       </label>
       {children}

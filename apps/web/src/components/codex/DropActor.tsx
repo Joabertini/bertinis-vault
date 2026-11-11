@@ -90,14 +90,14 @@ export default function DropActor() {
         }}
         className="cursor-pointer border border-dashed px-6 py-7 text-center transition-colors"
         style={{
-          borderColor: over ? "#B08A3E" : "rgba(74,70,64,0.6)",
+          borderColor: over ? "#F2C14E" : "rgba(74,70,64,0.6)",
           background: over ? "rgba(176,138,62,0.06)" : "transparent",
         }}
       >
-        <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-gold/85">
+        <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-gold">
           Traer de Foundry
         </p>
-        <p className="mt-2 font-body text-sm text-bone/75">
+        <p className="mt-2 font-body text-[15px] text-bone">
           Solta aca el json que exporta Foundry.
         </p>
 
@@ -121,7 +121,7 @@ export default function DropActor() {
             initial={{ opacity: 0, y: -4 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            className="mt-3 border-l-2 border-ember/60 pl-3 font-body text-sm text-bone/75"
+            className="mt-3 border-l-2 border-ember/60 pl-3 font-body text-[15px] text-bone"
           >
             {outcome.reason}
           </motion.p>
@@ -135,14 +135,14 @@ export default function DropActor() {
             exit={{ opacity: 0 }}
             className="mt-4 border border-iron/50 bg-void/40 p-5"
           >
-            <p className="font-display text-sm font-bold text-gold">
+            <p className="font-display text-[15px] font-bold text-gold">
               {outcome.name} esta en el estante
             </p>
 
             <div className="mt-3 grid gap-x-8 gap-y-1 md:grid-cols-2">
               {outcome.report.resolved.map((line) => (
-                <p key={line} className="font-body text-xs text-bone/75">
-                  <span className="text-gold/85">·</span> {line}
+                <p key={line} className="font-body text-sm text-bone">
+                  <span className="text-gold">·</span> {line}
                 </p>
               ))}
             </div>
@@ -151,17 +151,17 @@ export default function DropActor() {
                 pick again by hand in the Forge. */}
             {outcome.report.unresolved.length > 0 && (
               <div className="mt-4 border-t border-iron/40 pt-3">
-                <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-ember">
+                <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-ember">
                   {outcome.report.unresolved.length} sin reconocer
                 </p>
                 <div className="mt-1.5 space-y-0.5">
                   {outcome.report.unresolved.map((line) => (
-                    <p key={line} className="font-body text-[13px] text-bone/60">
+                    <p key={line} className="font-body text-[15px] text-bone">
                       {line}
                     </p>
                   ))}
                 </div>
-                <p className="mt-2 font-body text-[13px] text-bone/60">
+                <p className="mt-2 font-body text-[15px] text-bone">
                   El indice no los conoce. El resto entro igual.
                 </p>
               </div>

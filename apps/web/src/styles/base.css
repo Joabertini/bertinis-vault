@@ -17,15 +17,15 @@ body,
 }
 
 body {
-  background: #030202;
-  color: #e6dfce;
+  background: #000000;
+  color: #FFFFFF;
   font-family: "EB Garamond", Georgia, serif;
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
   background: #6e0f0f;
-  color: #e6dfce;
+  color: #FFFFFF;
 }
 
 /*
@@ -36,12 +36,17 @@ body {
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: #030202;
+  background: #000000;
 }
 ::-webkit-scrollbar-thumb {
   background: #3a332a;
   border-radius: 0;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #b08a3e;
+  background: #F2C14E;
+}
+
+/* Lining, equal-width figures for every number set in font-num. */
+.font-num {
+  font-variant-numeric: lining-nums tabular-nums;
 }

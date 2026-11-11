@@ -14,9 +14,9 @@ export function RuneButton({
   const y = useSpring(useMotionValue(0), { stiffness: 120, damping: 14 });
 
   const styles = {
-    gold: "border-[#B08A3E]/50 text-[#E6DFCE] hover:text-[#B08A3E] shadow-[inset_0_0_20px_rgba(176,138,62,0.08)]",
-    blood: "border-[#6E0F0F]/70 text-[#E6DFCE] bg-[#6E0F0F]/15 hover:bg-[#6E0F0F]/35",
-    ghost: "border-[#4A4640] text-bone/75 hover:text-[#E6DFCE]",
+    gold: "border-[#F2C14E]/50 text-[#FFFFFF] hover:text-[#F2C14E] shadow-[inset_0_0_20px_rgba(176,138,62,0.08)]",
+    blood: "border-[#6E0F0F]/70 text-[#FFFFFF] bg-[#6E0F0F]/15 hover:bg-[#6E0F0F]/35",
+    ghost: "border-[#5A5A5A] text-bone hover:text-[#FFFFFF]",
   }[variant];
 
   return (
@@ -31,7 +31,7 @@ export function RuneButton({
       onMouseLeave={() => { x.set(0); y.set(0); }}
       whileTap={{ scale: 0.96 }}
       style={{ x, y }}
-      className={`group relative overflow-hidden border px-12 py-4 font-display text-sm font-semibold uppercase tracking-[0.25em] backdrop-blur-sm transition-all duration-500 ${styles} ${className}`}
+      className={`group relative overflow-hidden border px-12 py-4 font-display text-[15px] font-semibold uppercase tracking-[0.1em] backdrop-blur-sm transition-all duration-500 ${styles} ${className}`}
     >
       {/* corner runes */}
       <span className="absolute left-2 top-2 h-2 w-2 border-l border-t border-current opacity-40 transition-all group-hover:h-3 group-hover:w-3 group-hover:opacity-90" />

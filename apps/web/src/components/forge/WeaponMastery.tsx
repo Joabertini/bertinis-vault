@@ -50,7 +50,7 @@ export default function WeaponMastery({
       {/* Said out loud rather than trimmed away. A pick that silently did not
           travel is the failure this builder keeps finding elsewhere. */}
       {problems.map((problem, index) => (
-        <p key={index} className="mb-4 font-body text-[13px] text-ember">
+        <p key={index} className="mb-4 font-body text-[15px] text-ember">
           {problem.kind === "over-limit"
             ? `Elegiste ${problem.picked} y podes ${problem.allowed}: las de mas no viajan a la ficha.`
             : `${problem.itemId} no tiene maestria que dominar.`}
@@ -77,12 +77,12 @@ export default function WeaponMastery({
               title={disabled ? "Ya elegiste todas las que podes dominar" : option.mastery}
             >
               <span
-                className="block font-body text-sm"
+                className="block font-body text-[15px]"
                 style={{ color: picked ? accent : undefined }}
               >
                 {option.label}
               </span>
-              <span className="block font-mono text-[10px] uppercase tracking-[0.2em] text-bone/60">
+              <span className="block font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                 {option.mastery}
               </span>
             </motion.button>

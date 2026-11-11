@@ -69,7 +69,7 @@ export default function Expertise({
 
         return (
           <div key={slot.key} className="mb-6 border border-iron/40 p-5">
-            <p className="mb-1 font-display text-sm font-bold" style={{ color: accent }}>
+            <p className="mb-1 font-display text-[15px] font-bold" style={{ color: accent }}>
               {slot.grant.name}
             </p>
             <p className={`mb-4 ${WHISPER}`}>
@@ -85,7 +85,7 @@ export default function Expertise({
                     key={index}
                     type="button"
                     onClick={() => onAnswer(slot.key, index, "skills", "")}
-                    className="border px-3 py-1.5 font-body text-xs transition-colors"
+                    className="border px-3 py-1.5 font-body text-sm transition-colors"
                     style={{
                       borderColor: answer?.setIndex === index ? accent : `${accent}33`,
                       color: answer?.setIndex === index ? accent : undefined,
@@ -102,7 +102,7 @@ export default function Expertise({
 
             {/* What it doubles without asking. */}
             {set && (set.skills.length > 0 || set.tools.length > 0) && (
-              <p className="mb-4 font-body text-sm text-bone/60">
+              <p className="mb-4 font-body text-[15px] text-bone">
                 Dobla {[...set.skills, ...set.tools].join(", ")}.
               </p>
             )}
@@ -128,7 +128,7 @@ export default function Expertise({
             )}
 
             {slot.problems.map((problem, index) => (
-              <p key={index} className="mt-3 font-body text-[13px] text-ember">
+              <p key={index} className="mt-3 font-body text-[15px] text-ember">
                 {problemLine(problem)}
               </p>
             ))}
@@ -161,7 +161,7 @@ function Picker({
 }) {
   return (
     <div className="mt-4">
-      <p className="mb-2 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60">{label}</p>
+      <p className="mb-2 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">{label}</p>
       {options.length === 0 ? (
         <p className={WHISPER}>Todavia no tenes nada de esto en lo que doblar.</p>
       ) : (
@@ -171,7 +171,7 @@ function Picker({
               key={option}
               type="button"
               onClick={() => onPick(option)}
-              className="border px-3 py-1.5 font-body text-xs transition-colors"
+              className="border px-3 py-1.5 font-body text-sm transition-colors"
               style={{
                 borderColor: chosen.includes(option) ? accent : `${accent}33`,
                 color: chosen.includes(option) ? accent : undefined,

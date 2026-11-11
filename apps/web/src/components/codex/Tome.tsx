@@ -86,7 +86,7 @@ export default function Tome({
           <div
             className="absolute left-0 top-0 h-full w-[16px]"
             style={{
-              background: `linear-gradient(to right, ${accent}cc, ${accent}55, #12100D)`,
+              background: `linear-gradient(to right, ${accent}cc, ${accent}55, #0B0B0B)`,
               transform: "rotateY(-90deg) translateX(-8px)",
               transformOrigin: "left center",
             }}
@@ -96,7 +96,7 @@ export default function Tome({
             className="absolute inset-0 border"
             style={{
               borderColor: `${accent}55`,
-              background: "linear-gradient(150deg, #2a2118 0%, #171310 55%, #0c0a08 100%)",
+              background: "linear-gradient(150deg, #2a2118 0%, #171310 55%, #000000 100%)",
               boxShadow: `inset -6px 0 12px rgba(0,0,0,0.6), inset 4px 0 8px ${accent}22`,
             }}
           >
@@ -111,10 +111,10 @@ export default function Tome({
             <div className="flex h-full flex-col items-center justify-center gap-5 px-4">
               <Sigil name={state.classId || state.raceId} size={52} />
               <span className="h-px w-10 bg-current opacity-40" style={{ color: accent }} />
-              <p className="line-clamp-2 text-center font-display text-sm font-bold leading-tight tracking-wide text-bone">
+              <p className="line-clamp-2 text-center font-display text-[15px] font-bold leading-tight tracking-wide text-bone">
                 {state.characterName}
               </p>
-              <p className="font-mono text-[10px] uppercase tracking-[0.25em]" style={{ color: accent }}>
+              <p className="font-mono text-[13px] uppercase tracking-[0.1em]" style={{ color: accent }}>
                 Nivel {characterLevelFor(state)}
               </p>
             </div>
@@ -144,7 +144,7 @@ export default function Tome({
             <Link
               to={`/ritual?id=${character.id}`}
               onClick={(event) => event.stopPropagation()}
-              className="absolute bottom-3 left-3 font-mono text-[10px] uppercase tracking-widest text-transparent transition-colors group-hover:text-gold"
+              className="absolute bottom-3 left-3 font-mono text-[13px] uppercase tracking-widest text-transparent transition-colors group-hover:text-gold"
             >
               ✦ enviar
             </Link>
@@ -230,7 +230,7 @@ function TomeMenu({
         transition={{ type: "spring", stiffness: 200, damping: 24 }}
         onClick={(event) => event.stopPropagation()}
         style={{ borderColor: `${accent}44`, boxShadow: `0 30px 70px rgba(0,0,0,0.8)` }}
-        className="w-full max-w-lg border bg-[#0c0a08] p-8"
+        className="w-full max-w-lg border bg-[#000000] p-8"
       >
         <div className="flex items-center gap-4">
           <Sigil name={state.classId || state.raceId} size={40} />
@@ -238,7 +238,7 @@ function TomeMenu({
             <p className="truncate font-display text-xl font-bold text-bone">
               {state.characterName}
             </p>
-            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60">
+            <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
               Nivel {characterLevelFor(state)} · {className}
             </p>
           </div>
@@ -262,7 +262,7 @@ function TomeMenu({
         <div className="mt-8 flex flex-wrap items-center justify-between gap-4 border-t border-iron/30 pt-5">
           <button
             onClick={onClose}
-            className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
+            className="font-mono text-[14px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-bone"
           >
             ← Cerrar
           </button>
@@ -270,7 +270,7 @@ function TomeMenu({
           <div className="flex flex-wrap items-start gap-5">
             <button
               onClick={onReforge}
-              className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
+              className="font-mono text-[14px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-bone"
               title="Volver a abrir este personaje en la fragua"
             >
               ⚒ Reforjar
@@ -279,7 +279,7 @@ function TomeMenu({
             <ShareButton character={character} accent={accent} />
             <Link
               to={`/ritual?id=${character.id}`}
-              className="font-mono text-[11px] uppercase tracking-[0.3em] text-gold transition-colors hover:text-ember"
+              className="font-mono text-[14px] uppercase tracking-[0.1em] text-gold transition-colors hover:text-ember"
             >
               ✦ Enviar →
             </Link>
@@ -311,7 +311,7 @@ function MenuChoice({
       <p className="font-display text-base font-bold" style={{ color: accent }}>
         {title}
       </p>
-      <p className="mt-1 font-body text-[13px] leading-snug text-bone/60">{blurb}</p>
+      <p className="mt-1 font-body text-[15px] leading-snug text-bone">{blurb}</p>
     </button>
   );
 }
@@ -404,8 +404,8 @@ function TomeWindow({
               color: view === id ? accent : undefined,
               borderColor: view === id ? accent : "transparent",
             }}
-            className={`border-b-2 pb-1 font-mono text-[11px] uppercase tracking-[0.25em] transition-colors ${
-              view === id ? "" : "text-bone/60 hover:text-bone"
+            className={`border-b-2 pb-1 font-mono text-[14px] uppercase tracking-[0.1em] transition-colors ${
+              view === id ? "" : "text-bone hover:text-bone"
             }`}
           >
             {label}
@@ -417,7 +417,7 @@ function TomeWindow({
         snapshot ? (
           <CharacterSheet state={state} build={snapshot} accent={accent} />
         ) : (
-          <p className="px-8 py-10 font-body text-sm italic text-bone/60">
+          <p className="px-8 py-10 font-body text-[15px] text-bone">
             Este tomo no se puede derivar: le falta especie, clase o trasfondo. Reforjalo y
             terminalo para ver la hoja.
           </p>
@@ -433,7 +433,7 @@ function TomeWindow({
             subtitle={subtitle}
           />
 
-          <dl className="flex flex-wrap gap-x-8 gap-y-2 border-t border-iron/30 px-8 py-5 font-mono text-xs">
+          <dl className="flex flex-wrap gap-x-8 gap-y-2 border-t border-iron/30 px-8 py-5 font-mono text-sm">
             {hitDie && <Row k="Dado de golpe" v={`d${hitDie}`} />}
             <Row k="Reglas" v={rulesVersion} />
             <Row k="Sellado" v={new Date(character.sealedAt).toLocaleDateString()} />
@@ -453,7 +453,7 @@ function TomeWindow({
 function Row({ k, v, accent }: { k: string; v: string; accent?: string }) {
   return (
     <div className="flex items-baseline gap-2">
-      <dt className="uppercase tracking-widest text-bone/60">{k}</dt>
+      <dt className="uppercase tracking-widest text-bone">{k}</dt>
       <dd style={{ color: accent ?? "#8a857c" }}>{v}</dd>
     </div>
   );
@@ -468,7 +468,7 @@ function BurnButton({ onConfirm }: { onConfirm: (origin: { x: number; y: number 
     return (
       <button
         onClick={() => setArming(true)}
-        className="font-mono text-[11px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-ember"
+        className="font-mono text-[14px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-ember"
       >
         Quemar este tomo
       </button>
@@ -481,18 +481,18 @@ function BurnButton({ onConfirm }: { onConfirm: (origin: { x: number; y: number 
       animate={{ opacity: 1, x: 0 }}
       className="flex items-center gap-4"
     >
-      <span className="font-mono text-[10px] uppercase tracking-widest text-ember">
+      <span className="font-mono text-[13px] uppercase tracking-widest text-ember">
         No se puede deshacer.
       </span>
       <button
         onClick={(event) => onConfirm({ x: event.clientX, y: event.clientY })}
-        className="border border-blood/70 bg-blood/25 px-6 py-2 font-display text-[11px] font-bold uppercase tracking-[0.25em] text-bone transition-colors hover:bg-blood/60"
+        className="border border-blood/70 bg-blood/25 px-6 py-2 font-display text-[14px] font-bold uppercase tracking-[0.1em] text-bone transition-colors hover:bg-blood/60"
       >
         Quemar
       </button>
       <button
         onClick={() => setArming(false)}
-        className="font-mono text-[11px] uppercase tracking-widest text-bone/60 hover:text-bone"
+        className="font-mono text-[14px] uppercase tracking-widest text-bone hover:text-bone"
       >
         Perdonar
       </button>

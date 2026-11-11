@@ -72,11 +72,11 @@ export default function GearBag({
 
       {bag.length > 0 && (
         <div className="mt-6 border-t border-iron/40 pt-5">
-          <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.35em] text-bone/60">
+          <p className="mb-3 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
             En la mochila — {objects}
             {/* Only claimed over what the index could weigh. */}
             {pounds > 0 && (
-              <span className="ml-3 normal-case tracking-normal text-bone/60">
+              <span className="ml-3 normal-case tracking-normal text-bone">
                 {pounds} lb
                 {known.length < bag.length && ` de ${known.length} de ${bag.length}`}
               </span>
@@ -109,20 +109,20 @@ export default function GearBag({
                     }
                   >
                     <span
-                      className="font-body text-sm"
+                      className="font-body text-[15px]"
                       style={{ color: facts?.magic ? RARITY_TINT[facts.rarity] : accent }}
                     >
                       {nameFor(id, rulesVersion)}
                     </span>
                     {quantity > 1 && (
-                      <span className="font-mono text-[10px] text-bone/60">×{quantity}</span>
+                      <span className="font-mono text-[13px] text-bone">×{quantity}</span>
                     )}
                     {facts?.attunement && (
-                      <span className="font-mono text-[10px] text-ember" title="Requiere sintonizacion">
+                      <span className="font-mono text-[13px] text-ember" title="Requiere sintonizacion">
                         ◈
                       </span>
                     )}
-                    <span className="font-mono text-[10px] text-bone/60 transition-colors group-hover:text-ember">
+                    <span className="font-mono text-[13px] text-bone transition-colors group-hover:text-ember">
                       ✕
                     </span>
                   </motion.button>

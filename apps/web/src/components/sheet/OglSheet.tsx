@@ -82,7 +82,7 @@ export default function OglSheet({ data }: { data: SheetData }) {
 
   if (failed) {
     return (
-      <p className="px-8 py-10 font-body text-sm italic text-bone/60">
+      <p className="px-8 py-10 font-body text-[15px] text-bone">
         No se pudo cargar la hoja. Recargá la página; si sigue, el archivo de la hoja no llegó al
         despliegue.
       </p>

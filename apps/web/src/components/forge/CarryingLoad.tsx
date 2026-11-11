@@ -32,12 +32,12 @@ export default function CarryingLoad({ load, accent }: { load: CarriedLoad; acce
     <div>
       <p className={LABEL_MB2}>Carga</p>
 
-      <p className="mb-3 font-body text-sm text-bone/60">
-        <span style={{ color: state === "over-capacity" ? "#ff5a1f" : accent }}>{pounds} lb</span>
-        <span className="text-bone/60"> de {limits.capacity}</span>
+      <p className="mb-3 font-body text-[15px] text-bone">
+        <span style={{ color: state === "over-capacity" ? "#FF7043" : accent }}>{pounds} lb</span>
+        <span className="text-bone"> de {limits.capacity}</span>
         {/* Only claimed over what the index could weigh. */}
         {load.weighed < load.lines && (
-          <span className="ml-2 font-mono text-[10px] tracking-[0.2em] text-bone/60">
+          <span className="ml-2 font-mono text-[13px] tracking-[0.1em] text-bone">
             {load.weighed} de {load.lines} pesados
           </span>
         )}
@@ -48,7 +48,7 @@ export default function CarryingLoad({ load, accent }: { load: CarriedLoad; acce
           className="h-full transition-all"
           style={{
             width: `${filled * 100}%`,
-            background: state === "over-capacity" ? "#ff5a1f" : accent,
+            background: state === "over-capacity" ? "#FF7043" : accent,
           }}
         />
         {/* The variant's two thresholds, marked and not enforced. */}
@@ -63,7 +63,7 @@ export default function CarryingLoad({ load, accent }: { load: CarriedLoad; acce
       </div>
 
       {STATE_NOTE[state] && (
-        <p className={`mt-3 ${WHISPER}`} style={state === "over-capacity" ? { color: "#ff5a1f" } : undefined}>
+        <p className={`mt-3 ${WHISPER}`} style={state === "over-capacity" ? { color: "#FF7043" } : undefined}>
           {STATE_NOTE[state]}
         </p>
       )}

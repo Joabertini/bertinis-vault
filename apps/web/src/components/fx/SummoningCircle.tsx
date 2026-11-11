@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 export default function SummoningCircle({
   size = 320,
   active,
-  accent = "#B08A3E",
+  accent = "#F2C14E",
 }: {
   size?: number;
   active: boolean;
@@ -54,9 +54,9 @@ export default function SummoningCircle({
         className="absolute inset-[28%]"
       >
         <circle cx="100" cy="100" r="88" fill="none"
-          stroke={active ? "#FF5A1F" : accent}
+          stroke={active ? "#FF7043" : accent}
           strokeWidth={active ? 1.4 : 0.6}
-          style={{ filter: active ? "drop-shadow(0 0 6px #FF5A1F)" : undefined }}
+          style={{ filter: active ? "drop-shadow(0 0 6px #FF7043)" : undefined }}
           strokeDasharray="1 9" />
       </motion.svg>
 

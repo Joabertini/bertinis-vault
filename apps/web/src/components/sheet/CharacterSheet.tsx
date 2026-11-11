@@ -35,7 +35,7 @@ export default function CharacterSheet({
 
   if (rulesVersion === "2024") {
     return (
-      <p className="px-8 py-10 font-body text-sm italic text-bone/60">
+      <p className="px-8 py-10 font-body text-[15px] text-bone">
         La hoja de 2024 todavía no está. Este personaje se armó con las reglas de 2024 y la hoja
         que tenemos es la de 2014; ponerlo en ella sería mostrarlo bajo reglas que no son las
         suyas. Mientras tanto están los recordatorios, y el tomo exporta a Foundry igual.

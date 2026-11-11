@@ -89,8 +89,8 @@ export default function HitPoints({
               color: method === value ? accent : "rgba(230,223,206,0.75)",
             }}
           >
-            <span className="font-display text-sm font-bold">{label}</span>
-            <span className="mt-1 block font-body text-xs text-bone/60">{hint}</span>
+            <span className="font-display text-[15px] font-bold">{label}</span>
+            <span className="mt-1 block font-body text-sm text-bone">{hint}</span>
           </button>
         ))}
       </div>
@@ -102,21 +102,21 @@ export default function HitPoints({
       ) : (
         <div className="space-y-2">
           <div className="flex items-center gap-3 border-b border-iron/30 pb-2">
-            <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60">
+            <span className="w-16 shrink-0 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
               Nv 1
             </span>
-            <span className="font-body text-sm text-bone/60">
+            <span className="font-body text-[15px] text-bone">
               d{firstDie} al maximo — no se tira en ninguna de las dos ediciones
             </span>
           </div>
 
           {levels.map((row) => (
             <div key={row.level} className="flex items-center gap-3">
-              <span className="w-16 shrink-0 font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60">
+              <span className="w-16 shrink-0 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                 Nv {row.level}
               </span>
-              <span className="w-14 shrink-0 font-mono text-[11px] text-bone/75">d{row.die}</span>
-              <span className="min-w-0 flex-1 truncate font-body text-sm text-bone/60">
+              <span className="w-14 shrink-0 font-mono text-[14px] text-bone">d{row.die}</span>
+              <span className="min-w-0 flex-1 truncate font-body text-[15px] text-bone">
                 {classLabel(row.classId)}
               </span>
 
@@ -136,7 +136,7 @@ export default function HitPoints({
                   );
                 }}
                 aria-label={`Tirada de nivel ${row.level}`}
-                className="w-16 border border-iron/40 bg-transparent px-2 py-1 text-center font-mono text-sm text-bone/80"
+                className="w-16 border border-iron/40 bg-transparent px-2 py-1 text-center font-mono text-[15px] text-bone"
               />
 
               <motion.button
@@ -144,7 +144,7 @@ export default function HitPoints({
                 onClick={() => roll(row)}
                 animate={rolling === row.level ? { rotate: [0, 180, 360] } : { rotate: 0 }}
                 transition={{ duration: 0.26 }}
-                className="shrink-0 border border-iron/40 px-3 py-1 font-mono text-[10px] uppercase tracking-[0.2em] text-bone/75 hover:text-bone/80"
+                className="shrink-0 border border-iron/40 px-3 py-1 font-mono text-[13px] uppercase tracking-[0.1em] text-bone hover:text-bone"
               >
                 Tirar
               </motion.button>

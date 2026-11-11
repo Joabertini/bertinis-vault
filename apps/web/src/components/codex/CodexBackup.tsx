@@ -72,7 +72,7 @@ export default function CodexBackup() {
         type="button"
         onClick={save}
         disabled={characters.length === 0}
-        className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-gold disabled:cursor-not-allowed disabled:text-bone/45"
+        className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-gold disabled:cursor-not-allowed disabled:text-bone"
       >
         Guardar el Codice en un archivo
       </button>
@@ -80,7 +80,7 @@ export default function CodexBackup() {
       <button
         type="button"
         onClick={() => input.current?.click()}
-        className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-gold"
+        className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-gold"
       >
         Traer un Codice guardado
       </button>

@@ -5,13 +5,14 @@ export default {
   theme: {
     extend: {
       colors: {
-        void: "#030202",
-        ash: "#12100D",
-        bone: "#E6DFCE",
-        gold: "#B08A3E",
+        void: "#000000",
+        ash: "#0B0B0B",
+        raised: "#141414",
+        bone: "#FFFFFF",
+        gold: "#F2C14E",
         blood: "#6E0F0F",
-        ember: "#FF5A1F",
-        iron: "#4A4640",
+        ember: "#FF7043",
+        iron: "#5A5A5A",
       },
       fontFamily: {
         /*
@@ -33,6 +34,12 @@ export default {
          */
         title: ["Jim Nightshade", "Cinzel", "serif"],
         body: ["EB Garamond", "serif"],
+        /*
+         * Numbers. Cinzel draws its 1 as a Roman I, so "11" reads "II" and
+         * "114" reads "II4". Every number a player reads is set in EB Garamond
+         * with lining figures instead (see base.css).
+         */
+        num: ["EB Garamond", "serif"],
         mono: ["JetBrains Mono", "monospace"],
       },
     },

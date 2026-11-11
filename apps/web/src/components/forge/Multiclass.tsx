@@ -109,7 +109,7 @@ export default function Multiclass({
                     // of Evocation is not a thing a barbarian can be.
                     onChange(index, { ...extra, classId: event.target.value, subclassId: "" })
                   }
-                  className="flex-1 border border-iron/50 bg-void px-3 py-2 font-body text-sm text-bone"
+                  className="flex-1 border border-iron/50 bg-void px-3 py-2 font-body text-[15px] text-bone"
                   aria-label="Clase"
                 >
                   <option value="">Elegi una clase…</option>
@@ -134,7 +134,7 @@ export default function Multiclass({
                 <button
                   type="button"
                   onClick={() => onRemove(index)}
-                  className="font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60 transition-colors hover:text-ember"
+                  className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-ember"
                 >
                   Sacar
                 </button>
@@ -177,7 +177,7 @@ export default function Multiclass({
                     onChange={(event) =>
                       onChange(index, { ...extra, subclassId: event.target.value })
                     }
-                    className="w-full border border-iron/50 bg-void px-3 py-2 font-body text-sm text-bone"
+                    className="w-full border border-iron/50 bg-void px-3 py-2 font-body text-[15px] text-bone"
                     aria-label="Senda"
                   >
                     <option value="">Sin elegir</option>
@@ -194,7 +194,7 @@ export default function Multiclass({
                   table that exists, and a warning the player can read beats a
                   build they cannot make. */}
               {problem && (
-                <p className="mt-4 font-body text-[13px] text-ember">
+                <p className="mt-4 font-body text-[15px] text-ember">
                   {taken?.label ?? extra.classId} pide {requirementLine(problem.requirements)}.
                 </p>
               )}
@@ -207,7 +207,7 @@ export default function Multiclass({
         type="button"
         onClick={onAdd}
         disabled={roomLeft < 1}
-        className="font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-gold disabled:cursor-not-allowed disabled:text-bone/45"
+        className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-gold disabled:cursor-not-allowed disabled:text-bone"
       >
         {roomLeft < 1 ? "Nivel 20 — no queda nivel para repartir" : "+ Sumar una clase"}
       </button>

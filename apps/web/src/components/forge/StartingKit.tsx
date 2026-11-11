@@ -43,7 +43,7 @@ export default function StartingKit({
               row.options.map((option) => (
                 <li
                   key={`${row.key}:${option.key}`}
-                  className="font-body text-sm leading-relaxed text-bone/60"
+                  className="font-body text-[15px] leading-relaxed text-bone"
                 >
                   {option.label}
                 </li>
@@ -80,8 +80,8 @@ export default function StartingKit({
                     }}
                   >
                     <span
-                      className="font-body text-sm leading-relaxed"
-                      style={{ color: taken ? accent : "#E6DFCEaa" }}
+                      className="font-body text-[15px] leading-relaxed"
+                      style={{ color: taken ? accent : "#FFFFFFaa" }}
                     >
                       {option.label}
                     </span>
@@ -95,7 +95,7 @@ export default function StartingKit({
                     )}
 
                     {coins && (
-                      <span className="mt-1 block font-mono text-[10px] tracking-[0.2em] text-gold">
+                      <span className="mt-1 block font-mono text-[13px] tracking-[0.1em] text-gold">
                         {coins}
                       </span>
                     )}

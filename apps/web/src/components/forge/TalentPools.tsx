@@ -44,7 +44,7 @@ export default function TalentPools({
           <p className={LABEL_MB2}>Ya no cumplen su requisito</p>
           <ul className="space-y-1">
             {stale.map((entry) => (
-              <li key={entry.id} className="font-body text-sm text-ember">
+              <li key={entry.id} className="font-body text-[15px] text-ember">
                 {entry.label} — {entry.reason}
               </li>
             ))}
@@ -92,7 +92,7 @@ export default function TalentPools({
                     <div className="flex w-full items-baseline justify-between gap-3">
                       <span
                         className={ITEM_NAME}
-                        style={{ color: active ? accent : "#E6DFCE" }}
+                        style={{ color: active ? accent : "#FFFFFF" }}
                       >
                         {option.label}
                       </span>
@@ -102,7 +102,7 @@ export default function TalentPools({
                     </div>
 
                     {option.blockedBy && (
-                      <span className="font-mono text-[10px] uppercase tracking-[0.15em] text-ember">
+                      <span className="font-mono text-[13px] uppercase tracking-[0.06em] text-ember">
                         {option.blockedBy}
                       </span>
                     )}

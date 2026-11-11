@@ -105,7 +105,7 @@ function GateContent() {
 
       {/* Ground fog */}
       <motion.div style={{ y: fogY }} className="pointer-events-none absolute bottom-0 h-64 w-full">
-        <div className="h-full w-full bg-gradient-to-t from-[#0a0806] via-[#0a0806]/40 to-transparent blur-xl" />
+        <div className="h-full w-full bg-gradient-to-t from-[#000000] via-[#000000]/40 to-transparent blur-xl" />
       </motion.div>
 
       <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
@@ -121,7 +121,7 @@ function GateContent() {
         >
           Faro
           <br />
-          <span className="bg-gradient-to-b from-[#B08A3E] via-[#8a6a2e] to-[#4d3a18] bg-clip-text text-transparent">
+          <span className="bg-gradient-to-b from-[#F2C14E] via-[#8a6a2e] to-[#4d3a18] bg-clip-text text-transparent">
             del Alba
           </span>
         </motion.h1>
@@ -162,7 +162,7 @@ function GateContent() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 2, duration: 1 }}
-          className="absolute bottom-10 flex flex-wrap justify-center gap-12 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60"
+          className="absolute bottom-10 flex flex-wrap justify-center gap-12 font-mono text-[13px] uppercase tracking-[0.1em] text-bone"
         >
           <span>
             Heroes sellados — <b className="text-gold">{characters.length}</b>
@@ -193,14 +193,14 @@ function GateContent() {
               <h2 className="font-display text-3xl font-black tracking-wide text-bone md:text-4xl">
                 ¿BAJO QUE REGLAS?
               </h2>
-              <p className="mx-auto mt-4 max-w-md font-body italic text-bone/75">
+              <p className="mx-auto mt-4 max-w-md font-body text-bone">
                 Decide que libros son legales. No se cambia a mitad de la forja.
               </p>
 
               {/* Said before the click, not after: choosing an edition here
                   replaces whatever is on the anvil, and there is no undo. */}
               {inProgress && (
-                <p className="mx-auto mt-5 max-w-md border-l-2 border-ember/60 pl-4 text-left font-body text-sm leading-relaxed text-bone/75">
+                <p className="mx-auto mt-5 max-w-md border-l-2 border-ember/60 pl-4 text-left font-body text-[15px] leading-relaxed text-bone">
                   Hay una forja en curso
                   {draft.characterName.trim() ? ` — ${draft.characterName.trim()}` : ""}. Elegir
                   una edicion aca la descarta.
@@ -224,7 +224,7 @@ function GateContent() {
                 </div>
               ) : (
                 <div className="mt-12">
-                  <p className="font-display text-xl font-bold uppercase tracking-[0.2em] text-bone">
+                  <p className="font-display text-xl font-bold uppercase tracking-[0.1em] text-bone">
                     ¿Usan libros complementarios?
                   </p>
                   <div className="mt-8 grid gap-6 sm:grid-cols-2">
@@ -254,7 +254,7 @@ function GateContent() {
 
               <button
                 onClick={() => (edition === null ? close() : setEdition(null))}
-                className="mt-10 font-mono text-[10px] uppercase tracking-[0.3em] text-bone/60 transition-colors hover:text-bone"
+                className="mt-10 font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-bone"
               >
                 {edition === null ? "← Volver" : "← Elegir otra edicion"}
               </button>
@@ -294,10 +294,10 @@ function EditionDoor({
       <p className="font-display text-5xl font-black text-gold transition-colors group-hover:text-gold">
         {edition}
       </p>
-      <p className="mt-3 font-display text-sm font-bold uppercase tracking-[0.25em] text-bone">
+      <p className="mt-3 font-display text-[15px] font-bold uppercase tracking-[0.1em] text-bone">
         {title}
       </p>
-      <p className="mt-3 font-body text-sm leading-relaxed text-bone/60">{detail}</p>
+      <p className="mt-3 font-body text-[15px] leading-relaxed text-bone">{detail}</p>
 
       <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/[0.05] to-transparent transition-transform duration-700 group-hover:translate-x-full" />
     </motion.button>

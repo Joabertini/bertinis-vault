@@ -22,7 +22,7 @@ export default function ItemFacts({ facts, accent }: { facts: Facts; accent: str
         <span className="font-display text-base font-bold" style={{ color: accent }}>
           {row.name}
         </span>
-        <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-bone/60">
+        <span className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
           {KIND_LABEL[facts.kind]}
         </span>
         {/*
@@ -32,31 +32,31 @@ export default function ItemFacts({ facts, accent }: { facts: Facts; accent: str
         */}
         {facts.magic && (
           <span
-            className="font-mono text-[10px] uppercase tracking-[0.25em]"
+            className="font-mono text-[13px] uppercase tracking-[0.1em]"
             style={{ color: RARITY_TINT[facts.rarity] }}
           >
             {RARITY_LABEL[facts.rarity]}
           </span>
         )}
         {facts.attunement && (
-          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-ember">
+          <span className="font-mono text-[13px] uppercase tracking-[0.1em] text-ember">
             Requiere sintonizacion
           </span>
         )}
       </div>
 
       {/* The numbers, on one line. */}
-      <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-mono text-[11px] text-bone/60">
+      <div className="mt-2 flex flex-wrap items-baseline gap-x-4 gap-y-1 font-mono text-[14px] text-bone">
         {weapon?.damage && <span style={{ color: accent }}>{weapon.damage}</span>}
         {armor && <span style={{ color: accent }}>{armor.armorClass}</span>}
         {armor?.strength !== null && armor?.strength !== undefined && (
-          <span className="text-bone/60">Fuerza {armor.strength}</span>
+          <span className="text-bone">Fuerza {armor.strength}</span>
         )}
         {armor?.stealthDisadvantage && (
           <span className="text-ember">Desventaja en Sigilo</span>
         )}
-        {facts.weight && <span className="text-bone/60">{facts.weight}</span>}
-        {facts.price && <span className="text-bone/60">{facts.price}</span>}
+        {facts.weight && <span className="text-bone">{facts.weight}</span>}
+        {facts.price && <span className="text-bone">{facts.price}</span>}
       </div>
 
       {/*
@@ -67,8 +67,8 @@ export default function ItemFacts({ facts, accent }: { facts: Facts; accent: str
       {weapon && weapon.properties.length > 0 && (
         <ul className="mt-3 space-y-1">
           {weapon.properties.map((property) => (
-            <li key={property.code} className="font-body text-xs leading-relaxed text-bone/60">
-              <span className="text-bone/70">{property.label}</span>
+            <li key={property.code} className="font-body text-sm leading-relaxed text-bone">
+              <span className="text-bone">{property.label}</span>
               {property.means && ` — ${property.means}`}
             </li>
           ))}
@@ -78,11 +78,11 @@ export default function ItemFacts({ facts, accent }: { facts: Facts; accent: str
       {/* Maestrias: 2024 only, and only for the classes that get them. */}
       {weapon && weapon.masteries.length > 0 && (
         <div className="mt-3">
-          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-gold/85">Maestria</p>
+          <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-gold">Maestria</p>
           <ul className="mt-1 space-y-1">
             {weapon.masteries.map((mastery) => (
-              <li key={mastery.name} className="font-body text-xs leading-relaxed text-bone/60">
-                <span className="text-bone/70">{mastery.name}</span>
+              <li key={mastery.name} className="font-body text-sm leading-relaxed text-bone">
+                <span className="text-bone">{mastery.name}</span>
                 {mastery.means && ` — ${mastery.means}`}
               </li>
             ))}

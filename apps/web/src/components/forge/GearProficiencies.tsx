@@ -37,7 +37,7 @@ export default function GearProficienciesPanel({
           the 2014 sorcerer — is told so. An empty space reads as a gap in the
           sheet rather than as the rule it is. */}
       <div className="mb-3">
-        <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-bone/60">Armadura</p>
+        <p className="mb-1 font-mono text-[13px] uppercase tracking-wide text-bone">Armadura</p>
         {armor.length ? (
           <Lines lines={armor} sourceLabels={sourceLabels} classIds={classIds} accent={accent} />
         ) : (
@@ -48,7 +48,7 @@ export default function GearProficienciesPanel({
       </div>
 
       <div>
-        <p className="mb-1 font-mono text-[10px] uppercase tracking-wide text-bone/60">Armas</p>
+        <p className="mb-1 font-mono text-[13px] uppercase tracking-wide text-bone">Armas</p>
         <Lines lines={weapons} sourceLabels={sourceLabels} classIds={classIds} accent={accent} />
       </div>
     </div>
@@ -84,12 +84,12 @@ function Lines({
       {lines.map((line) => (
         <li key={line.id}>
           <span className="flex min-w-0 items-baseline gap-1.5">
-            <span className="font-mono text-[10px] leading-none" style={{ color: accent }}>
+            <span className="font-mono text-[13px] leading-none" style={{ color: accent }}>
               •
             </span>
-            <span className="truncate font-body text-xs">{line.label}</span>
+            <span className="truncate font-body text-sm">{line.label}</span>
             {credited(line).length > 0 && (
-              <span className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-bone/60">
+              <span className="shrink-0 font-mono text-[13px] uppercase tracking-wide text-bone">
                 {credited(line)
                   .map((id) => sourceLabels[id] ?? id)
                   .join(", ")}
@@ -100,7 +100,7 @@ function Lines({
               hover, because the player deciding what to buy is as likely to be
               on a phone as at a desk. */}
           {line.detail && (
-            <span className="ml-3.5 block font-body text-[10px] leading-snug text-bone/60">
+            <span className="ml-3.5 block font-body text-[13px] leading-snug text-bone">
               {line.detail}
             </span>
           )}

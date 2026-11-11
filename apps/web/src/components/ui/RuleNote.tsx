@@ -102,10 +102,10 @@ export default function RuleNote({
         aria-expanded={open}
         aria-controls={open ? cardId : undefined}
         aria-label={`La regla: ${title}`}
-        className={`inline-flex h-[18px] shrink-0 items-center gap-1 border px-1.5 font-mono text-[10px] uppercase leading-none tracking-[0.2em] transition-colors ${
+        className={`inline-flex h-[18px] shrink-0 items-center gap-1 border px-1.5 font-mono text-[13px] uppercase leading-none tracking-[0.1em] transition-colors ${
           open
             ? "border-gold bg-gold/15 text-gold"
-            : "border-iron text-bone/60 hover:border-gold hover:text-gold"
+            : "border-iron text-bone hover:border-gold hover:text-gold"
         }`}
       >
         <span aria-hidden>?</span>
@@ -139,7 +139,7 @@ export default function RuleNote({
               className="fixed z-[91] w-[min(22rem,calc(100vw-24px))] border border-gold/40 bg-ash p-5 shadow-[0_18px_50px_rgba(0,0,0,0.75)]"
             >
               <p className={`${LABEL} mb-2`}>{title}</p>
-              <div className="space-y-2 font-body text-[15px] leading-relaxed text-bone/75">
+              <div className="space-y-2 font-body text-[15px] leading-relaxed text-bone">
                 {children}
               </div>
             </div>
