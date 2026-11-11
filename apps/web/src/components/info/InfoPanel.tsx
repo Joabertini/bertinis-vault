@@ -187,6 +187,15 @@ function Content({ ref_, accent }: { ref_: RuleRef; accent: string }) {
 
       <RulesBody entries={record["entries"]} accent={accent} />
 
+      {/* Plenty of entries are only a name in the books — a bag of rope, a common language.
+          Say so, rather than leave a blank panel that reads as broken. */}
+      {asList(record["entries"]).length === 0 &&
+        meta.length === 0 &&
+        ref_.kind !== "class" &&
+        ref_.kind !== "subclass" && (
+          <p className="mt-4 font-body text-[15px] text-bone">Los libros no le dedican texto aparte.</p>
+        )}
+
       {higher.length > 0 && (
         <div className="font-body text-[15px] leading-relaxed text-bone">
           {higher.map((entry, index) => (
