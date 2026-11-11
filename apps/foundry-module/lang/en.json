@@ -21,5 +21,8 @@
   "bertinis-vault.errors.offline": "Could not reach the Vault at {url}.",
   "bertinis-vault.errors.payloadVersion": "This build was exported in a newer format (version {version}). Update the module.",
   "bertinis-vault.errors.importFailed": "Import failed: {message}",
-  "bertinis-vault.notifications.unexpectedWindows": "The import opened windows it should not have: {names}. See the console."
+  "bertinis-vault.notifications.unexpectedWindows": "The import opened windows it should not have: {names}. See the console.",
+  "bertinis-vault.ui.exportAction": "Export for the Vault",
+  "bertinis-vault.notifications.exported": "{name} was exported with its picture. Drop it on the Codex.",
+  "bertinis-vault.notifications.exportNoPicture": "{name}: its picture could not be read; exported without it."
 }
