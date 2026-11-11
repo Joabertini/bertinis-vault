@@ -13,11 +13,29 @@
 import type { GearLine } from "@/lib/gear-lines";
 import { collapseGearLines } from "@/lib/gear-lines";
 import { motion, AnimatePresence } from "framer-motion";
+import { useMemo, useState } from "react";
 
 import ScryPicker from "@/components/forge/ScryPicker";
 import type { CatalogEntry } from "@/lib/catalog";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 import { RARITY_LABEL, RARITY_TINT, factsFor, nameFor } from "@/lib/item-facts";
+
+/**
+ * The tiers the list can be narrowed to, in the order a table reads them.
+ *
+ * `none` is the gear a character buys — rope, a tent, caltrops — and is on by
+ * default: it is what a bag is mostly made of, and a list that opened on 1,700
+ * magic items buried it.
+ */
+const RARITY_CHIPS: Array<{ key: string; label: string }> = [
+  { key: "none", label: "Mundano" },
+  { key: "common", label: "Comun" },
+  { key: "uncommon", label: "Poco comun" },
+  { key: "rare", label: "Raro" },
+  { key: "very rare", label: "Muy raro" },
+  { key: "legendary", label: "Legendario" },
+  { key: "artifact", label: "Artefacto" },
+];
 
 export default function GearBag({
   carried,
@@ -29,7 +47,8 @@ export default function GearBag({
 }: {
   /** Item ids already in the bag. */
   carried: string[];
-  search: (query: string) => CatalogEntry[];
+  /** Runs the query against the index, narrowed to the rarities ticked. */
+  search: (query: string, rarities: readonly string[]) => CatalogEntry[];
   rulesVersion: RulesVersion;
   accent: string;
   onAdd: (entry: CatalogEntry) => void;
@@ -42,6 +61,16 @@ export default function GearBag({
    * are notes rather than objects, and a total that silently skipped them
    * while claiming to be the total would be worse than no total at all.
    */
+  const [rarities, setRarities] = useState<string[]>(["none"]);
+  const toggleRarity = (key: string) =>
+    setRarities((current) =>
+      current.includes(key) ? current.filter((entry) => entry !== key) : [...current, key],
+    );
+  const searchHere = useMemo(
+    () => (query: string) => search(query, rarities),
+    [search, rarities],
+  );
+
   const bag = collapseGearLines(carried);
   const known = bag
     .map((entry) => ({ entry, facts: factsFor(entry.id, rulesVersion) }))
@@ -59,15 +88,36 @@ export default function GearBag({
   const objects = bag.reduce((total, entry) => total + entry.quantity, 0);
   return (
     <div>
+      <div className="mb-4 flex flex-wrap gap-2" role="group" aria-label="Filtrar por rareza">
+        {RARITY_CHIPS.map(({ key, label }) => {
+          const on = rarities.includes(key);
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => toggleRarity(key)}
+              aria-pressed={on}
+              className="border px-3 py-1 font-mono text-[13px] uppercase tracking-[0.1em] transition-colors hover:text-bone"
+              style={{
+                borderColor: on ? accent : `${accent}33`,
+                color: on ? accent : "rgba(230,223,206,0.6)",
+              }}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+
       <ScryPicker
         label="Buscar equipo"
-        placeholder="Libro de conjuros, cuerda, raciones…"
-        search={search}
+        placeholder="Buscar por nombre, o recorre la lista…"
+        search={searchHere}
         // Nothing is "selected" in a bag — picking adds rather than replaces.
         selectedId=""
         onPick={onAdd}
         accent={accent}
-        emptyHint="Escribi para buscar objetos."
+        emptyHint="Ningun objeto con esas rarezas. Suma otra arriba."
       />
 
       {bag.length > 0 && (

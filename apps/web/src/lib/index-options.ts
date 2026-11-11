@@ -111,7 +111,18 @@ export type OptionQuery = {
   armorOnly?: boolean | undefined;
   /** Narrow subclasses or subraces to the class or species that owns them. */
   parentName?: string | undefined;
+  /**
+   * Narrow items to these rarities, as the index writes them: `"none"` is the
+   * mundane gear a character buys, the rest are the magic tiers. Empty or
+   * omitted means every rarity.
+   */
+  rarities?: readonly string[] | undefined;
 };
+
+/** The rarity an item row carries, with "no rarity" spelt the one way. */
+export function rarityOfRow(row: { rarity?: string | null }): string {
+  return !row.rarity || row.rarity === "none" ? "none" : row.rarity;
+}
 
 /**
  * The options matching a search, legal for the ruleset.
@@ -128,6 +139,7 @@ export function optionsFor({
   weaponsOnly,
   armorOnly,
   parentName,
+  rarities,
 }: OptionQuery): IndexOption[] {
   const all = collections[prop] ?? [];
   const legal = forRulesVersion(all, rulesVersion);
@@ -136,6 +148,17 @@ export function optionsFor({
   if (weaponsOnly) scoped = scoped.filter((row) => isWeapon(row as ItemRow));
   if (armorOnly) scoped = scoped.filter((row) => isArmor(row as ItemRow));
   if (parentName) scoped = scoped.filter((row) => parentOf(row) === parentName);
+  if (rarities?.length) {
+    const wanted = new Set(rarities);
+    scoped = scoped.filter((row) => wanted.has(rarityOfRow(row as ItemRow)));
+  }
+
+  // Nothing typed is a request to browse, and a browse that follows the source
+  // files' order reads as shuffled: alphabetical is the only order a player
+  // can scan for the thing they remember the name of.
+  if (!search.trim() && rarities !== undefined) {
+    scoped = [...scoped].sort((a, b) => a.name.localeCompare(b.name));
+  }
 
   return toOptions(searchByName(scoped, search, limit ?? scoped.length));
 }

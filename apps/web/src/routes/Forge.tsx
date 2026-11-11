@@ -229,7 +229,8 @@ export default function Forge() {
   );
   // The bag searches every item, not only weapons and armour.
   const gearSearch = useMemo(
-    () => (query: string) => optionsFor({ prop: "item", rulesVersion, search: query, limit: 30 }),
+    () => (query: string, rarities: readonly string[]) =>
+      optionsFor({ prop: "item", rulesVersion, search: query, limit: 60, rarities }),
     [rulesVersion],
   );
 
