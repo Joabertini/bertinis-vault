@@ -1,5 +1,7 @@
 import type { ComponentProps } from "react";
 
+import type { RulesVersion } from "@bertinis-vault/vetools-ref";
+
 import BonusEditor from "@/components/forge/BonusEditor";
 import Improvements from "@/components/forge/Improvements";
 import OriginBonus from "@/components/forge/OriginBonus";
@@ -28,10 +30,10 @@ export default function GrowthChamber({
 }: {
   draft: BuilderState;
   patchDraft: (patch: Partial<BuilderState>) => void;
-  rulesVersion: BuilderState["rulesVersion"];
+  rulesVersion: RulesVersion;
   printedBonus: ComponentProps<typeof OriginBonus>["printed"];
   speciesBudget: ComponentProps<typeof BonusEditor>["budget"];
-  originAllowance: ComponentProps<typeof BonusEditor>["allowed"];
+  originAllowance: Exclude<ComponentProps<typeof BonusEditor>["allowed"], undefined>;
   slots: ComponentProps<typeof Improvements>["slots"];
   variantSources: ComponentProps<typeof VariantChoices>["sources"];
   spellChoices: ComponentProps<typeof VariantChoices>["questions"];
