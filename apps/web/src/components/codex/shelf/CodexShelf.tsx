@@ -231,38 +231,6 @@ export default function CodexShelf({
         />
       </div>
 
-      {/* The shelf shows three at a time and turns. Past three, the rest are
-          here too, all at once, each one a tap from open. */}
-      {characters.length > 3 && (
-        <section className="mt-10" aria-label="Todos los tomos">
-          <p className="mb-3 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
-            Todos tus tomos — {characters.length}
-          </p>
-          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {characters.map((entry) => (
-              <li key={entry.id}>
-                <button
-                  type="button"
-                  onClick={() => setOpen(entry.id)}
-                  className="flex w-full items-baseline justify-between gap-3 border border-iron/60 px-4 py-2.5 text-left transition-colors hover:border-gold"
-                >
-                  <span className="truncate font-display text-base text-white">
-                    {entry.state.characterName || "Sin nombre"}
-                  </span>
-                  <span className="shrink-0 font-mono text-[13px] text-bone">
-                    {classingLabelFor(
-                      entry.state,
-                      (classId) => entryById("class", rulesVersionOf(entry.state), classId)?.label ?? classId,
-                    )}{" "}
-                    {characterLevelFor(entry.state)}
-                  </span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       {openCharacter && (
         <Tome
           detached

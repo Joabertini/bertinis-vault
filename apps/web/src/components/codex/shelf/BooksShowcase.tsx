@@ -1756,7 +1756,7 @@ export function BooksShowcase({
             type="button"
             aria-label="Previous books"
             onClick={() => shiftCarouselRef.current(-1)}
-            className={`absolute left-3 top-1/2 z-30 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bs-cream)]/90 text-[var(--bs-navy)] shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[var(--bs-cream)] @min-[768px]:left-6 @min-[768px]:h-12 @min-[768px]:w-12 ${uiMode === 'hero' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+            className={`absolute left-3 top-1/2 z-30 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#F2C14E] bg-[#17120A] text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[#241C0D] hover:text-[#F2C14E] @min-[768px]:left-6 @min-[768px]:h-12 @min-[768px]:w-12 ${uiMode === 'hero' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
               }`}
           >
             <ChevronLeft />
@@ -1765,7 +1765,7 @@ export function BooksShowcase({
             type="button"
             aria-label="Next books"
             onClick={() => shiftCarouselRef.current(1)}
-            className={`absolute right-3 top-1/2 z-30 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-full bg-[var(--bs-cream)]/90 text-[var(--bs-navy)] shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[var(--bs-cream)] @min-[768px]:right-6 @min-[768px]:h-12 @min-[768px]:w-12 ${uiMode === 'hero' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+            className={`absolute right-3 top-1/2 z-30 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#F2C14E] bg-[#17120A] text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[#241C0D] hover:text-[#F2C14E] @min-[768px]:right-6 @min-[768px]:h-12 @min-[768px]:w-12 ${uiMode === 'hero' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
               }`}
           >
             <ChevronRight />
