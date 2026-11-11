@@ -105,10 +105,10 @@ export default function Codex() {
           </div>
         </div>
 
-        {/* The shelf is the page: full width, above the tools. */}
+        {/* The shelf, above the tools and no wider than the page: the title and the books scale with the column, and the arrows stay on screen. */}
         {filtered.length > 0 && (
-          <div className="relative left-1/2 mb-14 w-screen -translate-x-1/2">
-            <Suspense fallback={<div className="h-[78vh] min-h-[560px]" />}>
+          <div className="mb-14">
+            <Suspense fallback={<div className="h-[56vh] min-h-[380px]" />}>
               <CodexShelf characters={filtered} onBurn={handleBurn} onReforge={handleReforge} />
             </Suspense>
           </div>

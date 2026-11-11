@@ -11,6 +11,8 @@
  *     has no meaning for a character.
  *   - ADAPTED: scene lights and the drifting leaves use the project's gold/ember
  *     instead of the blue/pink/green defaults.
+ *   - ADAPTED: the minimum height is 360px, not 560px, so the shelf can be sized
+ *     by the page instead of filling it.
  *   - The "Open" slip and the empty-state text are in Spanish.
  * Type checking is off for this file only: it is third-party code written
  * without `noUncheckedIndexedAccess`, which the rest of this app turns on.
@@ -1706,7 +1708,7 @@ export function BooksShowcase({
       aria-label={`${heroTitle} book showcase`}
       data-state={uiMode}
       className={cn(
-        'book-showcase relative isolate h-full min-h-[560px] overflow-hidden font-sans outline-none [container-type:size] [-webkit-tap-highlight-color:transparent]',
+        'book-showcase relative isolate h-full min-h-[360px] overflow-hidden font-sans outline-none [container-type:size] [-webkit-tap-highlight-color:transparent]',
         'focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--bs-peri)]',
         'transition-colors duration-500 ease-out',
         uiMode === 'hero'

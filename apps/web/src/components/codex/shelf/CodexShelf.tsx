@@ -108,7 +108,7 @@ export default function CodexShelf({
 
   return (
     <>
-      <div className="relative h-[78vh] min-h-[560px] w-full">
+      <div className="relative h-[56vh] max-h-[620px] min-h-[380px] w-full">
         <BooksShowcase
           books={books}
           heroTitle="Códice"
