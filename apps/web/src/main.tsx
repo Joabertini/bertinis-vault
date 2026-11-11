@@ -2,7 +2,12 @@ import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
+import { setBookLibrary } from "@bertinis-vault/vetools-ref";
 import Gate from "@/routes/Gate";
+
+// Every book, so a saved character finds its picks wherever it is opened. The
+// Forge narrows this to what the character's table allows.
+setBookLibrary("all");
 
 /*
  * The working rooms load when they are entered.

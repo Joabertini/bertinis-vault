@@ -41,6 +41,8 @@ function GateContent() {
   const navigate = useNavigate();
   const { beginDraft, characters, draft } = useVault();
   const [choosing, setChoosing] = useState(false);
+  // The edition picked, while the supplements question is still open.
+  const [edition, setEdition] = useState<BuilderRulesVersion | null>(null);
   const inProgress = hasProgress(draft);
 
   // Horizontal travel went with the monolith; the title still drifts with the
@@ -52,9 +54,14 @@ function GateContent() {
   const fogY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
   const titleY = useTransform(sy, [-0.5, 0.5], [14, -14]);
 
-  const enterForge = (rulesVersion: BuilderRulesVersion) => {
-    beginDraft(rulesVersion);
+  const enterForge = (rulesVersion: BuilderRulesVersion, supplements: boolean) => {
+    beginDraft(rulesVersion, supplements);
     navigate("/forge");
+  };
+
+  const close = () => {
+    setChoosing(false);
+    setEdition(null);
   };
 
   // A full-screen overlay that only closes by clicking outside traps anyone
@@ -63,7 +70,7 @@ function GateContent() {
     if (!choosing) return;
 
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setChoosing(false);
+      if (event.key === "Escape") close();
     };
 
     window.addEventListener("keydown", onKey);
@@ -102,15 +109,6 @@ function GateContent() {
       </motion.div>
 
       <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
-        <motion.p
-          style={{ y: titleY }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2, duration: 1.4 }}
-          className="font-mono text-[13px] tracking-[0.1em] uppercase text-gold"
-        >
-          El codice de personajes
-        </motion.p>
 
         <motion.h1
           // Letter-spacing this wide eats the word space: at 8xl, "DEL ALBA"
@@ -181,7 +179,7 @@ function GateContent() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={() => setChoosing(false)}
+            onClick={close}
             className="fixed inset-0 z-[85] flex items-center justify-center bg-black/88 px-6 backdrop-blur-md"
           >
             <motion.div
@@ -192,10 +190,7 @@ function GateContent() {
               onClick={(event) => event.stopPropagation()}
               className="w-full max-w-3xl text-center"
             >
-              <p className="font-mono text-[13px] tracking-[0.1em] uppercase text-gold">
-                Dos puertas, un umbral
-              </p>
-              <h2 className="mt-4 font-display text-3xl font-black tracking-wide text-bone md:text-4xl">
+              <h2 className="font-display text-3xl font-black tracking-wide text-bone md:text-4xl">
                 ¿BAJO QUE REGLAS?
               </h2>
               <p className="mx-auto mt-4 max-w-md font-body text-bone">
@@ -212,26 +207,56 @@ function GateContent() {
                 </p>
               )}
 
-              <div className="mt-12 grid gap-6 sm:grid-cols-2">
-                <EditionDoor
-                  edition="2014"
-                  title="Quinta edicion"
-                  detail="Player's Handbook 2014. Nueve linajes, doce clases, todo lo que salio despues."
-                  onClick={() => enterForge("5e-2014")}
-                />
-                <EditionDoor
-                  edition="2024"
-                  title="Reglas revisadas"
-                  detail="Player's Handbook 2024. Diez linajes, trasfondos que dan la mejora de aptitud."
-                  onClick={() => enterForge("5e-2024")}
-                />
-              </div>
+              {edition === null ? (
+                <div className="mt-12 grid gap-6 sm:grid-cols-2">
+                  <EditionDoor
+                    edition="2014"
+                    title="Quinta edicion"
+                    detail="Player's Handbook 2014. Nueve linajes, doce clases."
+                    onClick={() => setEdition("5e-2014")}
+                  />
+                  <EditionDoor
+                    edition="2024"
+                    title="Reglas revisadas"
+                    detail="Player's Handbook 2024. Diez linajes, trasfondos que dan la mejora de aptitud."
+                    onClick={() => setEdition("5e-2024")}
+                  />
+                </div>
+              ) : (
+                <div className="mt-12">
+                  <p className="font-display text-xl font-bold uppercase tracking-[0.1em] text-bone">
+                    ¿Usan libros complementarios?
+                  </p>
+                  <div className="mt-8 grid gap-6 sm:grid-cols-2">
+                    <EditionDoor
+                      edition="Sí"
+                      title="Con suplementos"
+                      detail={
+                        edition === "5e-2024"
+                          ? "Además del Player's Handbook 2024: Tasha's, Xanathar's, Fizban's, Eberron, Strixhaven, Monsters of the Multiverse y el resto."
+                          : "Además del Player's Handbook: Tasha's, Xanathar's, Fizban's, Eberron, Strixhaven, Monsters of the Multiverse y el resto."
+                      }
+                      onClick={() => enterForge(edition, true)}
+                    />
+                    <EditionDoor
+                      edition="No"
+                      title="Solo los básicos"
+                      detail={
+                        edition === "5e-2024"
+                          ? "Player's Handbook, Dungeon Master's Guide y Monster Manual 2024."
+                          : "Player's Handbook, Dungeon Master's Guide y Monster Manual 2014."
+                      }
+                      onClick={() => enterForge(edition, false)}
+                    />
+                  </div>
+                </div>
+              )}
 
               <button
-                onClick={() => setChoosing(false)}
+                onClick={() => (edition === null ? close() : setEdition(null))}
                 className="mt-10 font-mono text-[13px] uppercase tracking-[0.1em] text-bone transition-colors hover:text-bone"
               >
-                ← Volver al umbral
+                {edition === null ? "← Volver" : "← Elegir otra edicion"}
               </button>
             </motion.div>
           </motion.div>

@@ -90,6 +90,12 @@ export type BuilderState = {
    * on import. The derived numbers still come from the 2014 tables.
    */
   rulesVersion: BuilderRulesVersion;
+  /**
+   * Whether the table uses supplements (Tasha's, Xanathar's, Fizban's,
+   * Eberron, Strixhaven...) or only the core books. For a 2024 character the
+   * supplements include the older books too.
+   */
+  supplements: boolean;
   characterName: string;
   playerName: string;
   alignment: string;
@@ -318,6 +324,7 @@ export type BuilderState = {
 export const initialState: BuilderState = {
   createdAt: new Date().toISOString(),
   rulesVersion: "5e-2014",
+  supplements: true,
   statMethod: "manual",
   abilityBonuses: { str: 1, dex: 1, con: 1, int: 1, wis: 1, cha: 1 },
   customOrigin: false,
@@ -470,6 +477,8 @@ export function coerceBuilderState(value: unknown): BuilderState {
     // A draft saved before these existed simply has none of them.
     ...coerceAppearance(candidate),
     rulesVersion: candidate.rulesVersion === "5e-2024" ? "5e-2024" : "5e-2014",
+    // A draft saved before the question existed had every book of its edition.
+    supplements: typeof candidate.supplements === "boolean" ? candidate.supplements : true,
     statMethod: coerceStatMethod(candidate.statMethod),
     abilityBonuses: coerceAbilityBonuses(candidate.abilityBonuses),
     // A draft saved before the switch existed kept the printed spread or a

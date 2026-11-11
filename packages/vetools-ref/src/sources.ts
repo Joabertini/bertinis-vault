@@ -53,9 +53,41 @@ export function rulesVersionOf(source: string): RulesVersion {
   return isClassicSource(source) ? "2014" : "2024";
 }
 
+/** The core books of each ruleset: Player's Handbook, Dungeon Master's Guide, Monster Manual. */
+export const CORE_SOURCES: Record<RulesVersion, readonly string[]> = {
+  "2014": ["PHB", "DMG", "MM"],
+  "2024": ["XPHB", "XDMG", "XMM"],
+};
+
+/**
+ * Which books a table allows besides the edition split.
+ *
+ * - `edition`: every book of the ruleset, and nothing from the other one.
+ * - `core`: the ruleset's core books only; the table said no to supplements.
+ * - `all`: every book of the ruleset, and for a 2024 table the older
+ *   supplements too (Tasha's, Fizban's, Eberron, Strixhaven...). The 2014 core
+ *   books stay out, because the revision replaces them.
+ */
+export type BookLibrary = "edition" | "core" | "all";
+
+let library: BookLibrary = "edition";
+
+/** Set which books are legal. The builder sets it from the character on the anvil. */
+export function setBookLibrary(next: BookLibrary): void {
+  library = next;
+}
+
+/** The books currently legal. */
+export function bookLibrary(): BookLibrary {
+  return library;
+}
+
 /** Whether a source may be used by a build targeting `rulesVersion`. */
 export function isSourceAllowed(source: string, rulesVersion: RulesVersion): boolean {
-  return rulesVersionOf(source) === rulesVersion;
+  if (library === "core") return CORE_SOURCES[rulesVersion].includes(source);
+  const edition = rulesVersionOf(source);
+  if (edition === rulesVersion) return true;
+  return library === "all" && rulesVersion === "2024" && !CORE_SOURCES["2014"].includes(source);
 }
 
 /** Every source for a ruleset, sorted by release date, newest first. */

@@ -7,6 +7,7 @@ import {
   isClassicSource,
   isKnownSource,
   isSourceAllowed,
+  setBookLibrary,
   listSources,
   partitionByRulesVersion,
   rulesVersionOf,
@@ -102,4 +103,23 @@ test("partitionByRulesVersion separates mixed-edition picks instead of dropping 
   assert.equal(allowed.length, 2);
   assert.equal(rejected.length, 1);
   assert.equal(rejected[0].ref.source, "XPHB");
+});
+
+test("the book library widens or narrows what a table may use", () => {
+  try {
+    setBookLibrary("core");
+    assert.ok(isSourceAllowed("XPHB", "2024"));
+    assert.ok(!isSourceAllowed("TCE", "2014"));
+    assert.ok(!isSourceAllowed("FRHoF", "2024"));
+
+    setBookLibrary("all");
+    // A 2024 table with supplements gets the older ones, not the 2014 core.
+    assert.ok(isSourceAllowed("TCE", "2024"));
+    assert.ok(isSourceAllowed("SCC", "2024"));
+    assert.ok(!isSourceAllowed("PHB", "2024"));
+    // A 2014 table never gets 2024 books.
+    assert.ok(!isSourceAllowed("XPHB", "2014"));
+  } finally {
+    setBookLibrary("edition");
+  }
 });
