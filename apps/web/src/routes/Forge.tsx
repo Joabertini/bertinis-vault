@@ -33,6 +33,8 @@ import SigilShelf from "@/components/forge/SigilShelf";
 import BackgroundGrant from "@/components/forge/BackgroundGrant";
 import ScryPicker from "@/components/forge/ScryPicker";
 import RarityScry from "@/components/forge/RarityScry";
+import InfoPanel from "@/components/info/InfoPanel";
+import { InfoProvider, useInfo } from "@/components/info/info-context";
 import PickList from "@/components/forge/PickList";
 import LiveSheet from "@/components/forge/LiveSheet";
 
@@ -1437,6 +1439,7 @@ export default function Forge() {
   }
 
   return (
+    <InfoProvider edition={rulesVersion}>
     <main className={PAGE}>
       <GrainOverlay />
       <LightfallBackdrop variant="page" fallbackDensity={36} />
@@ -1576,6 +1579,7 @@ export default function Forge() {
                     selectedSource={draft.sourceBooks[`race:${draft.raceId}`]}
                     onPick={(entry) => pick("race", entry)}
                     accent={VAULT_GOLD}
+                    infoKind="race"
                     label="Buscar raza"
                     placeholder="Buscar entre todas las razas…"
                     // The book is what tells two same-named species apart, and
@@ -1640,6 +1644,7 @@ export default function Forge() {
                     groupFor={sidekickHeading}
                     onPick={(entry) => pick("class", entry)}
                     accent={accent}
+                    infoKind="class"
                     label="Buscar clase"
                     placeholder="Buscar entre todas las clases…"
                     noteFor={(entry) => {
@@ -1674,6 +1679,7 @@ export default function Forge() {
                     (subclassUnlocked ? (
                       subclasses.length > 0 && (
                         <SubChoice
+                          infoClass={selectedClass?.label ?? ""}
                           title="Senda"
                           hint={`${selectedClass?.label} elige a nivel ${subclassLevel}. ${subclasses.length} disponibles.`}
                           options={subclasses}
@@ -1770,6 +1776,7 @@ export default function Forge() {
                     selectedSource={draft.sourceBooks[`background:${draft.backgroundId}`]}
                     onPick={(entry) => pick("background", entry)}
                     accent={accent}
+                    infoKind="background"
                     label="Buscar trasfondo"
                     placeholder="Buscar entre todos los trasfondos…"
                     noteFor={(entry) => entry.source}
@@ -2045,6 +2052,7 @@ export default function Forge() {
                       </div>
                     ) : (
                       <PickList
+                        infoKind={offer.kind === "tool" ? "item" : "skill"}
                         key={`${offer.from}-${index}`}
                         title={`${offer.kind === "tool" ? "Herramientas" : "Competencias"} — ${offer.label ?? offer.from}`}
                         hint={
@@ -2115,6 +2123,7 @@ export default function Forge() {
                       <div key={`${offer.from}-${index}`} className="mb-6">
                         {offer.options.length > 0 && (
                           <PickList
+                            infoKind="language"
                             title={
                               offer.from === "especie"
                                 ? "Idiomas de tu especie"
@@ -2227,6 +2236,7 @@ export default function Forge() {
                       Arma
                     </p>
                     <RarityScry
+                      infoKind="item"
                       label="Buscar arma"
                       placeholder="Buscar arma…"
                       search={weaponSearch}
@@ -2246,6 +2256,7 @@ export default function Forge() {
                     </p>
                     <p className={WHISPER_MB4}>Dejala vacia para ir sin armadura.</p>
                     <RarityScry
+                      infoKind="item"
                       label="Buscar armadura"
                       placeholder="Buscar armadura o escudo…"
                       search={armorSearch}
@@ -2493,6 +2504,8 @@ export default function Forge() {
         </footer>
       </div>
     </main>
+      <InfoPanel accent={accent} />
+    </InfoProvider>
   );
 }
 
@@ -2584,6 +2597,7 @@ function VariantChoices({
 
       {asked.map((question) => (
         <PickList
+          infoKind="spell"
           key={question.key}
           title={`${question.label} — elegi ${question.count}`}
           options={question.options}
@@ -2726,7 +2740,10 @@ function SubChoice({
   onPick,
   accent,
   note,
+  infoClass,
 }: {
+  /** The class's name, which is what tells two same-named subclasses apart in the books. */
+  infoClass?: string;
   title: string;
   hint: string;
   options: CatalogEntry[];
@@ -2736,6 +2753,7 @@ function SubChoice({
   /** An honest caveat, when the pick does not yet travel the whole way. */
   note?: string;
 }) {
+  const info = useInfo();
   return (
     <div className={DIVIDER_TIGHT}>
       <div className="flex flex-wrap items-baseline justify-between gap-3">
@@ -2752,7 +2770,13 @@ function SubChoice({
           return (
             <button
               key={`${entry.id}:${entry.source}`}
-              onClick={() => onPick(entry)}
+              onClick={() => {
+                onPick(entry);
+                info.show({ kind: "subclass", name: entry.label, source: entry.source, extra: [infoClass ?? ""] });
+              }}
+              onMouseEnter={() =>
+                info.show({ kind: "subclass", name: entry.label, source: entry.source, extra: [infoClass ?? ""] }, { hover: true })
+              }
               className="flex items-baseline justify-between gap-3 border-l-2 px-4 py-2.5 text-left transition-colors"
               style={{
                 borderLeftColor: active ? accent : "transparent",

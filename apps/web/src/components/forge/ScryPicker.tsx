@@ -11,7 +11,9 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import { useInfo } from "@/components/info/info-context";
 import type { CatalogEntry } from "@/lib/catalog";
+import type { RulesKind } from "@/lib/rules-text";
 import { ITEM_META, ITEM_NAME } from "@/styles/recipes";
 
 export default function ScryPicker({
@@ -22,6 +24,7 @@ export default function ScryPicker({
   onPick,
   accent,
   emptyHint,
+  infoKind,
 }: {
   label: string;
   placeholder: string;
@@ -31,7 +34,10 @@ export default function ScryPicker({
   onPick: (entry: CatalogEntry) => void;
   accent: string;
   emptyHint?: string;
+  /** What a row is, so the info panel can show it. Without it rows say nothing to the panel. */
+  infoKind?: RulesKind;
 }) {
+  const info = useInfo();
   const [query, setQuery] = useState("");
   const results = useMemo(() => search(query), [search, query]);
 
@@ -71,7 +77,16 @@ export default function ScryPicker({
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.18 }}
-                onClick={() => onPick(entry)}
+                onClick={() => {
+                  onPick(entry);
+                  if (infoKind) info.show({ kind: infoKind, name: entry.label, source: entry.source });
+                }}
+                onMouseEnter={() =>
+                  infoKind && info.show({ kind: infoKind, name: entry.label, source: entry.source }, { hover: true })
+                }
+                onFocus={() =>
+                  infoKind && info.show({ kind: infoKind, name: entry.label, source: entry.source }, { hover: true })
+                }
                 className="flex w-full items-baseline justify-between gap-4 border-l-2 px-4 py-2.5 text-left transition-colors"
                 style={{
                   borderLeftColor: active ? accent : "transparent",

@@ -182,6 +182,7 @@ function LevelSlot({
                 label={`Dote de nivel ${level}`}
                 placeholder="Buscar dote…"
                 search={featSearch}
+                infoKind="feat"
                 selectedId={featId}
                 onPick={(entry: CatalogEntry) =>
                   onSetChoice(slotKey, { kind: "feat", featId: entry.id })

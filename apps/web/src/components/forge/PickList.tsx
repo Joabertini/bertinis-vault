@@ -12,6 +12,8 @@
  */
 
 import { motion } from "framer-motion";
+import { useInfo } from "@/components/info/info-context";
+import type { RulesKind } from "@/lib/rules-text";
 import { LABEL, META, WHISPER_MB4 } from "@/styles/recipes";
 
 export default function PickList({
@@ -25,6 +27,7 @@ export default function PickList({
   onToggle,
   columns = 3,
   perList = false,
+  infoKind,
 }: {
   title: string;
   hint?: string;
@@ -44,7 +47,10 @@ export default function PickList({
    * too read as every level having that many.
    */
   perList?: boolean;
+  /** What the options are, so hovering one shows its text in the info panel. */
+  infoKind?: RulesKind;
 }) {
+  const info = useInfo();
   const lockedSet = new Set(locked);
   const chosen = selected.filter((entry) => !lockedSet.has(entry));
   const full = chosen.length >= limit;
@@ -82,7 +88,12 @@ export default function PickList({
           return (
             <motion.button
               key={option}
-              onClick={() => !disabled && onToggle(option)}
+              onClick={() => {
+                if (infoKind) info.show({ kind: infoKind, name: option });
+                if (!disabled) onToggle(option);
+              }}
+              onMouseEnter={() => infoKind && info.show({ kind: infoKind, name: option }, { hover: true })}
+              onFocus={() => infoKind && info.show({ kind: infoKind, name: option }, { hover: true })}
               disabled={disabled}
               {...(disabled ? {} : { whileTap: { scale: 0.97 } })}
               className="flex items-center gap-3 border-l-2 px-3 py-2 text-left transition-colors disabled:cursor-not-allowed"
