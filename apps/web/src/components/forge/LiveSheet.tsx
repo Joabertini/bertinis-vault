@@ -545,12 +545,12 @@ function AbilityRows({
                   {added > 0 ? `+${added}` : ""}
                 </span>
                 <span
-                  className="w-6 text-right font-num text-[15px] font-bold"
+                  className="w-10 text-right font-num text-2xl font-bold leading-none"
                   style={{ color: accent }}
                 >
                   {score}
                 </span>
-                <span className="w-7 text-right font-mono text-[13px] text-bone">
+                <span className="w-10 text-right font-mono text-base text-bone">
                   {modifier >= 0 ? `+${modifier}` : modifier}
                 </span>
               </div>

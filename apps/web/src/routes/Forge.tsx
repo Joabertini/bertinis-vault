@@ -1403,7 +1403,7 @@ export default function Forge() {
 
       <motion.div
         animate={{
-          background: `radial-gradient(ellipse at 75% 20%, ${accent}14, transparent 55%), #000000`,
+          background: "#000000",
         }}
         transition={{ duration: 1.2 }}
         className="pointer-events-none fixed inset-0"

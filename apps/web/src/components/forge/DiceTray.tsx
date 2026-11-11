@@ -155,7 +155,7 @@ export default function DiceTray({
                       onClick={() => onKeep(index)}
                       className="flex w-full items-center gap-4 border border-[#5A5A5A]/50 bg-[#0B0B0B]/60 px-4 py-3 text-left transition-colors hover:border-[#F2C14E]"
                     >
-                      <span className="w-16 shrink-0 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
+                      <span className="w-24 shrink-0 whitespace-nowrap font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                         Tirada {index + 1}
                       </span>
 
