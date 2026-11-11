@@ -26,8 +26,6 @@ import StokeEmbers from "@/components/fx/StokeEmbers";
 import Sigil from "@/components/sigils/Sigil";
 import RuneButton from "@/components/ui/RuneButton";
 import RuleNote from "@/components/ui/RuleNote";
-import DiceTray from "@/components/forge/DiceTray";
-import StatRune from "@/components/forge/StatRune";
 import SigilCard from "@/components/forge/SigilCard";
 import SigilShelf from "@/components/forge/SigilShelf";
 import BackgroundGrant from "@/components/forge/BackgroundGrant";
@@ -36,6 +34,7 @@ import RarityScry from "@/components/forge/RarityScry";
 import InfoPanel from "@/components/info/InfoPanel";
 import { InfoProvider, InfoReset } from "@/components/info/info-context";
 import PickList from "@/components/forge/PickList";
+import AttributesChamber from "@/components/forge/AttributesChamber";
 import IdentityChamber from "@/components/forge/IdentityChamber";
 import ChamberArrows from "@/components/forge/ChamberArrows";
 import SizeChoice from "@/components/forge/SizeChoice";
@@ -73,10 +72,8 @@ import { assignLanguages, languagePlanFor, languagesSatisfied } from "@/lib/lang
 import { branchIsRequiredFor } from "@/lib/species-branch";
 import StartingKit from "@/components/forge/StartingKit";
 import { parseKitSignature, rekitBag, startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
-import PointBuy from "@/components/forge/PointBuy";
 import {
   ROLL_ATTEMPTS,
-  STAT_METHODS,
   abilitiesSettled,
   pointBuyFloor,
   scratchForMethod,
@@ -139,7 +136,7 @@ import { foundrySizeFor, sizeFor, sizeOptionsFor } from "@/lib/table-numbers";
 import Attunement from "@/components/forge/Attunement";
 import CarryingLoad from "@/components/forge/CarryingLoad";
 import HitPoints from "@/components/forge/HitPoints";
-import { DIVIDER, DIVIDER_TIGHT, HEADING, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
+import { DIVIDER, DIVIDER_TIGHT, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
 
 const CHAMBER_LABEL: Record<ChamberKey, string> = {
   ancestry: "Raza",
@@ -1824,72 +1821,22 @@ export default function Forge() {
 
               {/* ---------- Attributes ---------- */}
               {chamberKey === "attributes" && (
-                <div className="space-y-10">
-                  {/* Which way the six numbers get made. All four already
-                      existed in the model and mapped to the payload; only
-                      rolling was ever wired to a screen. */}
-                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                    {STAT_METHODS.map((method) => {
-                      const active = draft.statMethod === method.id;
-                      return (
-                        <button
-                          key={method.id}
-                          onClick={() => chooseStatMethod(method.id)}
-                          className="border p-4 text-left transition-colors"
-                          style={{
-                            borderColor: active ? `${accent}88` : "rgba(74,70,64,0.4)",
-                            background: active ? `${accent}0f` : "transparent",
-                          }}
-                        >
-                          <p
-                            className={HEADING}
-                            style={{ color: active ? accent : "#FFFFFF" }}
-                          >
-                            {method.label}
-                          </p>
-                          <p className="mt-1 font-body text-[15px] leading-snug text-bone">
-                            {method.blurb}
-                          </p>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {draft.statMethod === "pointbuy" || draft.statMethod === "manual" ? (
-                    <PointBuy
-                      mode={draft.statMethod === "manual" ? "manual" : "pointbuy"}
-                      scores={rawScores}
-                      bonuses={draft.abilityBonuses}
-                      accent={accent}
-                      onChange={(ability, score) =>
-                        patchDraft({ [ability]: score } as Parameters<typeof patchDraft>[0])
-                      }
-                    />
-                  ) : (
-                    <>
-                      {/* Three throws, and the player keeps one. The sum of
-                          modifiers is shown because it is the one number that
-                          compares two spreads without reading six. */}
-                      {draft.statMethod === "roll" && (
-                        <DiceTray
-                          onRoll={handleRoll}
-                          sets={scratch.sets}
-                          onKeep={keepSet}
-                          accent={accent}
-                        />
-                      )}
-
-                      <StatRune
-                        pool={scratch.pool}
-                        bound={bound}
-                        scores={rawScores}
-                        accent={accent}
-                        onBind={bindScore}
-                        onRelease={releaseScore}
-                      />
-                    </>
-                  )}
-                </div>
+                <AttributesChamber
+                  statMethod={draft.statMethod}
+                  abilityBonuses={draft.abilityBonuses}
+                  rawScores={rawScores}
+                  scratch={scratch}
+                  bound={bound}
+                  accent={accent}
+                  onChooseMethod={chooseStatMethod}
+                  onScore={(ability, score) =>
+                    patchDraft({ [ability]: score } as Parameters<typeof patchDraft>[0])
+                  }
+                  onRoll={handleRoll}
+                  onKeep={keepSet}
+                  onBind={bindScore}
+                  onRelease={releaseScore}
+                />
               )}
 
               {/* ---------- Growth ---------- */}
