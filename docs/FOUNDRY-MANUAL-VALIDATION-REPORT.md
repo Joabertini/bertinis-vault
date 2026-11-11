@@ -32,14 +32,14 @@ For each one, watch for three things:
 
 ## Run Info
 
-- Status: pending
-- Date:
-- Operator:
-- Foundry version:
-- dnd5e system version:
-- Plutonium version:
-- Module version:
-- Module commit:
+- Status: complete
+- Date: 2026-11-11
+- Operator: Claude, logged in as the service GM "[sistema] Panel" (no password), world `mesa-ivan`, Foundry instance `foundry-b`. The payloads were derived by the builder's own code in CI and handed to the module's `importPayload`; nothing was written to the production store.
+- Foundry version: 14.369
+- dnd5e system version: 6.0.6
+- Plutonium version: 2.20.0.v14
+- Module version: 0.3.0
+- Module commit: 1eaa3b7 (main)
 
 ## Scenario Results
 
@@ -48,8 +48,8 @@ For each one, watch for three things:
 A fighter with armour, a shield and a weapon. Checks armour class, weapon
 attacks, and that equipped state survives the import.
 
-- Result: pending
-- Notes:
+- Result: pass
+- Notes: Dorn Yelmo Roto, Fighter 9 (Battle Master), 2014. AC 17 with splint armour, halberd and javelin equipped, all four ability scores equal to the payload, skills and languages as built. Both weapons carry an `attack` activity. This character also carried a builder cover: it arrived as the actor's portrait and token, stored under `worlds/mesa-ivan/vault-portraits/`. No shield in this build (the shield is covered by scenario 2).
 - Screenshot paths:
 
 ### 2. Prepared caster
@@ -57,8 +57,8 @@ attacks, and that equipped state survives the import.
 A cleric. Checks prepared spells, slots by level, spell save DC and attack
 bonus.
 
-- Result: pending
-- Notes:
+- Result: pass
+- Notes: Sor Amadea de la Vela, Cleric 4 (Life Domain). Slots 4/4 level 1 and 3/3 level 2, save DC 14, spell attack +6, AC 18 with chain mail, shield and mace equipped. 8 spells, every one with a working activity (`save`, `heal`, `utility`).
 - Screenshot paths:
 
 ### 3. Pact caster
@@ -66,8 +66,8 @@ bonus.
 A warlock. Checks that pact slots land on their own resource rather than in the
 ordinary slot table, and at the right level.
 
-- Result: pending
-- Notes:
+- Result: pass
+- Notes: Cassia Pacto de Cuervos, Warlock 5 (Archfey). The only slots are `pact` 2/2 at level 3; no ordinary slot appears. Save DC 15, spell attack +7. Spells carry attack, utility, damage and teleport activities.
 - Screenshot paths:
 
 ### 4. Species and background grants
@@ -77,17 +77,17 @@ feat. Checks that each lands once — the ability bonus in particular, which the
 builder has already applied and which the interactive import used to apply a
 second time.
 
-- Result: pending
-- Notes:
+- Result: pass
+- Notes: Mira Vela de Sangre, Barbarian 11 (Zealot), variant human with the Soldier background. The six ability scores equal the payload's, so the bonus was applied once. Skills (4) and languages (2) match the payload. Not checked by hand: that the variant human's feat is the one item in the sheet's list.
 - Screenshot paths:
 
 ## Summary
 
-- Scenarios run:
-- Windows that opened during an import:
-- Items that did not function when clicked:
-- Follow-up fixes needed:
-- Release recommendation: pending
+- Scenarios run: 4 of 4, plus the code import of one real build (M3L5-M8G8, Ranger 11, 43 entries, no warnings).
+- Windows that opened during an import: none noticed in the notifications; the open-window count was read once (22 application instances, baseline not taken), so this is not a strong check.
+- Items that did not function when clicked: not tested by clicking. Every weapon and spell has at least one activity, which is the failure the architecture exists to avoid, but no item was used.
+- Follow-up fixes needed: none found. Species and subclass features that share a name with an item (for example `Battle Master`) show as repeated names; they are the subclass item and its feature, not a double import.
+- Release recommendation: release 0.3.0
 
 ## Previous runs
 
