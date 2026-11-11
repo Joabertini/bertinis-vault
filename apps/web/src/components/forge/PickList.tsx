@@ -95,8 +95,6 @@ export default function PickList({
                 if (infoKind) info.show({ kind: infoKind, name: infoNameOf(option) });
                 if (!disabled) onToggle(option);
               }}
-              onMouseEnter={() => infoKind && info.show({ kind: infoKind, name: infoNameOf(option) }, { hover: true })}
-              onFocus={() => infoKind && info.show({ kind: infoKind, name: infoNameOf(option) }, { hover: true })}
               disabled={disabled}
               {...(disabled ? {} : { whileTap: { scale: 0.97 } })}
               className="flex items-center gap-3 border-l-2 px-3 py-2 text-left transition-colors disabled:cursor-not-allowed"

@@ -5,7 +5,7 @@
  * another entry's text. Asking outside a provider does nothing, so a component that offers info
  * still renders where there is no panel (a test, the share page).
  *
- * Hovering replaces what is shown, because moving along a list is how someone reads it. Following a
+ * Choosing something replaces what is shown. Following a
  * link inside the panel pushes, because that is a trail the reader wants to walk back.
  */
 
@@ -15,7 +15,7 @@ import type { RuleRef } from "@/lib/rules-markup";
 import type { Edition } from "@/lib/rules-text";
 
 type ShowOptions = {
-  /** A pointer passing over it, as opposed to a deliberate choice. Ignored on screens too narrow for a side panel. */
+  /** Reserved: not used by any caller; hovering does not open the panel. */
   hover?: boolean;
   /** Add to the trail instead of replacing it. */
   push?: boolean;

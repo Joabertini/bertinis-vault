@@ -13,6 +13,7 @@
  */
 
 import { motion } from "framer-motion";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import type { ResolvedDraft } from "@/lib/derive";
 import type { BuilderState } from "@/lib/builder";
@@ -40,6 +41,7 @@ import {
 } from "@/lib/table-numbers";
 import { actionProfile, concentrationAmong } from "@/lib/spells";
 import { rulesVersionOf } from "@/lib/vault-store";
+import InfoLink from "@/components/info/InfoLink";
 import Sigil from "@/components/sigils/Sigil";
 import { HEADING, LABEL_MB2 } from "@/styles/recipes";
 
@@ -61,6 +63,66 @@ function toLines(value: string): string[] {
     .filter(Boolean);
 }
 
+/** The widest the record grows before it would reach the page's edge, and what it keeps clear. */
+const TRAY_MAX = 1400;
+const TRAY_GUTTER = 24;
+/** From this width the record is a tray of side-by-side sections; below it, one column. */
+const TRAY_FROM = 1280;
+
+/**
+ * Lets the record grow to the right, and lets the wheel read it.
+ *
+ * It sits in a column 460 wide that used to be the whole panel, so everything
+ * under the first screen fell off the bottom of the page and had to be
+ * scrolled to. The panel now keeps its left edge and spreads right, up to the
+ * edge of the window less a gutter, and its sections sit side by side. The
+ * wheel moves along them — down is right, up is left — until it reaches an
+ * end, and past an end it is the page's again, so the panel never traps it.
+ */
+function useTray() {
+  const aside = useRef<HTMLElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
+  const [reach, setReach] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const node = aside.current;
+      if (!node || window.innerWidth < TRAY_FROM) return setReach(null);
+      const left = node.getBoundingClientRect().left;
+      setReach(Math.max(460, Math.min(TRAY_MAX, window.innerWidth - left - TRAY_GUTTER)));
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  useEffect(() => {
+    const node = scroller.current;
+    if (!node) return;
+
+    const onWheel = (event: WheelEvent) => {
+      if (window.innerWidth < TRAY_FROM) return;
+      if (Math.abs(event.deltaY) <= Math.abs(event.deltaX)) return;
+
+      const max = node.scrollWidth - node.clientWidth;
+      if (max <= 0) return;
+      const goingRight = event.deltaY > 0;
+      const atEnd = goingRight ? node.scrollLeft >= max - 1 : node.scrollLeft <= 0;
+      if (atEnd) return;
+
+      event.preventDefault();
+      node.scrollLeft += event.deltaY;
+    };
+
+    // Not through React: its wheel listener is passive, and a passive one
+    // cannot stop the page from scrolling too.
+    node.addEventListener("wheel", onWheel, { passive: false });
+    return () => node.removeEventListener("wheel", onWheel);
+  }, []);
+
+  return { aside, scroller, reach };
+}
+
 export default function LiveSheet({
   state,
   resolved,
@@ -70,6 +132,7 @@ export default function LiveSheet({
   resolved: ResolvedDraft;
   accent: string;
 }) {
+  const { aside, scroller, reach } = useTray();
   const rulesVersion = rulesVersionOf(state);
   const race = entryById("race", rulesVersion, state.raceId, state.sourceBooks[`race:${state.raceId}`]);
   const subrace = entryById("subrace", rulesVersion, state.subraceId, state.sourceBooks[`subrace:${state.subraceId}`]);
@@ -185,12 +248,21 @@ export default function LiveSheet({
 
   return (
     <motion.aside
-      className="sticky top-10 self-start border p-7"
+      ref={aside}
+      className="sticky top-10 self-start border xl:overflow-hidden"
       style={{
         borderColor: `${accent}44`,
         background: "#0B0B0B",
+        // Wider than its column on purpose: it spreads right from its own left edge.
+        ...(reach ? { width: reach } : {}),
       }}
     >
+      <div
+        ref={scroller}
+        className="p-7 xl:flex xl:max-h-[calc(100vh-5rem)] xl:items-start xl:overflow-x-auto xl:overflow-y-auto xl:p-0"
+      >
+      {/* ---- section 1: who this is and the numbers ---- */}
+      <div className="xl:w-[440px] xl:shrink-0 xl:border-r xl:border-iron/40 xl:p-7">
       {/* ---- identity ---- */}
       <div className="flex items-start justify-between gap-4 border-b border-iron/50 pb-5">
         <div className="min-w-0">
@@ -226,7 +298,6 @@ export default function LiveSheet({
         Only from `xl`, because that is where the aside is wide enough to hold
         two of anything. Below it nothing changes.
       */}
-      <div className="xl:grid xl:grid-cols-2 xl:gap-x-6">
       {/* ---- what the sheet computes ---- */}
       <div>
       {/* ---- the three numbers that decide a fight ---- */}
@@ -323,9 +394,10 @@ export default function LiveSheet({
         accent={accent}
       />
       </div>
+      </div>
 
-      {/* ---- what the sheet states ---- */}
-      <div>
+      {/* ---- section 2: what the sheet states ---- */}
+      <div className="xl:w-[440px] xl:shrink-0 xl:border-r xl:border-iron/40 xl:p-7">
 
       {/* Flying, swimming, climbing, burrowing — the reason someone picked
           this species. An Aarakocra's 50 feet of flight was nowhere on the
@@ -375,7 +447,17 @@ export default function LiveSheet({
                 <span className="font-mono text-[13px] leading-none" style={{ color: accent }}>
                   •
                 </span>
-                <span className="truncate font-body text-sm">{trait}</span>
+                {race ? (
+                  <InfoLink
+                    target={{ kind: "race", name: race.label, source: race.source }}
+                    accent={accent}
+                    className="truncate font-body text-sm"
+                  >
+                    {trait}
+                  </InfoLink>
+                ) : (
+                  <span className="truncate font-body text-sm">{trait}</span>
+                )}
               </li>
             ))}
           </ul>
@@ -398,7 +480,13 @@ export default function LiveSheet({
                 <span className="font-mono text-[13px] leading-none" style={{ color: accent }}>
                   •
                 </span>
-                <span className="font-body text-sm capitalize">{granted.label}</span>
+                <InfoLink
+                  target={{ kind: "spell", name: granted.label }}
+                  accent={accent}
+                  className="font-body text-sm capitalize"
+                >
+                  {granted.label}
+                </InfoLink>
                 <span className="font-body text-[13px] text-bone">
                   {granted.uses
                     ? `${granted.grantedBy} · ${granted.uses.max}/${periodLabel(granted.uses.period)}`
@@ -422,8 +510,6 @@ export default function LiveSheet({
         </p>
       )}
 
-      {/* Close the right-hand column, and the two-column band with it. */}
-      </div>
       </div>
 
       {/*
@@ -435,6 +521,8 @@ export default function LiveSheet({
         proficiency bonus behind it is a number they would write down and be
         wrong about.
       */}
+      {/* ---- section 3: saves, skills and the seal ---- */}
+      <div className="xl:w-[440px] xl:shrink-0 xl:border-r xl:border-iron/40 xl:p-7">
       {snapshot && (
         <Checks
           saves={savingThrowChecksFor(snapshot)}
@@ -471,6 +559,11 @@ export default function LiveSheet({
         </p>
       )}
 
+      </div>
+
+      {/* ---- section 4: how it fights ---- */}
+      {(counsel.length > 0 || problems.length > 0) && (
+      <div className="xl:w-[440px] xl:shrink-0 xl:border-r xl:border-iron/40 xl:p-7">
       {/* Whether it works, under whether it is legal. */}
       {counsel.length > 0 && <Counsel advice={counsel} accent={accent} />}
 
@@ -492,6 +585,9 @@ export default function LiveSheet({
           </ul>
         </div>
       )}
+      </div>
+      )}
+      </div>
     </motion.aside>
   );
 }

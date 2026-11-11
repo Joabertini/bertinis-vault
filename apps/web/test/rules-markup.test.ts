@@ -143,3 +143,22 @@ describe("rules meta lines", () => {
     expect(linksIn("{@itemProperty Versatile|XPHB}")[0]).toMatchObject({ kind: "itemProperty", name: "Versatile" });
   });
 });
+
+describe("rules data completeness", () => {
+  it("every subclass in the index has features to show", async () => {
+    const { readFileSync } = await import("node:fs");
+    const sub = JSON.parse(readFileSync("public/rules/subclass.json", "utf8")) as Record<string, { subclassFeatures?: string[] }>;
+    const empty = Object.entries(sub).filter(([, row]) => !row.subclassFeatures?.length).map(([key]) => key);
+
+    expect(empty).toEqual([]);
+  });
+
+  it("races and backgrounds reprinted by _copy carry the copied text", async () => {
+    const { readFileSync } = await import("node:fs");
+    const race = JSON.parse(readFileSync("public/rules/race.json", "utf8")) as Record<string, { entries?: unknown[] }>;
+    const background = JSON.parse(readFileSync("public/rules/background.json", "utf8")) as Record<string, { entries?: unknown[] }>;
+
+    expect(race["goblin|erlw"]?.entries?.length).toBeGreaterThan(0);
+    expect(Object.values(background).filter((row) => !row.entries?.length)).toEqual([]);
+  });
+});

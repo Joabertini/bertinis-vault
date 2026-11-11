@@ -81,12 +81,6 @@ export default function ScryPicker({
                   onPick(entry);
                   if (infoKind) info.show({ kind: infoKind, name: entry.label, source: entry.source });
                 }}
-                onMouseEnter={() =>
-                  infoKind && info.show({ kind: infoKind, name: entry.label, source: entry.source }, { hover: true })
-                }
-                onFocus={() =>
-                  infoKind && info.show({ kind: infoKind, name: entry.label, source: entry.source }, { hover: true })
-                }
                 className="flex w-full items-baseline justify-between gap-4 border-l-2 px-4 py-2.5 text-left transition-colors"
                 style={{
                   borderLeftColor: active ? accent : "transparent",

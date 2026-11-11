@@ -164,8 +164,6 @@ export default function SigilShelf({
                   return (
                     <div
                       key={`${entry.id}:${entry.source}`}
-                      onMouseEnter={() => ref && info.show(ref, { hover: true })}
-                      onFocus={() => ref && info.show(ref, { hover: true })}
                       className="contents"
                     >
                       <SigilCard

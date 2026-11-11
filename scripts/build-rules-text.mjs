@@ -56,9 +56,86 @@ function pick(row, keys) {
 
 const keyOf = (row, ...extra) => [row.name, ...extra, row.source].join("|").toLowerCase();
 
+const lc = (value) => String(value ?? "").toLowerCase();
+
+/**
+ * 5etools reprints are written as `_copy`: "Goblin (Eberron) is Goblin (Volo's) with this paragraph
+ * replaced". Left alone they have no text of their own, so the entry opened empty. This applies the
+ * copy and the entry edits it carries (`_mod.entries`), which is all the books use on prose.
+ */
+function resolveCopies(rows) {
+  const byKey = new Map(rows.map((row) => [`${lc(row.name)}|${lc(row.source)}`, row]));
+  const done = new Map();
+
+  const applyOps = (entries, ops) => {
+    let out = [...entries];
+    for (const op of Array.isArray(ops) ? ops : [ops]) {
+      if (!op || typeof op !== "object") continue;
+      const items = op.items === undefined ? [] : Array.isArray(op.items) ? op.items : [op.items];
+      const indexOf = (target) => out.findIndex((entry) => (typeof entry === "string" ? entry === target : entry?.name === target));
+      if (op.mode === "appendArr") out = [...out, ...items];
+      else if (op.mode === "prependArr") out = [...items, ...out];
+      else if (op.mode === "appendIfNotExistsArr") out = [...out, ...items.filter((item) => !out.some((e) => JSON.stringify(e) === JSON.stringify(item)))];
+      else if (op.mode === "replaceArr") {
+        const at = typeof op.replace === "string" ? indexOf(op.replace) : (op.replace?.index ?? -1);
+        if (at >= 0) out.splice(at, 1, ...items);
+        else out = [...out, ...items];
+      } else if (op.mode === "insertArr") out.splice(op.index ?? out.length, 0, ...items);
+      else if (op.mode === "removeArr") {
+        const names = op.names === undefined ? [] : Array.isArray(op.names) ? op.names : [op.names];
+        out = out.filter((entry) => !names.includes(typeof entry === "string" ? entry : entry?.name));
+      }
+    }
+    return out;
+  };
+
+  const resolve = (row, seen = new Set()) => {
+    if (!row._copy) return row;
+    const key = `${lc(row.name)}|${lc(row.source)}`;
+    if (done.has(key)) return done.get(key);
+    if (seen.has(key)) return row;
+    seen.add(key);
+
+    const base = byKey.get(`${lc(row._copy.name)}|${lc(row._copy.source)}`);
+    if (!base) return row;
+    const parent = resolve(base, seen);
+
+    const merged = { ...parent };
+    for (const [field, value] of Object.entries(row)) {
+      if (field === "_copy" || field === "_mod" || field === "_preserve") continue;
+      if (value !== null && value !== undefined) merged[field] = value;
+    }
+    const mod = row._copy._mod ?? row._mod;
+    if (mod?.entries !== undefined && Array.isArray(parent.entries) && row.entries === undefined) {
+      merged.entries = applyOps(parent.entries, mod.entries);
+    }
+    done.set(key, merged);
+    return merged;
+  };
+
+  return rows.map((row) => resolve(row));
+}
+
+/**
+ * Subclasses that do not list their features. 5etools keeps the features as separate rows that name
+ * their subclass, and a few subclasses (Drakewarden, the Artificer's, the original Barbarian paths)
+ * carry no list at all, so they opened as a title and nothing under it.
+ */
+const subclassFeatureRows = readDir("class", "subclassFeature");
+function withSubclassFeatures(rows) {
+  return rows.map((row) => {
+    if (Array.isArray(row.subclassFeatures) && row.subclassFeatures.length) return row;
+    const list = subclassFeatureRows
+      .filter((f) => lc(f.className) === lc(row.className) && lc(f.subclassShortName) === lc(row.shortName) && lc(f.subclassSource) === lc(row.source))
+      .sort((a, b) => (a.level ?? 0) - (b.level ?? 0))
+      .map((f) => [f.name, f.className, f.classSource ?? "", f.subclassShortName, f.subclassSource ?? "", f.level, f.source].join("|"));
+    return { ...row, subclassFeatures: list };
+  });
+}
+
 function collect(rows, keys, extraKey) {
   const out = {};
-  for (const row of rows) {
+  for (const row of resolveCopies(rows)) {
     if (!row.name || !row.source) continue;
     out[keyOf(row, ...(extraKey ? extraKey(row) : []))] = pick(row, keys);
   }
@@ -101,7 +178,7 @@ const kinds = {
 
   class: collect(readDir("class", "class"), [...COMMON, "hd", "proficiency", "startingProficiencies", "startingEquipment", "multiclassing", "spellcastingAbility", "casterProgression", "subclassTitle", "classFeatures", "primaryAbility"]),
 
-  subclass: collect(readDir("class", "subclass"), [...COMMON, "className", "classSource", "shortName", "subclassFeatures", "spellcastingAbility", "casterProgression", "additionalSpells"], (row) => [row.className ?? ""]),
+  subclass: collect(withSubclassFeatures(readDir("class", "subclass")), [...COMMON, "className", "classSource", "shortName", "subclassFeatures", "spellcastingAbility", "casterProgression", "additionalSpells"], (row) => [row.className ?? ""]),
 
   classFeature: collect(readDir("class", "classFeature"), [...COMMON, "className", "classSource", "level"], (row) => [row.className ?? "", row.classSource ?? "", String(row.level ?? "")]),
 

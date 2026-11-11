@@ -5,8 +5,8 @@
  * long sword they hover, the background they pick — with every condition, spell and item named in
  * it a link that opens its own entry on top. Back walks the trail; the cross clears it.
  *
- * Wide screens get it as a column in the margin that follows hover. Narrower ones get a sheet at
- * the bottom that opens only on a deliberate choice, since a hover there would cover the page.
+ * Wide screens get it as a column in the margin. Narrower ones get a sheet at
+ * the bottom. Both open only on a deliberate choice: a click or a pick.
  */
 
 import { useEffect, useState } from "react";
@@ -186,6 +186,15 @@ function Content({ ref_, accent }: { ref_: RuleRef; accent: string }) {
       )}
 
       <RulesBody entries={record["entries"]} accent={accent} />
+
+      {/* Plenty of entries are only a name in the books — a bag of rope, a common language.
+          Say so, rather than leave a blank panel that reads as broken. */}
+      {asList(record["entries"]).length === 0 &&
+        meta.length === 0 &&
+        ref_.kind !== "class" &&
+        ref_.kind !== "subclass" && (
+          <p className="mt-4 font-body text-[15px] text-bone">Los libros no le dedican texto aparte.</p>
+        )}
 
       {higher.length > 0 && (
         <div className="font-body text-[15px] leading-relaxed text-bone">

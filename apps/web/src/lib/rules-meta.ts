@@ -38,7 +38,7 @@ const DAMAGE_TYPES: Record<string, string> = {
   Y: "psychic",
 };
 
-const PROPERTIES: Record<string, string> = {
+export const PROPERTIES: Record<string, string> = {
   A: "Ammunition",
   AF: "Ammunition (firearm)",
   BF: "Burst fire",
@@ -352,6 +352,14 @@ export function metaLinesFor(kind: RulesKind, record: RulesRecord): MetaLine[] {
     case "optionalfeature": {
       const requirement = prerequisiteText(record);
       return requirement ? [{ label: "Requisito", text: requirement }] : [];
+    }
+    case "language": {
+      const lines: MetaLine[] = [];
+      if (typeof record["type"] === "string") lines.push({ label: "Tipo", text: record["type"] });
+      const speakers = asArray<string>(record["typicalSpeakers"]);
+      if (speakers.length) lines.push({ label: "Hablantes", text: speakers.join(", ") });
+      if (typeof record["script"] === "string") lines.push({ label: "Escritura", text: record["script"] });
+      return lines;
     }
     case "action": {
       const time = asArray<Record<string, unknown>>(record["time"])[0];
