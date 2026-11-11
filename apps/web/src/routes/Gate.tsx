@@ -98,14 +98,13 @@ function GateContent() {
         style={{
           background:
             "conic-gradient(from 180deg at 50% 0%, transparent 40%, rgba(176,138,62,0.5) 49%, rgba(230,223,206,0.6) 50%, rgba(176,138,62,0.5) 51%, transparent 60%)",
-          filter: "blur(30px)",
           maskImage: "linear-gradient(to bottom, black, transparent 75%)",
         }}
       />
 
       {/* Ground fog */}
       <motion.div style={{ y: fogY }} className="pointer-events-none absolute bottom-0 h-64 w-full">
-        <div className="h-full w-full bg-gradient-to-t from-[#000000] via-[#000000]/40 to-transparent blur-xl" />
+        <div className="h-full w-full bg-gradient-to-t from-[#000000] via-[#000000]/40 to-transparent" />
       </motion.div>
 
       <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
@@ -114,8 +113,8 @@ function GateContent() {
           // Letter-spacing this wide eats the word space: at 8xl, "DEL ALBA"
           // closes up into one word unless the gap is widened to match.
           style={{ y: titleY, wordSpacing: "0.22em" }}
-          initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 1.4, ease: [0.16, 1, 0.3, 1] }}
           className="mt-6 font-title text-7xl font-normal leading-[0.95] tracking-wide text-bone drop-shadow-[0_0_40px_rgba(176,138,62,0.15)] md:text-9xl"
         >
@@ -180,7 +179,7 @@ function GateContent() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={close}
-            className="fixed inset-0 z-[85] flex items-center justify-center bg-black/88 px-6 backdrop-blur-md"
+            className="fixed inset-0 z-[85] flex items-center justify-center bg-black/90 px-6"
           >
             <motion.div
               initial={{ scale: 0.92, y: 30 }}

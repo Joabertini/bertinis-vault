@@ -1508,9 +1508,9 @@ export default function Forge() {
           <AnimatePresence mode="wait">
             <motion.section
               key={chamberKey}
-              initial={{ opacity: 0, y: 24, filter: "blur(6px)" }}
-              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              exit={{ opacity: 0, y: -24, filter: "blur(6px)" }}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -24 }}
               transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             >
               <h2 className="mb-2 font-display text-2xl font-bold" style={{ color: accent }}>
@@ -2593,7 +2593,7 @@ function ChamberArrows({
   accent: string;
 }) {
   const base =
-    "fixed top-1/2 z-20 hidden h-14 w-11 -translate-y-1/2 items-center justify-center border border-iron/60 bg-void/80 font-display text-2xl text-bone backdrop-blur-sm transition-colors enabled:hover:text-bone disabled:opacity-25 xl:flex";
+    "fixed top-1/2 z-20 hidden h-14 w-11 -translate-y-1/2 items-center justify-center border border-iron/60 bg-void font-display text-2xl text-bone transition-colors enabled:hover:text-bone disabled:opacity-25 xl:flex";
 
   return (
     <>

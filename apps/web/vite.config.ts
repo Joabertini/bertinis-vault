@@ -47,6 +47,14 @@ export default defineConfig({
           // looks right.
           const path = id.split("\\").join("/");
 
+          // Its own chunk, and before the index: the entry reads the book
+          // library from here, and if these modules lived in `index-data` the
+          // landing page would download the whole 5etools index to get at them.
+          if (path.includes("packages/vetools-ref")) return "vetools-ref";
+          // Same reason: the landing's store merges two shelves with a helper
+          // from here, and the index imports this package too, so Rollup
+          // filed it under `index-data` and the landing paid for the index.
+          if (path.includes("packages/contracts")) return "contracts";
           if (path.includes("packages/vetools-index")) return "index-data";
           if (path.includes("node_modules")) return "vendor";
           return undefined;

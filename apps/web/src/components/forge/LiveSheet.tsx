@@ -185,11 +185,10 @@ export default function LiveSheet({
 
   return (
     <motion.aside
-      layout
-      className="sticky top-10 self-start border p-7 backdrop-blur-md"
+      className="sticky top-10 self-start border p-7"
       style={{
         borderColor: `${accent}44`,
-        background: "linear-gradient(170deg, rgba(18,16,13,0.92), rgba(10,8,6,0.95))",
+        background: "#0B0B0B",
       }}
     >
       {/* ---- identity ---- */}

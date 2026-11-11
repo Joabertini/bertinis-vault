@@ -15,7 +15,7 @@ export default function CinematicIntro({ children }: { children: React.ReactNode
               className="fixed inset-x-0 bottom-0 z-[70] bg-black" initial={{ height: "50vh" }} />
 
             {/* Carved title */}
-            <motion.div exit={{ opacity: 0, scale: 1.15, filter: "blur(8px)" }}
+            <motion.div exit={{ opacity: 0, scale: 1.15 }}
               transition={{ duration: 0.7 }}
               className="fixed inset-0 z-[71] flex items-center justify-center">
               <div className="text-center">

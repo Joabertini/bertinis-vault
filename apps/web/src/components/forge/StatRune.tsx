@@ -138,7 +138,7 @@ export default function StatRune({
                     ? { borderColor: `${accent}88`, boxShadow: `inset 0 0 24px ${accent}22` }
                     : { borderColor: "rgba(74,70,64,0.53)", boxShadow: "inset 0 0 0 transparent" }
               }
-              className="flex w-full items-center justify-between border bg-ash/70 px-5 py-3 text-left backdrop-blur-sm disabled:cursor-default"
+              className="flex w-full items-center justify-between border bg-ash px-5 py-3 text-left disabled:cursor-default"
               title={
                 heldValue !== undefined
                   ? `Poner ${heldValue} en ${abilityLabels[ability]}`

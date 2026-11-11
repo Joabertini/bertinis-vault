@@ -77,7 +77,7 @@ export default function DiceTray({
         />
       )}
 
-      <div className="border border-[#5A5A5A]/60 bg-[#0B0B0B]/80 p-8 backdrop-blur-sm">
+      <div className="border border-[#5A5A5A]/60 bg-[#0B0B0B] p-8">
         <div className="mb-6 flex items-center justify-between">
           <p className="font-mono text-[13px] tracking-[0.1em] uppercase text-gold">
             Rito de aptitudes

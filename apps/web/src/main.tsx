@@ -1,5 +1,6 @@
 import { lazy, StrictMode, Suspense } from "react";
 import { createRoot } from "react-dom/client";
+import { MotionConfig } from "framer-motion";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { setBookLibrary } from "@bertinis-vault/vetools-ref";
@@ -31,6 +32,9 @@ import "./styles/animations.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
+    {/* Visitors who asked their system for less motion get opacity changes
+        only: no sliding, spinning or scaling. */}
+    <MotionConfig reducedMotion="user">
     <BrowserRouter>
       {/* Nothing on purpose: the swap is a frame or two on a warm cache, and
           a spinner that flashes is worse than a beat of the page you left. */}
@@ -44,5 +48,6 @@ createRoot(document.getElementById("root")!).render(
         </Routes>
       </Suspense>
     </BrowserRouter>
+    </MotionConfig>
   </StrictMode>,
 );

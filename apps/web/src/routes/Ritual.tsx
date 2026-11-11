@@ -207,7 +207,7 @@ export default function Ritual() {
         </header>
 
         {/* who is crossing */}
-        <div className="mb-12 flex items-center justify-center gap-5 border border-iron/50 bg-ash/70 px-8 py-4 backdrop-blur-sm">
+        <div className="mb-12 flex items-center justify-center gap-5 border border-iron/50 bg-ash px-8 py-4">
           <Sigil name={state.classId || state.raceId} size={34} />
           <div className="text-left">
             <p className="font-display text-lg font-bold text-bone">{state.characterName}</p>
@@ -224,7 +224,7 @@ export default function Ritual() {
               key="select"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              exit={{ opacity: 0, filter: "blur(8px)" }}
+              exit={{ opacity: 0 }}
             >
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
                 {REALMS.map((entry) => (

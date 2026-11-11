@@ -31,7 +31,7 @@ export function RuneButton({
       onMouseLeave={() => { x.set(0); y.set(0); }}
       whileTap={{ scale: 0.96 }}
       style={{ x, y }}
-      className={`group relative overflow-hidden border px-12 py-4 font-display text-[15px] font-semibold uppercase tracking-[0.1em] backdrop-blur-sm transition-all duration-500 ${styles} ${className}`}
+      className={`group relative overflow-hidden border px-12 py-4 font-display text-[15px] font-semibold uppercase tracking-[0.1em] transition-all duration-500 ${styles} ${className}`}
     >
       {/* corner runes */}
       <span className="absolute left-2 top-2 h-2 w-2 border-l border-t border-current opacity-40 transition-all group-hover:h-3 group-hover:w-3 group-hover:opacity-90" />
