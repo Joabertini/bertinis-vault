@@ -10,6 +10,8 @@
  * hand-written per item.
  */
 
+import InfoLink from "@/components/info/InfoLink";
+import { PROPERTIES } from "@/lib/rules-meta";
 import type { ItemFacts as Facts } from "@/lib/item-facts";
 import { KIND_LABEL, RARITY_LABEL, RARITY_TINT } from "@/lib/item-facts";
 
@@ -19,9 +21,13 @@ export default function ItemFacts({ facts, accent }: { facts: Facts; accent: str
   return (
     <div className="mt-4 border-l-2 pl-4" style={{ borderColor: `${accent}55` }}>
       <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="font-display text-base font-bold" style={{ color: accent }}>
+        <InfoLink
+          target={{ kind: "item", name: row.name, source: row.source }}
+          accent={accent}
+          className="font-display text-base font-bold"
+        >
           {row.name}
-        </span>
+        </InfoLink>
         <span className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
           {KIND_LABEL[facts.kind]}
         </span>
@@ -68,7 +74,13 @@ export default function ItemFacts({ facts, accent }: { facts: Facts; accent: str
         <ul className="mt-3 space-y-1">
           {weapon.properties.map((property) => (
             <li key={property.code} className="font-body text-sm leading-relaxed text-bone">
-              <span className="text-bone">{property.label}</span>
+              {PROPERTIES[property.code] ? (
+                <InfoLink target={{ kind: "itemProperty", name: PROPERTIES[property.code] ?? "" }} accent={accent}>
+                  {property.label}
+                </InfoLink>
+              ) : (
+                <span className="text-bone">{property.label}</span>
+              )}
               {property.means && ` — ${property.means}`}
             </li>
           ))}
@@ -82,7 +94,9 @@ export default function ItemFacts({ facts, accent }: { facts: Facts; accent: str
           <ul className="mt-1 space-y-1">
             {weapon.masteries.map((mastery) => (
               <li key={mastery.name} className="font-body text-sm leading-relaxed text-bone">
-                <span className="text-bone">{mastery.name}</span>
+                <InfoLink target={{ kind: "mastery", name: mastery.name }} accent={accent}>
+                  {mastery.name}
+                </InfoLink>
                 {mastery.means && ` — ${mastery.means}`}
               </li>
             ))}

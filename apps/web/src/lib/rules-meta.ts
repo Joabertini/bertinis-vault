@@ -38,7 +38,7 @@ const DAMAGE_TYPES: Record<string, string> = {
   Y: "psychic",
 };
 
-const PROPERTIES: Record<string, string> = {
+export const PROPERTIES: Record<string, string> = {
   A: "Ammunition",
   AF: "Ammunition (firearm)",
   BF: "Burst fire",
