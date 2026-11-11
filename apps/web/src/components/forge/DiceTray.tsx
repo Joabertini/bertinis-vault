@@ -153,13 +153,13 @@ export default function DiceTray({
                     <button
                       key={index}
                       onClick={() => onKeep(index)}
-                      className="flex w-full items-center gap-4 border border-[#5A5A5A]/50 bg-[#0B0B0B]/60 px-4 py-3 text-left transition-colors hover:border-[#F2C14E]"
+                      className="flex w-full items-center gap-3 border border-[#5A5A5A]/50 bg-[#0B0B0B]/60 px-4 py-3 text-left transition-colors hover:border-[#F2C14E]"
                     >
-                      <span className="w-24 shrink-0 whitespace-nowrap font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
+                      <span className="shrink-0 whitespace-nowrap font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
                         Tirada {index + 1}
                       </span>
 
-                      <span className="flex flex-wrap gap-2">
+                      <span className="flex shrink-0 flex-nowrap gap-1.5">
                         {[...set]
                           .sort((a, b) => b - a)
                           .map((score, position) => (
@@ -173,8 +173,11 @@ export default function DiceTray({
                           ))}
                       </span>
 
-                      <span className="ml-auto shrink-0 text-right font-mono text-[13px] text-bone">
-                        modificadores {worth >= 0 ? `+${worth}` : worth}
+                      <span className="ml-auto flex shrink-0 flex-col items-end text-right">
+                        <span className="font-mono text-[13px] text-bone">modificadores</span>
+                        <span className="font-num text-xl font-bold leading-none text-bone">
+                          {worth >= 0 ? `+${worth}` : worth}
+                        </span>
                       </span>
                     </button>
                   );
