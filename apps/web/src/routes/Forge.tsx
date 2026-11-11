@@ -32,6 +32,7 @@ import SigilCard from "@/components/forge/SigilCard";
 import SigilShelf from "@/components/forge/SigilShelf";
 import BackgroundGrant from "@/components/forge/BackgroundGrant";
 import ScryPicker from "@/components/forge/ScryPicker";
+import RarityScry from "@/components/forge/RarityScry";
 import PickList from "@/components/forge/PickList";
 import LiveSheet from "@/components/forge/LiveSheet";
 
@@ -224,13 +225,13 @@ export default function Forge() {
   );
 
   const weaponSearch = useMemo(
-    () => (query: string) =>
-      optionsFor({ prop: "item", rulesVersion, search: query, weaponsOnly: true, limit: 30 }),
+    () => (query: string, rarities: readonly string[]) =>
+      optionsFor({ prop: "item", rulesVersion, search: query, weaponsOnly: true, limit: 30, rarities }),
     [rulesVersion],
   );
   const armorSearch = useMemo(
-    () => (query: string) =>
-      optionsFor({ prop: "item", rulesVersion, search: query, armorOnly: true, limit: 30 }),
+    () => (query: string, rarities: readonly string[]) =>
+      optionsFor({ prop: "item", rulesVersion, search: query, armorOnly: true, limit: 30, rarities }),
     [rulesVersion],
   );
   // The bag searches every item, not only weapons and armour.
@@ -2225,7 +2226,7 @@ export default function Forge() {
                     <p className={LABEL_MB4}>
                       Arma
                     </p>
-                    <ScryPicker
+                    <RarityScry
                       label="Buscar arma"
                       placeholder="Buscar arma…"
                       search={weaponSearch}
@@ -2244,7 +2245,7 @@ export default function Forge() {
                       Armadura
                     </p>
                     <p className={WHISPER_MB4}>Dejala vacia para ir sin armadura.</p>
-                    <ScryPicker
+                    <RarityScry
                       label="Buscar armadura"
                       placeholder="Buscar armadura o escudo…"
                       search={armorSearch}
