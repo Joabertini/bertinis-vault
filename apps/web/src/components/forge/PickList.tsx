@@ -24,6 +24,7 @@ export default function PickList({
   accent,
   onToggle,
   columns = 3,
+  perList = false,
 }: {
   title: string;
   hint?: string;
@@ -35,6 +36,14 @@ export default function PickList({
   accent: string;
   onToggle: (value: string) => void;
   columns?: 2 | 3;
+  /**
+   * Count only what was chosen in this list, and say no limit.
+   *
+   * For a list that is one of several sharing a single limit — the spells of
+   * each level — the limit belongs to the section above them. Printing it here
+   * too read as every level having that many.
+   */
+  perList?: boolean;
 }) {
   const lockedSet = new Set(locked);
   const chosen = selected.filter((entry) => !lockedSet.has(entry));
@@ -51,7 +60,11 @@ export default function PickList({
           className={META}
           style={{ color: complete ? accent : "rgba(230,223,206,0.6)" }}
         >
-          {chosen.length} / {limit}
+          {perList
+            ? `${chosen.filter((entry) => options.includes(entry)).length} elegido${
+                chosen.filter((entry) => options.includes(entry)).length === 1 ? "" : "s"
+              }`
+            : `${chosen.length} / ${limit}`}
         </span>
       </div>
 

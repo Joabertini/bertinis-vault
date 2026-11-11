@@ -114,6 +114,7 @@ export default function SpellClassSection({
               title={`Nivel ${level}`}
               options={names.map((name) => formatSpellLine(level, name))}
               selected={book}
+              perList
               limit={plan.book!.limit}
               accent={accent}
               onToggle={onToggleBookSpell}
@@ -142,7 +143,8 @@ export default function SpellClassSection({
               title={`Nivel ${level}`}
               options={names.map((name) => formatSpellLine(level, name))}
               selected={spells}
-              locked={lockedAt(level, names)}
+              locked={[...lockedSpells]}
+              perList
               limit={picker.spellLimit}
               accent={accent}
               onToggle={onToggleSpell}
