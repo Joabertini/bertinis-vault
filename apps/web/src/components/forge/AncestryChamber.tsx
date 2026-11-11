@@ -71,6 +71,8 @@ export default function AncestryChamber({
       {/* Only 2014 has these; 2024 folded them into the species. */}
       {subraces.length > 0 && (
         <SubChoice
+          infoKind="race"
+          infoClass={raceLabel ?? ""}
           title="Rama"
           hint={
             branchIsRequired
