@@ -94,6 +94,16 @@ describe("rules text lookup", () => {
     expect(findIn("subclass", "Champion", "PHB", "2014", ["Fighter"])?.["className"]).toBe("Fighter");
   });
 
+  it("matches a subrace by the species it belongs to", () => {
+    resetRulesText();
+    seedRulesText("race", {
+      "hill|dwarf|phb": { name: "Hill", source: "PHB", raceName: "Dwarf" },
+      "hill|other|phb": { name: "Hill", source: "PHB", raceName: "Other" },
+    });
+
+    expect(findIn("race", "Hill", "PHB", "2014", ["Dwarf"])?.["raceName"]).toBe("Dwarf");
+  });
+
   it("finds a feature by class and level, not by name alone", async () => {
     resetRulesText();
     seedRulesText("classFeature", {
@@ -159,6 +169,8 @@ describe("rules data completeness", () => {
     const background = JSON.parse(readFileSync("public/rules/background.json", "utf8")) as Record<string, { entries?: unknown[] }>;
 
     expect(race["goblin|erlw"]?.entries?.length).toBeGreaterThan(0);
+    // A subrace is told from its species by the species' name.
+    expect(race["hill|dwarf|phb"]).toBeDefined();
     expect(Object.values(background).filter((row) => !row.entries?.length)).toEqual([]);
   });
 });

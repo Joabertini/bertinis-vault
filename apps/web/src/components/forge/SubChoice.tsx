@@ -18,9 +18,12 @@ export default function SubChoice({
   accent,
   note,
   infoClass,
+  infoKind = "subclass",
 }: {
-  /** The class's name, which is what tells two same-named subclasses apart in the books. */
+  /** The class's name, which is what tells two same-named subclasses apart in the books. For a subrace, the species'. */
   infoClass?: string;
+  /** What the options are in the books: a subclass of a class, or a subrace of a species. */
+  infoKind?: "subclass" | "race";
   title: string;
   hint: string;
   options: CatalogEntry[];
@@ -49,7 +52,7 @@ export default function SubChoice({
               key={`${entry.id}:${entry.source}`}
               onClick={() => {
                 onPick(entry);
-                info.show({ kind: "subclass", name: entry.label, source: entry.source, extra: [infoClass ?? ""] });
+                info.show({ kind: infoKind, name: entry.label, source: entry.source, extra: [infoClass ?? ""] });
               }}
               className="flex items-baseline justify-between gap-3 border-l-2 px-4 py-2.5 text-left transition-colors"
               style={{
