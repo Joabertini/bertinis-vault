@@ -105,7 +105,7 @@ import Expertise from "@/components/forge/Expertise";
 import type { ExtraClass } from "@/lib/classing";
 import { classEntriesFor, emptyExtraClass } from "@/lib/classing";
 import { suggestAppearance, type Appearance } from "@/lib/appearance";
-import { masteryPlanFor, masteryProblemsFor } from "@/lib/weapon-mastery";
+import { foundryWeaponId, masteryPlanFor, masteryProblemsFor } from "@/lib/weapon-mastery";
 import { expertisePlanFor } from "@/lib/expertise";
 import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
 import { talentPools, talentsSatisfied } from "@/lib/optional-features";
@@ -1225,6 +1225,13 @@ export default function Forge() {
     patchDraft({ weaponMasteryIds: chosen });
   };
 
+  /** Carry the weapon a mastery card names: look it up in the same catalogue the search reads. */
+  const carryMasteryWeapon = (id: string) => {
+    const label = masteryPlan.options.find((option) => option.id === id)?.label ?? id;
+    const entry = weaponSearch(label).find((candidate) => foundryWeaponId(candidate.label) === id);
+    if (entry) pick("weapon", entry);
+  };
+
   /** Attuning to a fourth is allowed and named, not refused. */
   const toggleAttunement = (id: string) => {
     const attuned = draft.attunedItemIds.includes(id)
@@ -2194,9 +2201,30 @@ export default function Forge() {
                     onAnswer={answerKitRow}
                   />
 
-                  <div className={kitRows.length > 0 ? DIVIDER : ""}>
+                  {/*
+                    With mastery the weapon list is one: the cards below are
+                    the weapons, and each can be carried and mastered there.
+                    The search stays for a weapon that has no mastery to pick.
+                  */}
+                  {masteryPlan.count > 0 && (
+                    <div className={kitRows.length > 0 ? DIVIDER : ""}>
+                      <WeaponMastery
+                        options={masteryPlan.options}
+                        chosen={draft.weaponMasteryIds}
+                        count={masteryPlan.count}
+                        meleeOnly={masteryPlan.meleeOnly}
+                        problems={masteryProblems}
+                        accent={accent}
+                        onToggle={toggleMastery}
+                        carriedId={draft.weaponId ? foundryWeaponId(draft.weaponId) : ""}
+                        onCarry={carryMasteryWeapon}
+                      />
+                    </div>
+                  )}
+
+                  <div className={kitRows.length > 0 || masteryPlan.count > 0 ? DIVIDER : ""}>
                     <p className={LABEL_MB4}>
-                      Arma
+                      {masteryPlan.count > 0 ? "Otra arma" : "Arma"}
                     </p>
                     <ScryPicker
                       label="Buscar arma"
@@ -2230,20 +2258,6 @@ export default function Forge() {
                       <p className="mt-3 font-body text-[15px] text-ember">{armorWarning}</p>
                     )}
                   </div>
-
-                  {masteryPlan.count > 0 && (
-                    <div className={DIVIDER}>
-                      <WeaponMastery
-                        options={masteryPlan.options}
-                        chosen={draft.weaponMasteryIds}
-                        count={masteryPlan.count}
-                        meleeOnly={masteryPlan.meleeOnly}
-                        problems={masteryProblems}
-                        accent={accent}
-                        onToggle={toggleMastery}
-                      />
-                    </div>
-                  )}
 
                   <div className={DIVIDER}>
                     <p className={LABEL_MB2}>
