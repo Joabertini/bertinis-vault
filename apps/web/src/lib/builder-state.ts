@@ -10,6 +10,7 @@
  * there has to change.
  */
 
+import { isCoverImage } from "@/lib/cover-image";
 import type { AbilityBonusMap, ExpertiseAnswer, LevelChoice } from "@bertinis-vault/domain";
 
 import { ABILITY_IDS, type AbilityId } from "./abilities";
@@ -97,6 +98,13 @@ export type BuilderState = {
    */
   supplements: boolean;
   characterName: string;
+  /**
+   * The cover of this character's book, as a data URL, or "" for none.
+   *
+   * Kept small by `fitCoverImage` (the account store caps one character at
+   * 128 KB), and never sent to Foundry: it is for the shelf only.
+   */
+  coverImage: string;
   playerName: string;
   alignment: string;
   raceId: string;
@@ -332,6 +340,7 @@ export const initialState: BuilderState = {
   optionalFeatureIds: [],
   featAbilityChoices: {},
   characterName: "Seraphina Vale",
+  coverImage: "",
   playerName: "Martin",
   alignment: "Neutral Bueno",
   raceId: "human",
@@ -400,6 +409,10 @@ export function coerceBuilderState(value: unknown): BuilderState {
   return {
     createdAt: typeof candidate.createdAt === "string" ? candidate.createdAt : initialState.createdAt,
     characterName: typeof candidate.characterName === "string" ? candidate.characterName : initialState.characterName,
+    // Absent on every character saved before covers existed, which reads as
+    // "no cover". Anything that is not a small image data URL is dropped so a
+    // hand-edited or corrupted save cannot push a character past the limit.
+    coverImage: isCoverImage(candidate.coverImage) ? candidate.coverImage : "",
     playerName: typeof candidate.playerName === "string" ? candidate.playerName : initialState.playerName,
     alignment: typeof candidate.alignment === "string" ? candidate.alignment : initialState.alignment,
     raceId: typeof candidate.raceId === "string" ? candidate.raceId : initialState.raceId,
