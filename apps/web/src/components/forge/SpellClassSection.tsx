@@ -41,6 +41,7 @@ export default function SpellClassSection({
   characterLevel: number;
   accent: string;
   showName: boolean;
+  granted: ReadonlySet<string>;
   onToggleCantrip: (line: string) => void;
   onToggleSpell: (line: string) => void;
   onToggleBookSpell: (line: string) => void;
