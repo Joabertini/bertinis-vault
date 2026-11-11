@@ -15,7 +15,7 @@
 
 import PickList from "./PickList";
 import RuleNote from "@/components/ui/RuleNote";
-import { formatSpellLine, type ClassSpellPlan } from "@/lib/spells";
+import { formatSpellLine, spellNameOf, type ClassSpellPlan } from "@/lib/spells";
 import { LABEL, META } from "@/styles/recipes";
 
 export default function SpellClassSection({
@@ -28,6 +28,8 @@ export default function SpellClassSection({
   accent,
   /** Off for a single-class character, where naming the class says nothing. */
   showName,
+  /** Spells the character is handed outright, lowercase. Shown as given, never counted. */
+  granted,
   onToggleCantrip,
   onToggleSpell,
   onToggleBookSpell,
@@ -39,12 +41,21 @@ export default function SpellClassSection({
   characterLevel: number;
   accent: string;
   showName: boolean;
+  granted: ReadonlySet<string>;
   onToggleCantrip: (line: string) => void;
   onToggleSpell: (line: string) => void;
   onToggleBookSpell: (line: string) => void;
 }) {
   const picker = plan.picker;
   if (!picker) return null;
+
+  const isGranted = (option: string) => granted.has(spellNameOf(option));
+  const lockedCantrips = plan.cantripOptions.filter(isGranted);
+  const lockedAt = (level: number, names: string[]) =>
+    names.map((name) => formatSpellLine(level, name)).filter(isGranted);
+  const lockedSpells = new Set(plan.spellsByLevel.flatMap(({ level, names }) => lockedAt(level, names)));
+  // What the player spent, not what the sheet shows: the granted ones cost nothing.
+  const spent = spells.filter((line) => !lockedSpells.has(line)).length;
 
   return (
     <div className="space-y-10">
@@ -69,6 +80,7 @@ export default function SpellClassSection({
           title="Trucos"
           options={plan.cantripOptions}
           selected={cantrips}
+          locked={lockedCantrips}
           limit={picker.availableCantripCount}
           accent={accent}
           onToggle={onToggleCantrip}
@@ -102,6 +114,7 @@ export default function SpellClassSection({
               title={`Nivel ${level}`}
               options={names.map((name) => formatSpellLine(level, name))}
               selected={book}
+              perList
               limit={plan.book!.limit}
               accent={accent}
               onToggle={onToggleBookSpell}
@@ -117,10 +130,10 @@ export default function SpellClassSection({
             <span
               className={META}
               style={{
-                color: spells.length === picker.spellLimit ? accent : "rgba(230,223,206,0.6)",
+                color: spent === picker.spellLimit ? accent : "rgba(230,223,206,0.6)",
               }}
             >
-              {spells.length} / {picker.spellLimit}
+              {spent} / {picker.spellLimit}
             </span>
           </div>
 
@@ -130,6 +143,8 @@ export default function SpellClassSection({
               title={`Nivel ${level}`}
               options={names.map((name) => formatSpellLine(level, name))}
               selected={spells}
+              locked={[...lockedSpells]}
+              perList
               limit={picker.spellLimit}
               accent={accent}
               onToggle={onToggleSpell}

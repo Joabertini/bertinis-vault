@@ -552,3 +552,22 @@ export function strayChoices(
     book: strayBook,
   };
 }
+
+/**
+ * The spells a character is handed outright, as the lowercase names the
+ * pickers compare against.
+ *
+ * A cleric's domain spells, a tiefling's Thaumaturgy and a feat's named spell
+ * arrive without being asked and without spending a pick. A picker that still
+ * offers them lets the player spend a prepared spell on something they already
+ * have, and the sheet ends up with it twice.
+ */
+export function grantedNameSet(granted: ReadonlyArray<{ label: string }>): ReadonlySet<string> {
+  return new Set(granted.map((entry) => entry.label.trim().toLowerCase()));
+}
+
+/** A picker option's spell name: `"Nv2: Hold Person"` and `"Hold Person"` both give `"hold person"`. */
+export function spellNameOf(option: string): string {
+  return option.replace(/^Nv\d+:\s*/i, "").trim().toLowerCase();
+}
+
