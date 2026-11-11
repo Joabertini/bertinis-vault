@@ -14,9 +14,11 @@ export function RuneButton({
   const y = useSpring(useMotionValue(0), { stiffness: 120, damping: 14 });
 
   const styles = {
-    gold: "border-[#F2C14E]/50 text-[#FFFFFF] hover:text-[#F2C14E] shadow-[inset_0_0_20px_rgba(176,138,62,0.08)]",
-    blood: "border-[#6E0F0F]/70 text-[#FFFFFF] bg-[#6E0F0F]/15 hover:bg-[#6E0F0F]/35",
-    ghost: "border-[#5A5A5A] text-bone hover:text-[#FFFFFF]",
+    // Opaque on purpose: these sit over the animated background, and a
+    // translucent button lets the streaks run through its label.
+    gold: "border-[#F2C14E] bg-[#17120A] text-[#FFFFFF] hover:bg-[#241C0D] hover:text-[#F2C14E]",
+    blood: "border-[#A32020] bg-[#3A0D0D] text-[#FFFFFF] hover:bg-[#551212]",
+    ghost: "border-[#8A8A8A] bg-[#0B0B0B] text-bone hover:bg-[#161616] hover:text-[#FFFFFF]",
   }[variant];
 
   return (

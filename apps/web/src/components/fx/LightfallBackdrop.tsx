@@ -36,22 +36,22 @@ const SHARED = {
   dpr: 1,
 };
 
-/** The landing, exactly as picked; the Forge keeps it calmer so text stays readable. */
+/** The landing at four fifths of the picked strength; every other page keeps it calmer so text stays readable. */
 const VARIANTS = {
-  gate: { ...SHARED, speed: 0.85, holdToWarp: true, intro: true, opacity: 1 },
-  forge: { ...SHARED, speed: 0.5, holdToWarp: false, intro: false, opacity: 0.75 },
+  gate: { ...SHARED, speed: 0.85, holdToWarp: true, intro: true, opacity: 0.8 },
+  page: { ...SHARED, speed: 0.5, holdToWarp: false, intro: false, opacity: 0.75 },
 } as const;
 
 /**
  * What keeps text readable over the streaks: a plain dark gradient on top of
  * the canvas (cheaper than masking a layer that redraws every frame). The
- * landing darkens behind its title, buttons and footer; the Forge darkens the
+ * landing darkens behind its title, buttons and footer; the other pages darken the
  * whole centre column and leaves the streaks to the margins.
  */
 const SCRIMS = {
   gate:
     "radial-gradient(ellipse 60% 55% at 50% 52%, rgba(0,0,0,0.72), rgba(0,0,0,0.5) 55%, rgba(0,0,0,0) 100%), linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0) 14%)",
-  forge:
+  page:
     "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.92) 24%, rgba(0,0,0,0.92) 76%, rgba(0,0,0,0) 100%)",
 } as const;
 

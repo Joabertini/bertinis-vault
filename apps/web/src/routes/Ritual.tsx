@@ -17,7 +17,7 @@ import { useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 
-import EmberField from "@/components/fx/EmberField";
+import LightfallBackdrop from "@/components/fx/LightfallBackdrop";
 import GlyphScramble from "@/components/fx/GlyphScramble";
 import GrainOverlay from "@/components/fx/GrainOverlay";
 import SummoningCircle from "@/components/fx/SummoningCircle";
@@ -185,7 +185,7 @@ export default function Ritual() {
   return (
     <main className={PAGE}>
       <GrainOverlay />
-      <EmberField density={42} />
+      <LightfallBackdrop variant="page" fallbackDensity={42} />
 
       <div className="relative z-10 mx-auto max-w-4xl px-6 py-16 md:px-10">
         <header className="mb-14 text-center">

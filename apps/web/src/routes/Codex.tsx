@@ -13,7 +13,7 @@ import Tome from "@/components/codex/Tome";
 import DropActor from "@/components/codex/DropActor";
 import OpenCode from "@/components/codex/OpenCode";
 import AshBurst from "@/components/fx/AshBurst";
-import EmberField from "@/components/fx/EmberField";
+import LightfallBackdrop from "@/components/fx/LightfallBackdrop";
 import GrainOverlay from "@/components/fx/GrainOverlay";
 import RuneButton from "@/components/ui/RuneButton";
 import AccountBadge from "@/components/codex/AccountBadge";
@@ -46,7 +46,7 @@ export default function Codex() {
   return (
     <main className={PAGE}>
       <GrainOverlay />
-      <EmberField density={30} />
+      <LightfallBackdrop variant="page" fallbackDensity={30} />
 
       {burnOrigin && <AshBurst origin={burnOrigin} onDone={() => setBurnOrigin(null)} />}
 

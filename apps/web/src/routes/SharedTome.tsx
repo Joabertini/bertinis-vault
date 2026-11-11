@@ -18,7 +18,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 
 import Vision from "@/components/codex/Vision";
-import EmberField from "@/components/fx/EmberField";
+import LightfallBackdrop from "@/components/fx/LightfallBackdrop";
 import GrainOverlay from "@/components/fx/GrainOverlay";
 import RuneButton from "@/components/ui/RuneButton";
 import { characterLevelFor, classingLabelFor } from "@/lib/builder";
@@ -103,7 +103,7 @@ export default function SharedTome() {
   return (
     <main className={PAGE}>
       <GrainOverlay />
-      <EmberField density={20} />
+      <LightfallBackdrop variant="page" fallbackDensity={20} />
 
       <div className="relative z-10 mx-auto max-w-6xl px-6 py-16 md:px-10">
         <header className="mb-8">
