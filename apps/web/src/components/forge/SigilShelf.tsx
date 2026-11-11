@@ -21,7 +21,9 @@ import { useMemo, useState } from "react";
 
 import { normalizeForSearch } from "@bertinis-vault/vetools-index";
 
+import { useInfo } from "@/components/info/info-context";
 import type { CatalogEntry } from "@/lib/catalog";
+import type { RulesKind } from "@/lib/rules-text";
 import Sigil from "@/components/sigils/Sigil";
 import SigilCard from "./SigilCard";
 
@@ -46,6 +48,7 @@ export default function SigilShelf({
    * passes nothing and is unchanged.
    */
   groupFor,
+  infoKind,
 }: {
   entries: CatalogEntry[];
   selectedId: string;
@@ -69,7 +72,10 @@ export default function SigilShelf({
   label: string;
   noteFor?: (entry: CatalogEntry) => string | undefined;
   groupFor?: ((entry: CatalogEntry) => string | undefined) | undefined;
+  /** What a card is, so the info panel can show it on hover and on choosing it. */
+  infoKind?: RulesKind | undefined;
 }) {
+  const info = useInfo();
   const [query, setQuery] = useState("");
 
   const shown = useMemo(() => {
@@ -153,19 +159,31 @@ export default function SigilShelf({
                 </p>
               )}
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {items.map((entry) => (
-                  <SigilCard
-                    key={`${entry.id}:${entry.source}`}
-                    compact
-                    label={entry.label}
-                    note={noteFor?.(entry)}
-                    active={isSelected(entry)}
-                    accent={accent}
-                    onClick={() => onPick(entry)}
-                  >
-                    <Sigil name={entry.id} size={30} />
-                  </SigilCard>
-                ))}
+                {items.map((entry) => {
+                  const ref = infoKind ? { kind: infoKind, name: entry.label, source: entry.source } : null;
+                  return (
+                    <div
+                      key={`${entry.id}:${entry.source}`}
+                      onMouseEnter={() => ref && info.show(ref, { hover: true })}
+                      onFocus={() => ref && info.show(ref, { hover: true })}
+                      className="contents"
+                    >
+                      <SigilCard
+                        compact
+                        label={entry.label}
+                        note={noteFor?.(entry)}
+                        active={isSelected(entry)}
+                        accent={accent}
+                        onClick={() => {
+                          onPick(entry);
+                          if (ref) info.show(ref);
+                        }}
+                      >
+                        <Sigil name={entry.id} size={30} />
+                      </SigilCard>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}

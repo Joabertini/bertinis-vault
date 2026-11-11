@@ -77,6 +77,7 @@ export default function SpellClassSection({
 
       {picker.availableCantripCount > 0 && (
         <PickList
+          infoKind="spell"
           title="Trucos"
           options={plan.cantripOptions}
           selected={cantrips}
@@ -110,6 +111,7 @@ export default function SpellClassSection({
 
           {plan.book.options.map(({ level, names }) => (
             <PickList
+              infoKind="spell"
               key={level}
               title={`Nivel ${level}`}
               options={names.map((name) => formatSpellLine(level, name))}
@@ -139,6 +141,7 @@ export default function SpellClassSection({
 
           {plan.spellsByLevel.map(({ level, names }) => (
             <PickList
+              infoKind="spell"
               key={level}
               title={`Nivel ${level}`}
               options={names.map((name) => formatSpellLine(level, name))}

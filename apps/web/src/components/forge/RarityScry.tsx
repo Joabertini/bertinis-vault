@@ -11,6 +11,7 @@ import { useMemo, useState } from "react";
 
 import ScryPicker from "@/components/forge/ScryPicker";
 import type { CatalogEntry } from "@/lib/catalog";
+import type { RulesKind } from "@/lib/rules-text";
 
 /** The tiers a list can be narrowed to, in the order a table reads them. `none` is bought gear. */
 export const RARITY_CHIPS: Array<{ key: string; label: string }> = [
@@ -31,6 +32,7 @@ export default function RarityScry({
   onPick,
   accent,
   emptyHint,
+  infoKind,
 }: {
   label: string;
   placeholder: string;
@@ -40,6 +42,7 @@ export default function RarityScry({
   onPick: (entry: CatalogEntry) => void;
   accent: string;
   emptyHint?: string;
+  infoKind?: RulesKind;
 }) {
   const [rarities, setRarities] = useState<string[]>(["none"]);
   const toggle = (key: string) =>
@@ -79,6 +82,7 @@ export default function RarityScry({
         onPick={onPick}
         accent={accent}
         {...(emptyHint ? { emptyHint } : {})}
+        {...(infoKind ? { infoKind } : {})}
       />
     </div>
   );

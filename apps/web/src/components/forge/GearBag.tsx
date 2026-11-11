@@ -68,6 +68,7 @@ export default function GearBag({
         selectedId=""
         onPick={onAdd}
         accent={accent}
+        infoKind="item"
         emptyHint="Ningun objeto con esas rarezas. Suma otra arriba."
       />
 
