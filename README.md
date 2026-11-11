@@ -21,6 +21,7 @@ icons, because we never build the item ourselves.
 - [ARCHITECTURE-PLAN.md](./ARCHITECTURE-PLAN.md) — the design
 - [docs/PLUTONIUM-INTEGRATION.md](./docs/PLUTONIUM-INTEGRATION.md) — the import path
 - [docs/AI-HANDOFF.md](./docs/AI-HANDOFF.md) — start here if you are picking this up
+- [docs/FARO-FRONT.md](./docs/FARO-FRONT.md) — how the web front is laid out and verified
 
 ## Layout
 
