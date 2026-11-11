@@ -1,15 +1,10 @@
 /**
- * The character's weapons, and which of them they have learned to use well.
+ * Which of the weapons the character has they have learned to use well.
  *
- * One list, not two: a player who has chosen the weapon they carry should not
- * be asked again, in another section, which weapons they master. Each weapon
- * is a card that says what it does (Sap, Vex, Topple); the card's main button
- * masters it and a small one under it makes it the weapon the character
- * carries.
- *
- * Shown as the weapons themselves rather than as the properties, because that
- * is the choice the book asks for: you master a longsword, and Sap is what
- * mastering it does.
+ * The weapon hands the mastery over, so this lists only weapons already in the
+ * character's hands — the kit, the weapon they picked, the bag — and never a
+ * catalogue to choose from. Each card says what mastering that weapon does
+ * (Sap, Vex, Topple), and the count is how many the class lets them master.
  */
 
 import { motion } from "framer-motion";
@@ -25,8 +20,6 @@ export default function WeaponMastery({
   problems,
   accent,
   onToggle,
-  carriedId = "",
-  onCarry,
 }: {
   options: MasteryOption[];
   chosen: string[];
@@ -35,10 +28,6 @@ export default function WeaponMastery({
   problems: MasteryProblem[];
   accent: string;
   onToggle: (id: string) => void;
-  /** The dnd5e id of the weapon the character carries, or "". */
-  carriedId?: string;
-  /** Make this weapon the one the character carries. */
-  onCarry?: (id: string) => void;
 }) {
   const taken = chosen.filter((id) => options.some((option) => option.id === id));
   const remaining = count - taken.length;
@@ -46,7 +35,7 @@ export default function WeaponMastery({
   return (
     <div>
       <p className={LABEL_MB2}>
-        Armas — dominas <span style={{ color: accent }}>{taken.length}</span> de {count}
+        Maestria — <span style={{ color: accent }}>{taken.length}</span> de {count}
       </p>
       <p className={`mb-4 ${WHISPER}`}>
         {meleeOnly
@@ -64,53 +53,44 @@ export default function WeaponMastery({
         </p>
       ))}
 
+      {options.length === 0 && (
+        <p className="font-body text-[15px] text-bone">
+          Ninguna de tus armas tiene maestria todavia. La maestria la da el arma: suma una al
+          equipo y aparece aca.
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {options.map((option) => {
           const picked = taken.includes(option.id);
           // Full is full: an unpicked option with no room left reads as
           // unavailable rather than silently doing nothing when clicked.
           const disabled = !picked && remaining < 1;
-          const carried = option.id === carriedId;
 
           return (
-            <div
+            <motion.button
               key={option.id}
-              className="flex flex-col border"
-              style={{ borderColor: picked || carried ? accent : `${accent}33` }}
+              type="button"
+              layout
+              onClick={() => onToggle(option.id)}
+              disabled={disabled}
+              {...(disabled ? {} : { whileTap: { scale: 0.97 } })}
+              className="border px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-30"
+              style={{ borderColor: picked ? accent : `${accent}33` }}
+              aria-pressed={picked}
+              title={disabled ? "Ya elegiste todas las que podes dominar" : option.mastery}
             >
-              <motion.button
-                type="button"
-                layout
-                onClick={() => onToggle(option.id)}
-                disabled={disabled}
-                {...(disabled ? {} : { whileTap: { scale: 0.97 } })}
-                className="px-3 py-2 text-left transition-colors disabled:cursor-not-allowed disabled:opacity-30"
-                aria-pressed={picked}
-                title={disabled ? "Ya elegiste todas las que podes dominar" : `Dominar: ${option.mastery}`}
+              <span
+                className="block font-body text-[15px]"
+                style={{ color: picked ? accent : undefined }}
               >
-                <span
-                  className="block font-body text-[15px]"
-                  style={{ color: picked ? accent : undefined }}
-                >
-                  {picked ? "✓ " : ""}
-                  {option.label}
-                </span>
-                <span className="block font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
-                  {option.mastery}
-                </span>
-              </motion.button>
-              {onCarry && (
-                <button
-                  type="button"
-                  onClick={() => onCarry(option.id)}
-                  aria-pressed={carried}
-                  className="border-t px-3 py-1 text-left font-mono text-[13px] uppercase tracking-[0.1em] transition-colors hover:text-bone"
-                  style={{ borderColor: `${accent}33`, color: carried ? accent : "rgba(230,223,206,0.6)" }}
-                >
-                  {carried ? "La llevas" : "Llevar"}
-                </button>
-              )}
-            </div>
+                {picked ? "✓ " : ""}
+                {option.label}
+              </span>
+              <span className="block font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
+                {option.mastery}
+              </span>
+            </motion.button>
           );
         })}
       </div>
