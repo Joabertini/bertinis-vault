@@ -34,11 +34,16 @@ import BackgroundGrant from "@/components/forge/BackgroundGrant";
 import ScryPicker from "@/components/forge/ScryPicker";
 import RarityScry from "@/components/forge/RarityScry";
 import InfoPanel from "@/components/info/InfoPanel";
-import { InfoProvider, InfoReset, useInfo } from "@/components/info/info-context";
+import { InfoProvider, InfoReset } from "@/components/info/info-context";
 import PickList from "@/components/forge/PickList";
+import ChamberArrows from "@/components/forge/ChamberArrows";
+import ForgeField from "@/components/forge/ForgeField";
+import SizeChoice from "@/components/forge/SizeChoice";
+import SubChoice from "@/components/forge/SubChoice";
+import VariantChoices from "@/components/forge/VariantChoices";
 import LiveSheet from "@/components/forge/LiveSheet";
 
-import { ABILITY_IDS, abilityLabels, type AbilityId } from "@/lib/abilities";
+import { ABILITY_IDS, type AbilityId } from "@/lib/abilities";
 import {
   allOptions,
   entryById,
@@ -89,13 +94,11 @@ import {
 import { attributeSpells, grantedNameSet, spellPlansFor, strayChoices } from "@/lib/spells";
 import SpellClassSection from "@/components/forge/SpellClassSection";
 import {
-  abilityOptionsOf,
   grantedSpellChoicesFor,
   grantedSpellsFor,
   spellGrantsFor,
   unansweredAbilities,
   unansweredSpellChoices,
-  type GrantedSpellChoice,
   type SpellGrantSource,
 } from "@/lib/granted-spells";
 import BonusEditor from "@/components/forge/BonusEditor";
@@ -132,12 +135,12 @@ import { chamberOrder, firstChamber, type ChamberKey } from "@/lib/chambers";
 import { hitPointLevelsFor } from "@/lib/hit-points";
 import { carriedLoadFor } from "@/lib/carrying";
 import { attunementStateFor } from "@/lib/attunement";
-import { foundrySizeFor, sizeFor, sizeNameOf, sizeOptionsFor } from "@/lib/table-numbers";
+import { foundrySizeFor, sizeFor, sizeOptionsFor } from "@/lib/table-numbers";
 import Attunement from "@/components/forge/Attunement";
 import CarryingLoad from "@/components/forge/CarryingLoad";
 import HitPoints from "@/components/forge/HitPoints";
 import CoverPicker from "@/components/codex/CoverPicker";
-import { DIVIDER, DIVIDER_TIGHT, HEADING, ITEM_META, ITEM_NAME, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
+import { DIVIDER, DIVIDER_TIGHT, HEADING, LABEL, LABEL_MB2, LABEL_MB4, META, PAGE, WHISPER, WHISPER_MB4 } from "@/styles/recipes";
 
 const CHAMBER_LABEL: Record<ChamberKey, string> = {
   ancestry: "Raza",
@@ -2344,32 +2347,32 @@ export default function Forge() {
               {/* ---------- Identity ---------- */}
               {chamberKey === "identity" && (
                 <div className="max-w-lg space-y-8">
-                  <Field label="Nombre verdadero">
+                  <ForgeField label="Nombre verdadero">
                     <input
                       value={draft.characterName}
                       onChange={(event) => patchDraft({ characterName: event.target.value })}
                       placeholder="Decilo en la oscuridad…"
                       className="w-full border-b border-iron bg-transparent pb-3 font-display text-3xl text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                     />
-                  </Field>
+                  </ForgeField>
 
-                  <Field label="Nombre del jugador">
+                  <ForgeField label="Nombre del jugador">
                     <input
                       value={draft.playerName}
                       onChange={(event) => patchDraft({ playerName: event.target.value })}
                       placeholder="Quien sostiene la pluma"
                       className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                     />
-                  </Field>
+                  </ForgeField>
 
-                  <Field label="Alineamiento">
+                  <ForgeField label="Alineamiento">
                     <input
                       value={draft.alignment}
                       onChange={(event) => patchDraft({ alignment: event.target.value })}
                       placeholder="Neutral bueno…"
                       className="w-full border-b border-iron bg-transparent pb-2 font-body text-lg text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                     />
-                  </Field>
+                  </ForgeField>
 
                   <CoverPicker
                     value={draft.coverImage}
@@ -2393,17 +2396,17 @@ export default function Forge() {
                         ["flaw", "Defecto", "No abandona una pista, aunque arriesgue al grupo."],
                       ] as const
                     ).map(([field, label, placeholder]) => (
-                      <Field key={field} label={label}>
+                      <ForgeField key={field} label={label}>
                         <input
                           value={draft[field]}
                           onChange={(event) => patchDraft({ [field]: event.target.value })}
                           placeholder={placeholder}
                           className="w-full border-b border-iron bg-transparent pb-2 font-body text-base text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                         />
-                      </Field>
+                      </ForgeField>
                     ))}
 
-                    <Field label="Notas">
+                    <ForgeField label="Notas">
                       <textarea
                         value={draft.notes}
                         onChange={(event) => patchDraft({ notes: event.target.value })}
@@ -2411,7 +2414,7 @@ export default function Forge() {
                         placeholder="Lo que no entra en ninguna casilla."
                         className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                       />
-                    </Field>
+                    </ForgeField>
                   </div>
 
                   {/* The nine boxes the dnd5e sheet already draws. They are
@@ -2446,18 +2449,18 @@ export default function Forge() {
                           ["faith", "Fe", "Ninguna"],
                         ] as const
                       ).map(([field, label, placeholder]) => (
-                        <Field key={field} label={label}>
+                        <ForgeField key={field} label={label}>
                           <input
                             value={draft[field]}
                             onChange={(event) => patchDraft({ [field]: event.target.value })}
                             placeholder={placeholder}
                             className="w-full border-b border-iron bg-transparent pb-2 font-body text-base text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                           />
-                        </Field>
+                        </ForgeField>
                       ))}
                     </div>
 
-                    <Field label="Aspecto">
+                    <ForgeField label="Aspecto">
                       <textarea
                         value={draft.appearance}
                         onChange={(event) => patchDraft({ appearance: event.target.value })}
@@ -2465,7 +2468,7 @@ export default function Forge() {
                         placeholder="Lo primero que nota alguien que te cruza."
                         className="w-full resize-none border border-iron bg-transparent p-3 font-body text-base text-bone outline-none transition-colors placeholder:text-bone focus:border-gold"
                       />
-                    </Field>
+                    </ForgeField>
                   </div>
                 </div>
               )}
@@ -2507,310 +2510,5 @@ export default function Forge() {
       <InfoReset scope={chamberKey} />
       <InfoPanel accent={accent} />
     </InfoProvider>
-  );
-}
-
-/*
- * `Beyond` used to live here: the fold under a grid of core-book cards, where
- * the rest of the catalog waited behind a second search box. It went with the
- * grids. One shelf holds the whole catalog now, so there is no "rest".
- */
-
-/**
- * A sub-pick under something already chosen: a subrace, a subclass.
- *
- * Shown as a list rather than cards because the counts are unpredictable —
- * one class offers four sendas and the 2014 cleric offers nineteen — and a
- * grid that is sometimes two tiles and sometimes twenty reads as a mistake.
- */
-/**
- * The named alternatives something offers, one question each.
- *
- * Six subclasses ask this — Circle of the Land's terrain, the Genie's four
- * patrons — and in 2024 two species do, which is not a spell question at all:
- * XPHB has no subraces, so an elf's Drow, High Elf and Wood Elf live only as
- * the names on its spell blocks. Until it is answered the character has none
- * of them, which is the honest reading: three lineages at once is three
- * characters.
- */
-function VariantChoices({
-  sources,
-  chosen,
-  chosenAbilities,
-  questions,
-  answers,
-  accent,
-  onPick,
-  onPickAbility,
-  onToggleSpell,
-}: {
-  sources: SpellGrantSource[];
-  chosen: Record<string, string>;
-  chosenAbilities: Record<string, string>;
-  questions: GrantedSpellChoice[];
-  answers: Record<string, string[]>;
-  accent: string;
-  onPick: (key: string, name: string) => void;
-  onPickAbility: (key: string, ability: string) => void;
-  onToggleSpell: (key: string, name: string) => void;
-}) {
-  const chambers = new Set(sources.map((source) => source.chamber));
-  const asking = sources.filter((source) => source.variants.length > 0);
-  const asary = sources.filter((source) => abilityOptionsOf(source).length > 0);
-  const asked = questions.filter((question) => chambers.has(question.chamber));
-  if (!asking.length && !asary.length && !asked.length) return null;
-
-  return (
-    <>
-      {asking.map((source) => (
-        <SubChoice
-          key={source.key}
-          title="Linaje"
-          hint={`${source.label} se divide en ${source.variants.length}. Decide que conjuros trae.`}
-          options={source.variants.map((name) => ({
-            id: name,
-            label: name,
-            source: "",
-            shared: false,
-          }))}
-          selectedId={chosen[source.key] ?? ""}
-          onPick={(entry) => onPick(source.key, entry.id)}
-          accent={accent}
-        />
-      ))}
-
-      {asary.map((source) => (
-        <SubChoice
-          key={`${source.key}:ability`}
-          title="Con que lanza esos conjuros"
-          hint={`${source.label} deja elegir. Decide la CD de salvacion y el bonificador de ataque.`}
-          options={abilityOptionsOf(source).map((ability) => ({
-            id: ability,
-            label: abilityLabels[ability as AbilityId] ?? ability,
-            source: "",
-            shared: false,
-          }))}
-          selectedId={chosenAbilities[source.key] ?? ""}
-          onPick={(entry) => onPickAbility(source.key, entry.id)}
-          accent={accent}
-        />
-      ))}
-
-      {asked.map((question) => (
-        <PickList
-          infoKind="spell"
-          key={question.key}
-          title={`${question.label} — elegi ${question.count}`}
-          options={question.options}
-          selected={answers[question.key] ?? []}
-          limit={question.count}
-          accent={accent}
-          onToggle={(name) => onToggleSpell(question.key, name)}
-        />
-      ))}
-    </>
-  );
-}
-
-/**
- * Back and forward, pinned to the edges of the screen.
- *
- * The footer already carries both, and the footer is at the bottom: a player
- * in the middle of a long chamber has to scroll past everything to move on.
- * These do not scroll, so the way out is always where the player last saw it.
- *
- * Only from `xl` up. The page is `max-w-6xl` (1152px) centred, so above
- * 1280px there is real margin either side to sit in; below it these would
- * float over the chamber itself, and an arrow covering the question it is
- * asking about is worse than an arrow you scroll to. The footer stays as it
- * is at every width, so nothing is lost when they are absent.
- *
- * Disabled rather than removed at the ends of the rail — an arrow that
- * vanishes on the last chamber moves the other one, and a control that moves
- * is a control you have to find again.
- */
-function ChamberArrows({
-  onBack,
-  onNext,
-  canGoBack,
-  canGoNext,
-  accent,
-}: {
-  onBack: () => void;
-  onNext: () => void;
-  canGoBack: boolean;
-  canGoNext: boolean;
-  accent: string;
-}) {
-  const base =
-    "fixed top-1/2 z-20 hidden h-14 w-11 -translate-y-1/2 items-center justify-center border border-iron/60 bg-void font-display text-2xl text-bone transition-colors enabled:hover:text-bone disabled:opacity-25 xl:flex";
-
-  return (
-    <>
-      <button
-        type="button"
-        onClick={onBack}
-        disabled={!canGoBack}
-        aria-label="Camara anterior"
-        className={`${base} left-2`}
-      >
-        ‹
-      </button>
-      <button
-        type="button"
-        onClick={onNext}
-        disabled={!canGoNext}
-        aria-label="Camara siguiente"
-        className={`${base} right-2`}
-        style={canGoNext ? { borderColor: `${accent}66` } : undefined}
-      >
-        ›
-      </button>
-    </>
-  );
-}
-
-/**
- * The size question, for the thirty species that ask it.
- *
- * Drawn as buttons and not as a fact, because it is a question: the 2024
- * human, aasimar and tiefling and twenty-seven more print `["S","M"]` and
- * leave the choice to the player. Reading that as Small — which is what
- * taking the first letter did — sent every one of them to the table in a
- * Small square carrying half the weight.
- *
- * Pressing the chosen one again clears it, and unanswered is a legal state:
- * the field simply does not travel, and Foundry reads an absent size as
- * Medium. So the note says what silence will mean rather than barring the way.
- */
-function SizeChoice({
-  options,
-  value,
-  accent,
-  onPick,
-}: {
-  options: string[];
-  value: string;
-  accent: string;
-  onPick: (letter: string) => void;
-}) {
-  return (
-    <div className={DIVIDER_TIGHT}>
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <span className={LABEL}>Tamano</span>
-        <span className={WHISPER}>Esta especie se juega en dos tamanos.</span>
-      </div>
-
-      <div className="mt-5 flex flex-wrap gap-1.5">
-        {options.map((letter) => {
-          const chosen = letter === value;
-
-          return (
-            <button
-              key={letter}
-              type="button"
-              aria-pressed={chosen}
-              onClick={() => onPick(chosen ? "" : letter)}
-              className="border px-3 py-1.5 font-body text-[15px] transition-colors"
-              style={
-                chosen
-                  ? { borderColor: accent, background: `${accent}1f`, color: accent }
-                  : { borderColor: "rgba(74,70,64,0.7)", color: "#FFFFFF" }
-              }
-            >
-              {sizeNameOf(letter)}
-            </button>
-          );
-        })}
-      </div>
-
-      {!value && (
-        <p className={`mt-4 ${WHISPER}`}>
-          Sin elegir sale como Mediano, que es lo que Foundry entiende cuando no se dice nada.
-        </p>
-      )}
-    </div>
-  );
-}
-
-function SubChoice({
-  title,
-  hint,
-  options,
-  selectedId,
-  onPick,
-  accent,
-  note,
-  infoClass,
-}: {
-  /** The class's name, which is what tells two same-named subclasses apart in the books. */
-  infoClass?: string;
-  title: string;
-  hint: string;
-  options: CatalogEntry[];
-  selectedId: string;
-  onPick: (entry: CatalogEntry) => void;
-  accent: string;
-  /** An honest caveat, when the pick does not yet travel the whole way. */
-  note?: string;
-}) {
-  const info = useInfo();
-  return (
-    <div className={DIVIDER_TIGHT}>
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <span className={LABEL}>
-          {title}
-        </span>
-        <span className={WHISPER}>{hint}</span>
-      </div>
-
-      <div className="mt-5 grid max-h-64 gap-1 overflow-y-auto pr-1 sm:grid-cols-2">
-        {options.map((entry) => {
-          const active = entry.id === selectedId;
-
-          return (
-            <button
-              key={`${entry.id}:${entry.source}`}
-              onClick={() => {
-                onPick(entry);
-                info.show({ kind: "subclass", name: entry.label, source: entry.source, extra: [infoClass ?? ""] });
-              }}
-              className="flex items-baseline justify-between gap-3 border-l-2 px-4 py-2.5 text-left transition-colors"
-              style={{
-                borderLeftColor: active ? accent : "transparent",
-                background: active ? `${accent}12` : "transparent",
-              }}
-            >
-              <span
-                className={ITEM_NAME}
-                style={{ color: active ? accent : "#FFFFFF" }}
-              >
-                {entry.label}
-              </span>
-              <span className={ITEM_META}>
-                {entry.source}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      {note && (
-        <p className="mt-4 border-l-2 border-ember/50 pl-3 font-body text-[15px] leading-relaxed text-bone">
-          {note}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <label className="mb-3 block font-mono text-[13px] tracking-[0.1em] uppercase text-bone">
-        {label}
-      </label>
-      {children}
-    </div>
   );
 }
