@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { setBookLibrary } from "@bertinis-vault/vetools-ref";
 import { motion, AnimatePresence } from "framer-motion";
 
 import EmberField from "@/components/fx/EmberField";
@@ -187,6 +188,12 @@ export default function Forge() {
   const [stokeKey, setStokeKey] = useState(0);
   /** What the last species or class change released, named for the player. */
   const [shedByPick, setShedByPick] = useState<string[]>([]);
+
+  // The books the table allows decide what every chamber offers. Set before
+  // anything below reads the catalog; leaving the Forge restores every book,
+  // so a saved character always finds its picks again.
+  setBookLibrary(draft.supplements ? "all" : "core");
+  useEffect(() => () => setBookLibrary("all"), []);
 
   const rulesVersion = rulesVersionOf(draft);
   const accent = draft.classId ? tintFor(draft.classId) : VAULT_GOLD;
@@ -2238,7 +2245,7 @@ export default function Forge() {
 
                   <div className={DIVIDER}>
                     <p className={LABEL_MB2}>
-                      Lo demas
+                      Equipo adicional
                     </p>
                     <p className={WHISPER_MB4}>
                       {castsAnything

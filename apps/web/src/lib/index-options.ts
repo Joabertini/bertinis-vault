@@ -38,7 +38,7 @@ import {
   type OriginAbilityOption,
 } from "@bertinis-vault/domain";
 import type { MulticlassGrants } from "@bertinis-vault/vetools-index";
-import type { RulesVersion } from "@bertinis-vault/vetools-ref";
+import { rulesVersionOf, type RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { FeatGrant } from "./gear-proficiencies";
 
@@ -321,8 +321,20 @@ export function originAbilityChoiceFor(
   const matches = legal.filter((row) => slugOf(row.name) === backgroundId);
   const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
 
-  return (row as (BackgroundRow & { abilityChoice?: OriginAbilityOption[] }) | undefined)
-    ?.abilityChoice ?? null;
+  const stated = (row as (BackgroundRow & { abilityChoice?: OriginAbilityOption[] }) | undefined)
+    ?.abilityChoice;
+  if (stated) return stated;
+
+  // A background from an older book, on a 2024 table, names no abilities: the
+  // 2014 rules put the increase on the species. The player picks any three.
+  if (row && rulesVersion === "2024" && rulesVersionOf(row.source) === "2014") {
+    const any = ["str", "dex", "con", "int", "wis", "cha"];
+    return [
+      { options: any, amounts: [2, 1] },
+      { options: any, amounts: [1, 1, 1] },
+    ];
+  }
+  return null;
 }
 
 /** What a feat asks for before it may be taken. Empty for the ones that ask nothing. */
