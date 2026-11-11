@@ -14,11 +14,10 @@ describe("the bag's rarity filter", () => {
     const mundane = names(["none"]);
 
     // The things the owner named when this section offered only what was searched.
-    for (const wanted of ["Caltrops", "Bell", "Rope, Hempen (50 feet)"]) {
-      expect(mundane).toContain(wanted);
+    // By prefix: the index appends the quantity or size ("Caltrops (bag of 20)").
+    for (const wanted of [/^Caltrops/, /^Bell/, /^Rope/, /^Tent/, /^Pole/]) {
+      expect(mundane.some((name) => wanted.test(name)), String(wanted)).toBe(true);
     }
-    expect(mundane.some((name) => /^Tent/.test(name))).toBe(true);
-    expect(mundane.some((name) => /^Pole/.test(name))).toBe(true);
   });
 
   it("keeps magic items out of the mundane list and out of the way", () => {
