@@ -221,7 +221,7 @@ function TomeMenu({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onClose}
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 px-6 backdrop-blur-md"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/90 px-6"
     >
       <motion.div
         initial={{ scale: 0.94, y: 20 }}

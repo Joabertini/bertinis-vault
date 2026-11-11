@@ -1,0 +1,5 @@
+Cinzel, EB Garamond and JetBrains Mono: SIL Open Font License 1.1, served from
+this site instead of Google Fonts. Files are the unmodified `latin` subsets
+Google publishes (variable fonts, woff2).
+Jim Nightshade: see JimNightshade-OFL.txt. The woff2 is a lossless format
+conversion of the TTF (no glyphs removed or changed).

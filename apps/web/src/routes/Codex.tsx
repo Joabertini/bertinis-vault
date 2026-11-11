@@ -128,7 +128,7 @@ export default function Codex() {
                     layout
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.8, filter: "blur(6px)" }}
+                    exit={{ opacity: 0, scale: 0.8 }}
                     transition={{ delay: index * 0.06, duration: 0.5 }}
                     className="flex justify-center"
                   >
