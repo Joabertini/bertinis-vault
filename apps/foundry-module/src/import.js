@@ -467,6 +467,43 @@ async function writeItem(actor, document) {
   }
 }
 
+const PORTRAIT_URL = /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/;
+
+/** The picture the player gave the character in the builder, or null. */
+export function portraitSource(payload) {
+  const portrait = payload?.identity?.portrait;
+  return typeof portrait === "string" && PORTRAIT_URL.test(portrait) ? portrait : null;
+}
+
+/**
+ * Where the portrait should live.
+ *
+ * Uploaded into the world's own folder so the actor points at a file like any
+ * other, which is also what a Foundry export of it will name. A player may not
+ * be allowed to upload; then the data URL itself is used, which Foundry shows
+ * the same way, and the import goes ahead either way.
+ */
+export async function storePortrait(dataUrl, name) {
+  try {
+    const picker = foundry.applications?.apps?.FilePicker?.implementation ?? globalThis.FilePicker;
+    const blob = await (await fetch(dataUrl)).blob();
+    const ext = blob.type === "image/jpeg" ? "jpg" : (blob.type.split("/")[1] ?? "webp");
+    const slug = String(name).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "retrato";
+    const dir = `worlds/${game.world.id}/vault-portraits`;
+    try {
+      await picker.createDirectory("data", dir);
+    } catch {
+      // It already exists.
+    }
+    const file = new File([blob], `${slug}-${Date.now()}.${ext}`, { type: blob.type });
+    const response = await picker.upload("data", dir, file, {}, { notify: false });
+    return response?.path || dataUrl;
+  } catch (error) {
+    console.warn("bertinis-vault | portrait could not be stored, using it inline:", error);
+    return dataUrl;
+  }
+}
+
 /**
  * Import a payload as a new actor.
  *
@@ -479,6 +516,13 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
 
   const actorData = baseActorData(payload);
   if (folderId) actorData.folder = folderId;
+
+  const portrait = portraitSource(payload);
+  if (portrait) {
+    const src = await storePortrait(portrait, payload.identity.characterName);
+    actorData.img = src;
+    actorData.prototypeToken = { texture: { src } };
+  }
 
   const actor = await Actor.create(actorData);
   if (!actor) throw new Error("Foundry refused to create the actor.");

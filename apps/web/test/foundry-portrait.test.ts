@@ -22,16 +22,6 @@ describe("portraitOf", () => {
     ).toBe("assets/Token%20Rathma.png");
   });
 
-  it("prefers the picture the Vault's Foundry module wrote into the export", () => {
-    const tiny = "data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==";
-    expect(
-      portraitOf({ img: "assets/Tokens%20PCs/Rathma.jpg", flags: { "bertinis-vault": { portrait: tiny } } }),
-    ).toBe(tiny);
-    expect(
-      portraitOf({ img: "assets/Rathma.jpg", flags: { "bertinis-vault": { portrait: "not an image" } } }),
-    ).toBe("assets/Rathma.jpg");
-  });
-
   it("keeps an embedded image and skips things that are not images", () => {
     expect(portraitOf({ img: "data:image/webp;base64,AAAA" })).toBe("data:image/webp;base64,AAAA");
     expect(portraitOf({ img: "assets/video.webm" })).toBe("");

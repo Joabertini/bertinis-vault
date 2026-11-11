@@ -29,7 +29,6 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder";
 import { initialState } from "./builder";
-import { isCoverImage } from "./cover-image";
 import { entryById } from "./catalog";
 import { featChoiceForBackground, levellingFor, optionsFor, slugOf } from "./index-options";
 
@@ -67,7 +66,6 @@ type Actor = {
   name?: string;
   img?: string;
   prototypeToken?: { texture?: { src?: string } };
-  flags?: Record<string, Record<string, unknown> | undefined>;
   type?: string;
   items?: ActorItem[];
   system?: {
@@ -83,12 +81,7 @@ type Actor = {
  * `systems/…/icons/…`, mostly SVG — and that is not a portrait. The token's
  * texture is the fallback for a character whose sheet portrait was never set.
  */
-export function portraitOf(actor: Pick<Actor, "img" | "prototypeToken" | "flags">): string {
-  // The Vault's own Foundry module writes the picture itself into the export,
-  // in this flag, because the path in `img` means nothing outside the server.
-  const embedded = actor.flags?.["bertinis-vault"]?.portrait;
-  if (isCoverImage(embedded)) return embedded;
-
+export function portraitOf(actor: Pick<Actor, "img" | "prototypeToken">): string {
   for (const candidate of [actor.img, actor.prototypeToken?.texture?.src]) {
     const src = typeof candidate === "string" ? candidate.trim() : "";
     if (!src) continue;

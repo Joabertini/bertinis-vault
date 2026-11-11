@@ -2,13 +2,10 @@
 
 ## [Foundry module 0.3.0] — 2026-11-11
 
-- Nuevo botón **Exportar para el Vault** en la ficha de personaje. Escribe el
-  mismo json que "Export Data" pero con la imagen del retrato adentro
-  (`flags["bertinis-vault"].portrait`, recortada 2:3 y achicada), porque el json
-  de Foundry solo nombra la imagen por una ruta del servidor. El Vault la toma
-  como tapa del libro al soltar el archivo en el Códice (#130, #131).
-- El hook del botón (`getHeaderControlsApplicationV2`) no se probó todavía en
-  Foundry v14 con dnd5e 5.3.
+- La imagen que el jugador sube en la web como tapa del personaje viaja dentro
+  del código (`identity.portrait`) y el módulo la guarda en el mundo
+  (`worlds/<mundo>/vault-portraits/`) y la pone de retrato y token del actor.
+  Si el jugador no puede subir archivos, usa la imagen embebida.
 
 ## [Unreleased] — 2026-09-02
 
