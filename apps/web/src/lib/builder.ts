@@ -663,6 +663,13 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   const languages = languageEntries.map((entry) => `Language: ${entry}`);
   const normalizedWeapon = normalizeEquipmentEntry(state.weaponId, 1, state);
   const normalizedArmor = normalizeArmorEntry(state);
+  // A spell the character is handed outright is not also a pick: the player
+  // may have chosen it before the grant existed (a subclass chosen later), and
+  // it would reach the sheet twice, once as prepared and once as always.
+  const handedOver = new Set(
+    grantedSpellsFor(state, rulesVersionOf(state)).map((entry) => entry.label.trim().toLowerCase()),
+  );
+  const notHandedOver = (label: string) => !handedOver.has(label.trim().toLowerCase());
   const writtenSpells: Array<{
     label: string;
     /** Null where the source did not say and the catalog has to. */
@@ -674,15 +681,15 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
     ability?: AbilityId;
     grantedBy?: string;
   }> = [
-    ...parseLineList(state.cantripsText).map((entry) => ({ label: entry, level: 0 })),
-    ...leveledSpells.map((entry) => ({
-      ...parseSpellEntry(entry),
-      preparation: "prepared" as const,
-    })),
-    ...unpreparedSpells.map((entry) => ({
-      ...parseSpellEntry(entry),
-      preparation: "unprepared" as const,
-    })),
+    ...parseLineList(state.cantripsText)
+      .filter(notHandedOver)
+      .map((entry) => ({ label: entry, level: 0 })),
+    ...leveledSpells
+      .map((entry) => ({ ...parseSpellEntry(entry), preparation: "prepared" as const }))
+      .filter((entry) => notHandedOver(entry.label)),
+    ...unpreparedSpells
+      .map((entry) => ({ ...parseSpellEntry(entry), preparation: "unprepared" as const }))
+      .filter((entry) => notHandedOver(entry.label)),
     /*
      * What the species, the subspecies and the subclass hand over without
      * being asked. A tiefling has Thaumaturgy whether or not anyone typed it,

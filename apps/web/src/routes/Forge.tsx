@@ -82,11 +82,12 @@ import {
   proficiencyPlan,
   toLines,
 } from "@/lib/grants";
-import { attributeSpells, spellPlansFor, strayChoices } from "@/lib/spells";
+import { attributeSpells, grantedNameSet, spellPlansFor, strayChoices } from "@/lib/spells";
 import SpellClassSection from "@/components/forge/SpellClassSection";
 import {
   abilityOptionsOf,
   grantedSpellChoicesFor,
+  grantedSpellsFor,
   spellGrantsFor,
   unansweredAbilities,
   unansweredSpellChoices,
@@ -502,6 +503,11 @@ export default function Forge() {
    * because a fighter elf never opens the spell chamber and still has one.
    */
   const spellGrants = useMemo(() => spellGrantsFor(draft, rulesVersion), [draft, rulesVersion]);
+  /** Spells handed over outright: locked in the pickers and free of the class's count. */
+  const grantedNames = useMemo(
+    () => grantedNameSet(grantedSpellsFor(draft, rulesVersion)),
+    [draft, rulesVersion],
+  );
 
   const chooseVariant = (key: string, name: string) => {
     patchDraft({ spellVariantChoices: { ...draft.spellVariantChoices, [key]: name } });
@@ -2287,6 +2293,7 @@ export default function Forge() {
                       characterLevel={draft.level}
                       accent={accent}
                       showName={spellPlans.length > 1}
+                      granted={grantedNames}
                       onToggleCantrip={toggleCantrip}
                       onToggleSpell={toggleSpell}
                       onToggleBookSpell={toggleBookSpell}
