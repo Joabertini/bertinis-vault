@@ -1408,14 +1408,6 @@ export default function Forge() {
       <LightfallBackdrop variant="forge" fallbackDensity={36} />
       <StokeEmbers trigger={stokeKey} />
 
-      <motion.div
-        animate={{
-          background: "#000000",
-        }}
-        transition={{ duration: 1.2 }}
-        className="pointer-events-none fixed inset-0"
-      />
-
       <ChamberArrows
         onBack={() => go(position - 1)}
         onNext={() => go(position + 1)}
