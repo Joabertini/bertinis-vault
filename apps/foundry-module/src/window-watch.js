@@ -69,10 +69,22 @@ export function watchWindows({ label = "" } = {}) {
  */
 export function isNoise(app) {
   try {
-    return app?.rendered === true;
+    return app?.rendered === true || isSidebarTab(app);
   } catch {
     return false;
   }
+}
+
+/**
+ * A sidebar tab redraws when an import creates an actor even while another tab
+ * is showing, and then it is not `rendered` yet. It is still part of the
+ * sidebar, not a window: reporting it warned every player on every import.
+ */
+function isSidebarTab(app) {
+  const SidebarTab = globalThis.foundry?.applications?.sidebar?.AbstractSidebarTab;
+  if (typeof SidebarTab === "function" && app instanceof SidebarTab) return true;
+  // Every sidebar tab class names its tab with a static `tabName`.
+  return typeof app?.constructor?.tabName === "string";
 }
 
 /**

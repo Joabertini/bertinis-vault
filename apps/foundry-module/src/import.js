@@ -42,12 +42,11 @@ import { watchWindows } from "./window-watch.js";
 export function orderedRefs(payload) {
   // A subrace entity is the whole species: 5etools merges the base race's
   // entries into it, so a hill dwarf carries Darkvision and Dwarven Resilience
-  // as well as Dwarven Toughness. Both documents are still imported — the sheet
-  // names them separately — but only one of them may contribute traits, or the
-  // player gets Darkvision twice.
-  const hasSubrace = Boolean(payload.race.subrace);
-  const entries = [{ ref: payload.race.ref, dataOpts: {}, features: !hasSubrace }];
-  if (hasSubrace) entries.push({ ref: payload.race.subrace, dataOpts: {} });
+  // as well as Dwarven Toughness. It is imported alone. dnd5e 6 refuses a
+  // second species on a character ("Only a single Species can be added"), so
+  // importing the base as well lost the subrace — a Mark of Storm half-elf
+  // arrived as a plain half-elf.
+  const entries = [{ ref: payload.race.subrace ?? payload.race.ref, dataOpts: {} }];
 
   for (const [index, entry] of payload.classes.entries()) {
     const level = entry.level;

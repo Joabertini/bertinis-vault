@@ -122,6 +122,17 @@ test("each class carries the level the builder set, so nothing has to ask", () =
   assert.deepEqual(subclass.dataOpts, {});
 });
 
+test("a subrace is imported alone, because dnd5e 6 takes a single species", () => {
+  // Mark of Storm arrived as a plain half-elf: the base race went in first and
+  // dnd5e refused the subrace as a second species.
+  const storm = ref("subrace", "races.html", "Half-Elf (Variant; Mark of Storm)", "ERLW");
+  const entries = orderedRefs(payload({ race: { ref: ref("race", "races.html", "Half-Elf", "PHB"), subrace: storm } }));
+
+  const species = entries.filter((e) => e.ref.prop === "race" || e.ref.prop === "subrace");
+  assert.deepEqual(species.map((e) => e.ref), [storm]);
+  assert.notEqual(species[0].features, false);
+});
+
 test("a payload with no optional collections still yields the required refs", () => {
   const bare = payload();
   delete bare.feats;
