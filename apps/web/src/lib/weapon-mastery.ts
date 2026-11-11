@@ -184,3 +184,24 @@ export function masteryProblemsFor(picked: string[], plan: MasteryPlan): Mastery
 
   return problems;
 }
+
+/**
+ * The plan, narrowed to the weapons the character has.
+ *
+ * Mastery is not a list to pick from: the weapon hands it over. A character
+ * masters weapons they own — the ones in the starting kit, the one they
+ * picked, whatever they added to the bag — so the choice is among those, and
+ * a weapon that is not in the bag is not on offer. `names` are item names as
+ * the index writes them; anything that is not a base weapon with a mastery
+ * property simply matches nothing.
+ */
+export function masteryPlanForCarried(plan: MasteryPlan, names: Iterable<string>): MasteryPlan {
+  const held = new Set([...names].map((name) => foundryWeaponId(name)));
+  return { ...plan, options: plan.options.filter((option) => held.has(option.id)) };
+}
+
+/** The picks that are still weapons the character has; the rest left with the weapon. */
+export function picksStillCarried(picked: string[], plan: MasteryPlan): string[] {
+  return picked.filter((id) => plan.options.some((option) => option.id === id));
+}
+
