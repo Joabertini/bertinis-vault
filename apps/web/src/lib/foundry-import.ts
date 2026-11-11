@@ -29,6 +29,7 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder";
 import { initialState } from "./builder";
+import { isCoverImage } from "./cover-image";
 import { entryById } from "./catalog";
 import { featChoiceForBackground, levellingFor, optionsFor, slugOf } from "./index-options";
 
@@ -38,6 +39,13 @@ export type ActorImport = {
   resolved: string[];
   /** What the index did not know, named so it can be fixed by hand. */
   unresolved: string[];
+  /**
+   * The picture the actor carries, as Foundry wrote it, or "" when it has none
+   * of its own. It is a `data:` URL, an absolute URL, or — nearly always — a
+   * path inside the Foundry server's Data folder, which a `.json` cannot carry
+   * the bytes of. See `portraitOf`.
+   */
+  portrait: string;
 };
 
 /* The parts of a dnd5e actor this reads. Everything else is ignored. */
@@ -57,6 +65,9 @@ type ActorItem = {
 
 type Actor = {
   name?: string;
+  img?: string;
+  prototypeToken?: { texture?: { src?: string } };
+  flags?: Record<string, Record<string, unknown> | undefined>;
   type?: string;
   items?: ActorItem[];
   system?: {
@@ -64,6 +75,31 @@ type Actor = {
     details?: Record<string, unknown>;
   };
 };
+
+/**
+ * The picture an actor brings of its own.
+ *
+ * Foundry fills `img` with a stock icon when nobody chose one — `icons/…` or
+ * `systems/…/icons/…`, mostly SVG — and that is not a portrait. The token's
+ * texture is the fallback for a character whose sheet portrait was never set.
+ */
+export function portraitOf(actor: Pick<Actor, "img" | "prototypeToken" | "flags">): string {
+  // The Vault's own Foundry module writes the picture itself into the export,
+  // in this flag, because the path in `img` means nothing outside the server.
+  const embedded = actor.flags?.["bertinis-vault"]?.portrait;
+  if (isCoverImage(embedded)) return embedded;
+
+  for (const candidate of [actor.img, actor.prototypeToken?.texture?.src]) {
+    const src = typeof candidate === "string" ? candidate.trim() : "";
+    if (!src) continue;
+    if (src.startsWith("data:image/")) return src;
+    const path = src.split("?")[0]!.toLowerCase();
+    if (/^(icons|systems)\//.test(path) || path.endsWith(".svg")) continue;
+    if (!/\.(webp|png|jpe?g|gif|avif)$/.test(path)) continue;
+    return src;
+  }
+  return "";
+}
 
 /** The id a dnd5e item resolves to, preferring its own identifier. */
 function idOf(item: ActorItem): string {
@@ -409,5 +445,5 @@ export function readFoundryActor(raw: unknown): ActorImport | null {
     resolved.push(`${cantrips.length} trucos y ${spells.length} conjuros`);
   }
 
-  return { state, resolved, unresolved };
+  return { state, resolved, unresolved, portrait: portraitOf(actor) };
 }

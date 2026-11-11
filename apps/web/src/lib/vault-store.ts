@@ -152,6 +152,13 @@ type VaultStore = {
    * character, and the one already pasted in a chat would stop being current.
    */
   rememberShare: (id: string, share: CharacterShare) => void;
+  /**
+   * Put a picture on a character that is already on the shelf.
+   *
+   * Counts as an edit — `sealedAt` moves — because the cover is part of the
+   * character and has to reach the account's other machines.
+   */
+  setCover: (id: string, coverImage: string) => void;
   burn: (id: string) => void;
   /**
    * Fold an imported Codex into this one.
@@ -351,6 +358,15 @@ export const useVault = create<VaultStore>()(
           // sync compares, and sharing does not change the character — bumping
           // it here would make every share look like an edit to every other
           // machine.
+        })),
+
+      setCover: (id, coverImage) =>
+        set((s) => ({
+          characters: s.characters.map((entry) =>
+            entry.id === id
+              ? { ...entry, sealedAt: new Date().toISOString(), state: { ...entry.state, coverImage } }
+              : entry,
+          ),
         })),
 
       importCharacters: (incoming) => {

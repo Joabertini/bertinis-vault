@@ -21,5 +21,8 @@
   "bertinis-vault.errors.offline": "No se pudo conectar con el Vault en {url}.",
   "bertinis-vault.errors.payloadVersion": "Este personaje se exportó en un formato más nuevo (versión {version}). Actualizá el módulo.",
   "bertinis-vault.errors.importFailed": "Falló la importación: {message}",
-  "bertinis-vault.notifications.unexpectedWindows": "La importación abrió ventanas que no debería: {names}. Mirá la consola."
+  "bertinis-vault.notifications.unexpectedWindows": "La importación abrió ventanas que no debería: {names}. Mirá la consola.",
+  "bertinis-vault.ui.exportAction": "Exportar para el Vault",
+  "bertinis-vault.notifications.exported": "{name} se exportó con su imagen. Soltalo en el Códice.",
+  "bertinis-vault.notifications.exportNoPicture": "{name}: no se pudo leer su imagen; se exportó sin ella."
 }

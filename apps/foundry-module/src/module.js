@@ -5,6 +5,7 @@
  * and hands each reference to Plutonium.
  */
 
+import { exportFileName, pickPortrait, portraitDataUrl, withPortrait } from "./export-portrait.js";
 import { importPayload } from "./import.js";
 import { PlutoniumUnavailableError, isPlutoniumReady } from "./plutonium.js";
 
@@ -212,3 +213,43 @@ Hooks.once("ready", () => {
   const module = game.modules.get(MODULE_ID);
   if (module) module.api = { importByCode, promptForCode };
 });
+
+/**
+ * A button on a character sheet that exports it for the Vault.
+ *
+ * Foundry's own "Export Data" names the portrait by a path inside the server
+ * and leaves the picture out, which the Vault cannot reach. This writes the
+ * same file with the picture inside it; see `export-portrait.js`.
+ */
+Hooks.on("getHeaderControlsApplicationV2", (app, controls) => {
+  const actor = app.document ?? app.actor;
+  if (actor?.documentName !== "Actor" || actor.type !== "character") return;
+  if (controls.some((control) => control.action === `${MODULE_ID}-export`)) return;
+
+  controls.push({
+    action: `${MODULE_ID}-export`,
+    icon: "fa-solid fa-book-open",
+    label: t("ui.exportAction"),
+    visible: true,
+    onClick: () => exportActor(actor),
+  });
+});
+
+/** Write the actor to a file the Vault can read, picture included. */
+export async function exportActor(actor) {
+  const data =
+    typeof actor.toCompendium === "function"
+      ? actor.toCompendium(null, { keepId: true, clearFolder: true, clearOwnership: true })
+      : actor.toObject();
+
+  const source = pickPortrait(actor);
+  const picture = source ? await portraitDataUrl(source, (path) => foundry.utils.getRoute(path)) : null;
+  if (source && !picture) ui.notifications.warn(t("notifications.exportNoPicture", { name: actor.name }));
+
+  foundry.utils.saveDataToFile(
+    JSON.stringify(withPortrait(data, MODULE_ID, picture), null, 2),
+    "text/json",
+    exportFileName(actor),
+  );
+  ui.notifications.info(t("notifications.exported", { name: actor.name }));
+}
