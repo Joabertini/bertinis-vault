@@ -30,24 +30,23 @@ function wrap(x: CanvasRenderingContext2D, text: string, maxWidth: number): stri
   return lines.slice(0, 4);
 }
 
-/** The sigil in the middle of the cover: a dark medallion, the role's glyph lit from within. */
+/**
+ * The sigil in the middle of the cover: a soft dark pool, no frame, and the
+ * class glyph lit from within. A round drawing fills the circle; the rest keep
+ * their own size.
+ */
 function paintSigil(x: CanvasRenderingContext2D, sigil: RoleSigil, cx: number, cy: number, radius: number) {
   x.save();
+  const pool = x.createRadialGradient(cx, cy, 0, cx, cy, radius);
+  pool.addColorStop(0, "rgba(0,0,0,0.78)");
+  pool.addColorStop(0.7, "rgba(0,0,0,0.55)");
+  pool.addColorStop(1, "rgba(0,0,0,0)");
+  x.fillStyle = pool;
   x.beginPath();
   x.arc(cx, cy, radius, 0, Math.PI * 2);
-  x.fillStyle = "rgba(0,0,0,0.72)";
   x.fill();
-  x.lineWidth = 8;
-  x.strokeStyle = sigil.color;
-  x.stroke();
-  x.globalAlpha = 0.4;
-  x.lineWidth = 3;
-  x.beginPath();
-  x.arc(cx, cy, radius - 18, 0, Math.PI * 2);
-  x.stroke();
-  x.globalAlpha = 1;
 
-  const scale = (radius * 1.25) / 512;
+  const scale = (sigil.fills ? radius * 2 : radius * 1.25) / 512;
   x.translate(cx - 256 * scale, cy - 256 * scale);
   x.scale(scale, scale);
   x.shadowColor = sigil.color;
@@ -206,7 +205,7 @@ export default function CodexShelf({
       <div className="relative h-[56vh] max-h-[620px] min-h-[380px] w-full">
         <BooksShowcase
           books={books}
-          heroTitle="Códice"
+          heroTitle=""
           navTitle={`${characters.length} ${characters.length === 1 ? "tomo" : "tomos"}`}
           className="!font-display"
           themeColors={{

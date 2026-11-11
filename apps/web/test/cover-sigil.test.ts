@@ -6,7 +6,8 @@ import { describe, expect, it } from "vitest";
 
 import { coerceBuilderState, initialState } from "@/lib/builder";
 import { COVER_HEIGHT, COVER_WIDTH, MAX_COVER_CHARS, coverCrop, isCoverImage } from "@/lib/cover-image";
-import { ROLE_SIGILS, sigilFor, sigilRoleFor } from "@/lib/role-sigil";
+import { CLASS_ICON_PATHS } from "@/lib/class-icon-paths";
+import { ROLES, sigilFor, sigilRoleFor } from "@/lib/role-sigil";
 
 const tiny = "data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==";
 
@@ -22,11 +23,35 @@ describe("role sigil", () => {
   it("falls back to damage for a class it does not know", () => {
     expect(sigilRoleFor("homebrew-class")).toBe("dano");
     expect(sigilFor("homebrew-class").id).toBe("dano");
+    expect(sigilFor("homebrew-class").paths).toEqual(ROLES.dano.paths);
   });
 
-  it("carries the picker's colours and one glyph per role", () => {
-    expect(ROLE_SIGILS.control.color).toBe("#a76bff");
-    for (const sigil of Object.values(ROLE_SIGILS)) expect(sigil.paths.length).toBeGreaterThan(0);
+  it("carries the picker's colours and one fallback glyph per role", () => {
+    expect(ROLES.control.color).toBe("#a76bff");
+    for (const role of Object.values(ROLES)) expect(role.paths.length).toBeGreaterThan(0);
+  });
+
+  it("draws every D&D class with a glyph of its own", () => {
+    const classes = ["artificer", "barbarian", "bard", "cleric", "druid", "fighter", "monk", "paladin", "ranger", "rogue", "sorcerer", "warlock", "wizard"];
+    const seen = new Set<string>();
+    for (const id of classes) {
+      expect(CLASS_ICON_PATHS[id]?.paths.length, id).toBeGreaterThan(0);
+      seen.add(CLASS_ICON_PATHS[id]!.icon);
+    }
+    expect(seen.size).toBe(classes.length);
+    expect(sigilFor("fighter").paths).toEqual(CLASS_ICON_PATHS.fighter!.paths);
+  });
+
+  it("grows only the round drawings to fill the circle", () => {
+    expect(sigilFor("sorcerer").fills).toBe(true);
+    expect(sigilFor("warlock").fills).toBe(true);
+    expect(sigilFor("fighter").fills).toBe(false);
+    expect(sigilFor("lyre-of-nothing").fills).toBe(false);
+  });
+
+  it("keeps the role colour whatever the glyph", () => {
+    expect(sigilFor("wizard").color).toBe(ROLES.control.color);
+    expect(sigilFor("fighter").color).toBe(ROLES.dano.color);
   });
 });
 

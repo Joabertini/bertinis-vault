@@ -1,29 +1,43 @@
 /**
- * The sigil on a character's cover: one of the five role symbols of the
- * Westmarch "Misión cumplida" role picker, with the same colours.
+ * The sigil on a character's cover: the glyph of the character's class, in the
+ * colour of its role.
  *
- * The colours and icons are the picker's (foundry-westmarch,
- * `partida/roles.js`), unchanged, so the cover and the popup read as the same
- * family. What is new here is the class → role table: the picker's one maps
- * Pathfinder classes, and this builder is D&D 5e.
+ * The colours come from the five roles of the Westmarch "Misión cumplida" role
+ * picker (foundry-westmarch, `partida/roles.js`), unchanged, so the cover and
+ * the popup read as the same family. The glyph is the class's own (D&D has far
+ * fewer classes than Pathfinder, so each gets a drawing of its own); the
+ * picker's five role icons remain as the glyph of a class this table does not
+ * know, such as an imported homebrew one.
  */
 
+import { CLASS_ICON_PATHS } from "@/lib/class-icon-paths";
 import { ROLE_ICON_PATHS } from "@/lib/role-icon-paths";
 
 export type SigilRole = "dano" | "defensa" | "sanacion" | "apoyo" | "control";
 
-export type RoleSigil = {
+type Role = {
   id: SigilRole;
   name: string;
-  /** The role's colour: the glyph, its ring and the glow. */
+  /** The role's colour: the glyph and its glow. */
   color: string;
-  /** The hot centre of the glow. */
+  /** The hot edge of the glow. */
   core: string;
-  /** game-icons.net path data, viewBox 512x512. */
+  /** The role's own icon, used when a class has none. */
   paths: string[];
 };
 
-export const ROLE_SIGILS: Record<SigilRole, RoleSigil> = {
+export type RoleSigil = Role & {
+  /**
+   * Whether the glyph grows to fill the whole circle.
+   *
+   * Only for drawings that are round or radiate from a centre, where leaving
+   * space around them looks small. A sword or a lyre stays its own size: grown
+   * to the circle it would just be a bigger sword in a box.
+   */
+  fills: boolean;
+};
+
+export const ROLES: Record<SigilRole, Role> = {
   dano: { id: "dano", name: "Daño", color: "#ff5a1f", core: "#ffe1c2", paths: ROLE_ICON_PATHS["crossed-swords"]! },
   defensa: { id: "defensa", name: "Defensa", color: "#c9d6e6", core: "#ffffff", paths: ROLE_ICON_PATHS["checked-shield"]! },
   sanacion: { id: "sanacion", name: "Sanación", color: "#f2b437", core: "#fff1c9", paths: ROLE_ICON_PATHS["winged-shield"]! },
@@ -51,10 +65,16 @@ const BY_CLASS: Record<string, SigilRole> = {
   druid: "control",
 };
 
+/** Classes whose drawing is round or radiates from its centre. */
+const FILLS = new Set(["sorcerer", "warlock"]);
+
 export function sigilRoleFor(classId: string): SigilRole {
   return BY_CLASS[classId.trim().toLowerCase()] ?? "dano";
 }
 
 export function sigilFor(classId: string): RoleSigil {
-  return ROLE_SIGILS[sigilRoleFor(classId)];
+  const key = classId.trim().toLowerCase();
+  const role = ROLES[sigilRoleFor(key)];
+  const own = CLASS_ICON_PATHS[key];
+  return own ? { ...role, paths: own.paths, fills: FILLS.has(key) } : { ...role, fills: false };
 }
