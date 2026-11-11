@@ -125,7 +125,7 @@ import { carriedLoadFor } from "@/lib/carrying";
 import { attunementStateFor } from "@/lib/attunement";
 import { foundrySizeFor, sizeFor, sizeOptionsFor } from "@/lib/table-numbers";
 import HitPoints from "@/components/forge/HitPoints";
-import { DIVIDER, DIVIDER_TIGHT, META, PAGE } from "@/styles/recipes";
+import { DIVIDER, DIVIDER_TIGHT, PAGE } from "@/styles/recipes";
 
 const CHAMBER_LABEL: Record<ChamberKey, string> = {
   ancestry: "Raza",
