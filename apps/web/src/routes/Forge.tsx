@@ -132,7 +132,7 @@ const CHAMBER_LABEL: Record<ChamberKey, string> = {
   calling: "Camino",
   origin: "Origen",
   attributes: "Aptitudes",
-  growth: "Mejoras",
+  growth: "Mejora de característica",
   gifts: "Dones",
   gear: "Equipo",
   spells: "Conjuros",
@@ -149,14 +149,14 @@ export const CHAMBER_TITLE: Record<ChamberKey, string> = {
   calling: "Elegi tu camino",
   origin: "Recorda de donde venis",
   attributes: "Liga tus aptitudes",
-  growth: "Reclama lo que ganaste",
+  growth: "Mejora de puntuación de característica",
   gifts: "Reclama tus dones",
   gear: "Armate",
   spells: "Aprende tus conjuros",
   identity: "Talla tu nombre",
 };
 
-const CHAMBER_EPIGRAPH: Record<ChamberKey, string> = {
+const CHAMBER_EPIGRAPH: Partial<Record<ChamberKey, string>> = {
   ancestry: "La sangre recuerda lo que la mente olvida.",
   // Kept keyed as `ancestry` and `calling` on purpose: the chamber keys are
   // stored in progress state, and renaming them would strand anyone mid-forge.
@@ -167,7 +167,6 @@ const CHAMBER_EPIGRAPH: Record<ChamberKey, string> = {
   gifts: "Lo que sabes hacer pesa mas que lo que llevas encima.",
   gear: "El acero no pregunta de donde venis.",
   spells: "Cada palabra aprendida ocupa un lugar que otra ya no tendra.",
-  identity: "Un nombre dicho en voz alta no se puede desdecir.",
 };
 
 /** What the notice says was changed, per chamber. */
@@ -1510,9 +1509,13 @@ export default function Forge() {
               <h2 className="mb-2 font-display text-2xl font-bold" style={{ color: accent }}>
                 {CHAMBER_TITLE[chamberKey]}
               </h2>
-              <p className="mb-8 font-body italic text-bone/70">
-                {CHAMBER_EPIGRAPH[chamberKey]}
-              </p>
+              {CHAMBER_EPIGRAPH[chamberKey] ? (
+                <p className="mb-8 font-body italic text-bone/70">
+                  {CHAMBER_EPIGRAPH[chamberKey]}
+                </p>
+              ) : (
+                <div className="mb-8" />
+              )}
 
               {/* What the last pick released. Keeping it would export a
                   character carrying another species' or class's choices. */}

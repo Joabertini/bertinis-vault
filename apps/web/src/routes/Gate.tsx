@@ -102,15 +102,6 @@ function GateContent() {
       </motion.div>
 
       <section className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 text-center">
-        <motion.p
-          style={{ y: titleY }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2, duration: 1.4 }}
-          className="font-mono text-[10px] tracking-[0.7em] uppercase text-gold"
-        >
-          El codice de personajes
-        </motion.p>
 
         <motion.h1
           // Letter-spacing this wide eats the word space: at 8xl, "DEL ALBA"
@@ -192,10 +183,7 @@ function GateContent() {
               onClick={(event) => event.stopPropagation()}
               className="w-full max-w-3xl text-center"
             >
-              <p className="font-mono text-[10px] tracking-[0.6em] uppercase text-gold/85">
-                Dos puertas, un umbral
-              </p>
-              <h2 className="mt-4 font-display text-3xl font-black tracking-wide text-bone md:text-4xl">
+              <h2 className="font-display text-3xl font-black tracking-wide text-bone md:text-4xl">
                 ¿BAJO QUE REGLAS?
               </h2>
               <p className="mx-auto mt-4 max-w-md font-body italic text-bone/75">
