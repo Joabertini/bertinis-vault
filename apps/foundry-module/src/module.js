@@ -128,7 +128,9 @@ export async function importByCode(code) {
 
 async function runImport(payload) {
   const name = payload.identity.characterName;
-  const notification = ui.notifications.info(t("notifications.importing", { name }), { permanent: true });
+  // A progress notification, the v13+ replacement for the deprecated
+  // `SceneNavigation.displayProgressBar` (gone in v15).
+  const notification = ui.notifications.info(t("notifications.importing", { name }), { progress: true });
 
   try {
     const folderId = await ensureFolder();
@@ -136,7 +138,7 @@ async function runImport(payload) {
     const result = await importPayload(payload, {
       folderId,
       onProgress: ({ index, total }) => {
-        SceneNavigation.displayProgressBar?.({ label: name, pct: Math.round(((index + 1) / total) * 100) });
+        notification?.update?.({ pct: (index + 1) / total });
       },
     });
 
