@@ -223,16 +223,16 @@ function Die({
       <motion.div
         className="relative h-16 w-16"
         style={{ transformStyle: "preserve-3d" }}
-        initial={tumbling ? { y: -40, rotateX: startX, rotateY: startY } : false}
-        animate={
-          tumbling
-            ? {
+        {...(tumbling
+          ? {
+              initial: { y: -40, rotateX: startX, rotateY: startY },
+              animate: {
                 y: [-40, 6, -4, 0],
                 rotateX: [startX, turnsX - 25, turnsX + 6, turnsX],
                 rotateY: [startY, turnsY + 20, turnsY - 5, turnsY],
-              }
-            : undefined
-        }
+              },
+            }
+          : {})}
         transition={{
           duration: DIE_MS / 1000,
           delay: (index * DIE_STAGGER_MS) / 1000,
