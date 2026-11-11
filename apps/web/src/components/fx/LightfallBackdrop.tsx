@@ -1,0 +1,85 @@
+import { lazy, memo, Suspense } from "react";
+
+import EmberField from "./EmberField";
+
+/**
+ * The page background: Lightfall behind everything.
+ *
+ * Loaded lazily so the landing paints before the shader code arrives, mounted
+ * once with constant props so a parent re-render never re-runs it, and drawn at
+ * one device pixel per CSS pixel because a full-screen shader with bloom is the
+ * heaviest thing on the page. Without WebGL2 (or in the test DOM) it falls
+ * back to the ember canvas the pages used before.
+ */
+
+const Lightfall = lazy(() => import("./Lightfall"));
+
+const COLORS = ["#c3b9ad", "#bd5b02", "#cd2f2f"];
+
+const SHARED = {
+  colors: COLORS,
+  backgroundColor: "#4f1707",
+  streakCount: 5,
+  streakWidth: 1.1,
+  twinkle: 0.25,
+  backgroundGlow: 0.04,
+  headGlow: 0.15,
+  bloom: 0.65,
+  mouseInteraction: true,
+  streakLength: 1.4,
+  glow: 2,
+  depth: 1.8,
+  zoom: 1.8,
+  mouseStrength: 0.55,
+  mouseRadius: 0.15,
+  fade: 0.05,
+  dpr: 1,
+};
+
+/** The landing at four fifths of the picked strength; every other page keeps it calmer so text stays readable. */
+const VARIANTS = {
+  gate: { ...SHARED, speed: 0.85, holdToWarp: true, intro: true, opacity: 0.8 },
+  page: { ...SHARED, speed: 0.5, holdToWarp: false, intro: false, opacity: 0.75 },
+} as const;
+
+/**
+ * What keeps text readable over the streaks: a plain dark gradient on top of
+ * the canvas (cheaper than masking a layer that redraws every frame). The
+ * landing darkens behind its title, buttons and footer; the other pages darken the
+ * whole centre column and leaves the streaks to the margins.
+ */
+const SCRIMS = {
+  gate:
+    "radial-gradient(ellipse 60% 55% at 50% 52%, rgba(0,0,0,0.72), rgba(0,0,0,0.5) 55%, rgba(0,0,0,0) 100%), linear-gradient(to top, rgba(0,0,0,0.7), rgba(0,0,0,0) 14%)",
+  page:
+    "linear-gradient(to right, rgba(0,0,0,0) 0%, rgba(0,0,0,0.92) 24%, rgba(0,0,0,0.92) 76%, rgba(0,0,0,0) 100%)",
+} as const;
+
+function supportsLightfall(): boolean {
+  return (
+    typeof WebGL2RenderingContext !== "undefined" &&
+    typeof ResizeObserver !== "undefined" &&
+    typeof IntersectionObserver !== "undefined"
+  );
+}
+
+function LightfallBackdrop({
+  variant,
+  fallbackDensity,
+}: {
+  variant: keyof typeof VARIANTS;
+  fallbackDensity: number;
+}) {
+  if (!supportsLightfall()) return <EmberField density={fallbackDensity} />;
+
+  return (
+    <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
+      <Suspense fallback={null}>
+        <Lightfall {...VARIANTS[variant]} />
+      </Suspense>
+      <div className="absolute inset-0" style={{ background: SCRIMS[variant] }} />
+    </div>
+  );
+}
+
+export default memo(LightfallBackdrop);

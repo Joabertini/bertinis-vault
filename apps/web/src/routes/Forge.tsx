@@ -20,7 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { setBookLibrary } from "@bertinis-vault/vetools-ref";
 import { motion, AnimatePresence } from "framer-motion";
 
-import EmberField from "@/components/fx/EmberField";
+import LightfallBackdrop from "@/components/fx/LightfallBackdrop";
 import GrainOverlay from "@/components/fx/GrainOverlay";
 import StokeEmbers from "@/components/fx/StokeEmbers";
 import Sigil from "@/components/sigils/Sigil";
@@ -1352,7 +1352,7 @@ export default function Forge() {
     return (
       <main className="relative flex min-h-screen items-center justify-center overflow-hidden bg-void px-6">
         <GrainOverlay />
-        <EmberField density={22} />
+        <LightfallBackdrop variant="page" fallbackDensity={22} />
         <div className="relative z-10 w-full max-w-2xl">
           <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-gold">
             Antes de encender la fragua
@@ -1404,16 +1404,8 @@ export default function Forge() {
   return (
     <main className={PAGE}>
       <GrainOverlay />
-      <EmberField density={36} />
+      <LightfallBackdrop variant="page" fallbackDensity={36} />
       <StokeEmbers trigger={stokeKey} />
-
-      <motion.div
-        animate={{
-          background: "#000000",
-        }}
-        transition={{ duration: 1.2 }}
-        className="pointer-events-none fixed inset-0"
-      />
 
       <ChamberArrows
         onBack={() => go(position - 1)}
