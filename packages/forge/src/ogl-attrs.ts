@@ -19,7 +19,6 @@
  */
 
 import type { SheetData } from "./sheet-data";
-import type { OglData, OglRow } from "./ogl-render";
 
 /** Nuestras abreviaturas contra las de la hoja. */
 const ABILITY_STEM: Record<string, string> = {
@@ -194,3 +193,15 @@ export function oglDataFor(data: SheetData): OglData {
 
   return { attrs, rows };
 }
+
+/** Un valor como lo guarda roll20. Los booleanos son `"1"` y `"0"`. */
+export type OglValue = string | number;
+
+export type OglRow = Record<string, OglValue>;
+
+export type OglData = {
+  /** Por nombre completo del atributo, `attr_` incluido. */
+  attrs: Record<string, OglValue>;
+  /** Por grupo, como lo nombra `data-groupname`: `repeating_attack`. */
+  rows: Record<string, OglRow[]>;
+};

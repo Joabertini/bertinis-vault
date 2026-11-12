@@ -36,7 +36,7 @@ Ningún paquete toca una API de navegador. Cero, no "casi cero".
 | `vetools-ref` | — | La terna `{page, source, hash}` y las fuentes |
 | `vetools-index` | `vetools-ref`, `contracts` | El índice de navegación, 47 KB gzip |
 | `domain` | `contracts`, `data-engine` | Reglas 5e. Arrastra `data-engine`, que es legado |
-| `forge` | `contracts`, `data-engine`, `domain`, `vetools-index`, `vetools-ref` | Las reglas del constructor: 53 archivos, 14.156 líneas |
+| `forge` | `contracts`, `data-engine`, `domain`, `vetools-index`, `vetools-ref` | Las reglas del constructor: 52 archivos, 13.943 líneas |
 | `data-engine` | — | Legado, a retirar |
 | `foundry-exporter` | `contracts`, `data-engine`, `domain` | Legado, a retirar |
 
@@ -56,11 +56,11 @@ no los descarte da tres falsos positivos y enseña a ignorarlo.
 
 ### `apps/web/src/lib` — lo que queda
 
-Las reglas ya no viven acá. Los 51 archivos puros se mudaron a
+Las reglas ya no viven acá. Los 50 archivos puros se mudaron a
 `packages/forge`, y en su lugar quedó un reexporte de una línea, por eso la web
 sigue importando de `@/lib/...`.
 
-Quedan nueve archivos con código, todos atados a la web:
+Quedan diez archivos con código, todos atados a la web:
 
 | Archivo | Por qué |
 | --- | --- |
@@ -73,6 +73,7 @@ Quedan nueve archivos con código, todos atados a la web:
 | `share.ts` | Publica con `vault-client` |
 | `cover-image.ts` | Canvas y `fetch`; los límites y la validación están en `forge` |
 | `rules-text.ts` | `fetch` de `/rules/<kind>.json`; los tipos están en `forge` |
+| `ogl-render.ts` | Escribe sobre el DOM de la hoja; los tipos de sus datos están en `forge` |
 
 ## La regla
 
