@@ -1,8 +1,8 @@
 import { describe, expect, test } from "vitest";
 
-import { applyAction, type Anvil, type ForgeAction } from "../src/lib/actions";
+import { applyAction, hasProgress, type Anvil, type ForgeAction } from "../src/lib/actions";
 import { ABILITY_IDS } from "../src/lib/abilities";
-import { coerceBuilderState, initialState, rulesVersionOf } from "../src/lib/builder-state";
+import { coerceBuilderState, freshDraft, initialState, rulesVersionOf } from "../src/lib/builder-state";
 import { allOptions } from "../src/lib/catalog";
 import { classEntriesFor } from "../src/lib/classing";
 import { resolveDraft } from "../src/lib/derive";
@@ -249,5 +249,80 @@ describe("what a choice wrote survives a reload", () => {
     ]);
 
     expect(reloaded(end.draft)).toEqual(end.draft);
+  });
+});
+
+describe("picking from the catalog", () => {
+  const races = allOptions("race", "2014");
+  const classes = allOptions("class", "2014");
+  const dwarf = races.find((entry) => entry.label === "Dwarf")!;
+  const elf = races.find((entry) => entry.label === "Elf")!;
+  const wizard = classes.find((entry) => entry.label === "Wizard")!;
+  const fighter = classes.find((entry) => entry.label === "Fighter")!;
+
+  test("a species is written with the book it came from", () => {
+    const end = applyAction(anvil({ raceId: "", sourceBooks: {} }), { type: "pick", prop: "race", entry: dwarf });
+    expect(end.draft.raceId).toBe(dwarf.id);
+    expect(end.draft.sourceBooks[`race:${dwarf.id}`]).toBe(dwarf.source);
+    expect(end.shed).toEqual([]);
+  });
+
+  test("picking the same entry again clears it", () => {
+    const end = run(anvil({ raceId: "" }), [
+      { type: "pick", prop: "race", entry: dwarf },
+      { type: "pick", prop: "race", entry: dwarf },
+    ]);
+    expect(end.draft.raceId).toBe("");
+  });
+
+  test("a new species lets go of the old one's subrace, size and bonus, and says so", () => {
+    const end = applyAction(
+      anvil({ raceId: dwarf.id, subraceId: "hill", sizeChoice: "M", abilityBonuses: { con: 2 } }),
+      { type: "pick", prop: "race", entry: elf },
+    );
+    expect(end.draft.subraceId).toBe("");
+    expect(end.draft.sizeChoice).toBe("");
+    expect(end.draft.abilityBonuses).toEqual({});
+    expect(end.shed).toEqual(["la subraza", "la mejora de especie", "el tamano elegido"]);
+  });
+
+  test("a new class takes the old one's spells with it", () => {
+    const start = anvil({ classId: wizard.id, cantripsText: "Fire Bolt", spellsText: "Shield", spellbookText: "Shield" });
+    const end = applyAction(start, { type: "pick", prop: "class", entry: fighter });
+    expect(end.draft.classId).toBe(fighter.id);
+    expect([end.draft.cantripsText, end.draft.spellsText, end.draft.spellbookText]).toEqual(["", "", ""]);
+    expect(end.shed).toContain("los conjuros");
+    expect(resolveDraft(reloaded(end.draft)).status).toBeDefined();
+  });
+
+  test("a background change drops only a chosen feat", () => {
+    const backgrounds = allOptions("background", "2024");
+    const first = backgrounds[0]!;
+    const end = applyAction(anvil({ rulesVersion: "5e-2024", backgroundFeatId: "alert" }), {
+      type: "pick",
+      prop: "background",
+      entry: first,
+    });
+    expect(end.draft.backgroundFeatId).toBe("");
+    expect(end.shed).toEqual(["la dote del trasfondo"]);
+  });
+
+  test("a patch writes the fields it names and nothing else", () => {
+    const start = anvil();
+    const end = applyAction(start, { type: "patch", patch: { characterName: "Ilse" } });
+    expect(end.draft).toEqual({ ...start.draft, characterName: "Ilse" });
+  });
+
+  test("a fresh draft carries the edition and none of the demo character", () => {
+    const draft = freshDraft("5e-2024", false);
+    expect([draft.rulesVersion, draft.supplements, draft.characterName, draft.raceId, draft.level]).toEqual([
+      "5e-2024",
+      false,
+      "",
+      "",
+      1,
+    ]);
+    expect(hasProgress(draft)).toBe(false);
+    expect(hasProgress({ ...draft, characterName: "Ilse" })).toBe(true);
   });
 });

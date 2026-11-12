@@ -75,7 +75,7 @@ import {
 } from "@/lib/stat-methods";
 import { tintFor, VAULT_GOLD } from "@/lib/class-tint";
 import { resolveDraft } from "@/lib/derive";
-import { releaseStraySpells as releaseStray, type ForgeAction } from "@/lib/actions";
+import type { ForgeAction, PickProp } from "@/lib/actions";
 import {
   assignOffers,
   fromLines,
@@ -112,7 +112,7 @@ import {
   seedSpeciesBonus,
   speciesBonusBudgetFor,
 } from "@/lib/improvements";
-import { useVault, releasedByPick, rulesVersionOf, type Pace } from "@/lib/vault-store";
+import { useVault, rulesVersionOf, type Pace } from "@/lib/vault-store";
 import { chamberOrder, firstChamber, type ChamberKey } from "@/lib/chambers";
 import { hitPointLevelsFor } from "@/lib/hit-points";
 import { carriedLoadFor } from "@/lib/carrying";
@@ -444,17 +444,6 @@ export default function Forge() {
   );
 
   const castsAnything = spellPlans.length > 0;
-
-  /**
-   * What a change of classes or levels takes with it from the spell lists.
-   *
-   * Asked of the draft as it will be, against the plans it will have: the
-   * spells only a class that is leaving offered, and the ones above the spell
-   * level a lower level reaches. Done on the change itself rather than in an
-   * effect, so a list brought in from a Foundry actor is never pruned behind
-   * the player's back — only what their own change made illegal goes.
-   */
-  const releaseStraySpells = (next: typeof draft) => releaseStray(draft, next);
 
   const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
   const chosenSpells = useMemo(() => toLines(draft.spellsText), [draft.spellsText]);
@@ -1045,49 +1034,7 @@ export default function Forge() {
     if (Object.keys(patch).length > 0) patchDraft(patch);
   };
 
-  const pick = (
-    prop: "race" | "class" | "background" | "subrace" | "subclass" | "weapon" | "armor",
-    entry: CatalogEntry,
-  ) => {
-    const field = {
-      race: "raceId",
-      class: "classId",
-      background: "backgroundId",
-      subrace: "subraceId",
-      subclass: "subclassId",
-      weapon: "weaponId",
-      armor: "armorId",
-    }[prop];
-
-    // Weapons and armour are both items, so their book is recorded under the
-    // prop the resolver will use to look them up.
-    const bookProp = prop === "weapon" || prop === "armor" ? "item" : prop;
-    const current = draft[field as keyof typeof draft];
-
-    // Changing species or class releases what belonged to the old one; see
-    // `releasedByPick` for why keeping it would export a wrong character.
-    const released =
-      prop === "race" || prop === "class" || prop === "background"
-        ? releasedByPick(prop, draft)
-        : { patch: {}, shed: [] };
-
-    const value = current === entry.id ? "" : entry.id;
-    // A subclass widens the spell list — a patron's, a domain's — and its
-    // spells leave with it.
-    const strays =
-      prop === "subclass" ? releaseStraySpells({ ...draft, subclassId: value }) : { patch: {}, shed: [] };
-
-    setShedByPick([...released.shed, ...strays.shed]);
-
-    patchDraft({
-      // Picking the same entry twice clears it, which is the only way to
-      // un-choose an optional pick once one is set.
-      [field]: value,
-      sourceBooks: { ...draft.sourceBooks, [`${bookProp}:${entry.id}`]: entry.source },
-      ...released.patch,
-      ...strays.patch,
-    } as Parameters<typeof patchDraft>[0]);
-  };
+  const pick = (prop: PickProp, entry: CatalogEntry) => act({ type: "pick", prop, entry });
 
   const setLevel = (level: number) => act({ type: "setLevel", level });
 

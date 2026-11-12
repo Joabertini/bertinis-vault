@@ -20,7 +20,7 @@ import { persist } from "zustand/middleware";
  */
 import {
   coerceBuilderState,
-  initialState,
+  freshDraft,
   type BuilderRulesVersion,
   type BuilderState,
 } from "./builder-state";
@@ -183,60 +183,6 @@ function isShare(value: unknown): value is CharacterShare {
     typeof candidate.writeToken === "string" &&
     candidate.writeToken.length > 0
   );
-}
-
-function freshDraft(rulesVersion: BuilderRulesVersion, supplements = true): BuilderState {
-  return {
-    ...initialState,
-    rulesVersion,
-    supplements,
-    createdAt: new Date().toISOString(),
-    // The repo's `initialState` is a worked demo character (Seraphina Vale, a
-    // level 3 wizard). That is right for a dev harness and wrong for a player
-    // opening the Forge, so the identity fields start empty here.
-    characterName: "",
-    playerName: "",
-    alignment: "",
-    trait: "",
-    ideal: "",
-    bond: "",
-    flaw: "",
-    notes: "",
-    raceId: "",
-    subraceId: "",
-    sizeChoice: "",
-    classId: "",
-    subclassId: "",
-    backgroundId: "",
-    backgroundFeatId: "",
-    featId: "",
-    level: 1,
-    statMethod: "roll",
-    // Unassigned. The Attributes chamber binds rolled scores onto these.
-    str: 10,
-    dex: 10,
-    con: 10,
-    int: 10,
-    wis: 10,
-    cha: 10,
-    abilityBonuses: {},
-    levelChoices: {},
-    optionalFeatureIds: [],
-    featAbilityChoices: {},
-    sourceBooks: {},
-    weaponId: "",
-    armorId: "",
-    extraEquipmentText: "",
-    proficienciesText: "",
-    languagesText: "",
-    cantripsText: "",
-    spellsText: "",
-    spellbookText: "",
-    spellVariantChoices: {},
-    spellAbilityChoices: {},
-    grantedSpellChoices: {},
-    featuresText: "",
-  };
 }
 
 export const useVault = create<VaultStore>()(
@@ -474,89 +420,3 @@ function coerceScratch(value: unknown): ForgeScratch {
   };
 }
 
-/**
- * Whether the anvil currently holds work worth losing.
- *
- * `beginDraft` replaces the draft outright, so anyone who returns to the Gate
- * mid-forge and presses the button out of habit loses a whole character with
- * no confirmation and no way back. Knowing whether there is anything there is
- * what lets the Gate offer to continue instead of silently discarding.
- *
- * The name alone counts: someone who has typed who this is has started.
- */
-export function hasProgress(state: BuilderState): boolean {
-  return Boolean(
-    state.characterName.trim() ||
-      state.raceId ||
-      state.classId ||
-      state.backgroundId ||
-      state.level > 1,
-  );
-}
-
-/**
- * What a species or class change has to let go of.
- *
- * Nothing downstream re-checks these against the new pick, so keeping them
- * exports a character carrying another species' or class's choices — a wizard
- * turned fighter who still casts Fireball, a dwarf turned elf who still has
- * the dwarf's Constitution because the species seed only runs when no bonus
- * has been assigned.
- *
- * Returns both the patch and the names of what went, so the Forge can say it
- * out loud: dropping a pick in silence is its own kind of wrong.
- */
-export function releasedByPick(
-  prop: "race" | "class" | "background",
-  draft: BuilderState,
-): { patch: Partial<BuilderState>; shed: string[] } {
-  if (prop === "background") {
-    /*
-     * Only the chosen feat, and only where one was chosen.
-     *
-     * Almost every 2024 background names a single feat, which is derived from
-     * the background itself and needs nothing released. The four that let the
-     * player choose are the ones that leave a stale id behind — a feat the new
-     * background does not grant, exported as though it did.
-     *
-     * Proficiencies and languages are not released here: two effects in the
-     * Forge already re-derive them from whatever background is current.
-     */
-    return {
-      patch: { backgroundFeatId: "" },
-      shed: draft.backgroundFeatId ? ["la dote del trasfondo"] : [],
-    };
-  }
-
-  if (prop === "race") {
-    const shed: string[] = [];
-    if (draft.subraceId) shed.push("la subraza");
-    if (Object.keys(draft.abilityBonuses).length > 0) shed.push("la mejora de especie");
-    // Only thirty species ask about size, so an answer carried onto the next
-    // one is an answer to a question the new species never posed. `sizeFor`
-    // re-checks it anyway and would ignore it; clearing it here is what makes
-    // the Forge say so out loud instead of dropping it in silence.
-    if (draft.sizeChoice) shed.push("el tamano elegido");
-    return { patch: { subraceId: "", sizeChoice: "", abilityBonuses: {} }, shed };
-  }
-
-  const shed: string[] = [];
-  if (draft.subclassId) shed.push("la subclase");
-  if (draft.optionalFeatureIds.length > 0) shed.push("los dones");
-  if (draft.cantripsText.trim() || draft.spellsText.trim() || draft.spellbookText.trim()) {
-    shed.push("los conjuros");
-  }
-
-  return {
-    patch: {
-      subclassId: "",
-      optionalFeatureIds: [],
-      cantripsText: "",
-      spellsText: "",
-      // The book is a wizard's, and a player leaving the wizard behind is not
-      // taking it with them.
-      spellbookText: "",
-    },
-    shed,
-  };
-}
