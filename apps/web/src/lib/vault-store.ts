@@ -27,6 +27,7 @@ import {
 import type { Pace } from "./chambers";
 import type { Account, CharacterShare, StoredCharacter } from "@bertinis-vault/contracts";
 
+import { applyAction, type ForgeAction, type Outcome } from "./actions";
 import { mergeCodex, type CodexMerge, type SealedCharacter } from "./codex-file";
 
 export type { SealedCharacter } from "./codex-file";
@@ -111,6 +112,13 @@ type VaultStore = {
   /** Record — or clear, with null — how the Forge should order itself. */
   setPace: (pace: Pace | null) => void;
   patchDraft: (patch: Partial<BuilderState>) => void;
+  /**
+   * Apply a choice to the anvil.
+   *
+   * What the choice writes is decided in `forge/actions`, not here and not in
+   * the page. The outcome comes back so the page can say what the change shed.
+   */
+  dispatch: (action: ForgeAction) => Outcome;
   setScratch: (scratch: ForgeScratch) => void;
   /** Load a sealed character back onto the anvil. */
   reforge: (id: string) => void;
@@ -252,6 +260,16 @@ export const useVault = create<VaultStore>()(
         }),
 
       patchDraft: (patch) => set((s) => ({ draft: { ...s.draft, ...patch } })),
+
+      dispatch: (action) => {
+        const { draft, scratch } = get();
+        const outcome = applyAction({ draft, scratch }, action);
+        // An action that changes nothing hands the anvil back as it was.
+        if (outcome.draft !== draft || outcome.scratch !== scratch) {
+          set({ draft: outcome.draft, scratch: outcome.scratch });
+        }
+        return outcome;
+      },
 
       setScratch: (scratch) => set({ scratch }),
 
