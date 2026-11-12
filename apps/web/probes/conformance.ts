@@ -29,7 +29,7 @@ import {
 import { resolveDraft } from "@/lib/derive";
 import { characterSheetHtml, fileSlug } from "@/lib/export-targets";
 import { publishBuild } from "@/lib/vault-client";
-import { hasProgress, releasedByPick } from "@/lib/vault-store";
+import { hasProgress, releasedByPick } from "@/lib/actions";
 import {
   abilitySources,
   bonusShape,

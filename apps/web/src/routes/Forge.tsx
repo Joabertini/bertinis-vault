@@ -68,14 +68,14 @@ import { gearProficienciesFor } from "@/lib/gear-proficiencies";
 import { speciesProficienciesFor } from "@/lib/species";
 import { assignLanguages, languagePlanFor, languagesSatisfied } from "@/lib/languages";
 import { branchIsRequiredFor } from "@/lib/species-branch";
-import { parseKitSignature, rekitBag, startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
+import { startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
 import {
   abilitiesSettled,
   type StatMethodId,
 } from "@/lib/stat-methods";
 import { tintFor, VAULT_GOLD } from "@/lib/class-tint";
 import { resolveDraft } from "@/lib/derive";
-import { releaseStraySpells as releaseStray, type ForgeAction } from "@/lib/actions";
+import type { ForgeAction, PickProp } from "@/lib/actions";
 import {
   assignOffers,
   fromLines,
@@ -100,7 +100,6 @@ import {
   masteryPlanFor,
   masteryPlanForCarried,
   masteryProblemsFor,
-  picksStillCarried,
 } from "@/lib/weapon-mastery";
 import { expertisePlanFor } from "@/lib/expertise";
 import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
@@ -112,8 +111,17 @@ import {
   seedSpeciesBonus,
   speciesBonusBudgetFor,
 } from "@/lib/improvements";
-import { useVault, releasedByPick, rulesVersionOf, type Pace } from "@/lib/vault-store";
+import { useVault, rulesVersionOf, type Pace } from "@/lib/vault-store";
 import { chamberOrder, firstChamber, type ChamberKey } from "@/lib/chambers";
+import {
+  settleBackgroundFeat,
+  settleKit,
+  settleLanguages,
+  settleMasteries,
+  settlePrintedBonus,
+  settleProficiencies,
+  settleSpeciesSeed,
+} from "@/lib/settle";
 import { hitPointLevelsFor } from "@/lib/hit-points";
 import { carriedLoadFor } from "@/lib/carrying";
 import { attunementStateFor } from "@/lib/attunement";
@@ -282,8 +290,8 @@ export default function Forge() {
 
   // A weapon that left the bag takes its mastery with it.
   useEffect(() => {
-    const kept = picksStillCarried(draft.weaponMasteryIds, masteryPlan);
-    if (kept.length !== draft.weaponMasteryIds.length) patchDraft({ weaponMasteryIds: kept });
+    const patch = settleMasteries(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [masteryPlan]);
 
@@ -397,14 +405,14 @@ export default function Forge() {
    * otherwise linger as if the player had chosen them.
    */
   useEffect(() => {
-    const next = fromLines([...granted, ...chosenProficiencies]);
-    if (next !== draft.proficienciesText) patchDraft({ proficienciesText: next });
+    const patch = settleProficiencies(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [granted.join("|")]);
 
   useEffect(() => {
-    const next = fromLines([...langPlan.fixed, ...chosenLanguages]);
-    if (next !== draft.languagesText) patchDraft({ languagesText: next });
+    const patch = settleLanguages(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [langPlan.fixed.join("|")]);
 
@@ -444,17 +452,6 @@ export default function Forge() {
   );
 
   const castsAnything = spellPlans.length > 0;
-
-  /**
-   * What a change of classes or levels takes with it from the spell lists.
-   *
-   * Asked of the draft as it will be, against the plans it will have: the
-   * spells only a class that is leaving offered, and the ones above the spell
-   * level a lower level reaches. Done on the change itself rather than in an
-   * effect, so a list brought in from a Foundry actor is never pruned behind
-   * the player's back — only what their own change made illegal goes.
-   */
-  const releaseStraySpells = (next: typeof draft) => releaseStray(draft, next);
 
   const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
   const chosenSpells = useMemo(() => toLines(draft.spellsText), [draft.spellsText]);
@@ -563,14 +560,8 @@ export default function Forge() {
    * dropped, so changing background does not leave the old one behind.
    */
   useEffect(() => {
-    const only = backgroundFeatIds.length === 1 ? backgroundFeatIds[0]! : "";
-    if (only && draft.backgroundFeatId !== only) {
-      patchDraft({ backgroundFeatId: only });
-      return;
-    }
-    if (draft.backgroundFeatId && !backgroundFeatIds.includes(draft.backgroundFeatId)) {
-      patchDraft({ backgroundFeatId: "" });
-    }
+    const patch = settleBackgroundFeat(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backgroundFeatIds.join("|")]);
 
@@ -724,21 +715,8 @@ export default function Forge() {
    * class's rows mean nothing under another's.
    */
   useEffect(() => {
-    if (draft.kitAppliedFor === kitSignature) return;
-
-    // The old kit comes out before the new one goes in. Only adding is what
-    // put a second rogue's kit in the bag the moment a background was picked.
-    const previous = parseKitSignature(draft.kitAppliedFor);
-    const previousRows = previous
-      ? startingKitFor(previous.classId, previous.backgroundId, previous.rulesVersion, draft.sourceBooks)
-      : [];
-    patchDraft({
-      kitChoices: {},
-      kitAppliedFor: kitSignature,
-      extraEquipmentText: fromLines(
-        rekitBag(toLines(draft.extraEquipmentText), previousRows, draft.kitChoices, kitRows),
-      ),
-    });
+    const patch = settleKit(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kitSignature, kitRows]);
 
@@ -835,11 +813,8 @@ export default function Forge() {
    * editor simply starts blank.
    */
   useEffect(() => {
-    if (!draft.raceId) return;
-    if (Object.keys(draft.abilityBonuses).length > 0) return;
-
-    const seed = seedSpeciesBonus(draft, rulesVersion);
-    if (Object.keys(seed).length > 0) patchDraft({ abilityBonuses: seed });
+    const patch = settleSpeciesSeed(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.raceId, draft.subraceId, rulesVersion]);
 
@@ -852,13 +827,8 @@ export default function Forge() {
    * make impossible.
    */
   useEffect(() => {
-    if (rulesVersion !== "2014" || draft.customOrigin) return;
-    if (Object.keys(printedBonus).length === 0) return;
-
-    const already = ABILITY_IDS.every(
-      (ability) => (draft.abilityBonuses[ability] ?? 0) === (printedBonus[ability] ?? 0),
-    );
-    if (!already) patchDraft({ abilityBonuses: printedBonus });
+    const patch = settlePrintedBonus(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.customOrigin, rulesVersion, printedBonus]);
 
@@ -1045,49 +1015,7 @@ export default function Forge() {
     if (Object.keys(patch).length > 0) patchDraft(patch);
   };
 
-  const pick = (
-    prop: "race" | "class" | "background" | "subrace" | "subclass" | "weapon" | "armor",
-    entry: CatalogEntry,
-  ) => {
-    const field = {
-      race: "raceId",
-      class: "classId",
-      background: "backgroundId",
-      subrace: "subraceId",
-      subclass: "subclassId",
-      weapon: "weaponId",
-      armor: "armorId",
-    }[prop];
-
-    // Weapons and armour are both items, so their book is recorded under the
-    // prop the resolver will use to look them up.
-    const bookProp = prop === "weapon" || prop === "armor" ? "item" : prop;
-    const current = draft[field as keyof typeof draft];
-
-    // Changing species or class releases what belonged to the old one; see
-    // `releasedByPick` for why keeping it would export a wrong character.
-    const released =
-      prop === "race" || prop === "class" || prop === "background"
-        ? releasedByPick(prop, draft)
-        : { patch: {}, shed: [] };
-
-    const value = current === entry.id ? "" : entry.id;
-    // A subclass widens the spell list — a patron's, a domain's — and its
-    // spells leave with it.
-    const strays =
-      prop === "subclass" ? releaseStraySpells({ ...draft, subclassId: value }) : { patch: {}, shed: [] };
-
-    setShedByPick([...released.shed, ...strays.shed]);
-
-    patchDraft({
-      // Picking the same entry twice clears it, which is the only way to
-      // un-choose an optional pick once one is set.
-      [field]: value,
-      sourceBooks: { ...draft.sourceBooks, [`${bookProp}:${entry.id}`]: entry.source },
-      ...released.patch,
-      ...strays.patch,
-    } as Parameters<typeof patchDraft>[0]);
-  };
+  const pick = (prop: PickProp, entry: CatalogEntry) => act({ type: "pick", prop, entry });
 
   const setLevel = (level: number) => act({ type: "setLevel", level });
 

@@ -734,3 +734,63 @@ function coerceSpellChoices(value: unknown): Record<string, string[]> {
 export function rulesVersionOf(state: BuilderState): "2014" | "2024" {
   return state.rulesVersion === "5e-2024" ? "2024" : "2014";
 }
+
+/**
+ * A blank draft for a new character under one edition.
+ *
+ * `initialState` is a worked demo character, which is right for a dev
+ * harness and wrong for a player opening the Forge.
+ */
+export function freshDraft(rulesVersion: BuilderRulesVersion, supplements = true): BuilderState {
+  return {
+    ...initialState,
+    rulesVersion,
+    supplements,
+    createdAt: new Date().toISOString(),
+    // The repo's `initialState` is a worked demo character (Seraphina Vale, a
+    // level 3 wizard). That is right for a dev harness and wrong for a player
+    // opening the Forge, so the identity fields start empty here.
+    characterName: "",
+    playerName: "",
+    alignment: "",
+    trait: "",
+    ideal: "",
+    bond: "",
+    flaw: "",
+    notes: "",
+    raceId: "",
+    subraceId: "",
+    sizeChoice: "",
+    classId: "",
+    subclassId: "",
+    backgroundId: "",
+    backgroundFeatId: "",
+    featId: "",
+    level: 1,
+    statMethod: "roll",
+    // Unassigned. The Attributes chamber binds rolled scores onto these.
+    str: 10,
+    dex: 10,
+    con: 10,
+    int: 10,
+    wis: 10,
+    cha: 10,
+    abilityBonuses: {},
+    levelChoices: {},
+    optionalFeatureIds: [],
+    featAbilityChoices: {},
+    sourceBooks: {},
+    weaponId: "",
+    armorId: "",
+    extraEquipmentText: "",
+    proficienciesText: "",
+    languagesText: "",
+    cantripsText: "",
+    spellsText: "",
+    spellbookText: "",
+    spellVariantChoices: {},
+    spellAbilityChoices: {},
+    grantedSpellChoices: {},
+    featuresText: "",
+  };
+}

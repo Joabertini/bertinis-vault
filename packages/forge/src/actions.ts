@@ -17,7 +17,7 @@
 
 import type { AbilityId } from "./abilities";
 import { rulesVersionOf, type BuilderState, type ExtraClass } from "./builder-state";
-import { allOptions } from "./catalog";
+import { allOptions, type CatalogEntry } from "./catalog";
 import { classEntriesFor, emptyExtraClass } from "./classing";
 import { resolveDraft } from "./derive";
 import { fromLines, toLines } from "./grants";
@@ -55,7 +55,22 @@ export type ForgeAction =
   | { type: "roll"; rolled: number[] }
   | { type: "keepSet"; index: number }
   | { type: "bindScore"; ability: AbilityId; value: number }
-  | { type: "releaseScore"; ability: AbilityId };
+  | { type: "releaseScore"; ability: AbilityId }
+  | { type: "pick"; prop: PickProp; entry: CatalogEntry }
+  | { type: "patch"; patch: Partial<BuilderState> };
+
+/** What `pick` chooses from a catalog. */
+export type PickProp = "race" | "class" | "background" | "subrace" | "subclass" | "weapon" | "armor";
+
+const PICK_FIELD = {
+  race: "raceId",
+  class: "classId",
+  background: "backgroundId",
+  subrace: "subraceId",
+  subclass: "subclassId",
+  weapon: "weaponId",
+  armor: "armorId",
+} as const satisfies Record<PickProp, keyof BuilderState>;
 
 export type Outcome = Anvil & {
   /**
@@ -141,11 +156,139 @@ function withStrays(anvil: Anvil, patch: Partial<BuilderState>): Outcome {
   };
 }
 
+/**
+ * Whether the anvil currently holds work worth losing.
+ *
+ * `beginDraft` replaces the draft outright, so anyone who returns to the Gate
+ * mid-forge and presses the button out of habit loses a whole character with
+ * no confirmation and no way back. Knowing whether there is anything there is
+ * what lets the Gate offer to continue instead of silently discarding.
+ *
+ * The name alone counts: someone who has typed who this is has started.
+ */
+export function hasProgress(state: BuilderState): boolean {
+  return Boolean(
+    state.characterName.trim() ||
+      state.raceId ||
+      state.classId ||
+      state.backgroundId ||
+      state.level > 1,
+  );
+}
+
+/**
+ * What a species or class change has to let go of.
+ *
+ * Nothing downstream re-checks these against the new pick, so keeping them
+ * exports a character carrying another species' or class's choices — a wizard
+ * turned fighter who still casts Fireball, a dwarf turned elf who still has
+ * the dwarf's Constitution because the species seed only runs when no bonus
+ * has been assigned.
+ *
+ * Returns both the patch and the names of what went, so the Forge can say it
+ * out loud: dropping a pick in silence is its own kind of wrong.
+ */
+export function releasedByPick(
+  prop: "race" | "class" | "background",
+  draft: BuilderState,
+): { patch: Partial<BuilderState>; shed: string[] } {
+  if (prop === "background") {
+    /*
+     * Only the chosen feat, and only where one was chosen.
+     *
+     * Almost every 2024 background names a single feat, which is derived from
+     * the background itself and needs nothing released. The four that let the
+     * player choose are the ones that leave a stale id behind — a feat the new
+     * background does not grant, exported as though it did.
+     *
+     * Proficiencies and languages are not released here: two effects in the
+     * Forge already re-derive them from whatever background is current.
+     */
+    return {
+      patch: { backgroundFeatId: "" },
+      shed: draft.backgroundFeatId ? ["la dote del trasfondo"] : [],
+    };
+  }
+
+  if (prop === "race") {
+    const shed: string[] = [];
+    if (draft.subraceId) shed.push("la subraza");
+    if (Object.keys(draft.abilityBonuses).length > 0) shed.push("la mejora de especie");
+    // Only thirty species ask about size, so an answer carried onto the next
+    // one is an answer to a question the new species never posed. `sizeFor`
+    // re-checks it anyway and would ignore it; clearing it here is what makes
+    // the Forge say so out loud instead of dropping it in silence.
+    if (draft.sizeChoice) shed.push("el tamano elegido");
+    return { patch: { subraceId: "", sizeChoice: "", abilityBonuses: {} }, shed };
+  }
+
+  const shed: string[] = [];
+  if (draft.subclassId) shed.push("la subclase");
+  if (draft.optionalFeatureIds.length > 0) shed.push("los dones");
+  if (draft.cantripsText.trim() || draft.spellsText.trim() || draft.spellbookText.trim()) {
+    shed.push("los conjuros");
+  }
+
+  return {
+    patch: {
+      subclassId: "",
+      optionalFeatureIds: [],
+      cantripsText: "",
+      spellsText: "",
+      // The book is a wizard's, and a player leaving the wizard behind is not
+      // taking it with them.
+      spellbookText: "",
+    },
+    shed,
+  };
+}
+
 export function applyAction(anvil: Anvil, action: ForgeAction): Outcome {
   const { draft, scratch } = anvil;
   const write = (patch: Partial<BuilderState>): Outcome => ({ draft: { ...draft, ...patch }, scratch });
 
   switch (action.type) {
+    case "patch":
+      return write(action.patch);
+
+    case "pick": {
+      const { prop, entry } = action;
+      const field = PICK_FIELD[prop];
+      // Weapons and armour are both items, so their book is recorded under the
+      // prop the resolver will use to look them up.
+      const bookProp = prop === "weapon" || prop === "armor" ? "item" : prop;
+
+      // Changing species or class releases what belonged to the old one; see
+      // `releasedByPick` for why keeping it would export a wrong character.
+      const released =
+        prop === "race" || prop === "class" || prop === "background"
+          ? releasedByPick(prop, draft)
+          : { patch: {}, shed: [] };
+
+      // Picking the same entry twice clears it, which is the only way to
+      // un-choose an optional pick once one is set.
+      const value = draft[field] === entry.id ? "" : entry.id;
+      // A subclass widens the spell list — a patron's, a domain's — and its
+      // spells leave with it.
+      const strays =
+        prop === "subclass"
+          ? releaseStraySpells(draft, { ...draft, subclassId: value })
+          : { patch: {}, shed: [] };
+
+      return {
+        draft: {
+          ...draft,
+          [field]: value,
+          sourceBooks: { ...draft.sourceBooks, [`${bookProp}:${entry.id}`]: entry.source },
+          ...released.patch,
+          ...strays.patch,
+        },
+        scratch,
+        // Always said, even empty: a new pick clears the last pick's notice.
+        shed: [...released.shed, ...strays.shed],
+      };
+    }
+
     case "setLevel": {
       const rulesVersion = rulesVersionOf(draft);
       const stillEntitled =
