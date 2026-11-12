@@ -68,7 +68,7 @@ import { gearProficienciesFor } from "@/lib/gear-proficiencies";
 import { speciesProficienciesFor } from "@/lib/species";
 import { assignLanguages, languagePlanFor, languagesSatisfied } from "@/lib/languages";
 import { branchIsRequiredFor } from "@/lib/species-branch";
-import { parseKitSignature, rekitBag, startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
+import { startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
 import {
   abilitiesSettled,
   type StatMethodId,
@@ -100,7 +100,6 @@ import {
   masteryPlanFor,
   masteryPlanForCarried,
   masteryProblemsFor,
-  picksStillCarried,
 } from "@/lib/weapon-mastery";
 import { expertisePlanFor } from "@/lib/expertise";
 import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
@@ -114,6 +113,15 @@ import {
 } from "@/lib/improvements";
 import { useVault, rulesVersionOf, type Pace } from "@/lib/vault-store";
 import { chamberOrder, firstChamber, type ChamberKey } from "@/lib/chambers";
+import {
+  settleBackgroundFeat,
+  settleKit,
+  settleLanguages,
+  settleMasteries,
+  settlePrintedBonus,
+  settleProficiencies,
+  settleSpeciesSeed,
+} from "@/lib/settle";
 import { hitPointLevelsFor } from "@/lib/hit-points";
 import { carriedLoadFor } from "@/lib/carrying";
 import { attunementStateFor } from "@/lib/attunement";
@@ -282,8 +290,8 @@ export default function Forge() {
 
   // A weapon that left the bag takes its mastery with it.
   useEffect(() => {
-    const kept = picksStillCarried(draft.weaponMasteryIds, masteryPlan);
-    if (kept.length !== draft.weaponMasteryIds.length) patchDraft({ weaponMasteryIds: kept });
+    const patch = settleMasteries(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [masteryPlan]);
 
@@ -397,14 +405,14 @@ export default function Forge() {
    * otherwise linger as if the player had chosen them.
    */
   useEffect(() => {
-    const next = fromLines([...granted, ...chosenProficiencies]);
-    if (next !== draft.proficienciesText) patchDraft({ proficienciesText: next });
+    const patch = settleProficiencies(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [granted.join("|")]);
 
   useEffect(() => {
-    const next = fromLines([...langPlan.fixed, ...chosenLanguages]);
-    if (next !== draft.languagesText) patchDraft({ languagesText: next });
+    const patch = settleLanguages(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [langPlan.fixed.join("|")]);
 
@@ -552,14 +560,8 @@ export default function Forge() {
    * dropped, so changing background does not leave the old one behind.
    */
   useEffect(() => {
-    const only = backgroundFeatIds.length === 1 ? backgroundFeatIds[0]! : "";
-    if (only && draft.backgroundFeatId !== only) {
-      patchDraft({ backgroundFeatId: only });
-      return;
-    }
-    if (draft.backgroundFeatId && !backgroundFeatIds.includes(draft.backgroundFeatId)) {
-      patchDraft({ backgroundFeatId: "" });
-    }
+    const patch = settleBackgroundFeat(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [backgroundFeatIds.join("|")]);
 
@@ -713,21 +715,8 @@ export default function Forge() {
    * class's rows mean nothing under another's.
    */
   useEffect(() => {
-    if (draft.kitAppliedFor === kitSignature) return;
-
-    // The old kit comes out before the new one goes in. Only adding is what
-    // put a second rogue's kit in the bag the moment a background was picked.
-    const previous = parseKitSignature(draft.kitAppliedFor);
-    const previousRows = previous
-      ? startingKitFor(previous.classId, previous.backgroundId, previous.rulesVersion, draft.sourceBooks)
-      : [];
-    patchDraft({
-      kitChoices: {},
-      kitAppliedFor: kitSignature,
-      extraEquipmentText: fromLines(
-        rekitBag(toLines(draft.extraEquipmentText), previousRows, draft.kitChoices, kitRows),
-      ),
-    });
+    const patch = settleKit(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [kitSignature, kitRows]);
 
@@ -824,11 +813,8 @@ export default function Forge() {
    * editor simply starts blank.
    */
   useEffect(() => {
-    if (!draft.raceId) return;
-    if (Object.keys(draft.abilityBonuses).length > 0) return;
-
-    const seed = seedSpeciesBonus(draft, rulesVersion);
-    if (Object.keys(seed).length > 0) patchDraft({ abilityBonuses: seed });
+    const patch = settleSpeciesSeed(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.raceId, draft.subraceId, rulesVersion]);
 
@@ -841,13 +827,8 @@ export default function Forge() {
    * make impossible.
    */
   useEffect(() => {
-    if (rulesVersion !== "2014" || draft.customOrigin) return;
-    if (Object.keys(printedBonus).length === 0) return;
-
-    const already = ABILITY_IDS.every(
-      (ability) => (draft.abilityBonuses[ability] ?? 0) === (printedBonus[ability] ?? 0),
-    );
-    if (!already) patchDraft({ abilityBonuses: printedBonus });
+    const patch = settlePrintedBonus(draft);
+    if (patch) patchDraft(patch);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft.customOrigin, rulesVersion, printedBonus]);
 

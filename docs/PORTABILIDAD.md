@@ -92,7 +92,11 @@ Un archivo nuevo en `lib/` es código atado a la web, o un reexporte.
   decide en `forge/actions`: 20 ya están ahí y la Forja las despacha, entre
   ellas `pick` (especie, subraza, clase, subclase, trasfondo, arma, armadura,
   con lo que cada cambio suelta) y `patch` (campos sueltos). El borrador nuevo
-  (`freshDraft`) y `hasProgress` también viven en el paquete. Las que quedan
+  (`freshDraft`) y `hasProgress` también viven en el paquete. Las siete
+  correcciones que la Forja hace sola (maestrías, competencias e idiomas
+  otorgados, dote del trasfondo, equipo inicial, mejora de especie) están en
+  `forge/settle`: la web las llama desde sus efectos y `settleDraft` las corre
+  para cualquier otra interfaz. Las que quedan
   en `routes/Forge.tsx` (competencias, idiomas, equipo, conjuros otorgados)
   dependen de lo que calculan sus efectos y se mudan con ellos.
 - **Los tests.** Los de las reglas siguen en `apps/web/test`.

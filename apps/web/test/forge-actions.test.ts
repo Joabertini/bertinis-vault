@@ -8,6 +8,7 @@ import { classEntriesFor } from "../src/lib/classing";
 import { resolveDraft } from "../src/lib/derive";
 import { toLines } from "../src/lib/grants";
 import { levellingFor } from "../src/lib/index-options";
+import { settleDraft, settleKit, settlePrintedBonus, settleSpeciesSeed } from "../src/lib/settle";
 import { spellPlansFor, strayChoices } from "../src/lib/spells";
 import { ROLL_ATTEMPTS, pointBuyFloor } from "../src/lib/stat-methods";
 
@@ -324,5 +325,47 @@ describe("picking from the catalog", () => {
     ]);
     expect(hasProgress(draft)).toBe(false);
     expect(hasProgress({ ...draft, characterName: "Ilse" })).toBe(true);
+  });
+});
+
+describe("what the Forge settles on its own", () => {
+  const races = allOptions("race", "2014");
+  const dwarf = races.find((entry) => entry.label === "Dwarf")!;
+  const classes = allOptions("class", "2014");
+  const fighter = classes.find((entry) => entry.label === "Fighter")!;
+  const wizard = classes.find((entry) => entry.label === "Wizard")!;
+
+  const pickAndSettle = (draft: typeof initialState, prop: "race" | "class", entry: typeof dwarf) => {
+    const picked = applyAction({ draft, scratch: { pool: [], bound: [], sets: [] } }, { type: "pick", prop, entry });
+    return settleDraft(picked.draft, draft);
+  };
+
+  test("a 2014 dwarf brings its printed Constitution", () => {
+    const start = settleDraft(freshDraft("5e-2014"));
+    const end = pickAndSettle(start, "race", dwarf);
+    expect(end.abilityBonuses.con).toBe(2);
+  });
+
+  test("a new class swaps the kit instead of stacking it", () => {
+    const start = settleDraft(freshDraft("5e-2014"));
+    const asFighter = pickAndSettle(start, "class", fighter);
+    const asWizard = pickAndSettle(asFighter, "class", wizard);
+    expect(asFighter.kitAppliedFor).toBe(`${fighter.id}||5e-2014`);
+    expect(asWizard.kitAppliedFor).toBe(`${wizard.id}||5e-2014`);
+    expect(asWizard.extraEquipmentText).not.toBe(asFighter.extraEquipmentText);
+  });
+
+  test("a settled draft stays as it is", () => {
+    const start = settleDraft(freshDraft("5e-2014"));
+    const end = pickAndSettle(pickAndSettle(start, "race", dwarf), "class", fighter);
+    expect(settleDraft(end, end)).toBe(end);
+    expect(settleDraft(end)).toEqual(end);
+  });
+
+  test("each rule is the effect's own: nothing to do on a draft that agrees", () => {
+    const end = pickAndSettle(settleDraft(freshDraft("5e-2014")), "race", dwarf);
+    expect(settleSpeciesSeed(end)).toBeNull();
+    expect(settlePrintedBonus(end)).toBeNull();
+    expect(settleKit(end)).toBeNull();
   });
 });
