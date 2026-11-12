@@ -1,0 +1,26 @@
+{
+  "name": "@bertinis-vault/forge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "default": "./dist/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@bertinis-vault/contracts": "workspace:*",
+    "@bertinis-vault/data-engine": "workspace:*",
+    "@bertinis-vault/domain": "workspace:*",
+    "@bertinis-vault/vetools-index": "workspace:*",
+    "@bertinis-vault/vetools-ref": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

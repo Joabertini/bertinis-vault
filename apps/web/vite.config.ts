@@ -21,6 +21,8 @@ export default defineConfig({
       "@bertinis-vault/contracts": vaultPackage("contracts"),
       "@bertinis-vault/data-engine": vaultPackage("data-engine"),
       "@bertinis-vault/domain": vaultPackage("domain"),
+      // Imported by file (`forge/spells`), so the alias is the folder.
+      "@bertinis-vault/forge": fileURLToPath(new URL("../../packages/forge/src", import.meta.url)),
       "@bertinis-vault/foundry-exporter": vaultPackage("foundry-exporter"),
       "@bertinis-vault/vetools-index": vaultPackage("vetools-index"),
       "@bertinis-vault/vetools-ref": vaultPackage("vetools-ref"),

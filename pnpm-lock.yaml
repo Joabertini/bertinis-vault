@@ -48,6 +48,9 @@ importers:
       '@bertinis-vault/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@bertinis-vault/forge':
+        specifier: workspace:*
+        version: link:../../packages/forge
       '@bertinis-vault/foundry-exporter':
         specifier: workspace:*
         version: link:../../packages/foundry-exporter
@@ -162,6 +165,28 @@ importers:
       '@bertinis-vault/data-engine':
         specifier: workspace:*
         version: link:../data-engine
+    devDependencies:
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
+  packages/forge:
+    dependencies:
+      '@bertinis-vault/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@bertinis-vault/data-engine':
+        specifier: workspace:*
+        version: link:../data-engine
+      '@bertinis-vault/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@bertinis-vault/vetools-index':
+        specifier: workspace:*
+        version: link:../vetools-index
+      '@bertinis-vault/vetools-ref':
+        specifier: workspace:*
+        version: link:../vetools-ref
     devDependencies:
       typescript:
         specifier: ^5.8.2

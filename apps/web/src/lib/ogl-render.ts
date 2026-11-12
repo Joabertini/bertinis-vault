@@ -22,17 +22,9 @@
  * no falla, deja la casilla vacía.
  */
 
-/** Un valor como lo guarda roll20. Los booleanos son `"1"` y `"0"`. */
-export type OglValue = string | number;
+import type { OglData, OglRow, OglValue } from "@bertinis-vault/forge/ogl-attrs";
 
-export type OglRow = Record<string, OglValue>;
-
-export type OglData = {
-  /** Por nombre completo del atributo, `attr_` incluido. */
-  attrs: Record<string, OglValue>;
-  /** Por grupo, como lo nombra `data-groupname`: `repeating_attack`. */
-  rows: Record<string, OglRow[]>;
-};
+export type { OglData, OglRow, OglValue } from "@bertinis-vault/forge/ogl-attrs";
 
 const isText = (element: Element): boolean =>
   element instanceof HTMLInputElement &&

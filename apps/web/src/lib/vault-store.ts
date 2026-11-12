@@ -27,30 +27,10 @@ import {
 import type { Pace } from "./chambers";
 import type { Account, CharacterShare, StoredCharacter } from "@bertinis-vault/contracts";
 
-import { mergeCodex, type CodexMerge } from "./codex-file";
+import { mergeCodex, type CodexMerge, type SealedCharacter } from "./codex-file";
 
-/** A character sealed in the Codex. */
-export type SealedCharacter = {
-  id: string;
-  sealedAt: string;
-  /**
-   * The full builder state, not a derived sheet.
-   *
-   * Stored this way so a tome can be reopened and edited: a derived snapshot
-   * would have to be reverse-engineered back into choices, and some choices
-   * (which book a shared name came from, which ability a half-feat raised)
-   * cannot be recovered from the result at all.
-   */
-  state: BuilderState;
-  /**
-   * The code this character is published under, once it has been.
-   *
-   * Beside the state and never inside it: the state is what gets sent to the
-   * store and handed to whoever opens the code, so a write token in there would
-   * be printed on the thing it protects.
-   */
-  share?: CharacterShare;
-};
+export type { SealedCharacter } from "./codex-file";
+export { rulesVersionOf } from "./builder-state";
 
 /**
  * Where the dice are, between rolling and binding.
@@ -561,9 +541,4 @@ export function releasedByPick(
     },
     shed,
   };
-}
-
-/** The edition a draft targets, in the index's vocabulary. */
-export function rulesVersionOf(state: BuilderState): "2014" | "2024" {
-  return state.rulesVersion === "5e-2024" ? "2024" : "2014";
 }

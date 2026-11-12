@@ -1,0 +1,17 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "lib": ["ES2022"],
+    "types": [],
+    "paths": {
+      "@bertinis-vault/contracts": ["../contracts/dist/index.d.ts"],
+      "@bertinis-vault/data-engine": ["../data-engine/dist/index.d.ts"],
+      "@bertinis-vault/domain": ["../domain/dist/index.d.ts"],
+      "@bertinis-vault/vetools-index": ["../vetools-index/dist/index.d.ts"],
+      "@bertinis-vault/vetools-ref": ["../vetools-ref/dist/index.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}
