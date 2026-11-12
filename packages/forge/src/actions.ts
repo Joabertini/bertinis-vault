@@ -22,7 +22,9 @@ import { classEntriesFor, emptyExtraClass } from "./classing";
 import { resolveDraft } from "./derive";
 import { fromLines, toLines } from "./grants";
 import { levellingFor } from "./index-options";
+import { fixedLanguagesOf, grantedProficienciesOf } from "./settle";
 import { spellPlansFor, strayChoices } from "./spells";
+import { startingKitFor, swapKitAnswer } from "./starting-kit";
 import {
   ROLL_ATTEMPTS,
   pointBuyFloor,
@@ -57,7 +59,17 @@ export type ForgeAction =
   | { type: "bindScore"; ability: AbilityId; value: number }
   | { type: "releaseScore"; ability: AbilityId }
   | { type: "pick"; prop: PickProp; entry: CatalogEntry }
-  | { type: "patch"; patch: Partial<BuilderState> };
+  | { type: "patch"; patch: Partial<BuilderState> }
+  | { type: "toggleProficiency"; value: string }
+  | { type: "toggleLanguage"; value: string }
+  | { type: "writeLanguage"; value: string }
+  | { type: "chooseVariant"; key: string; name: string }
+  | { type: "chooseSpellAbility"; key: string; ability: string }
+  | { type: "toggleGrantedSpell"; key: string; name: string }
+  | { type: "answerKitRow"; rowKey: string; optionKey: string }
+  | { type: "addGear"; entry: CatalogEntry }
+  | { type: "removeGear"; id: string }
+  | { type: "toggleTalent"; id: string };
 
 /** What `pick` chooses from a catalog. */
 export type PickProp = "race" | "class" | "background" | "subrace" | "subclass" | "weapon" | "armor";
@@ -250,6 +262,67 @@ export function applyAction(anvil: Anvil, action: ForgeAction): Outcome {
   switch (action.type) {
     case "patch":
       return write(action.patch);
+
+    case "toggleProficiency": {
+      // Granted first, then what the player chose: the order the sheet reads.
+      const granted = grantedProficienciesOf(draft);
+      const chosen = toLines(draft.proficienciesText).filter((entry) => !granted.includes(entry));
+      return write({ proficienciesText: fromLines([...granted, ...toggled(chosen, action.value)]) });
+    }
+
+    case "toggleLanguage": {
+      const fixed = fixedLanguagesOf(draft);
+      const chosen = toLines(draft.languagesText).filter((entry) => !fixed.includes(entry));
+      return write({ languagesText: fromLines([...fixed, ...toggled(chosen, action.value)]) });
+    }
+
+    case "writeLanguage": {
+      const entry = action.value.trim();
+      const fixed = fixedLanguagesOf(draft);
+      const chosen = toLines(draft.languagesText).filter((line) => !fixed.includes(line));
+      if (!entry || chosen.includes(entry) || fixed.includes(entry)) return anvil;
+      return write({ languagesText: fromLines([...fixed, ...chosen, entry]) });
+    }
+
+    case "chooseVariant":
+      return write({ spellVariantChoices: { ...draft.spellVariantChoices, [action.key]: action.name } });
+
+    case "chooseSpellAbility":
+      return write({ spellAbilityChoices: { ...draft.spellAbilityChoices, [action.key]: action.ability } });
+
+    case "toggleGrantedSpell": {
+      const taken = draft.grantedSpellChoices[action.key] ?? [];
+      return write({ grantedSpellChoices: { ...draft.grantedSpellChoices, [action.key]: toggled(taken, action.name) } });
+    }
+
+    case "answerKitRow": {
+      const rows = startingKitFor(draft.classId, draft.backgroundId, rulesVersionOf(draft), draft.sourceBooks);
+      const row = rows.find((entry) => entry.key === action.rowKey);
+      if (!row) return anvil;
+      const previous = row.options.find((option) => option.key === draft.kitChoices[action.rowKey]);
+      const next = row.options.find((option) => option.key === action.optionKey);
+      return write({
+        kitChoices: { ...draft.kitChoices, [action.rowKey]: action.optionKey },
+        extraEquipmentText: fromLines(swapKitAnswer(toLines(draft.extraEquipmentText), previous, next)),
+      });
+    }
+
+    case "addGear": {
+      const carried = toLines(draft.extraEquipmentText);
+      if (carried.includes(action.entry.id)) return anvil;
+      return write({
+        extraEquipmentText: fromLines([...carried, action.entry.id]),
+        sourceBooks: { ...draft.sourceBooks, [`item:${action.entry.id}`]: action.entry.source },
+      });
+    }
+
+    case "removeGear":
+      return write({
+        extraEquipmentText: fromLines(toLines(draft.extraEquipmentText).filter((entry) => entry !== action.id)),
+      });
+
+    case "toggleTalent":
+      return write({ optionalFeatureIds: toggled(draft.optionalFeatureIds, action.id) });
 
     case "pick": {
       const { prop, entry } = action;

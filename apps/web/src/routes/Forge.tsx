@@ -68,7 +68,7 @@ import { gearProficienciesFor } from "@/lib/gear-proficiencies";
 import { speciesProficienciesFor } from "@/lib/species";
 import { assignLanguages, languagePlanFor, languagesSatisfied } from "@/lib/languages";
 import { branchIsRequiredFor } from "@/lib/species-branch";
-import { startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
+import { startingKitFor } from "@/lib/starting-kit";
 import {
   abilitiesSettled,
   type StatMethodId,
@@ -78,7 +78,6 @@ import { resolveDraft } from "@/lib/derive";
 import type { ForgeAction, PickProp } from "@/lib/actions";
 import {
   assignOffers,
-  fromLines,
   offersAreSatisfied,
   proficiencyPlan,
   toLines,
@@ -392,11 +391,7 @@ export default function Forge() {
   );
 
   /** A language typed into an open offer, added the way a tick would add it. */
-  const writeLanguage = (value: string) => {
-    const entry = value.trim();
-    if (!entry || chosenLanguages.includes(entry) || langPlan.fixed.includes(entry)) return;
-    patchDraft({ languagesText: fromLines([...langPlan.fixed, ...chosenLanguages, entry]) });
-  };
+  const writeLanguage = (value: string) => act({ type: "writeLanguage", value });
 
   /**
    * Keep what the species and the background grant present in the text.
@@ -493,9 +488,7 @@ export default function Forge() {
     [draft, rulesVersion],
   );
 
-  const chooseVariant = (key: string, name: string) => {
-    patchDraft({ spellVariantChoices: { ...draft.spellVariantChoices, [key]: name } });
-  };
+  const chooseVariant = (key: string, name: string) => act({ type: "chooseVariant", key, name });
 
   /*
    * Which ability the granted spells are cast with.
@@ -504,9 +497,7 @@ export default function Forge() {
    * for a fighter or a rogue it is the only thing that gives a species cantrip
    * a save DC — they have no spellcasting ability of their own.
    */
-  const chooseSpellAbility = (key: string, ability: string) => {
-    patchDraft({ spellAbilityChoices: { ...draft.spellAbilityChoices, [key]: ability } });
-  };
+  const chooseSpellAbility = (key: string, ability: string) => act({ type: "chooseSpellAbility", key, ability });
 
   /** The filter questions: "two cantrips of your choice from that list". */
   const spellChoices = useMemo(
@@ -514,13 +505,7 @@ export default function Forge() {
     [draft, rulesVersion],
   );
 
-  const toggleGrantedSpell = (key: string, name: string) => {
-    const taken = draft.grantedSpellChoices[key] ?? [];
-    const next = taken.includes(name)
-      ? taken.filter((entry) => entry !== name)
-      : [...taken, name];
-    patchDraft({ grantedSpellChoices: { ...draft.grantedSpellChoices, [key]: next } });
-  };
+  const toggleGrantedSpell = (key: string, name: string) => act({ type: "toggleGrantedSpell", key, name });
 
   /* ---------------- growth ---------------- */
 
@@ -727,20 +712,7 @@ export default function Forge() {
    * name, so a handaxe the player added themselves survives changing an answer
    * that also granted a handaxe.
    */
-  const answerKitRow = (rowKey: string, optionKey: string) => {
-    const row = kitRows.find((entry) => entry.key === rowKey);
-    if (!row) return;
-
-    const previous = row.options.find((option) => option.key === draft.kitChoices[rowKey]);
-    const next = row.options.find((option) => option.key === optionKey);
-
-    patchDraft({
-      kitChoices: { ...draft.kitChoices, [rowKey]: optionKey },
-      extraEquipmentText: fromLines(
-        swapKitAnswer(toLines(draft.extraEquipmentText), previous, next),
-      ),
-    });
-  };
+  const answerKitRow = (rowKey: string, optionKey: string) => act({ type: "answerKitRow", rowKey, optionKey });
 
   const weaponFacts = useMemo(
     () =>
@@ -785,24 +757,11 @@ export default function Forge() {
   const weaponWarning = weaponFacts && weaponWarningFor(weaponFacts.row, gearProficiencies);
   const armorWarning = armorFacts && armorWarningFor(armorFacts.row, gearProficiencies);
 
-  const addGear = (entry: CatalogEntry) => {
-    if (carried.includes(entry.id)) return;
-    patchDraft({
-      extraEquipmentText: fromLines([...carried, entry.id]),
-      sourceBooks: { ...draft.sourceBooks, [`item:${entry.id}`]: entry.source },
-    });
-  };
+  const addGear = (entry: CatalogEntry) => act({ type: "addGear", entry });
 
-  const removeGear = (id: string) => {
-    patchDraft({ extraEquipmentText: fromLines(carried.filter((entry) => entry !== id)) });
-  };
+  const removeGear = (id: string) => act({ type: "removeGear", id });
 
-  const toggleTalent = (id: string) => {
-    const next = draft.optionalFeatureIds.includes(id)
-      ? draft.optionalFeatureIds.filter((entry) => entry !== id)
-      : [...draft.optionalFeatureIds, id];
-    patchDraft({ optionalFeatureIds: next });
-  };
+  const toggleTalent = (id: string) => act({ type: "toggleTalent", id });
 
   /**
    * Seed the species increase once the species is known.
@@ -1019,19 +978,9 @@ export default function Forge() {
 
   const setLevel = (level: number) => act({ type: "setLevel", level });
 
-  const toggleProficiency = (value: string) => {
-    const next = chosenProficiencies.includes(value)
-      ? chosenProficiencies.filter((entry) => entry !== value)
-      : [...chosenProficiencies, value];
-    patchDraft({ proficienciesText: fromLines([...granted, ...next]) });
-  };
+  const toggleProficiency = (value: string) => act({ type: "toggleProficiency", value });
 
-  const toggleLanguage = (value: string) => {
-    const next = chosenLanguages.includes(value)
-      ? chosenLanguages.filter((entry) => entry !== value)
-      : [...chosenLanguages, value];
-    patchDraft({ languagesText: fromLines([...langPlan.fixed, ...next]) });
-  };
+  const toggleLanguage = (value: string) => act({ type: "toggleLanguage", value });
 
   const toggleCantrip = (value: string) => act({ type: "toggleCantrip", value });
 

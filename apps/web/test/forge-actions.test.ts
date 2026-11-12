@@ -373,3 +373,36 @@ describe("what the Forge settles on its own", () => {
     expect(settleKit(end)).toBeNull();
   });
 });
+
+describe("gifts and gear", () => {
+  const start = () => ({ draft: settleDraft(freshDraft("5e-2014")), scratch: { pool: [], bound: [], sets: [] } });
+
+  test("a chosen skill goes after the granted ones, and toggles off", () => {
+    const on = applyAction(start(), { type: "toggleProficiency", value: "Perception" });
+    expect(toLines(on.draft.proficienciesText)).toContain("Perception");
+    const off = applyAction(on, { type: "toggleProficiency", value: "Perception" });
+    expect(toLines(off.draft.proficienciesText)).not.toContain("Perception");
+  });
+
+  test("a written language is added once", () => {
+    const once = applyAction(start(), { type: "writeLanguage", value: " Sylvan " });
+    const twice = applyAction(once, { type: "writeLanguage", value: "Sylvan" });
+    expect(toLines(twice.draft.languagesText).filter((line) => line === "Sylvan")).toHaveLength(1);
+  });
+
+  test("gear is added with its book and removed by id", () => {
+    const entry = { id: "rope-hempen-50-feet", label: "Rope", source: "PHB", shared: false };
+    const added = applyAction(start(), { type: "addGear", entry });
+    expect(toLines(added.draft.extraEquipmentText)).toContain(entry.id);
+    expect(added.draft.sourceBooks[`item:${entry.id}`]).toBe("PHB");
+    const removed = applyAction(added, { type: "removeGear", id: entry.id });
+    expect(toLines(removed.draft.extraEquipmentText)).not.toContain(entry.id);
+  });
+
+  test("a talent toggles, and a granted spell answer toggles under its key", () => {
+    const talent = applyAction(start(), { type: "toggleTalent", id: "agonizing-blast" });
+    expect(talent.draft.optionalFeatureIds).toEqual(["agonizing-blast"]);
+    const spell = applyAction(talent, { type: "toggleGrantedSpell", key: "k", name: "Light" });
+    expect(spell.draft.grantedSpellChoices.k).toEqual(["Light"]);
+  });
+});
