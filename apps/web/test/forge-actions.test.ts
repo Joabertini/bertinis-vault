@@ -262,7 +262,11 @@ describe("picking from the catalog", () => {
   const fighter = classes.find((entry) => entry.label === "Fighter")!;
 
   test("a species is written with the book it came from", () => {
-    const end = applyAction(anvil({ raceId: "", sourceBooks: {} }), { type: "pick", prop: "race", entry: dwarf });
+    const end = applyAction(anvil({ raceId: "", sourceBooks: {}, abilityBonuses: {}, subraceId: "", sizeChoice: "" }), {
+      type: "pick",
+      prop: "race",
+      entry: dwarf,
+    });
     expect(end.draft.raceId).toBe(dwarf.id);
     expect(end.draft.sourceBooks[`race:${dwarf.id}`]).toBe(dwarf.source);
     expect(end.shed).toEqual([]);
