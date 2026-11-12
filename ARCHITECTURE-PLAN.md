@@ -146,5 +146,5 @@ What that means here, in practice:
   command that repeats it.
 - Offline operation, local files, installed content packages and local AI are
   **not goals of this product**. They are the reason the desktop track exists.
-- New 5e rules logic belongs in a package, not in `apps/web/src/lib`, so that
+- New 5e rules logic belongs in `packages/forge`, not in `apps/web/src/lib`, so that
   the desktop track can take it without taking React with it.

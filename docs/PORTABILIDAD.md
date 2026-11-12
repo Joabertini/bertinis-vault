@@ -1,6 +1,6 @@
 # Portabilidad — qué de este repo puede correr fuera del navegador
 
-Escrito el 2026-09-02. Es un documento que **afirma**: se mantiene.
+Escrito el 2026-09-02, actualizado el 2026-11-12 con la mudanza de `lib`.
 
 ## Por qué existe
 
@@ -24,9 +24,9 @@ La regla no se puede hacer cumplir desde el otro repositorio. Vive acá.
 
 ## La medición
 
-Ejecutada el 2026-09-02 sobre `main` = #74.
+Ejecutada el 2026-11-12 sobre `main` = #156.
 
-### `packages/` — portable, los seis
+### `packages/` — portable, los siete
 
 Ningún paquete toca una API de navegador. Cero, no "casi cero".
 
@@ -36,6 +36,7 @@ Ningún paquete toca una API de navegador. Cero, no "casi cero".
 | `vetools-ref` | — | La terna `{page, source, hash}` y las fuentes |
 | `vetools-index` | `vetools-ref`, `contracts` | El índice de navegación, 47 KB gzip |
 | `domain` | `contracts`, `data-engine` | Reglas 5e. Arrastra `data-engine`, que es legado |
+| `forge` | `contracts`, `data-engine`, `domain`, `vetools-index`, `vetools-ref` | Las reglas del constructor: 53 archivos, 14.156 líneas |
 | `data-engine` | — | Legado, a retirar |
 | `foundry-exporter` | `contracts`, `data-engine`, `domain` | Legado, a retirar |
 
@@ -50,12 +51,16 @@ El segundo `grep` descarta comentarios, y hace falta: en prosa aparecen "a
 Foundry *document*" y, en los datos de D&D, `navigator's tools`. Un chequeo que
 no los descarte da tres falsos positivos y enseña a ignorarlo.
 
-### `apps/web/src/lib` — acá está el problema
+`forge` además se compila sin tipos de DOM (`lib: ["ES2022"]`), así que ahí un
+`window` o un `fetch` no llega al `grep`: no compila.
 
-De **42 archivos, 37 son lógica pura**: sin React, sin zustand, sin navegador.
-Suman **10.699 líneas** de reglas de D&D 5e.
+### `apps/web/src/lib` — lo que queda
 
-Sólo cinco están atados a la web:
+Las reglas ya no viven acá. Los 51 archivos puros se mudaron a
+`packages/forge`, y en su lugar quedó un reexporte de una línea, por eso la web
+sigue importando de `@/lib/...`.
+
+Quedan nueve archivos con código, todos atados a la web:
 
 | Archivo | Por qué |
 | --- | --- |
@@ -64,33 +69,28 @@ Sólo cinco están atados a la web:
 | `export-targets.ts` | Arma el HTML de la exportación |
 | `vault-store.ts` | zustand |
 | `codex-sync.ts` | Hook de React |
-
-Los otros 37 —`spells.ts`, `improvements.ts`, `grants.ts`, `starting-kit.ts`,
-`expertise.ts`, `weapon-mastery.ts`, `granted-spells.ts`,
-`optional-features.ts`, `table-numbers.ts`, `derive.ts`, `playbook.ts`…— son
-exactamente lo que el escritorio querría y hoy **no puede tomar, porque está
-adentro de una app de React**. No por su código: por dónde vive.
+| `share-link.ts` | `window.location` |
+| `share.ts` | Publica con `vault-client` |
+| `cover-image.ts` | Canvas y `fetch`; los límites y la validación están en `forge` |
+| `rules-text.ts` | `fetch` de `/rules/<kind>.json`; los tipos están en `forge` |
 
 ## La regla
 
-**Reglas nuevas de 5e van a un paquete, no a `apps/web/src/lib`.**
+**Reglas nuevas de 5e van a `packages/forge`, no a `apps/web/src/lib`.**
 
-Un archivo de `lib/` que hoy es puro no puede volverse impuro: si necesitás
-`fetch`, `localStorage` o un hook, la lógica va a una función pura y el
-navegador se queda del lado del que llama.
+Si una regla necesita `fetch`, `localStorage` o un hook, la lógica va a una
+función pura en el paquete y el navegador se queda del lado del que llama.
 
-Esto no es prolijidad. Es la diferencia entre que el descargable tome 10.699
-líneas ya probadas o las vuelva a escribir.
+Un archivo nuevo en `lib/` es código atado a la web, o un reexporte.
 
 ## Lo que no se hace todavía
 
-**Mudar `lib/` a un paquete no está hecho, y es a propósito.** Primero la
-frontera escrita y medible; después la mudanza, que es mecánica y ruidosa. Al
-revés —mover diez mil líneas y después escribir por qué— es el orden que dejó
-la documentación en el estado que este documento existe para corregir.
-
-Cuando se haga, `domain` es el destino natural para las reglas, y hace falta
-sacarle antes la dependencia con `data-engine`.
+- **Fusionar `forge` con `domain`.** Hace falta sacarle antes a `domain` la
+  dependencia con `data-engine`.
+- **Las transiciones de `vault-store`.** Qué cambia en el borrador con cada
+  elección sigue dentro del store de zustand; es regla y tiene que pasar a
+  `forge` como funciones puras.
+- **Los tests.** Los de las reglas siguen en `apps/web/test`.
 
 ## Lo que este producto explícitamente no hace
 

@@ -19,6 +19,7 @@
     "@bertinis-vault/contracts": "workspace:*",
     "@bertinis-vault/data-engine": "workspace:*",
     "@bertinis-vault/domain": "workspace:*",
+    "@bertinis-vault/forge": "workspace:*",
     "@bertinis-vault/foundry-exporter": "workspace:*",
     "@bertinis-vault/vetools-index": "workspace:*",
     "@bertinis-vault/vetools-ref": "workspace:*",

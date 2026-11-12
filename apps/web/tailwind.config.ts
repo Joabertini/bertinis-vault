@@ -2,7 +2,8 @@ import containerQueries from "@tailwindcss/container-queries";
 import type { Config } from "tailwindcss";
 
 export default {
-  content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  // The package holds class strings too (tints, palettes); unscanned, they are purged.
+  content: ["./index.html", "./src/**/*.{ts,tsx}", "../../packages/forge/src/**/*.ts"],
   theme: {
     extend: {
       colors: {

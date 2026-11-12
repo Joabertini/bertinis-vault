@@ -18,6 +18,9 @@
       "@bertinis-vault/domain": [
         "../../packages/domain/dist/index.d.ts"
       ],
+      "@bertinis-vault/forge/*": [
+        "../../packages/forge/dist/*"
+      ],
       "@bertinis-vault/foundry-exporter": [
         "../../packages/foundry-exporter/dist/index.d.ts"
       ],
