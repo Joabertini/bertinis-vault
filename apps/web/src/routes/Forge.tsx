@@ -70,14 +70,12 @@ import { assignLanguages, languagePlanFor, languagesSatisfied } from "@/lib/lang
 import { branchIsRequiredFor } from "@/lib/species-branch";
 import { parseKitSignature, rekitBag, startingKitFor, swapKitAnswer } from "@/lib/starting-kit";
 import {
-  ROLL_ATTEMPTS,
   abilitiesSettled,
-  pointBuyFloor,
-  scratchForMethod,
   type StatMethodId,
 } from "@/lib/stat-methods";
 import { tintFor, VAULT_GOLD } from "@/lib/class-tint";
 import { resolveDraft } from "@/lib/derive";
+import { releaseStraySpells as releaseStray, type ForgeAction } from "@/lib/actions";
 import {
   assignOffers,
   fromLines,
@@ -85,7 +83,7 @@ import {
   proficiencyPlan,
   toLines,
 } from "@/lib/grants";
-import { attributeSpells, grantedNameSet, spellPlansFor, strayChoices } from "@/lib/spells";
+import { attributeSpells, grantedNameSet, spellPlansFor } from "@/lib/spells";
 import SpellClassSection from "@/components/forge/SpellClassSection";
 import {
   grantedSpellChoicesFor,
@@ -96,7 +94,7 @@ import {
   type SpellGrantSource,
 } from "@/lib/granted-spells";
 import type { ExtraClass } from "@/lib/classing";
-import { classEntriesFor, emptyExtraClass } from "@/lib/classing";
+import { classEntriesFor } from "@/lib/classing";
 import { suggestAppearance, type Appearance } from "@/lib/appearance";
 import {
   masteryPlanFor,
@@ -173,7 +171,7 @@ const SHED_SUBJECT: Partial<Record<ChamberKey, string>> = {
 
 export default function Forge() {
   const navigate = useNavigate();
-  const { draft, patchDraft, scratch, setScratch, seal, editingId, pace, setPace } = useVault();
+  const { draft, patchDraft, dispatch, scratch, seal, editingId, pace, setPace } = useVault();
 
   // The opening chamber of whichever order this player asked for. Read once,
   // on mount: after that the rail decides where they are.
@@ -181,6 +179,15 @@ export default function Forge() {
   const [stokeKey, setStokeKey] = useState(0);
   /** What the last species or class change released, named for the player. */
   const [shedByPick, setShedByPick] = useState<string[]>([]);
+
+  /**
+   * Make a choice. What it writes is decided in `forge/actions`; this only
+   * sends it and repeats what the change took with it.
+   */
+  const act = (action: ForgeAction) => {
+    const outcome = dispatch(action);
+    if (outcome.shed) setShedByPick(outcome.shed);
+  };
 
   // The books the table allows decide what every chamber offers. Set before
   // anything below reads the catalog; leaving the Forge restores every book,
@@ -447,40 +454,7 @@ export default function Forge() {
    * effect, so a list brought in from a Foundry actor is never pruned behind
    * the player's back — only what their own change made illegal goes.
    */
-  const releaseStraySpells = (
-    next: typeof draft,
-  ): { patch: Partial<typeof draft>; shed: string[] } => {
-    const plans = spellPlansFor({
-      entries: classEntriesFor(
-        { classId: next.classId, subclassId: next.subclassId, level: next.level },
-        next.extraClasses,
-        rulesVersion,
-      ),
-      labelFor: classLabelFor,
-      rulesVersion,
-      snapshot,
-      spellbook: toLines(next.spellbookText),
-    });
-    const stray = strayChoices(plans, {
-      cantrips: toLines(next.cantripsText),
-      spells: toLines(next.spellsText),
-      book: toLines(next.spellbookText),
-    });
-    const count = stray.cantrips.length + stray.spells.length + stray.book.length;
-    if (count === 0) return { patch: {}, shed: [] };
-
-    const without = (text: string, drop: string[]) =>
-      fromLines(toLines(text).filter((line) => !drop.includes(line)));
-
-    return {
-      patch: {
-        cantripsText: without(next.cantripsText, stray.cantrips),
-        spellsText: without(next.spellsText, [...stray.spells, ...stray.book]),
-        spellbookText: without(next.spellbookText, stray.book),
-      },
-      shed: [count === 1 ? "un conjuro que ya no te ofrece ninguna clase" : `${count} conjuros que ya no te ofrece ninguna clase`],
-    };
-  };
+  const releaseStraySpells = (next: typeof draft) => releaseStray(draft, next);
 
   const chosenCantrips = useMemo(() => toLines(draft.cantripsText), [draft.cantripsText]);
   const chosenSpells = useMemo(() => toLines(draft.spellsText), [draft.spellsText]);
@@ -1115,30 +1089,7 @@ export default function Forge() {
     } as Parameters<typeof patchDraft>[0]);
   };
 
-  const setLevel = (level: number) => {
-    const stillEntitled = level >= (levellingFor(draft.classId, rulesVersion).subclassLevel ?? 3);
-
-    // Improvements recorded above the new level are dropped. `bonusesFromChoices`
-    // sums the whole map without consulting the level, so a character reforged
-    // down from 8 to 4 would keep the points they earned at 6 and 8 — the sheet
-    // would show scores the rules never granted, and the Growth chamber would
-    // report nothing pending because those levels are answered.
-    // Only the first class's own keys are levels of this class. Another
-    // class's answers (`wizard:4`) belong to that class's level, not this one.
-    const levelChoices = Object.fromEntries(
-      Object.entries(draft.levelChoices).filter(([at]) => at.includes(":") || Number(at) <= level),
-    );
-
-    const patch = {
-      level,
-      levelChoices,
-      ...(stillEntitled ? {} : { subclassId: "" }),
-    };
-    const released = releaseStraySpells({ ...draft, ...patch });
-    if (released.shed.length) setShedByPick(released.shed);
-
-    patchDraft({ ...patch, ...released.patch });
-  };
+  const setLevel = (level: number) => act({ type: "setLevel", level });
 
   const toggleProficiency = (value: string) => {
     const next = chosenProficiencies.includes(value)
@@ -1154,202 +1105,55 @@ export default function Forge() {
     patchDraft({ languagesText: fromLines([...langPlan.fixed, ...next]) });
   };
 
-  const toggleCantrip = (value: string) => {
-    const next = chosenCantrips.includes(value)
-      ? chosenCantrips.filter((entry) => entry !== value)
-      : [...chosenCantrips, value];
-    patchDraft({ cantripsText: fromLines(next) });
-  };
+  const toggleCantrip = (value: string) => act({ type: "toggleCantrip", value });
 
-  const toggleSpell = (line: string) => {
-    const next = chosenSpells.includes(line)
-      ? chosenSpells.filter((entry) => entry !== line)
-      : [...chosenSpells, line];
-    patchDraft({ spellsText: fromLines(next) });
-  };
+  const toggleSpell = (line: string) => act({ type: "toggleSpell", line });
 
-  /**
-   * Erasing a spell from the book unprepares it too.
-   *
-   * A wizard cannot prepare what is not written down, so leaving the prepared
-   * list alone would leave a spell selected that the picker no longer offers —
-   * invisible on the page and still in the export.
-   */
-  const toggleBookSpell = (line: string) => {
-    if (!chosenBook.includes(line)) {
-      patchDraft({ spellbookText: fromLines([...chosenBook, line]) });
-      return;
-    }
-
-    patchDraft({
-      spellbookText: fromLines(chosenBook.filter((entry) => entry !== line)),
-      spellsText: fromLines(chosenSpells.filter((entry) => entry !== line)),
-    });
-  };
+  const toggleBookSpell = (line: string) => act({ type: "toggleBookSpell", line });
 
   /* ---------------- multiclass ---------------- */
 
-  const addClass = () => {
-    patchDraft({ extraClasses: [...draft.extraClasses, emptyExtraClass()] });
-  };
+  const addClass = () => act({ type: "addClass" });
 
-  const changeClass = (index: number, next: ExtraClass) => {
-    const extraClasses = draft.extraClasses.map((extra, at) => (at === index ? next : extra));
-    const released = releaseStraySpells({ ...draft, extraClasses });
-    if (released.shed.length) setShedByPick(released.shed);
+  const changeClass = (index: number, next: ExtraClass) =>
+    act({ type: "changeClass", index, next });
 
-    patchDraft({ extraClasses, ...released.patch });
-  };
-
-  /**
-   * One pick on one grant.
-   *
-   * A pick already taken is dropped rather than re-added, so the same button
-   * both chooses and unchooses. Changing which set the grant is spent on
-   * clears the picks with it: the 2014 rogue's two-skill answer is not half of
-   * its one-skill-and-tools answer.
-   */
   const answerExpertise = (
     key: string,
     setIndex: number,
     of: "skills" | "tools",
     id: string,
-  ) => {
-    const current = draft.expertiseChoices[key] ?? { setIndex, skills: [], tools: [] };
-    const base =
-      current.setIndex === setIndex ? current : { setIndex, skills: [], tools: [] };
+  ) => act({ type: "answerExpertise", key, setIndex, of, id });
 
-    const picked = base[of];
-    const next = id
-      ? picked.includes(id)
-        ? picked.filter((entry) => entry !== id)
-        : [...picked, id]
-      : picked;
+  const toggleMastery = (id: string) => act({ type: "toggleMastery", id });
 
-    patchDraft({
-      expertiseChoices: { ...draft.expertiseChoices, [key]: { ...base, [of]: next } },
-    });
-  };
+  const toggleAttunement = (id: string) => act({ type: "toggleAttunement", id });
 
-  const toggleMastery = (id: string) => {
-    const chosen = draft.weaponMasteryIds.includes(id)
-      ? draft.weaponMasteryIds.filter((entry) => entry !== id)
-      : [...draft.weaponMasteryIds, id];
-    patchDraft({ weaponMasteryIds: chosen });
-  };
+  const removeClass = (index: number) => act({ type: "removeClass", index });
 
-  /** Attuning to a fourth is allowed and named, not refused. */
-  const toggleAttunement = (id: string) => {
-    const attuned = draft.attunedItemIds.includes(id)
-      ? draft.attunedItemIds.filter((entry) => entry !== id)
-      : [...draft.attunedItemIds, id];
-    patchDraft({ attunedItemIds: attuned });
-  };
+  const setHitPointRoll = (level: number, roll: number | null) =>
+    act({ type: "setHitPointRoll", level, roll });
 
-  const removeClass = (index: number) => {
-    const extraClasses = draft.extraClasses.filter((_, at) => at !== index);
-    const released = releaseStraySpells({ ...draft, extraClasses });
-    if (released.shed.length) setShedByPick(released.shed);
+  const setLevelChoice = (key: string, choice: (typeof draft.levelChoices)[string]) =>
+    act({ type: "setLevelChoice", key, choice });
 
-    patchDraft({ extraClasses, ...released.patch });
-  };
-
-  /**
-   * What the player rolled for one level.
-   *
-   * Null clears it, and clearing is not the same as writing a zero: a level
-   * with no roll takes the average, which is what a level nobody has rolled
-   * yet honestly is. So the entry is removed rather than stored as a number.
-   */
-  const setHitPointRoll = (level: number, roll: number | null) => {
-    const hpRolls = { ...draft.hpRolls };
-    if (roll === null) delete hpRolls[String(level)];
-    else hpRolls[String(level)] = roll;
-
-    patchDraft({ hpRolls });
-  };
-
-  const setLevelChoice = (key: string, choice: (typeof draft.levelChoices)[string]) => {
-    patchDraft({ levelChoices: { ...draft.levelChoices, [key]: choice } });
-  };
-
-  const setFeatAbilities = (featId: string, bonuses: Record<string, number>) => {
-    patchDraft({ featAbilityChoices: { ...draft.featAbilityChoices, [featId]: bonuses } });
-  };
+  const setFeatAbilities = (featId: string, bonuses: Record<string, number>) =>
+    act({ type: "setFeatAbilities", featId, bonuses });
 
   /* ---------------- dice ---------------- */
 
-  /** Every ability back to unbound, and nothing loose. */
-  const clearScores = () =>
-    patchDraft({ str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 });
-
-  /*
-   * Switching method clears what the last one produced, and keeps the dice.
-   *
-   * Carrying a rolled 17 into point buy would show a spread that point buy
-   * cannot sell, with a budget it never paid — the numbers on screen would
-   * stop meaning what the panel says they mean. So the pool and the bindings
-   * go.
-   *
-   * The throws do not. `sets` is the record of what the dice actually did, and
-   * a player looking at the point buy panel to compare it against their roll
-   * came back to find the roll gone — three throws they cannot make again,
-   * destroyed by reading another screen. Rolling is the one method whose
-   * result cannot be reproduced, which is exactly why it is the one worth
-   * keeping through a look elsewhere.
-   */
   function chooseStatMethod(method: StatMethodId) {
-    if (method === draft.statMethod) return;
-
-    patchDraft({ statMethod: method });
-    // The array is a pool like any other: six numbers, assigned freely.
-    setScratch(scratchForMethod(method, scratch.sets));
-
-    if (method === "pointbuy") {
-      patchDraft(pointBuyFloor());
-      return;
-    }
-    clearScores();
+    act({ type: "chooseStatMethod", method });
   }
 
-  /** One throw. Kept alongside the others until the player picks. */
-  const handleRoll = (rolled: number[]) => {
-    setScratch({
-      pool: [],
-      bound: [],
-      sets: [...scratch.sets, rolled].slice(-ROLL_ATTEMPTS),
-    });
-    clearScores();
-    patchDraft({ statMethod: "roll" });
-  };
+  const handleRoll = (rolled: number[]) => act({ type: "roll", rolled });
 
-  /** The set the player kept becomes the pool; the rest are forgotten. */
-  const keepSet = (index: number) => {
-    const chosen = scratch.sets[index];
-    if (!chosen) return;
-    setScratch({ pool: [...chosen], bound: [], sets: scratch.sets });
-    clearScores();
-  };
+  const keepSet = (index: number) => act({ type: "keepSet", index });
 
-  const bindScore = (ability: AbilityId, value: number) => {
-    const index = scratch.pool.indexOf(value);
-    if (index < 0) return;
+  const bindScore = (ability: AbilityId, value: number) =>
+    act({ type: "bindScore", ability, value });
 
-    const pool = [...scratch.pool];
-    pool.splice(index, 1);
-    setScratch({ ...scratch, pool, bound: [...scratch.bound, ability] });
-    patchDraft({ [ability]: value } as Parameters<typeof patchDraft>[0]);
-  };
-
-  const releaseScore = (ability: AbilityId) => {
-    if (!bound.has(ability)) return;
-    setScratch({
-      ...scratch,
-      pool: [...scratch.pool, draft[ability]],
-      bound: scratch.bound.filter((entry) => entry !== ability),
-    });
-    patchDraft({ [ability]: 10 } as Parameters<typeof patchDraft>[0]);
-  };
+  const releaseScore = (ability: AbilityId) => act({ type: "releaseScore", ability });
 
   const sealCharacter = () => {
     if (seal()) navigate("/codex");

@@ -88,9 +88,11 @@ Un archivo nuevo en `lib/` es código atado a la web, o un reexporte.
 
 - **Fusionar `forge` con `domain`.** Hace falta sacarle antes a `domain` la
   dependencia con `data-engine`.
-- **Las transiciones de `vault-store`.** Qué cambia en el borrador con cada
-  elección sigue dentro del store de zustand; es regla y tiene que pasar a
-  `forge` como funciones puras.
+- **El resto de las elecciones.** Qué escribe cada elección en el borrador se
+  decide en `forge/actions`: 18 ya están ahí y la Forja las despacha. Las que
+  quedan en `routes/Forge.tsx` (especie, clase, trasfondo, competencias,
+  idiomas, equipo, conjuros otorgados) dependen de lo que calculan sus efectos y
+  se mudan con ellos.
 - **Los tests.** Los de las reglas siguen en `apps/web/test`.
 
 ## Lo que este producto explícitamente no hace
