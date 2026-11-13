@@ -14,7 +14,7 @@
  * scimitar wants to know about that scimitar.
  */
 
-import { collections, forRulesVersion } from "@bertinis-vault/vetools-index";
+import { collections, forRulesVersion, legalRowsFor } from "@bertinis-vault/vetools-index";
 import {
   classProficienciesFor,
   type ResolvedClassProficiencies,
@@ -274,27 +274,38 @@ function clauseLabel(clause: string): string {
  * be noise; a dwarf *wizard* has nothing of the kind, and the battleaxe is the
  * only reason they can swing one.
  */
-function weaponCategoryIndex(rulesVersion: RulesVersion): Map<string, string> {
-  const rows = forRulesVersion(collections.item ?? [], rulesVersion) as WeaponRow[];
-  const categories = new Map<string, string>();
-  for (const row of rows) {
-    if (!row.weaponCategory) continue;
-    const id = foundryWeaponId(row.name);
-    if (!categories.has(id)) categories.set(id, row.weaponCategory);
-  }
-  return categories;
-}
+type WeaponIndex = {
+  /** A base-item id to the category the index files it under. */
+  categories: Map<string, string>;
+  /** A base-item id back to the name the index prints for it. */
+  names: Map<string, string>;
+};
 
-/** A base-item id back to the name the index prints for it. */
-function weaponNameById(rulesVersion: RulesVersion): Map<string, string> {
-  const rows = forRulesVersion(collections.item ?? [], rulesVersion) as WeaponRow[];
-  const names = new Map<string, string>();
-  for (const row of rows) {
-    if (!row.weaponCategory) continue;
-    const id = foundryWeaponId(row.name);
-    if (!names.has(id)) names.set(id, row.name);
+const weaponIndexes = new WeakMap<readonly WeaponRow[], WeaponIndex>();
+
+/**
+ * Both tables, read off the item table once.
+ *
+ * They are the same for every character of an edition, and walking 1773 items
+ * twice to rebuild them was part of every derivation. Kept against the list of
+ * legal items they were read from, so a change of ruleset or of book library
+ * gets its own.
+ */
+function weaponIndexFor(rulesVersion: RulesVersion): WeaponIndex {
+  const rows = legalRowsFor(collections.item ?? [], rulesVersion) as readonly WeaponRow[];
+
+  let index = weaponIndexes.get(rows);
+  if (!index) {
+    index = { categories: new Map<string, string>(), names: new Map<string, string>() };
+    for (const row of rows) {
+      if (!row.weaponCategory) continue;
+      const id = foundryWeaponId(row.name);
+      if (!index.categories.has(id)) index.categories.set(id, row.weaponCategory);
+      if (!index.names.has(id)) index.names.set(id, row.name);
+    }
+    weaponIndexes.set(rows, index);
   }
-  return names;
+  return index;
 }
 
 /**
@@ -314,8 +325,7 @@ export function gearProficienciesFor(
     classes,
     rulesVersion === "2024" ? "5e-2024" : "5e-2014",
   );
-  const names = weaponNameById(rulesVersion);
-  const categories = weaponCategoryIndex(rulesVersion);
+  const { names, categories } = weaponIndexFor(rulesVersion);
   const clauseWeaponIds: string[] = [];
 
   const grantedBy: Record<string, string[]> = { ...resolved.grantedBy };

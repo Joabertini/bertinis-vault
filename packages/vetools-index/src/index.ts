@@ -1057,6 +1057,50 @@ export function rulesVersionOfRow(row: IndexRow): RulesVersion {
  * which would import as a different document than the player expects.
  */
 export function forRulesVersion<T extends IndexRow>(rows: T[], rulesVersion: RulesVersion): T[] {
+  // A copy, so a caller that sorts what it gets does not reorder it for the
+  // next one.
+  return legalRowsFor(rows, rulesVersion).slice();
+}
+
+type LegalRows = { length: number; rows: readonly IndexRow[] };
+
+const legalRowsCache = new WeakMap<readonly IndexRow[], Map<string, LegalRows>>();
+
+/**
+ * The same rows as `forRulesVersion`, filtered once and shared.
+ *
+ * The answer depends on the collection, the ruleset and the book library and
+ * on nothing else, and deriving a character asks for it dozens of times: the
+ * filter over 1773 items ran on every lookup of a single one. What comes back
+ * is the cached array itself, so it must be read and never changed. Being the
+ * same array each time is also what lets a caller hang an index of its own
+ * off it.
+ *
+ * Remembered per collection array, and dropped if that array has changed
+ * length since.
+ */
+export function legalRowsFor<T extends IndexRow>(
+  rows: readonly T[],
+  rulesVersion: RulesVersion,
+): readonly T[] {
+  if (rows.length === 0) return rows;
+
+  let byRuleset = legalRowsCache.get(rows);
+  if (!byRuleset) {
+    byRuleset = new Map<string, LegalRows>();
+    legalRowsCache.set(rows, byRuleset);
+  }
+
+  const key = `${rulesVersion}|${bookLibrary()}`;
+  const known = byRuleset.get(key);
+  if (known && known.length === rows.length) return known.rows as readonly T[];
+
+  const legal = filterLegal(rows, rulesVersion);
+  byRuleset.set(key, { length: rows.length, rows: legal });
+  return legal;
+}
+
+function filterLegal<T extends IndexRow>(rows: readonly T[], rulesVersion: RulesVersion): T[] {
   const legal = rows.filter((row) => isSourceAllowed(row.source, rulesVersion));
   if (rulesVersion !== "2024" || bookLibrary() !== "all") return legal;
 
@@ -1070,8 +1114,28 @@ export function forRulesVersion<T extends IndexRow>(rows: T[], rulesVersion: Rul
   );
 }
 
-/** Normalise a name for searching: casefolded and stripped of accents. */
+const normalized = new Map<string, string>();
+
+/** Enough for every name in the index several times over, and what a player types. */
+const NORMALIZED_LIMIT = 20000;
+
+/**
+ * Normalise a name for searching: casefolded and stripped of accents.
+ *
+ * Remembered, because the same few thousand names are normalised again on
+ * every search and every lookup, and Unicode decomposition is the slow part.
+ */
 export function normalizeForSearch(value: string): string {
+  const known = normalized.get(value);
+  if (known !== undefined) return known;
+
+  const result = stripAccents(value);
+  if (normalized.size >= NORMALIZED_LIMIT) normalized.clear();
+  normalized.set(value, result);
+  return result;
+}
+
+function stripAccents(value: string): string {
   return value
     .toLowerCase()
     .normalize("NFD")
