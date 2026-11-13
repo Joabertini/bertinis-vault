@@ -214,6 +214,7 @@ function usePictures(characters: SealedCharacter[]): Map<string, HTMLImageElemen
                 resolve();
               };
               image.onerror = () => resolve();
+              image.crossOrigin = "anonymous";
               image.src = entry.state.coverImage;
             }),
         ),

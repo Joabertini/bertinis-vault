@@ -96,9 +96,12 @@ function isDerivable(state: BuilderState): boolean {
  * Foundry module can make it the actor's portrait. `buildToPayload` works from
  * the canonical snapshot, which has no picture in it.
  */
-function withPortrait(payload: ImportPayload | null, cover: string): ImportPayload | null {
-  if (!payload || !isCoverImage(cover)) return payload;
-  return { ...payload, identity: { ...payload.identity, portrait: cover } };
+function withPortrait(payload: ImportPayload | null, cover: string, token = ""): ImportPayload | null {
+  if (!payload) return payload;
+  const identity = { ...payload.identity };
+  if (isCoverImage(cover)) identity.portrait = cover;
+  if (isCoverImage(token)) identity.token = token;
+  return { ...payload, identity };
 }
 
 export function resolveDraft(state: BuilderState): ResolvedDraft {
@@ -113,7 +116,7 @@ export function resolveDraft(state: BuilderState): ResolvedDraft {
     status: "ready",
     missing,
     snapshot,
-    payload: withPortrait(conversion.payload ?? null, state.coverImage),
+    payload: withPortrait(conversion.payload ?? null, state.coverImage, state.tokenImage),
     failures: conversion.failures,
     problems: conversion.failures.map((failure) => describeProblem(failure, state)),
   };

@@ -3,52 +3,63 @@
  * `fetch` to read a portrait. The limits and the check live in the package.
  */
 
-import {
-  COVER_HEIGHT,
-  COVER_WIDTH,
-  CoverImageError,
-  MAX_SOURCE_BYTES,
-  coverCrop,
-  isCoverImage,
-} from "@bertinis-vault/forge/cover-image";
+import { CoverImageError, MAX_SOURCE_BYTES, isCoverImage } from "@bertinis-vault/forge/cover-image";
+
+import { vaultBaseUrl } from "./vault-client";
 
 export * from "@bertinis-vault/forge/cover-image";
 
-/**
- * Turns a dropped file into a cover, or says why it cannot.
- *
- * Tries WebP first and falls back to JPEG where the browser cannot encode it,
- * lowering the quality until the result fits.
- */
-export async function fitCoverImage(file: File): Promise<string> {
-  if (!file.type.startsWith("image/")) throw new CoverImageError("Eso no es una imagen.");
-  if (file.size > MAX_SOURCE_BYTES) throw new CoverImageError("La imagen pesa más de 15 MB.");
+/** The types the build store keeps as they are. Anything else is converted to PNG, which loses nothing. */
+const KEPT_AS_IS = new Set(["image/png", "image/jpeg", "image/webp"]);
 
+/** A picture the store does not keep as it is (GIF, BMP, AVIF...), as a PNG of the same pixels. */
+async function asPng(file: File): Promise<Blob> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(file);
   } catch {
     throw new CoverImageError("No pude leer esa imagen.");
   }
-
   const canvas = document.createElement("canvas");
-  canvas.width = COVER_WIDTH;
-  canvas.height = COVER_HEIGHT;
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new CoverImageError("Este navegador no puede preparar la imagen.");
-  const { x, y, w, h } = coverCrop(bitmap.width, bitmap.height);
-  ctx.drawImage(bitmap, x, y, w, h, 0, 0, COVER_WIDTH, COVER_HEIGHT);
+  ctx.drawImage(bitmap, 0, 0);
   bitmap.close();
+  return await new Promise<Blob>((resolve, reject) =>
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new CoverImageError("No pude preparar la imagen."))), "image/png"),
+  );
+}
 
-  for (const type of ["image/webp", "image/jpeg"] as const) {
-    for (const quality of [0.85, 0.75, 0.65, 0.55, 0.45, 0.35]) {
-      const url = canvas.toDataURL(type, quality);
-      // toDataURL answers PNG when it does not know the type asked for.
-      if (!url.startsWith(`data:${type}`)) break;
-      if (isCoverImage(url)) return url;
-    }
+/**
+ * Stores a dropped picture as it is and gives back its address.
+ *
+ * The original goes to the build store (`POST /images`) without being cropped
+ * or re-encoded, so what reaches Foundry is the picture the player chose. The
+ * character keeps only the address. The name stays from when this shrank the
+ * picture into the character, so every caller keeps working.
+ */
+export async function fitCoverImage(file: File): Promise<string> {
+  if (!file.type.startsWith("image/")) throw new CoverImageError("Eso no es una imagen.");
+  if (file.size > MAX_SOURCE_BYTES) throw new CoverImageError("La imagen pesa más de 15 MB.");
+
+  const body: Blob = KEPT_AS_IS.has(file.type) ? file : await asPng(file);
+  let response: Response;
+  try {
+    response = await fetch(`${vaultBaseUrl()}/images`, {
+      method: "POST",
+      headers: { "Content-Type": body.type },
+      body,
+    });
+  } catch {
+    throw new CoverImageError("No pude subir la imagen. Revisá la conexión.");
   }
-  throw new CoverImageError("No logré achicar la imagen lo suficiente. Probá con otra.");
+  if (response.status === 429) throw new CoverImageError("Demasiadas subidas seguidas. Esperá un minuto.");
+  if (!response.ok) throw new CoverImageError("El almacén no aceptó la imagen.");
+  const { url } = (await response.json()) as { url?: string };
+  if (!isCoverImage(url)) throw new CoverImageError("El almacén respondió algo raro.");
+  return url;
 }
 
 /**
