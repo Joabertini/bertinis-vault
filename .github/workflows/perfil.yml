@@ -1,0 +1,41 @@
+name: Paquete de reglas del escritorio
+
+# Arma el paquete de reglas que la app de escritorio embebe. Solo en ramas
+# perf/: no es parte de la verificación. Las herramientas viven en el último
+# commit; las reglas que se empaquetan son las del commit anterior.
+
+on:
+  push:
+    branches:
+      - 'perf/**'
+
+jobs:
+  paquete:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Herramientas aparte, reglas del commit anterior
+        run: |
+          FARO="$RUNNER_TEMP/faro"
+          echo "FARO=$FARO" >> "$GITHUB_ENV"
+          mkdir -p "$FARO/scripts"
+          cp scripts/perfil/*.mjs "$FARO/scripts/"
+          git checkout --detach HEAD~1
+          git log -1 --format='reglas de %H %s'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm packages:build
+      - name: Paquete de reglas para el escritorio
+        run: node "$FARO/scripts/build-rules.mjs" "$GITHUB_WORKSPACE"
+      - name: El paquete corre solo, sin JIT
+        run: node --jitless "$FARO/scripts/check-rules.mjs"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reglas
+          path: ${{ runner.temp }}/faro/apps/forja/rules/
+          retention-days: 7
