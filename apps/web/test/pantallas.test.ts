@@ -44,8 +44,14 @@ describe("las pantallas del paquete", () => {
   });
 
   test("derivar una vez da lo mismo que derivar de nuevo", () => {
-    expect(derivedOf(draft)).toEqual(resolveDraft(draft));
-    expect(derivedOf({ ...draft, level: 7 })).toEqual(resolveDraft({ ...draft, level: 7 }));
+    // La derivación estampa la hora (`exportedAt`, `createdAt`, `updatedAt`),
+    // y la memoria guarda la de la primera vez: se compara sin ellas.
+    const sinHora = (value: unknown): unknown =>
+      JSON.parse(JSON.stringify(value), (key, inner) =>
+        key === "exportedAt" || key === "createdAt" || key === "updatedAt" ? undefined : inner,
+      );
+    expect(sinHora(derivedOf(draft))).toEqual(sinHora(resolveDraft(draft)));
+    expect(sinHora(derivedOf({ ...draft, level: 7 }))).toEqual(sinHora(resolveDraft({ ...draft, level: 7 })));
   });
 
   test("el registro vivo lee los números de la derivación", () => {
