@@ -106,6 +106,13 @@ export type BuilderState = {
    * `identity.portrait`, which the Foundry module makes the actor's portrait.
    */
   coverImage: string;
+  /**
+   * The token, when the player gave one apart from the portrait: the address of
+   * the picture as uploaded, or "" to use the portrait as the token too. It
+   * travels as `identity.token`, which the Foundry module makes the
+   * prototype token's texture.
+   */
+  tokenImage: string;
   playerName: string;
   alignment: string;
   raceId: string;
@@ -342,6 +349,7 @@ export const initialState: BuilderState = {
   featAbilityChoices: {},
   characterName: "Seraphina Vale",
   coverImage: "",
+  tokenImage: "",
   playerName: "Martin",
   alignment: "Neutral Bueno",
   raceId: "human",
@@ -414,6 +422,7 @@ export function coerceBuilderState(value: unknown): BuilderState {
     // "no cover". Anything that is not a small image data URL is dropped so a
     // hand-edited or corrupted save cannot push a character past the limit.
     coverImage: isCoverImage(candidate.coverImage) ? candidate.coverImage : "",
+    tokenImage: isCoverImage(candidate.tokenImage) ? candidate.tokenImage : "",
     playerName: typeof candidate.playerName === "string" ? candidate.playerName : initialState.playerName,
     alignment: typeof candidate.alignment === "string" ? candidate.alignment : initialState.alignment,
     raceId: typeof candidate.raceId === "string" ? candidate.raceId : initialState.raceId,

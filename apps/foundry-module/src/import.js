@@ -468,11 +468,20 @@ async function writeItem(actor, document) {
 }
 
 const PORTRAIT_URL = /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/;
+/** The original, stored whole in the build store and named by its address. */
+const STORED_URL = /^https?:\/\/[^\s/]+\/images\/[A-Za-z0-9_-]{32}$/;
+
+const pictureOf = (value) =>
+  typeof value === "string" && (PORTRAIT_URL.test(value) || STORED_URL.test(value)) ? value : null;
 
 /** The picture the player gave the character in the builder, or null. */
 export function portraitSource(payload) {
-  const portrait = payload?.identity?.portrait;
-  return typeof portrait === "string" && PORTRAIT_URL.test(portrait) ? portrait : null;
+  return pictureOf(payload?.identity?.portrait);
+}
+
+/** The token the player gave apart from the portrait, or null to use the portrait. */
+export function tokenSource(payload) {
+  return pictureOf(payload?.identity?.token);
 }
 
 /**
@@ -486,7 +495,11 @@ export function portraitSource(payload) {
 export async function storePortrait(dataUrl, name) {
   try {
     const picker = foundry.applications?.apps?.FilePicker?.implementation ?? globalThis.FilePicker;
-    const blob = await (await fetch(dataUrl)).blob();
+    // A data URL or the address of the original: `fetch` reads both, and the
+    // bytes go into the world untouched.
+    const response = await fetch(dataUrl);
+    if (!response.ok) throw new Error(`the picture answered ${response.status}`);
+    const blob = await response.blob();
     const ext = blob.type === "image/jpeg" ? "jpg" : (blob.type.split("/")[1] ?? "webp");
     const slug = String(name).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "retrato";
     const dir = `worlds/${game.world.id}/vault-portraits`;
@@ -517,11 +530,18 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
   const actorData = baseActorData(payload);
   if (folderId) actorData.folder = folderId;
 
+  // The portrait is the actor's picture; the token, when the player gave one
+  // apart, is the prototype token's texture. Without one the portrait is both.
   const portrait = portraitSource(payload);
+  const token = tokenSource(payload);
+  const name = payload.identity.characterName;
   if (portrait) {
-    const src = await storePortrait(portrait, payload.identity.characterName);
-    actorData.img = src;
-    actorData.prototypeToken = { texture: { src } };
+    actorData.img = await storePortrait(portrait, name);
+  }
+  if (token) {
+    actorData.prototypeToken = { texture: { src: await storePortrait(token, `${name}-token`) } };
+  } else if (actorData.img) {
+    actorData.prototypeToken = { texture: { src: actorData.img } };
   }
 
   const actor = await Actor.create(actorData);

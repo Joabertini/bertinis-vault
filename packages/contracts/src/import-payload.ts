@@ -222,21 +222,30 @@ export const payloadDerivedSchema = z.object({
     .optional(),
 });
 
+/** A picture: a stored original by address, or a small data URL. */
+const pictureSchema = z.union([
+  z.string().max(300).regex(/^https?:\/\/[^\s/]+\/images\/[A-Za-z0-9_-]{32}$/),
+  z
+    .string()
+    .max(100_000)
+    .regex(/^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/),
+]);
+
 export const payloadIdentitySchema = z.object({
   characterName: z.string().trim().min(1).max(120),
   playerName: z.string().trim().max(120).optional(),
   alignment: z.string().trim().max(60).optional(),
   biography: biographySchema.optional(),
   /**
-   * The picture the player gave the character in the builder: a small data URL
-   * (a 2:3 WebP or JPEG), so it travels in the same code as everything else.
-   * The Foundry module stores it and makes it the actor's portrait and token.
+   * The picture the player gave the character in the builder. Either the
+   * address of the original in the build store (`/images/<id>`), or — on
+   * characters saved before that existed — a small data URL. The Foundry
+   * module stores it and makes it the actor's portrait, and the token too when
+   * there is no `token`.
    */
-  portrait: z
-    .string()
-    .max(100_000)
-    .regex(/^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/)
-    .optional(),
+  portrait: pictureSchema.optional(),
+  /** The token, when the player gave one apart from the portrait. Same forms. */
+  token: pictureSchema.optional(),
 });
 
 export const importPayloadSchema = z.object({
