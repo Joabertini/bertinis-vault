@@ -55,6 +55,52 @@ const asAccount = (record: AccountRecord): Account =>
   });
 
 /**
+ * The session a desktop app sends, as `Authorization: Bearer <token>`.
+ *
+ * The desktop app has no cookie jar shared with a browser, so it holds the
+ * token itself and says it on each call. A browser never sends this header
+ * cross-origin on its own — CORS does not allow `Authorization` — so a page
+ * on another site cannot use it to act as the player.
+ */
+export function bearerTokenOf(request: Request): string | null {
+  const header = request.headers.get("Authorization") ?? "";
+  const match = /^Bearer ([A-Za-z0-9_-]{20,})$/.exec(header.trim());
+  return match ? (match[1] as string) : null;
+}
+
+/** The session token a request carries: the desktop's header, else the cookie. */
+export function sessionTokenOf(request: Request): string | null {
+  return bearerTokenOf(request) ?? readCookie(request, SESSION_COOKIE);
+}
+
+/**
+ * Where a sign-in started by the desktop app goes back to.
+ *
+ * The app listens on the loopback interface for the one request that brings
+ * the session home, the way RFC 8252 has native apps do it. Only
+ * `127.0.0.1`, only a port a user program can open, and only with the nonce
+ * the app chose, so the app can tell its own sign-in from any other request
+ * that reaches that port.
+ */
+const DESKTOP_PREFIX = "/__escritorio/";
+
+export type DesktopReturn = { port: number; nonce: string };
+
+export function desktopReturnPath(port: string | null, nonce: string | null): string | null {
+  if (!port || !nonce || !/^\d{4,5}$/.test(port) || !/^[A-Za-z0-9_-]{16,64}$/.test(nonce)) return null;
+  const number = Number(port);
+  if (number < 1024 || number > 65535) return null;
+  return `${DESKTOP_PREFIX}${number}/${nonce}`;
+}
+
+export function desktopReturnOf(path: string): DesktopReturn | null {
+  if (!path.startsWith(DESKTOP_PREFIX)) return null;
+  const [port, nonce, extra] = path.slice(DESKTOP_PREFIX.length).split("/");
+  if (extra !== undefined || !port || !nonce) return null;
+  return desktopReturnPath(port, nonce) === path ? { port: Number(port), nonce } : null;
+}
+
+/**
  * Who is calling, or nobody.
  *
  * Every route below treats "nobody" as an ordinary answer rather than an
@@ -62,7 +108,7 @@ const asAccount = (record: AccountRecord): Account =>
  * in, and asking is not a failure.
  */
 export async function accountFor(request: Request, env: AuthEnv): Promise<AccountRecord | null> {
-  const token = readCookie(request, SESSION_COOKIE);
+  const token = sessionTokenOf(request);
   if (!token) return null;
 
   return env.store.accountForSession(await hashToken(token), new Date().toISOString());
@@ -110,7 +156,11 @@ export async function handleStart(
   headers: Record<string, string>,
 ): Promise<Response> {
   const url = new URL(request.url);
-  const state = packState(generateToken(), safeReturnPath(url.searchParams.get("redirect")));
+  // A sign-in the desktop app opened comes back to the app, not to the front.
+  const back =
+    desktopReturnPath(url.searchParams.get("desktop"), url.searchParams.get("nonce")) ??
+    safeReturnPath(url.searchParams.get("redirect"));
+  const state = packState(generateToken(), back);
 
   return new Response(null, {
     status: 302,
@@ -185,6 +235,21 @@ export async function handleCallback(
     expiresAt: new Date(Date.now() + SESSION_TTL_SECONDS * 1000).toISOString(),
   });
 
+  /*
+   * The desktop app gets the token itself, on the loopback address it is
+   * listening on, and the browser is left signed out: the sign-in was the
+   * app's, not the browser's.
+   */
+  const desktop = desktopReturnOf(unpackReturnPath(state));
+  if (desktop) {
+    const home = new URL(`http://127.0.0.1:${desktop.port}/listo`);
+    home.searchParams.set("nonce", desktop.nonce);
+    home.searchParams.set("token", token);
+    const toApp = new Response(null, { status: 302, headers: { ...headers, Location: home.toString() } });
+    toApp.headers.append("Set-Cookie", clearCookieHeader(OAUTH_STATE_COOKIE, env.cookieDomain));
+    return toApp;
+  }
+
   const response = new Response(null, {
     status: 302,
     headers: {
@@ -216,7 +281,7 @@ export async function handleLogout(
   env: AuthEnv,
   headers: Record<string, string>,
 ): Promise<Response> {
-  const token = readCookie(request, SESSION_COOKIE);
+  const token = sessionTokenOf(request);
   if (token) await env.store.deleteSession(await hashToken(token));
 
   const response = json({ ok: true }, 200, headers);

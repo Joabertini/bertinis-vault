@@ -559,3 +559,79 @@ test("a sign-in only ever returns to this application", () => {
   assert.equal(unpackReturnPath(packState("nonce", "/codice")), "/codice");
   assert.equal(unpackReturnPath("nonce-with-no-path"), "/");
 });
+
+/* ---------------- the desktop app ---------------- */
+
+import { desktopReturnOf, desktopReturnPath } from "../dist/auth-routes.js";
+
+const NONCE = "abcdefghijklmnopqrstuv";
+
+/** A sign-in the desktop app started, back to where the browser lands. */
+async function signInFromDesktop(store, port = "51234", nonce = NONCE) {
+  const deps = { store, fetchImpl: discordThatSays() };
+  const started = await handle(get(`/auth/discord/start?desktop=${port}&nonce=${nonce}`), ENV, deps);
+  const state = cookiesOn(started)[OAUTH_STATE_COOKIE].value;
+  return handle(
+    get(`/auth/discord/callback?code=abc&state=${encodeURIComponent(state)}`, {
+      cookie: `${OAUTH_STATE_COOKIE}=${state}`,
+    }),
+    ENV,
+    deps,
+  );
+}
+
+const bearer = (path, token, { method = "GET", body } = {}) =>
+  new Request(`https://api.bertinilabs.xyz${path}`, {
+    method,
+    headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+
+test("only a loopback port and a real nonce make a desktop return", () => {
+  assert.equal(desktopReturnPath("51234", NONCE), `/__escritorio/51234/${NONCE}`);
+  assert.equal(desktopReturnPath("80", NONCE), null, "a privileged port");
+  assert.equal(desktopReturnPath("70000", NONCE), null);
+  assert.equal(desktopReturnPath("51234", "short"), null);
+  assert.equal(desktopReturnPath("51234", "has/slash-in-it-xxxxxxx"), null);
+  assert.equal(desktopReturnOf("/codice"), null);
+  assert.deepEqual(desktopReturnOf(`/__escritorio/51234/${NONCE}`), { port: 51234, nonce: NONCE });
+});
+
+test("a desktop sign-in sends the token to the app and leaves the browser signed out", async () => {
+  const store = makeStore();
+  const back = await signInFromDesktop(store);
+
+  assert.equal(back.status, 302);
+  const to = new URL(back.headers.get("Location"));
+  assert.equal(to.origin, "http://127.0.0.1:51234");
+  assert.equal(to.pathname, "/listo");
+  assert.equal(to.searchParams.get("nonce"), NONCE);
+  assert.ok(to.searchParams.get("token"));
+  assert.equal(cookiesOn(back)[SESSION_COOKIE], undefined, "no session cookie for the browser");
+  assert.equal(store.sessions.size, 1);
+});
+
+test("the desktop's token works as a bearer, with no origin", async () => {
+  const store = makeStore();
+  const token = new URL((await signInFromDesktop(store)).headers.get("Location")).searchParams.get("token");
+
+  const me = await (await handle(bearer("/auth/me", token), ENV, { store })).json();
+  assert.equal(me.account.displayName, "Bertini");
+
+  const synced = await handle(
+    bearer("/codex/sync", token, { method: "POST", body: { characters: [character("c1", "2026-11-13T00:00:00.000Z")], burned: [] } }),
+    ENV,
+    { store },
+  );
+  assert.equal(synced.status, 200);
+  assert.equal((await synced.json()).characters.length, 1);
+
+  const out = await handle(bearer("/auth/logout", token, { method: "POST" }), ENV, { store });
+  assert.equal(out.status, 200);
+  assert.equal(store.sessions.size, 0);
+});
+
+test("a made-up bearer is nobody", async () => {
+  const me = await (await handle(bearer("/auth/me", "x".repeat(43)), ENV, { store: makeStore() })).json();
+  assert.equal(me.account, null);
+});
