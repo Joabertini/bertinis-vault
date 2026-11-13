@@ -13,6 +13,7 @@ import { importPayloadSchema, type ImportPayload } from "@bertinis-vault/contrac
 
 import { d1Store, type D1Like, type Store } from "./accounts.js";
 import {
+  bearerTokenOf,
   handleCallback,
   handleLogout,
   handleMe,
@@ -532,7 +533,12 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
      * the sign-in are top-level navigations — a link out to Discord and a
      * redirect back — and a navigation carries no `Origin` header at all.
      */
-    if (CREDENTIALED_ROUTES.has(url.pathname) && !namesTheCaller(env, request)) {
+    /*
+     * A bearer token is the desktop app, which is not a page and has no origin.
+     * The origin check guards the cookie a browser attaches on its own; a
+     * header the caller has to set by hand cannot be forged by another site.
+     */
+    if (CREDENTIALED_ROUTES.has(url.pathname) && !bearerTokenOf(request) && !namesTheCaller(env, request)) {
       return error(
         "This store does not accept accounts from that origin. Set ALLOWED_ORIGINS.",
         403,
