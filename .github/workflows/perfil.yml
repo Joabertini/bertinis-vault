@@ -1,0 +1,59 @@
+name: Perfil de las reglas
+
+# Mide dónde se va el tiempo de derivar un personaje, con Node en modo
+# intérprete (--jitless), que es como corre en la app de escritorio, y arma el
+# paquete de reglas que esa app embebe. Solo en ramas perf/: no es parte de la
+# verificación.
+#
+# Las herramientas viven en el último commit de la rama; las reglas que se
+# miden y se empaquetan son las del commit anterior, así el paquete queda
+# anotado con un commit que solo tiene código del Vault.
+
+on:
+  push:
+    branches:
+      - 'perf/**'
+
+jobs:
+  perfil:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - name: Herramientas aparte, reglas del commit anterior
+        run: |
+          FARO="$RUNNER_TEMP/faro"
+          echo "FARO=$FARO" >> "$GITHUB_ENV"
+          mkdir -p "$FARO/scripts"
+          cp scripts/perfil/*.mjs "$FARO/scripts/"
+          git checkout --detach HEAD~1
+          git log -1 --format='reglas de %H %s'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: corepack enable
+      - run: corepack pnpm install --frozen-lockfile
+      - run: corepack pnpm packages:build
+      - name: Empaquetar sin minificar
+        run: node "$FARO/scripts/perfil-derivar.mjs" build "$GITHUB_WORKSPACE"
+      - name: Tiempos con JIT (referencia)
+        run: node "$FARO/scripts/perfil-derivar.mjs" run "$GITHUB_WORKSPACE"
+      - name: Tiempos y perfil sin JIT
+        run: node --jitless --cpu-prof --cpu-prof-dir=perfil "$FARO/scripts/perfil-derivar.mjs" run "$GITHUB_WORKSPACE"
+      - name: Resumen del perfil
+        run: node "$FARO/scripts/perfil-derivar.mjs" resumen "$GITHUB_WORKSPACE"
+      - name: Paquete de reglas para el escritorio
+        run: node "$FARO/scripts/build-rules.mjs" "$GITHUB_WORKSPACE"
+      - name: El paquete corre solo, sin JIT
+        run: node --jitless "$FARO/scripts/check-rules.mjs"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reglas
+          path: ${{ runner.temp }}/faro/apps/forja/rules/
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        with:
+          name: perfil
+          path: perfil/*.cpuprofile
+          retention-days: 7
