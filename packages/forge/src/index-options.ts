@@ -12,6 +12,7 @@
 import {
   collections,
   forRulesVersion,
+  legalRowsFor,
   normalizeForSearch,
   searchByName,
   type BackgroundRow,
@@ -51,11 +52,67 @@ export type IndexOption = {
   shared: boolean;
 };
 
-/** The slug for a name, in the shape the rest of the builder writes ids. */
+const slugs = new Map<string, string>();
+
+/** Enough for every name in the index several times over, and what a player types. */
+const SLUG_LIMIT = 20000;
+
+/**
+ * The slug for a name, in the shape the rest of the builder writes ids.
+ *
+ * Remembered: the names are the index's own few thousand, asked for again on
+ * every lookup.
+ */
 export function slugOf(name: string): string {
-  return normalizeForSearch(name)
+  const known = slugs.get(name);
+  if (known !== undefined) return known;
+
+  const slug = normalizeForSearch(name)
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+  if (slugs.size >= SLUG_LIMIT) slugs.clear();
+  slugs.set(name, slug);
+  return slug;
+}
+
+const NO_ROWS: readonly IndexRow[] = [];
+
+const slugIndexes = new WeakMap<readonly IndexRow[], Map<string, IndexRow[]>>();
+
+/**
+ * The legal rows of a collection whose name makes this slug, in index order.
+ *
+ * Finding one item used to mean filtering all 1773 by edition and slugging
+ * every name, and a single derivation looks up dozens: measured, that was
+ * four fifths of the time it took. The rows are indexed by slug the first
+ * time a collection is asked about, and the index lives as long as the list
+ * of legal rows it was built from — which is a different list once the
+ * ruleset or the book library changes.
+ *
+ * `Row` is the caller's word for what the collection holds, as the casts on
+ * `forRulesVersion` always were.
+ */
+export function rowsBySlug<Row extends IndexRow = IndexRow>(
+  rows: readonly IndexRow[] | undefined,
+  rulesVersion: RulesVersion,
+  id: string,
+): readonly Row[] {
+  if (!rows) return NO_ROWS as unknown as readonly Row[];
+
+  const legal = legalRowsFor(rows, rulesVersion);
+  let index = slugIndexes.get(legal);
+  if (!index) {
+    index = new Map<string, IndexRow[]>();
+    for (const row of legal) {
+      const slug = slugOf(row.name);
+      const found = index.get(slug);
+      if (found) found.push(row);
+      else index.set(slug, [row]);
+    }
+    slugIndexes.set(legal, index);
+  }
+
+  return (index.get(id) ?? NO_ROWS) as unknown as readonly Row[];
 }
 
 /** Item types that count as a weapon in the index's own vocabulary. */
@@ -186,8 +243,7 @@ export function optionById(
   id: string,
   sourceBook?: string,
 ): IndexOption | null {
-  const legal = forRulesVersion(collections[prop] ?? [], rulesVersion);
-  const matches = legal.filter((row) => slugOf(row.name) === id);
+  const matches = rowsBySlug(collections[prop], rulesVersion, id);
   if (matches.length === 0) return null;
 
   const picked = (sourceBook && matches.find((row) => row.source === sourceBook)) || matches[0];
@@ -242,9 +298,7 @@ export type IndexSpellInfo = {
  * distance, because that is all the generator recorded.
  */
 export function spellInfoFor(name: string, rulesVersion: RulesVersion, sourceBook?: string): IndexSpellInfo | null {
-  const legal = forRulesVersion(collections.spell ?? [], rulesVersion) as SpellRow[];
-  const key = slugOf(name);
-  const matches = legal.filter((row) => slugOf(row.name) === key);
+  const matches = rowsBySlug<SpellRow>(collections.spell, rulesVersion, slugOf(name));
   const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
   if (!row) return null;
 
@@ -279,8 +333,7 @@ export function speciesBonusFromIndex(
   rulesVersion: RulesVersion,
   sourceBook?: string,
 ): Record<string, number> | null {
-  const legal = forRulesVersion(collections.race ?? [], rulesVersion) as RaceRow[];
-  const matches = legal.filter((row) => slugOf(row.name) === raceId);
+  const matches = rowsBySlug<RaceRow>(collections.race, rulesVersion, raceId);
   const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
 
   return row?.ability ?? null;
@@ -302,8 +355,7 @@ export function subraceBonusFromIndex(
   rulesVersion: RulesVersion,
   sourceBook?: string,
 ): Record<string, number> | null {
-  const legal = forRulesVersion(collections.subrace ?? [], rulesVersion) as RaceRow[];
-  const matches = legal.filter((row) => slugOf(row.name) === subraceId);
+  const matches = rowsBySlug<RaceRow>(collections.subrace, rulesVersion, subraceId);
   const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
 
   return row?.ability ?? null;
@@ -340,8 +392,7 @@ export function originAbilityChoiceFor(
   rulesVersion: RulesVersion,
   sourceBook?: string,
 ): OriginAbilityOption[] | null {
-  const legal = forRulesVersion(collections.background ?? [], rulesVersion) as BackgroundRow[];
-  const matches = legal.filter((row) => slugOf(row.name) === backgroundId);
+  const matches = rowsBySlug<BackgroundRow>(collections.background, rulesVersion, backgroundId);
   const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
 
   const stated = (row as (BackgroundRow & { abilityChoice?: OriginAbilityOption[] }) | undefined)
@@ -366,8 +417,7 @@ export function featPrerequisitesFor(
   rulesVersion: RulesVersion,
   sourceBook?: string,
 ): FeatPrerequisite[] {
-  const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
-  const matches = legal.filter((row) => slugOf(row.name) === featId);
+  const matches = rowsBySlug<FeatRow>(collections.feat, rulesVersion, featId);
   const row = (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0];
 
   return row?.prerequisites ?? [];
@@ -384,12 +434,10 @@ export function raceInfoFor(
   subraceId: string,
   rulesVersion: RulesVersion,
 ): RaceRow | null {
-  const races = forRulesVersion(collections.race ?? [], rulesVersion) as RaceRow[];
-  const base = races.find((row) => slugOf(row.name) === raceId) ?? null;
+  const base = rowsBySlug<RaceRow>(collections.race, rulesVersion, raceId)[0] ?? null;
   if (!subraceId) return base;
 
-  const subraces = forRulesVersion(collections.subrace ?? [], rulesVersion) as RaceRow[];
-  const sub = subraces.find((row) => slugOf(row.name) === subraceId);
+  const sub = rowsBySlug<RaceRow>(collections.subrace, rulesVersion, subraceId)[0];
   if (!sub) return base;
 
   // A subrace states only what it *changes*, and states the rest as null. A
@@ -410,10 +458,9 @@ export function subclassInfoFor(
   classId: string,
   rulesVersion: RulesVersion,
 ): SubclassRow | null {
-  const legal = forRulesVersion(collections.subclass ?? [], rulesVersion) as SubclassRow[];
   return (
-    legal.find(
-      (row) => slugOf(row.name) === subclassId && slugOf(row.className ?? "") === classId,
+    rowsBySlug<SubclassRow>(collections.subclass, rulesVersion, subclassId).find(
+      (row) => slugOf(row.className ?? "") === classId,
     ) ?? null
   );
 }
@@ -494,16 +541,14 @@ export function itemInfoFor(
   rulesVersion: RulesVersion,
   sourceBook?: string,
 ): ItemRow | null {
-  const legal = forRulesVersion(collections.item ?? [], rulesVersion) as ItemRow[];
-  const matches = legal.filter((row) => slugOf(row.name) === id);
+  const matches = rowsBySlug<ItemRow>(collections.item, rulesVersion, id);
 
   return (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0] || null;
 }
 
 /** The class row for a class id, which carries its saves and hit die. */
 export function classInfoFor(classId: string, rulesVersion: RulesVersion): ClassRow | null {
-  const legal = forRulesVersion(collections.class ?? [], rulesVersion) as ClassRow[];
-  return legal.find((row) => slugOf(row.name) === classId) ?? null;
+  return rowsBySlug<ClassRow>(collections.class, rulesVersion, classId)[0] ?? null;
 }
 
 /**
@@ -545,8 +590,7 @@ function backgroundRowFor(
   rulesVersion: RulesVersion,
   sourceBook?: string,
 ): BackgroundRow | null {
-  const legal = forRulesVersion(collections.background ?? [], rulesVersion) as BackgroundRow[];
-  const matches = legal.filter((row) => slugOf(row.name) === backgroundId);
+  const matches = rowsBySlug<BackgroundRow>(collections.background, rulesVersion, backgroundId);
   return (sourceBook && matches.find((entry) => entry.source === sourceBook)) || matches[0] || null;
 }
 
@@ -785,9 +829,7 @@ export type CastingTime = "action" | "bonus" | "reaction" | "long";
  * the count rather than guessed into it.
  */
 export function castingTimeOf(spellName: string, rulesVersion: RulesVersion): CastingTime | null {
-  const legal = forRulesVersion(collections.spell ?? [], rulesVersion) as SpellRow[];
-  const key = slugOf(spellName);
-  const row = legal.find((entry) => slugOf(entry.name) === key);
+  const row = rowsBySlug<SpellRow>(collections.spell, rulesVersion, slugOf(spellName))[0];
   if (!row) return null;
 
   const time = (row as { time?: string }).time;
@@ -798,9 +840,7 @@ export function castingTimeOf(spellName: string, rulesVersion: RulesVersion): Ca
 }
 
 export function isConcentration(spellName: string, rulesVersion: RulesVersion): boolean {
-  const legal = forRulesVersion(collections.spell ?? [], rulesVersion) as SpellRow[];
-  const key = slugOf(spellName);
-  const row = legal.find((entry) => slugOf(entry.name) === key);
+  const row = rowsBySlug<SpellRow>(collections.spell, rulesVersion, slugOf(spellName))[0];
 
   return Boolean(row?.concentration);
 }
@@ -809,8 +849,7 @@ export function featAbilityGrantsFor(
   featId: string,
   rulesVersion: RulesVersion,
 ): FeatAbilityGrant[] {
-  const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
-  return legal.find((row) => slugOf(row.name) === featId)?.ability ?? [];
+  return rowsBySlug<FeatRow>(collections.feat, rulesVersion, featId)[0]?.ability ?? [];
 }
 
 /**
@@ -830,11 +869,10 @@ export function featGearGrantsFor(
   featIds: readonly string[],
   rulesVersion: RulesVersion,
 ): FeatGrant[] {
-  const legal = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
   const grants: FeatGrant[] = [];
 
   for (const featId of featIds) {
-    const row = legal.find((entry) => slugOf(entry.name) === featId);
+    const row = rowsBySlug<FeatRow>(collections.feat, rulesVersion, featId)[0];
     const gear: FeatGearGrant | null = row?.gear ?? null;
     if (!row || !gear) continue;
 

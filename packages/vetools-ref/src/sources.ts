@@ -41,11 +41,21 @@ export function isKnownSource(source: string): boolean {
  * Mirrors `SourceUtil.isClassicSource`. An unknown or undated source is treated
  * as classic, matching 5etools, where an invalid date compares false against
  * the threshold.
+ *
+ * Answered once per source. Every filter over the index asks this of every
+ * row, and parsing two dates each time was a third of the cost of deriving a
+ * character; the table of sources does not change while the program runs.
  */
+const classicBySource = new Map<string, boolean>();
+
 export function isClassicSource(source: string): boolean {
+  const known = classicBySource.get(source);
+  if (known !== undefined) return known;
+
   const date = SOURCES[source]?.date;
-  if (!date) return true;
-  return new Date(date) < new Date(EDITION_THRESHOLD);
+  const classic = date ? new Date(date) < new Date(EDITION_THRESHOLD) : true;
+  classicBySource.set(source, classic);
+  return classic;
 }
 
 /** The ruleset a source belongs to. */

@@ -21,7 +21,7 @@ import {
 } from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
-import { slugOf } from "./index-options";
+import { rowsBySlug, slugOf } from "./index-options";
 
 /** The book each edition's core options come from. */
 const coreBook: Record<RulesVersion, string> = {
@@ -186,8 +186,7 @@ export function entryById(
 ): CatalogEntry | null {
   if (!id) return null;
 
-  const legal = forRulesVersion(collections[prop] ?? [], rulesVersion);
-  const matches = legal.filter((row) => slugOf(row.name) === id);
+  const matches = rowsBySlug(collections[prop], rulesVersion, id);
   if (matches.length === 0) return null;
 
   const picked = (sourceBook && matches.find((row) => row.source === sourceBook)) || matches[0];
@@ -198,7 +197,6 @@ export function entryById(
 
 /** The hit die a class rolls, for the sheet. */
 export function hitDieFor(classId: string, rulesVersion: RulesVersion): number | null {
-  const legal = forRulesVersion(collections.class ?? [], rulesVersion) as ClassRow[];
-  const row = legal.find((entry) => slugOf(entry.name) === classId);
+  const row = rowsBySlug<ClassRow>(collections.class, rulesVersion, classId)[0];
   return row?.hitDie ?? null;
 }
