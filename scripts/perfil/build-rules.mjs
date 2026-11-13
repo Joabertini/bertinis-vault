@@ -45,6 +45,9 @@ import { optionsFor } from "./index-options";
 import { exportCodex, mergeCodex, readCodexFile } from "./codex-file";
 import { readFoundryActor } from "./foundry-import";
 import { sigilFor } from "./role-sigil";
+import { suggestAppearance } from "./appearance";
+import { sizeFor } from "./table-numbers";
+import { rulesVersionOf } from "./builder-state";
 import { setBookLibrary } from "@bertinis-vault/vetools-ref";
 import {
   callingView,
@@ -60,6 +63,19 @@ import {
   spellsView,
   tomeView,
 } from "./screens";
+
+// "Sugerir por especie" of the web's identity chamber (Forge.tsx suggestLooks):
+// the same call with the same arguments; the patch only fills empty boxes.
+const suggestLooks = (draft) => {
+  const rulesVersion = rulesVersionOf(draft);
+  const suggestion = suggestAppearance(draft.raceId, draft.subraceId, rulesVersion, sizeFor(draft, rulesVersion));
+  if (!suggestion) return {};
+  const patch = {};
+  for (const [field, value] of Object.entries(suggestion)) {
+    if (value && !String(draft[field] ?? "").trim()) patch[field] = value;
+  }
+  return patch;
+};
 
 // What each screen shows lives in the package (forge/screens), shared with the
 // web. This is only the door: names, and the JSON that crosses it.
@@ -106,6 +122,7 @@ const api = {
   readCodexFile,
   readFoundryActor,
   sigilFor,
+  suggestLooks,
   mergeCodex,
 };
 
