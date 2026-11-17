@@ -139,6 +139,9 @@ trasfondo a medida abre ese reparto en 2024.
 
 ### C1 — Hoja 2024
 
+> **Formato decidido (17-11):** la hoja de Foundry dnd5e, con pestañas, copiada
+> píxel a píxel. Referencia viva: [`docs/diseno/hoja-2024/README.md`](diseno/hoja-2024/README.md).
+
 `ogl-attrs.ts` y `ogl-render.ts` (la hoja imprimible) no mencionan la edición en
 ningún lado: una sola hoja para las dos. Alcance a definir con el dueño; lo que
 cambia en 2024: especie en vez de raza, dote de origen, columna de Maestría de
