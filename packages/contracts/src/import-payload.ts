@@ -263,7 +263,20 @@ export const importPayloadSchema = z.object({
     subrace: vetoolsRefSchema.optional(),
   }),
   classes: z.array(classRefSchema).min(1).max(20),
-  background: z.object({ ref: vetoolsRefSchema }),
+  /**
+   * The background as a 5etools document, or — for a background the DM built
+   * with the DMG 2024 rules (B2) — only its name. A custom background has no
+   * document to import: its skills, tool, feat and ability increases already
+   * travel in `proficiencies`, `feats` and `abilities`.
+   */
+  background: z
+    .object({
+      ref: vetoolsRefSchema.optional(),
+      custom: z.object({ name: z.string().min(1) }).optional(),
+    })
+    .refine((value) => Boolean(value.ref) !== Boolean(value.custom), {
+      message: "background needs exactly one of ref or custom",
+    }),
 
   abilities: abilityScoreMapSchema,
   proficiencies: proficiencyChoicesSchema,
@@ -301,6 +314,13 @@ export const importPayloadSchema = z.object({
 });
 
 export type ImportPayload = z.infer<typeof importPayloadSchema>;
+
+/**
+ * The id of the background a DM builds with the DMG 2024 rules ("Creating a
+ * Background"): three abilities, an Origin feat, two skills, one tool, 50 GP.
+ */
+export const CUSTOM_BACKGROUND_ID = "trasfondo-a-medida";
+export const CUSTOM_BACKGROUND_NAME = "Trasfondo a medida";
 export type ClassRef = z.infer<typeof classRefSchema>;
 export type SpellRef = z.infer<typeof spellRefSchema>;
 export type EquipmentRef = z.infer<typeof equipmentRefSchema>;
@@ -317,7 +337,7 @@ export function collectRefs(payload: ImportPayload): VetoolsRefPayload[] {
     if (entry.subclass) refs.push(entry.subclass);
   }
 
-  refs.push(payload.background.ref);
+  if (payload.background.ref) refs.push(payload.background.ref);
   for (const feat of payload.feats) refs.push(feat.ref);
   for (const spell of payload.spells) refs.push(spell.ref);
   for (const item of payload.equipment) refs.push(item.ref);

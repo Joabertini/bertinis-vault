@@ -39,6 +39,7 @@ import {
   type OriginAbilityOption,
 } from "@bertinis-vault/domain";
 import type { MulticlassGrants } from "@bertinis-vault/vetools-index";
+import { CUSTOM_BACKGROUND_ID, CUSTOM_BACKGROUND_NAME } from "@bertinis-vault/contracts";
 import { rulesVersionOf, type RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { FeatGrant } from "./gear-proficiencies";
@@ -109,10 +110,58 @@ export function rowsBySlug<Row extends IndexRow = IndexRow>(
       if (found) found.push(row);
       else index.set(slug, [row]);
     }
+    // B2: the background the DMG 2024 lets a DM build sits beside the printed
+    // ones, so every lookup that reads a background reads it too.
+    if (rows === collections.background && rulesVersion === "2024") {
+      index.set(CUSTOM_BACKGROUND_ID, [customBackgroundRow(legal as readonly BackgroundRow[])]);
+    }
     slugIndexes.set(legal, index);
   }
 
   return (index.get(id) ?? NO_ROWS) as unknown as readonly Row[];
+}
+
+/**
+ * A background built by the DMG 2024 rules ("Creating a Background").
+ *
+ * 1. Three abilities: the +2/+1 or +1/+1/+1 lands on at most three, so offering
+ *    all six with those amounts is the same rule with one step fewer.
+ * 2. One Origin feat: every feat a printed 2024 background grants, which is
+ *    what the Origin category is. Magic Initiate's class is asked by the feat.
+ * 3. Two skills, any. 4. One tool, any (asked by the proficiency plan).
+ * 5. 50 GP of equipment, unspent gold included: handed over as the 50 GP.
+ */
+function customBackgroundRow(legal: readonly BackgroundRow[]): BackgroundRow {
+  const feats = new Map<string, { name: string; source: string }>();
+  for (const row of legal) {
+    for (const option of row.featChoice?.options ?? []) {
+      const { name, source } = option as { name: string; source: string };
+      if (!feats.has(slugOf(name))) feats.set(slugOf(name), { name, source });
+    }
+  }
+  const abilities = ["str", "dex", "con", "int", "wis", "cha"];
+
+  return {
+    name: CUSTOM_BACKGROUND_NAME,
+    source: "XDMG",
+    featChoice: {
+      options: [...feats.values()].sort((a, b) => a.name.localeCompare(b.name)),
+    } as FeatChoice,
+    skillsGranted: [],
+    skillChoice: { options: [], count: 2, isOpen: true },
+    toolsGranted: [],
+    languages: null,
+    spells: [],
+    startingEquipment: {
+      rows: [{ fixed: true, options: [{ key: "_", entries: [{ kind: "coins", copper: 5000 }] }] }],
+      goldAlternative: null,
+      additionalFromBackground: false,
+    },
+    abilityChoice: [
+      { options: abilities, amounts: [2, 1] },
+      { options: abilities, amounts: [1, 1, 1] },
+    ],
+  };
 }
 
 /** Item types that count as a weapon in the index's own vocabulary. */

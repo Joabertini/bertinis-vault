@@ -18,6 +18,8 @@ import type {
 } from "@bertinis-vault/contracts";
 import {
   coinsFromCopper,
+  CUSTOM_BACKGROUND_ID,
+  CUSTOM_BACKGROUND_NAME,
   IMPORT_PAYLOAD_VERSION,
   skillIdFor,
   toolIdFor,
@@ -84,7 +86,11 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
 
   const raceRef = tryResolve(resolver, "race", build.ancestry.raceId, failures, books);
   const subraceRef = tryResolve(resolver, "subrace", build.ancestry.subraceId, failures, books);
-  const backgroundRef = tryResolve(resolver, "background", build.background.backgroundId, failures, books);
+  // A background built with the DMG 2024 rules has no document to resolve.
+  const customBackground = build.background.backgroundId === CUSTOM_BACKGROUND_ID;
+  const backgroundRef = customBackground
+    ? null
+    : tryResolve(resolver, "background", build.background.backgroundId, failures, books);
 
   const classes = build.classing.classes.map((entry) => {
     const ref = tryResolve(resolver, "class", entry.classId, failures, books);
@@ -160,7 +166,7 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
     (entry): entry is NonNullable<(typeof classes)[number]> => entry !== null,
   );
 
-  if (!raceRef || !backgroundRef || resolvedClasses.length === 0) {
+  if (!raceRef || (!backgroundRef && !customBackground) || resolvedClasses.length === 0) {
     return { payload: null, failures };
   }
 
@@ -178,7 +184,9 @@ export function buildToPayload(build: CharacterBuild, resolver: RefResolver): Bu
     },
     race: { ref: raceRef, ...(subraceRef ? { subrace: subraceRef } : {}) },
     classes: resolvedClasses,
-    background: { ref: backgroundRef },
+    background: backgroundRef
+      ? { ref: backgroundRef }
+      : { custom: { name: CUSTOM_BACKGROUND_NAME } },
     abilities: build.abilities.final,
     proficiencies: {
       ...partitionProficiencies(normalized?.proficiencies ?? []),

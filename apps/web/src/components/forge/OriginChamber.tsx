@@ -9,7 +9,8 @@ import VariantChoices from "@/components/forge/VariantChoices";
 import type { BuilderState } from "@/lib/builder-state";
 import type { CatalogEntry } from "@/lib/catalog";
 import { backgroundFeatIdsFor, chosenFeatBenefit, featBenefitKey } from "@/lib/feats";
-import { DIVIDER } from "@/styles/recipes";
+import { CUSTOM_BACKGROUND_ID, CUSTOM_BACKGROUND_NAME } from "@bertinis-vault/contracts";
+import { DIVIDER, WHISPER } from "@/styles/recipes";
 
 /** The background: its shelf, what it hands you, and the spell questions it opens. */
 export default function OriginChamber({
@@ -39,9 +40,52 @@ export default function OriginChamber({
   onChooseVariant: ComponentProps<typeof VariantChoices>["onPick"];
   onChooseSpellAbility: ComponentProps<typeof VariantChoices>["onPickAbility"];
 }) {
+  const custom = draft.backgroundId === CUSTOM_BACKGROUND_ID;
+
   return (
     <div className="space-y-10">
-      <SigilShelf
+      {/*
+        B2: the DMG 2024 lets a DM build a background. A table rule, so it is
+        offered and starts off; the player turns it on if their table uses it.
+      */}
+      {rulesVersion === "2024" && (
+        <button
+          type="button"
+          aria-pressed={custom}
+          onClick={() =>
+            custom
+              ? patchDraft({ backgroundId: "", backgroundFeatId: "" })
+              : onPickBackground({
+                  id: CUSTOM_BACKGROUND_ID,
+                  label: CUSTOM_BACKGROUND_NAME,
+                  source: "XDMG",
+                  shared: false,
+                })
+          }
+          className="flex items-start gap-3 text-left"
+        >
+          <span
+            className="mt-0.5 flex h-3.5 w-3.5 shrink-0 items-center justify-center border text-[13px]"
+            style={{
+              borderColor: custom ? accent : "#5A5A5A",
+              background: custom ? accent : "transparent",
+              color: "#0B0B0B",
+            }}
+          >
+            {custom ? "✓" : ""}
+          </span>
+          <span className="font-body text-sm leading-relaxed text-bone">
+            Trasfondo a medida{" "}
+            <span className="text-bone">
+              (Guia del DM 2024). Regla de mesa: armas tu propio trasfondo con tres
+              caracteristicas, una dote de Origen, dos habilidades, una herramienta y 50 po de
+              equipo. Preguntale a tu DM si la usan.
+            </span>
+          </span>
+        </button>
+      )}
+
+      {!custom && <SigilShelf
         entries={backgrounds}
         selectedId={draft.backgroundId}
         selectedSource={draft.sourceBooks[`background:${draft.backgroundId}`]}
@@ -52,7 +96,14 @@ export default function OriginChamber({
         label="Buscar trasfondo"
         placeholder="Buscar entre todos los trasfondos…"
         noteFor={(entry) => entry.source}
-      />
+      />}
+
+      {custom && (
+        <p className={WHISPER}>
+          Las caracteristicas se reparten en Mejora de caracteristica (+2 y +1, o +1 a tres); las dos
+          habilidades y la herramienta, en Dones; los 50 po, en Equipo.
+        </p>
+      )}
 
       {/* What it hands you. Everything on this panel is read off
           the index; the prose that 5etools prints alongside is not
