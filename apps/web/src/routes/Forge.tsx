@@ -1428,6 +1428,7 @@ export default function Forge() {
                       spells={spellsByClass.get(classPlan.classId) ?? []}
                       book={chosenBook}
                       characterLevel={draft.level}
+                      rulesVersion={rulesVersion}
                       accent={accent}
                       showName={spellPlans.length > 1}
                       granted={grantedNames}

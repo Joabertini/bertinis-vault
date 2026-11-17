@@ -105,6 +105,9 @@ describe("spells", () => {
     expect(spellIconKey({ name: "Hold Person", school: "E" })).toBe("spell-enchant");
     expect(spellIconKey({ name: "Gravity Fissure", school: "V" })).toBe("school-evocation");
     expect(spellIconKey({ name: "Reality Break", school: "X" })).toBe("spell-force");
+    // The pickers know a spell's school by the Spanish name the index gives.
+    expect(spellIconKey({ name: "Gravity Fissure", school: "Evocacion" })).toBe("school-evocation");
+    expect(spellIconKey({ name: "Reality Break", school: "Nigromancia" })).toBe("school-necromancy");
   });
 
   for (const version of ["2014", "2024"] as const) {

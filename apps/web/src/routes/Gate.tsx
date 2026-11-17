@@ -157,6 +157,9 @@ function GateContent() {
           </span>
           <span>Reinos enlazados — 5</span>
           <span>Ediciones — 2014 · 2024</span>
+          <Link to="/creditos" className="transition-colors hover:text-gold">
+            Créditos
+          </Link>
         </motion.footer>
       </section>
 

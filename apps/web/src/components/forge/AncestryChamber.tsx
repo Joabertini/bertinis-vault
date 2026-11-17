@@ -1,6 +1,7 @@
 import type { ComponentProps } from "react";
 
 import SigilShelf from "@/components/forge/SigilShelf";
+import { kindIconKey } from "@/lib/icons";
 import SizeChoice from "@/components/forge/SizeChoice";
 import SubChoice from "@/components/forge/SubChoice";
 import VariantChoices from "@/components/forge/VariantChoices";
@@ -49,6 +50,7 @@ export default function AncestryChamber({
         onPick={onPickRace}
         accent={VAULT_GOLD}
         infoKind="race"
+        iconFor={() => kindIconKey("species")}
         label="Buscar raza"
         placeholder="Buscar entre todas las razas…"
         // The book is what tells two same-named species apart, and

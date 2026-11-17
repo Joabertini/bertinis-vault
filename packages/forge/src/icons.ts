@@ -236,6 +236,15 @@ const SCHOOLS: Record<string, IconKey> = {
   I: "school-illusion",
   N: "school-necromancy",
   T: "school-transmutation",
+  // The picker lists spells by the Spanish name the index gives.
+  Abjuracion: "school-abjuration",
+  Conjuracion: "school-conjuration",
+  Adivinacion: "school-divination",
+  Encantamiento: "school-enchantment",
+  Evocacion: "school-evocation",
+  Ilusion: "school-illusion",
+  Nigromancia: "school-necromancy",
+  Transmutacion: "school-transmutation",
 };
 
 /** The icon for a spell: its theme if the name has one, its school otherwise. */
