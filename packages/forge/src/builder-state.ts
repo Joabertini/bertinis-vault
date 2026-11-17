@@ -142,7 +142,7 @@ export type BuilderState = {
    * changing the level does not shift every number onto a different level.
    * Level 1 is not here: it is the die at maximum, which is not a roll.
    */
-  hpMethod: "average" | "rolled";
+  hpMethod: "average" | "rolled" | "max";
   hpRolls: Record<string, number>;
   /**
    * The weapons this character has mastery with, as dnd5e base-item ids.
@@ -506,7 +506,7 @@ export function coerceBuilderState(value: unknown): BuilderState {
     featAbilityChoices: coerceFeatAbilityChoices(candidate.featAbilityChoices, candidate.levelChoices),
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
     // A draft saved before the switch existed took the average, and still does.
-    hpMethod: candidate.hpMethod === "rolled" ? "rolled" : "average",
+    hpMethod: candidate.hpMethod === "rolled" || candidate.hpMethod === "max" ? candidate.hpMethod : "average",
     hpRolls: coerceHpRolls(candidate.hpRolls),
   };
 }

@@ -478,7 +478,8 @@ export const sourceBooksSchema = z.record(z.string(), z.string());
  * Optional so every build written before this field stays valid.
  */
 export const hitPointsSchema = z.object({
-  method: z.enum(["average", "rolled"]).default("average"),
+  /** `max`: the whole die at every level, a common table rule. */
+  method: z.enum(["average", "rolled", "max"]).default("average"),
   rolls: z.array(z.number().int().min(1).max(12).nullable()).default([]),
   /**
    * Hit points that come from neither the dice nor Constitution: Tough, a

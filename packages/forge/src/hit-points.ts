@@ -84,6 +84,8 @@ export function hitPointLevelsFor(state: BuilderState): HitPointLevel[] {
  */
 export function hitPointsInputFor(state: BuilderState): HitPointsInput | null {
   const bonus = hitPointBonusesFor(state).reduce((sum, entry) => sum + entry.amount, 0);
+  // The whole die at every level asks nothing of the player and has nothing to carry but the rule.
+  if (state.hpMethod === "max") return { method: "max", rolls: [], ...(bonus > 0 ? { bonus } : {}) };
   const levels = state.hpMethod === "rolled" ? hitPointLevelsFor(state) : [];
 
   if (!levels.length && bonus === 0) return null;

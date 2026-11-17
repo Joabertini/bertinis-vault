@@ -58,12 +58,15 @@ export function calculateArmorClass(input: {
  * records the result — so the builder has to be able to say which, or every
  * character who rolled has a wrong number on their sheet.
  *
+ * Many tables add a third: the whole die at every level, which is the first
+ * level's rule applied to all of them (`max`).
+ *
  * The first level is neither: it is the die's maximum, never rolled. And it is
  * the *character's* first level rather than each class's, which is the whole
  * of the multiclassing rule on the subject — a wizard 5 who takes a level of
  * fighter rolls for it like any other.
  */
-export type HitPointMethod = "average" | "rolled";
+export type HitPointMethod = "average" | "rolled" | "max";
 
 /** The fixed number a class prints for a level after the first. */
 export function averageHitPointsPerLevel(hitDie: number): number {
@@ -103,7 +106,7 @@ export function hitPointsFor(input: {
       typeof written === "number" && Number.isInteger(written) && written >= 1 && written <= die
         ? written
         : null;
-    const gained = at === 0 ? die : (rolled ?? averageHitPointsPerLevel(die));
+    const gained = at === 0 || input.method === "max" ? die : (rolled ?? averageHitPointsPerLevel(die));
 
     total += Math.max(gained + input.constitutionModifier, 1);
   });

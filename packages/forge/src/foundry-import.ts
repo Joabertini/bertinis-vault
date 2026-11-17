@@ -136,7 +136,7 @@ function editionOf(items: ActorItem[]): RulesVersion {
  * too. `"max"` is stored as the die's maximum: not a roll, but what happened.
  */
 function hitPointsFromClass(classItem: ActorItem | undefined): {
-  hpMethod: "average" | "rolled";
+  hpMethod: "average" | "rolled" | "max";
   hpRolls: Record<string, number>;
 } {
   const system = classItem?.system as
@@ -150,6 +150,10 @@ function hitPointsFromClass(classItem: ActorItem | undefined): {
       typeof row === "object" && row !== null && (row as { type?: string }).type === "HitPoints",
   );
   if (!entry?.value) return { hpMethod: "average", hpRolls: {} };
+
+  // Every level after the first marked "max" is the table's max rule, not a run of lucky rolls.
+  const later = Object.entries(entry.value).filter(([level]) => level !== "1");
+  if (later.length && later.every(([, gained]) => gained === "max")) return { hpMethod: "max", hpRolls: {} };
 
   const die = Number(String(system?.hd?.denomination ?? "").replace(/^d/i, ""));
   const hpRolls: Record<string, number> = {};
