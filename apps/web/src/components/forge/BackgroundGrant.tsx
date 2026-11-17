@@ -20,7 +20,9 @@
 
 import { motion } from "framer-motion";
 
-import type { RulesVersion } from "@bertinis-vault/vetools-ref";
+import { useInfo } from "@/components/info/info-context";
+
+import { CORE_SOURCES, getSourceMeta, type RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import {
   featChoiceForBackground,
@@ -98,6 +100,7 @@ export default function BackgroundGrant({
       {feat &&
         (feat.options.length > 1 ? (
           <FeatChoice
+            rulesVersion={rulesVersion}
             options={feat.options}
             value={featId}
             accent={accent}
@@ -144,49 +147,114 @@ export default function BackgroundGrant({
  * and a question with no way back to unanswered is a trap.
  */
 function FeatChoice({
+  rulesVersion,
   options,
   value,
   accent,
   onPick,
 }: {
-  options: { name: string; qualifier?: string }[];
+  rulesVersion: RulesVersion;
+  options: { name: string; source?: string; qualifier?: string }[];
   value: string;
   accent: string;
   onPick: (id: string) => void;
 }) {
+  const info = useInfo();
+  const groups = groupBySource(options, rulesVersion);
+
   return (
     <div>
       <p className="mb-2 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
         Elegis una dote
       </p>
-      <div className="flex flex-wrap gap-1.5">
-        {options.map((option) => {
-          const id = slugOf(option.name);
-          const chosen = id === value;
+      <div className="space-y-5">
+        {groups.map((group) => (
+          <div key={group.source}>
+            <div className="mb-1.5 flex items-baseline gap-2.5 border-b border-iron/30 pb-1">
+              <span className="font-mono text-[12px] uppercase tracking-[0.08em]" style={{ color: accent }}>
+                {group.source}
+              </span>
+              <span className="flex-1 font-body text-sm text-bone">{group.title}</span>
+              <span className="font-mono text-[12px] text-bone/50">{group.options.length}</span>
+            </div>
+            <div className="grid gap-0.5 sm:grid-cols-2">
+              {group.options.map((option) => {
+                const id = slugOf(option.name);
+                const chosen = id === value;
 
-          return (
-            <button
-              key={id}
-              type="button"
-              aria-pressed={chosen}
-              onClick={() => onPick(chosen ? "" : id)}
-              className="border px-2.5 py-1 font-body text-[15px] transition-colors"
-              style={
-                chosen
-                  ? { borderColor: accent, background: `${accent}1f`, color: accent }
-                  : { borderColor: "rgba(74,70,64,0.7)", color: "#FFFFFF" }
-              }
-            >
-              {featOptionLabel(option)}
-            </button>
-          );
-        })}
+                return (
+                  <button
+                    key={`${id}:${option.qualifier ?? ""}`}
+                    type="button"
+                    aria-pressed={chosen}
+                    onClick={() => {
+                      // Touching a feat also says what it does: the choice is blind otherwise.
+                      info.show({ kind: "feat", name: option.name, ...(option.source ? { source: option.source } : {}) });
+                      onPick(chosen ? "" : id);
+                    }}
+                    className="flex items-center gap-3 border-l-2 px-3 py-1.5 text-left transition-colors"
+                    style={{
+                      borderLeftColor: chosen ? accent : "transparent",
+                      background: chosen ? `${accent}1f` : "transparent",
+                    }}
+                  >
+                    <span
+                      className="flex h-3.5 w-3.5 shrink-0 items-center justify-center border text-[13px]"
+                      style={{ borderColor: chosen ? accent : "#5A5A5A", color: accent }}
+                    >
+                      {chosen ? "✦" : ""}
+                    </span>
+                    <span
+                      className="font-body text-[15px]"
+                      style={{ color: chosen ? accent : "#FFFFFF" }}
+                    >
+                      {featOptionLabel(option)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Says why the next chamber is closed, which is otherwise invisible. */}
       {!value && <p className={`mt-2 ${WHISPER}`}>Elegi una para seguir.</p>}
     </div>
   );
+}
+
+/** Titles for the sources the generated table does not carry. */
+const EXTRA_SOURCE_TITLES: Record<string, string> = {
+  FRHOF: "Forgotten Realms: Heroes of Faerûn",
+  SATO: "Sigil and the Outlands",
+  DSOTDQ: "Dragonlance: Shadow of the Dragon Queen",
+};
+
+/**
+ * The options grouped by the book they come from: the edition's own handbook
+ * first, then the rest from the newest book to the oldest, each book A to Z.
+ */
+function groupBySource<T extends { name: string; source?: string }>(options: T[], rulesVersion: RulesVersion) {
+  const bySource = new Map<string, T[]>();
+  for (const option of options) {
+    const source = option.source ?? "—";
+    bySource.set(source, [...(bySource.get(source) ?? []), option]);
+  }
+  const core = CORE_SOURCES[rulesVersion];
+
+  return [...bySource.entries()]
+    .map(([source, list]) => ({
+      source,
+      title: getSourceMeta(source)?.full ?? EXTRA_SOURCE_TITLES[source] ?? source,
+      date: getSourceMeta(source)?.date ?? "",
+      options: [...list].sort((a, b) => a.name.localeCompare(b.name)),
+    }))
+    .sort((a, b) => {
+      const ca = core.includes(a.source) ? 0 : 1;
+      const cb = core.includes(b.source) ? 0 : 1;
+      return ca - cb || b.date.localeCompare(a.date) || a.source.localeCompare(b.source);
+    });
 }
 
 /**
