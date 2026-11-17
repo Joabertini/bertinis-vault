@@ -56,18 +56,40 @@ const magical = (row: IconItemRow) => !!row.rarity && row.rarity !== "none" && r
 /*  Items                                                                     */
 /* -------------------------------------------------------------------------- */
 
-/** Weapons, by what their name says. The last rule is the catch-all: a blade. */
+/**
+ * Weapons, by what their name says: each kind its own drawing, so a longsword,
+ * a shortsword and a rapier are three different blades. The last rule is the
+ * catch-all, a blade. A magic blade wears the magic mark instead of its shape.
+ */
 const WEAPONS: [RegExp, (row: IconItemRow) => IconKey][] = [
   [/\bstaff\b|\brod\b/, () => "staff"],
   [/dagger|knife|dirk|sickle|shiv|\bdarts?\b/, (r) => (magical(r) ? "magic-dagger" : "dagger")],
-  [/axe|halberd|glaive|poleax|labrys/, () => "axe"],
-  [/mace|flail|morningstar|club|scepter|quarterstaff/, () => "mace"],
-  [/hammer|maul|war pick|\bpick\b|trident/, () => "hammer"],
+  [/greataxe/, () => "axe"],
+  [/battleaxe/, () => "battleaxe"],
+  [/handaxe|hatchet/, () => "handaxe"],
+  [/halberd|glaive|poleaxe|voulge|labrys/, () => "halberd"],
+  [/\baxe\b/, () => "axe-d"],
+  [/warhammer/, () => "warhammer"],
+  [/\bmaul\b|great ?hammer/, () => "hammer-heavy"],
+  [/hammer/, () => "hammer"],
+  [/war pick|\bpick\b/, () => "pickaxe"],
+  [/trident/, () => "trident"],
+  [/flail/, () => "flail"],
+  [/mace|morningstar|morning star|scepter/, () => "mace"],
+  [/club|quarterstaff/, () => "club"],
   [/\b(spear|lance|javelin|pike)s?\b/, () => "spear"],
+  [/hand crossbow|heavy crossbow/, () => "crossbow-d"],
   [/crossbow|musket|pistol|firearm|rifle|\bgun\b/, () => "crossbow"],
-  [/bow|sling|blowgun/, () => "bow"],
+  [/longbow/, () => "bow-long"],
+  [/sling/, () => "sling"],
+  [/boomerang/, () => "boomerang"],
+  [/bow|blowgun/, () => "bow"],
   [/whip|\bnet\b/, () => "whip"],
-  [/.*/, (r) => (magical(r) ? "magic-sword" : "sword")],
+  [/greatsword|claymore|zweih/, (r) => (magical(r) ? "magic-sword" : "greatsword")],
+  [/rapier|estoc/, (r) => (magical(r) ? "magic-sword" : "sword-rapier")],
+  [/shortsword|short sword|gladius/, (r) => (magical(r) ? "magic-sword" : "sword-short")],
+  [/scimitar|sabre|saber|cutlass|falchion|katana/, (r) => (magical(r) ? "magic-sword" : "sword")],
+  [/.*/, (r) => (magical(r) ? "magic-sword" : "sword-long")],
 ];
 
 type Rule = { when: RegExp; types: string[]; key: (row: IconItemRow) => IconKey };
@@ -78,16 +100,38 @@ const GENERAL: Rule[] = [
   { types: ["RD"], when: /\brod\b/, key: () => "staff" },
   { types: ["WD"], when: /wand/, key: () => "wand" },
   { types: ["SCF"], when: /amulet|necklace|pendant|periapt|medallion|talisman|brooch|locket|holy symbol|emblem|badge|medal|choker|torc/, key: (r) => pick(["amulet", "amulet-green"], r.name) },
-  { types: ["S"], when: /shield|buckler/, key: () => "shield" },
+  {
+    types: ["S"],
+    when: /shield|buckler/,
+    key: (r) =>
+      /buckler|wooden|round/i.test(r.name)
+        ? "shield-round"
+        : /spiked|tower|wall/i.test(r.name)
+          ? "shield-spiked"
+          : /^shield$/i.test(r.name.trim())
+            ? "shield"
+            : pick(["shield", "shield-round", "shield-heraldic", "shield-spiked"], r.name),
+  },
   {
     types: ["LA", "MA", "HA"],
     when: /armor|armour|mail|plate|breastplate|hide|cuirass|robe\b|cloak|cape|mantle|vestment|tunic/,
-    key: (r) => (/robe|cloak|cape|mantle|vestment|tunic/i.test(r.name) ? "cloak" : pick(["armor", "armor-cloth", "armor-dark", "armor-leather"], r.name)),
+    key: (r) => {
+      const n = r.name.toLowerCase();
+      if (/robe|cloak|cape|mantle|vestment|tunic/.test(n)) return "cloak";
+      if (/half plate/.test(n)) return "armor-gold";
+      if (/\bplate\b|splint/.test(n)) return "armor-silver";
+      if (/chain|ring mail/.test(n)) return "armor";
+      if (/scale|breastplate|cuirass/.test(n)) return "armor-heavy";
+      if (/studded/.test(n)) return "armor-dark";
+      if (/padded|hide/.test(n)) return "armor-cloth";
+      if (/leather/.test(n)) return "armor-leather";
+      return pick(["armor", "armor-heavy", "armor-dark", "armor-leather"], r.name);
+    },
   },
   { types: ["RG"], when: /\bring\b|signet/, key: (r) => pick(["ring", "ring-green", "ring-magic"], r.name) },
   { types: ["P"], when: /potion|elixir|philter|oil of|antitoxin|draught|tonic|holy water|brew|poison|acid/, key: (r) => pick(["potion-red", "potion-blue", "potion-yellow", "potion-green", "potion-pink"], r.name) },
   { types: ["SC"], when: /scroll|parchment|letter/, key: (r) => pick(["scroll", "scroll-red", "scroll-green"], r.name) },
-  { types: [], when: /helm|\bhat\b|crown|circlet|\bcap\b|mask|hood|headband|diadem|tiara/, key: (r) => (/crown|circlet|diadem|tiara/i.test(r.name) ? "crown" : /hood/i.test(r.name) ? "hood" : /hat\b/i.test(r.name) ? "hat" : pick(["helm", "helmet-gold"], r.name)) },
+  { types: [], when: /helm|\bhat\b|crown|circlet|\bcap\b|mask|hood|headband|diadem|tiara/, key: (r) => (/crown|circlet|diadem|tiara/i.test(r.name) ? "crown" : /hood/i.test(r.name) ? "hood" : /hat\b/i.test(r.name) ? "hat" : /leather|\bcap\b/i.test(r.name) ? "helmet-leather" : pick(["helm", "helmet", "helmet-gold"], r.name)) },
   { types: [], when: /cloak|\bcape\b|mantle|\brobes?\b|vestment/, key: () => "cloak" },
   { types: [], when: /boots|shoes|slippers|sandals/, key: (r) => pick(["boots", "boots-plate"], r.name) },
   { types: [], when: /gloves?|gauntlets?|bracers?|bracelet|armlet/, key: (r) => pick(["gloves", "gloves-plate", "glove"], r.name) },

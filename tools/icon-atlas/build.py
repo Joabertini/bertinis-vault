@@ -57,6 +57,11 @@ DRUM = {
     "venom": "icon_venom", "legarmor": "icon_legarmor", "glove": "icon_glove", "ring-magic": "icon_ringmagic",
     "frostball": "icon_frostball", "spell-heal-d": "icon_spellheal", "book-holy-d": "icon_bookholy",
     "armor-gold": "icon_armorgold", "sword-blood": "icon_swordblood", "hammer-heavy": "icon_hammerheavy",
+    # Una pieza distinta por tipo de arma, escudo y armadura: un florete no se ve como un mandoble.
+    "sword-short": "icon_sword", "sword-long": "icon_sword2", "sword-rapier": "icon_sword2better",
+    "axe-d": "icon_axe", "bow-long": "icon_bow", "shield-round": "icon_shield", "shield-spiked": "icon_shield2",
+    "shield-heraldic": "icon_shield3", "armor-heavy": "icon_armor", "armor-silver": "icon_armorsilver",
+    "helmet": "icon_helmet", "helmet-leather": "icon_helmetleather",
 }
 # --- Painterly Spell Icons, J. W. Bjerk (CC-BY 3.0): un color por motivo. ---
 PAINT = {
@@ -73,6 +78,8 @@ SIL = {
     "lantern": "lorc/lantern", "instrument": "delapouite/harp", "drum": "delapouite/drum", "horn": "delapouite/bagpipes",
     "mount": "delapouite/horse-head", "saddle": "delapouite/saddle", "ship": "delapouite/sailboat", "wagon": "delapouite/old-wagon",
     "cards": "delapouite/card-joker", "dice": "delapouite/dice-six-faces-five", "explosive": "delapouite/dynamite",
+    "club": "delapouite/wood-club", "halberd": "lorc/halberd", "trident": "lorc/trident", "flail": "delapouite/flail",
+    "sling": "delapouite/slingshot", "boomerang": "delapouite/boomerang", "scythe": "lorc/scythe",
     "magic-item": "delapouite/sparkles", "orb": "lorc/crystal-ball", "camp": "delapouite/camping-tent", "campfire": "lorc/campfire",
     "hourglass": "lorc/hourglass", "backpack": "delapouite/backpack", "quill": "lorc/quill-ink", "mortar": "delapouite/mortar",
     "crown": "lorc/crown", "cape": "delapouite/cape", "money": "delapouite/money-stack", "lockpicks": "delapouite/lockpicks",

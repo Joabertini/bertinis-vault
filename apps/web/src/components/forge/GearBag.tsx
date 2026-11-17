@@ -113,7 +113,7 @@ export default function GearBag({
                         : "Sacar de la mochila"
                     }
                   >
-                    <GameIcon icon={itemIconKey(facts?.row ?? { name: nameFor(id, rulesVersion) })} size={24} />
+                    <GameIcon icon={itemIconKey(facts?.row ?? { name: nameFor(id, rulesVersion) })} size={29} />
                     <span
                       className="font-body text-[15px]"
                       style={{ color: facts?.magic ? RARITY_TINT[facts.rarity] : accent }}

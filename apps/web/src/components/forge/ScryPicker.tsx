@@ -93,7 +93,7 @@ export default function ScryPicker({
                 }}
               >
                 <span className="flex min-w-0 items-center gap-3">
-                  {iconFor && <GameIcon icon={iconFor(entry)} size={28} />}
+                  {iconFor && <GameIcon icon={iconFor(entry)} size={33} />}
                   <span
                     className={ITEM_NAME}
                     style={{ color: active ? accent : "#FFFFFF" }}

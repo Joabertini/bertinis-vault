@@ -42,9 +42,15 @@ describe("items", () => {
   const row = (name: string, extra: Partial<IconItemRow> = {}): IconItemRow => ({ name, ...extra });
 
   it("read by what they are", () => {
-    expect(itemIconKey(row("Longsword", { type: "M|XPHB", weaponCategory: "martial" }))).toBe("sword");
-    expect(itemIconKey(row("Rapier", { type: "M|XPHB", weaponCategory: "martial" }))).toBe("sword");
-    expect(itemIconKey(row("Handaxe", { type: "M|XPHB", weaponCategory: "simple" }))).toBe("axe");
+    expect(itemIconKey(row("Longsword", { type: "M|XPHB", weaponCategory: "martial" }))).toBe("sword-long");
+    expect(itemIconKey(row("Shortsword", { type: "M|XPHB", weaponCategory: "martial" }))).toBe("sword-short");
+    expect(itemIconKey(row("Rapier", { type: "M|XPHB", weaponCategory: "martial" }))).toBe("sword-rapier");
+    expect(itemIconKey(row("Greatsword", { type: "M|XPHB", weaponCategory: "martial" }))).toBe("greatsword");
+    expect(itemIconKey(row("Handaxe", { type: "M|XPHB", weaponCategory: "simple" }))).toBe("handaxe");
+    expect(itemIconKey(row("Battleaxe", { type: "M|XPHB", weaponCategory: "martial" }))).toBe("battleaxe");
+    expect(itemIconKey(row("Warhammer", { type: "M|XPHB", weaponCategory: "martial" }))).toBe("warhammer");
+    expect(itemIconKey(row("Plate Armor", { type: "HA|XPHB" }))).toBe("armor-silver");
+    expect(itemIconKey(row("Leather Armor", { type: "LA|XPHB" }))).toBe("armor-leather");
     expect(itemIconKey(row("Light Crossbow", { type: "R|XPHB", weaponCategory: "simple" }))).toBe("crossbow");
     expect(itemIconKey(row("Longbow", { type: "R|XPHB", weaponCategory: "martial" }))).toBe("bow");
     expect(itemIconKey(row("Spear", { type: "M|XPHB", weaponCategory: "simple" }))).toBe("spear");
@@ -63,6 +69,12 @@ describe("items", () => {
     expect(itemIconKey(row("Dagger of Venom", { type: "M|DMG", weaponCategory: "simple", rarity: "rare" }))).toBe(
       "magic-dagger",
     );
+  });
+
+  it("tell the common blades apart", () => {
+    const blades = ["Longsword", "Shortsword", "Rapier", "Greatsword", "Scimitar", "Handaxe", "Battleaxe", "Greataxe"];
+    const keys = blades.map((name) => itemIconKey(row(name, { type: "M|XPHB", weaponCategory: "martial" })));
+    expect(new Set(keys).size).toBe(blades.length);
   });
 
   it("always wear the same variant", () => {
