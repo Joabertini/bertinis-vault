@@ -10,6 +10,12 @@
  * at 56px on an open tome without a second asset.
  */
 
+import ClassSigil, { hasClassSigil } from "./ClassSigil";
+
+/**
+ * The old hand-drawn class marks. A class with a sigil of the canon (`ClassSigil`)
+ * never reaches these; they stay for a name the canon does not know.
+ */
 const CLASS_PATHS: Record<string, React.ReactNode> = {
   fighter: (
     <>
@@ -232,6 +238,9 @@ export default function Sigil({
   size?: number;
   className?: string;
 }) {
+  // A D&D class always wears the canon: one shape and one colour per class, everywhere.
+  if (hasClassSigil(name)) return <ClassSigil classId={name} size={size} className={className} />;
+
   const art = CLASS_PATHS[name] ?? RACE_PATHS[name] ?? DEFAULT;
 
   return (

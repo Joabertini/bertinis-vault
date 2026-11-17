@@ -46,6 +46,12 @@ function paintSigil(x: CanvasRenderingContext2D, sigil: RoleSigil, cx: number, c
   x.arc(cx, cy, radius, 0, Math.PI * 2);
   x.fill();
 
+  if (sigil.art) {
+    paintArt(x, sigil.art, cx, cy, radius);
+    x.restore();
+    return;
+  }
+
   const scale = (sigil.fills ? radius * 2 : radius * 1.6) / 512;
   x.translate(cx - 256 * scale, cy - 256 * scale);
   x.scale(scale, scale);
@@ -62,6 +68,48 @@ function paintSigil(x: CanvasRenderingContext2D, sigil: RoleSigil, cx: number, c
     x.globalAlpha = 1;
   }
   x.restore();
+}
+
+/**
+ * The canon sigil on the canvas: the same strokes, rings and glow as `ClassSigil`,
+ * so the book on the shelf and the mark in the Forge are one drawing.
+ */
+function paintArt(x: CanvasRenderingContext2D, art: NonNullable<RoleSigil["art"]>, cx: number, cy: number, radius: number) {
+  // The rings reach a radius of ~340 around (256, 256).
+  const scale = radius / 350;
+  x.translate(cx - 256 * scale, cy - 256 * scale);
+  x.scale(scale, scale);
+  x.lineCap = "round";
+  x.lineJoin = "round";
+  x.shadowColor = art.color;
+
+  x.shadowBlur = 30;
+  x.globalAlpha = 0.55;
+  x.strokeStyle = art.color;
+  x.lineWidth = 3;
+  x.stroke(new Path2D(art.rings));
+  x.globalAlpha = 1;
+
+  if (art.fillCircle) {
+    x.beginPath();
+    x.arc(256, 256, 296, 0, Math.PI * 2);
+    x.clip();
+    x.translate(256, 256);
+    x.scale(art.fillCircle, art.fillCircle);
+    x.translate(-256, -256);
+  }
+  const glyph = new Path2D(art.glyph);
+  // Twice with a wide glow, then the sharp stroke and its light core.
+  for (const blur of [60, 24]) {
+    x.shadowBlur = blur;
+    x.strokeStyle = art.color;
+    x.lineWidth = 11;
+    x.stroke(glyph);
+  }
+  x.shadowBlur = 0;
+  x.strokeStyle = art.core;
+  x.lineWidth = 3.85;
+  x.stroke(glyph);
 }
 
 /** `drawImage` source rectangle that fills the cover from the middle of the picture. */

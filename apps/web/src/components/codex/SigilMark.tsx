@@ -1,3 +1,4 @@
+import { SigilArt } from "@/components/sigils/ClassSigil";
 import type { RoleSigil } from "@/lib/role-sigil";
 
 /**
@@ -11,6 +12,8 @@ import type { RoleSigil } from "@/lib/role-sigil";
  * disagree.
  */
 export default function SigilMark({ sigil, size = 96 }: { sigil: RoleSigil; size?: number }) {
+  // A D&D class wears the canon; the filled glyph stays for a class it does not know.
+  if (sigil.art) return <SigilArt art={sigil.art} size={size} label={`Sigilo de ${sigil.name}`} />;
   const scale = sigil.fills ? 1 : 0.8;
   const offset = 256 - 256 * scale;
   return (
