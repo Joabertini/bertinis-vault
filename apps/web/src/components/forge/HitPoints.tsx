@@ -32,7 +32,7 @@ export default function HitPoints({
   onPickMethod,
   onRoll,
 }: {
-  method: "average" | "rolled";
+  method: "average" | "rolled" | "max";
   /** Every level with a roll to record, which is every level after the first. */
   levels: HitPointLevel[];
   /** The die of the class taken at level 1, which is granted at maximum. */
@@ -40,7 +40,7 @@ export default function HitPoints({
   constitutionModifier: number;
   classLabel: (classId: string) => string;
   accent: string;
-  onPickMethod: (method: "average" | "rolled") => void;
+  onPickMethod: (method: "average" | "rolled" | "max") => void;
   onRoll: (level: number, roll: number | null) => void;
 }) {
   const [rolling, setRolling] = useState<number | null>(null);
@@ -65,7 +65,8 @@ export default function HitPoints({
         <RuleNote title="Puntos de golpe">
           <p>
             El nivel 1 es siempre el dado al maximo. Cada nivel despues suma la mitad del dado
-            mas uno, o lo que salga si preferis tirarlo.
+            mas uno, o lo que salga si preferis tirarlo. Algunas mesas dan el dado entero en cada
+            nivel: eso es vida maxima.
           </p>
           <p>A todos los niveles se les suma tu modificador de Constitucion.</p>
         </RuleNote>
@@ -76,6 +77,7 @@ export default function HitPoints({
           [
             ["average", "Promedio", "el numero fijo que imprime la clase"],
             ["rolled", "Tirada", "lo que salio en la mesa"],
+            ["max", "Maxima", "el dado entero en cada nivel"],
           ] as const
         ).map(([value, label, hint]) => (
           <button
@@ -98,6 +100,10 @@ export default function HitPoints({
       {method === "average" ? (
         <p className={WHISPER}>
           Nivel 1: d{firstDie} al maximo {signed(constitutionModifier)}.
+        </p>
+      ) : method === "max" ? (
+        <p className={WHISPER}>
+          Cada nivel: el dado de su clase al maximo {signed(constitutionModifier)}.
         </p>
       ) : (
         <div className="space-y-2">
