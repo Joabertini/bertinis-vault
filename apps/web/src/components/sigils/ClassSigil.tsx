@@ -84,7 +84,8 @@ export function SigilArt({
         </filter>
         {art.fillCircle && (
           <clipPath id={`clip${uid}`}>
-            <circle cx="256" cy="256" r="296" />
+            {/* Inside the rings with them; at the box's edge without, so a small sigil stays its size. */}
+            <circle cx="256" cy="256" r={withRings ? 296 : 256} />
           </clipPath>
         )}
       </defs>
