@@ -199,6 +199,10 @@ describe("el oro inicial", () => {
       subclassId: "",
       level: 1,
       kitChoices: { [coinRow!.key]: coinOption!.key },
+      // Bolsa vacia: lo que se agrega a mano se paga con este oro (purse.test.ts).
+      weaponId: "",
+      armorId: "",
+      extraEquipmentText: "",
     });
 
     expect(snapshot.choices.startingCopper).toBe(coinOption!.copper);

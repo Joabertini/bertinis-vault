@@ -41,7 +41,7 @@ import { hitPointsInputFor } from "./hit-points";
 import { levelBonusesFor, levelFeatsFor } from "./level-choices";
 export { backgroundFeatIdsFor } from "./feats";
 import { foundrySizeFor } from "./table-numbers";
-import { kitCopper, startingKitFor, takenOptions } from "./starting-kit";
+import { purseFor } from "./purse";
 import { masteryPlanFor } from "./weapon-mastery";
 import {
   getArmorCatalogEntry,
@@ -594,18 +594,16 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
    */
   const attuned = new Set(state.attunedItemIds);
   /*
-   * The coins the kit is worth, from the rows the character actually took.
+   * The coins the character walks out with: what the kit is worth, minus what
+   * the player bought with it.
    *
    * A player who takes the money instead of the gear picks an option with no
    * items on it: reading only what landed in the bag would find nothing and
-   * give them neither the gear nor the money.
+   * give them neither the gear nor the money. And one who takes the money and
+   * then fills the bag by hand has spent it; `purseFor` says how much. A purse
+   * below zero exports as empty — the Forge has already said it out loud.
    */
-  const startingCopper = kitCopper(
-    takenOptions(
-      startingKitFor(state.classId, state.backgroundId, rulesVersionOf(state)),
-      state.kitChoices,
-    ),
-  );
+  const startingCopper = Math.max(0, purseFor(state, rulesVersionOf(state)).balanceCopper);
 
   const expertiseTaken = expertisePlanFor(state, rulesVersionOf(state)).doubled;
 
