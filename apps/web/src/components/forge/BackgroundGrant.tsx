@@ -29,6 +29,7 @@ import {
   slugOf,
   startingEquipmentForBackground,
 } from "@/lib/index-options";
+import { featBenefitsFor, type FeatBenefit } from "@/lib/feats";
 import { WHISPER } from "@/styles/recipes";
 
 export default function BackgroundGrant({
@@ -38,6 +39,8 @@ export default function BackgroundGrant({
   accent,
   featId,
   onPickFeat,
+  benefit = "",
+  onPickBenefit,
 }: {
   backgroundId: string;
   rulesVersion: RulesVersion;
@@ -46,6 +49,9 @@ export default function BackgroundGrant({
   /** The feat already answered for, empty while the question is open. */
   featId: string;
   onPickFeat: (id: string) => void;
+  /** The benefit chosen for the granted feat, when the feat asks for one. */
+  benefit?: string;
+  onPickBenefit?: (featId: string, name: string) => void;
 }) {
   const grant = proficiencyGrantForBackground(backgroundId, rulesVersion, sourceBook);
   const feat = featChoiceForBackground(backgroundId, rulesVersion, sourceBook);
@@ -96,6 +102,23 @@ export default function BackgroundGrant({
         ) : (
           <Line label="Dote" accent={accent} items={feat.options.map(featOptionLabel)} />
         ))}
+
+      {/* A granted feat that asks its own question, like Strike of the Giants. */}
+      {feat &&
+        onPickBenefit &&
+        (() => {
+          const grantedId =
+            feat.options.length === 1 ? slugOf((feat.options[0] as { name: string }).name) : featId;
+          const benefits = grantedId ? featBenefitsFor(grantedId) : [];
+          return benefits.length > 0 ? (
+            <BenefitChoice
+              benefits={benefits}
+              value={benefit}
+              accent={accent}
+              onPick={(name) => onPickBenefit(grantedId, name)}
+            />
+          ) : null;
+        })()}
 
       {gear.length > 0 && (
         <Line label="Equipo inicial" accent={accent} items={gear} muted />
@@ -158,6 +181,60 @@ function FeatChoice({
 
       {/* Says why the next chamber is closed, which is otherwise invisible. */}
       {!value && <p className={`mt-2 ${WHISPER}`}>Elegi una para seguir.</p>}
+    </div>
+  );
+}
+
+/**
+ * The benefit a granted feat makes the player pick.
+ *
+ * Same buttons as the feat choice above, for the same reason: it is a
+ * question, and the chamber stays closed until it is answered.
+ */
+function BenefitChoice({
+  benefits,
+  value,
+  accent,
+  onPick,
+}: {
+  benefits: FeatBenefit[];
+  value: string;
+  accent: string;
+  onPick: (name: string) => void;
+}) {
+  return (
+    <div>
+      <p className="mb-2 font-mono text-[13px] uppercase tracking-[0.1em] text-bone">
+        Elegis el beneficio de la dote
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {benefits.map((entry) => {
+          const chosen = entry.name === value;
+
+          return (
+            <button
+              key={entry.name}
+              type="button"
+              aria-pressed={chosen}
+              title={entry.summary}
+              onClick={() => onPick(chosen ? "" : entry.name)}
+              className="border px-2.5 py-1 font-body text-[15px] transition-colors"
+              style={
+                chosen
+                  ? { borderColor: accent, background: `${accent}1f`, color: accent }
+                  : { borderColor: "rgba(74,70,64,0.7)", color: "#FFFFFF" }
+              }
+            >
+              {entry.name}
+            </button>
+          );
+        })}
+      </div>
+      {value ? (
+        <p className={`mt-2 ${WHISPER}`}>{benefits.find((entry) => entry.name === value)?.summary}</p>
+      ) : (
+        <p className={`mt-2 ${WHISPER}`}>Elegi uno para seguir.</p>
+      )}
     </div>
   );
 }
