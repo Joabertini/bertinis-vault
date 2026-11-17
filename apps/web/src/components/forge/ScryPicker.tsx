@@ -11,8 +11,10 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
+import GameIcon from "@/components/icons/GameIcon";
 import { useInfo } from "@/components/info/info-context";
 import type { CatalogEntry } from "@/lib/catalog";
+import type { IconKey } from "@/lib/icons";
 import type { RulesKind } from "@/lib/rules-text";
 import { ITEM_META, ITEM_NAME } from "@/styles/recipes";
 
@@ -25,6 +27,7 @@ export default function ScryPicker({
   accent,
   emptyHint,
   infoKind,
+  iconFor,
 }: {
   label: string;
   placeholder: string;
@@ -36,6 +39,8 @@ export default function ScryPicker({
   emptyHint?: string;
   /** What a row is, so the info panel can show it. Without it rows say nothing to the panel. */
   infoKind?: RulesKind;
+  /** The icon a row wears. Without it rows are text only. */
+  iconFor?: (entry: CatalogEntry) => IconKey;
 }) {
   const info = useInfo();
   const [query, setQuery] = useState("");
@@ -81,17 +86,20 @@ export default function ScryPicker({
                   onPick(entry);
                   if (infoKind) info.show({ kind: infoKind, name: entry.label, source: entry.source });
                 }}
-                className="flex w-full items-baseline justify-between gap-4 border-l-2 px-4 py-2.5 text-left transition-colors"
+                className="flex w-full items-center justify-between gap-4 border-l-2 px-4 py-2.5 text-left transition-colors"
                 style={{
                   borderLeftColor: active ? accent : "transparent",
                   background: active ? `${accent}12` : "transparent",
                 }}
               >
-                <span
-                  className={ITEM_NAME}
-                  style={{ color: active ? accent : "#FFFFFF" }}
-                >
-                  {entry.label}
+                <span className="flex min-w-0 items-center gap-3">
+                  {iconFor && <GameIcon icon={iconFor(entry)} size={33} />}
+                  <span
+                    className={ITEM_NAME}
+                    style={{ color: active ? accent : "#FFFFFF" }}
+                  >
+                    {entry.label}
+                  </span>
                 </span>
                 <span className={ITEM_META}>
                   {entry.source}

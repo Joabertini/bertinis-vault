@@ -14,9 +14,11 @@ import type { GearLine } from "@/lib/gear-lines";
 import { collapseGearLines } from "@/lib/gear-lines";
 import { motion, AnimatePresence } from "framer-motion";
 
+import GameIcon from "@/components/icons/GameIcon";
 import RarityScry from "@/components/forge/RarityScry";
 import type { CatalogEntry } from "@/lib/catalog";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
+import { itemIconKey } from "@/lib/icons";
 import { RARITY_LABEL, RARITY_TINT, factsFor, nameFor } from "@/lib/item-facts";
 
 export default function GearBag({
@@ -61,6 +63,7 @@ export default function GearBag({
   return (
     <div>
       <RarityScry
+        rulesVersion={rulesVersion}
         label="Buscar equipo"
         placeholder="Buscar por nombre, o recorre la lista…"
         search={search}
@@ -110,6 +113,7 @@ export default function GearBag({
                         : "Sacar de la mochila"
                     }
                   >
+                    <GameIcon icon={itemIconKey(facts?.row ?? { name: nameFor(id, rulesVersion) })} size={29} />
                     <span
                       className="font-body text-[15px]"
                       style={{ color: facts?.magic ? RARITY_TINT[facts.rarity] : accent }}

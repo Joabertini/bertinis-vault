@@ -99,6 +99,7 @@ export default function GearChamber({
         </p>
         <RarityScry
           infoKind="item"
+          rulesVersion={rulesVersion}
           label="Buscar arma"
           placeholder="Buscar arma…"
           search={weaponSearch}
@@ -119,6 +120,7 @@ export default function GearChamber({
         <p className={WHISPER_MB4}>Dejala vacia para ir sin armadura.</p>
         <RarityScry
           infoKind="item"
+          rulesVersion={rulesVersion}
           label="Buscar armadura"
           placeholder="Buscar armadura o escudo…"
           search={armorSearch}
