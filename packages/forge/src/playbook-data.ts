@@ -30,6 +30,13 @@ export type PlayNote = {
   resource?: string;
   /** The ones worth reading first. */
   highlight?: boolean;
+  /**
+   * An optional-feature pool this note is about, by its 5etools code ("RN"
+   * for runes). The note then names the ones the character chose instead of
+   * the whole list: a Rune Knight knows two runes at level 3, and a reminder
+   * that lists all six reminds them of four they do not have.
+   */
+  chosenFrom?: string;
 };
 
 export type SubclassNotes = {
@@ -213,13 +220,14 @@ export const CLASS_NOTES: Record<string, ClassNotes> = {
         "extra": [
           {
             "name": "Rune Carving",
-            "desc": "Runas en equipo: Fire, Frost, Stone, Storm, Hill, Cloud.",
+            "desc": "Runas en equipo: elegilas en Talentos.",
+            "chosenFrom": "RN",
             "highlight": true
           },
           {
             "name": "Giant's Might",
-            "resource": "STR mod / descanso largo",
-            "desc": "BA: tamaño Large, ventaja en STR, +1d6 o 1d8 daño."
+            "resource": "Bonif. de competencia / descanso largo",
+            "desc": "BA, 1 minuto: tamaño Large, ventaja en pruebas y salvaciones de FUE, +1d6 de daño una vez por turno (1d8 a nivel 10, 1d10 a nivel 18)."
           }
         ]
       }
