@@ -52,7 +52,8 @@ describe("items", () => {
     expect(itemIconKey(row("Plate Armor", { type: "HA|XPHB" }))).toBe("armor-silver");
     expect(itemIconKey(row("Leather Armor", { type: "LA|XPHB" }))).toBe("armor-leather");
     expect(itemIconKey(row("Light Crossbow", { type: "R|XPHB", weaponCategory: "simple" }))).toBe("crossbow");
-    expect(itemIconKey(row("Longbow", { type: "R|XPHB", weaponCategory: "martial" }))).toBe("bow");
+    expect(itemIconKey(row("Longbow", { type: "R|XPHB", weaponCategory: "martial" }))).toBe("bow-long");
+    expect(itemIconKey(row("Shortbow", { type: "R|XPHB", weaponCategory: "simple" }))).toBe("bow");
     expect(itemIconKey(row("Spear", { type: "M|XPHB", weaponCategory: "simple" }))).toBe("spear");
     expect(itemIconKey(row("Shield", { type: "S|XPHB" }))).toBe("shield");
     expect(itemIconKey(row("Chain Mail", { type: "HA|XPHB" }))).not.toBe("bag");
