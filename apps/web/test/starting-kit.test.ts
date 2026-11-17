@@ -243,7 +243,7 @@ describe("a category with a quantity asks for that many picks", () => {
     // Measured, not read off one class: eight classes print a category with a
     // quantity, and a pick lost anywhere is a question the player never sees.
     for (const rulesVersion of ["2014", "2024"] as const) {
-      for (const row of forRulesVersion(collections.class, rulesVersion)) {
+      for (const row of forRulesVersion(collections.class ?? [], rulesVersion)) {
         const classId = slugOf(row.name);
         const raw = startingEquipmentRowsForClass(classId, rulesVersion).flatMap((entry) => entry.options ?? []);
         const owed = raw.map((option) =>
