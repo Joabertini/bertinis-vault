@@ -7,7 +7,7 @@ import Improvements from "@/components/forge/Improvements";
 import OriginBonus from "@/components/forge/OriginBonus";
 import VariantChoices from "@/components/forge/VariantChoices";
 import type { BuilderState } from "@/lib/builder-state";
-import { bonusOrigin, maxPointsPerAbility } from "@/lib/improvements";
+import { maxPointsPerAbility } from "@/lib/improvements";
 import { LABEL, WHISPER } from "@/styles/recipes";
 
 /** Where the species or background increase lands, the level-up choices, and what they open. */
@@ -48,13 +48,24 @@ export default function GrowthChamber({
     <div className="space-y-12">
       <div>
         <div className="mb-2 flex flex-wrap items-baseline justify-between gap-3">
+          {/*
+            Named after the rule in play (B3, reseñas 2026-11): players coming from
+            2014 read "the 2024 one didn't let me choose" when the two screens shared
+            a name. They are different rules, and the heading now says which.
+          */}
           <span className={LABEL}>
-            Aumento de {bonusOrigin(rulesVersion)}
+            {rulesVersion === "2024"
+              ? "Caracteristicas del trasfondo"
+              : draft.customOrigin
+                ? "Origen personalizado de Tasha's"
+                : "Aumento de especie"}
           </span>
           <span className={WHISPER}>
             {rulesVersion === "2024"
-              ? "En 2024 el aumento lo da el trasfondo: repartilo vos."
-              : "Sembrado desde el indice. Podes cambiarlo."}
+              ? "En 2024 lo da el trasfondo: +2 y +1, o +1 a tres, entre las tres que nombra."
+              : draft.customOrigin
+                ? "Regla opcional de Tasha's: cada bloque de la especie, entero, donde quieras."
+                : "El de la especie, como lo imprime el libro."}
           </span>
         </div>
         <p className="mb-3 font-body text-[15px] leading-relaxed text-bone">
