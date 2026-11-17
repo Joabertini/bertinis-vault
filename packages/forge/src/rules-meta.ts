@@ -290,7 +290,14 @@ function prerequisiteText(record: RulesRecord): string {
       }
       if (entry["spellcasting"] || entry["spellcasting2014"]) parts.push("Spellcasting");
       for (const proficiency of asArray<Record<string, unknown>>(entry["proficiency"])) {
-        parts.push(`${Object.keys(proficiency).join(", ")} proficiency`);
+        // { weaponGroup: "martial" } reads "Martial weapon proficiency", not the key.
+        for (const [kind, value] of Object.entries(proficiency)) {
+          const what = kind === "weaponGroup" || kind === "weapon" ? "weapon" : kind;
+          parts.push(`${typeof value === "string" ? `${value[0]?.toUpperCase()}${value.slice(1)} ` : ""}${what} proficiency`);
+        }
+      }
+      for (const background of asArray<string | { name?: string }>(entry["background"])) {
+        parts.push(`Background: ${typeof background === "string" ? background : (background.name ?? "")}`);
       }
       if (typeof entry["other"] === "string") parts.push(entry["other"]);
       for (const feat of asArray<string>(entry["feat"])) parts.push(`{@feat ${feat}}`);
