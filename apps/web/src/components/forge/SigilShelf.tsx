@@ -26,6 +26,7 @@ import type { CatalogEntry } from "@/lib/catalog";
 import type { RulesKind } from "@/lib/rules-text";
 import GameIcon from "@/components/icons/GameIcon";
 import type { IconKey } from "@/lib/icons";
+import { hasClassSigil } from "@/components/sigils/ClassSigil";
 import Sigil from "@/components/sigils/Sigil";
 import SigilCard from "./SigilCard";
 
@@ -182,7 +183,12 @@ export default function SigilShelf({
                           if (ref) info.show(ref);
                         }}
                       >
-                        {iconFor ? <GameIcon icon={iconFor(entry)} size={36} /> : <Sigil name={entry.id} size={30} />}
+                        {/* A class sigil needs room for its stroke and glow to read; 30px made it a blot. */}
+                        {iconFor ? (
+                          <GameIcon icon={iconFor(entry)} size={36} />
+                        ) : (
+                          <Sigil name={entry.id} size={hasClassSigil(entry.id) ? 44 : 30} />
+                        )}
                       </SigilCard>
                     </div>
                   );
