@@ -17,6 +17,7 @@
  */
 
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
+import { CUSTOM_BACKGROUND_ID } from "@bertinis-vault/contracts";
 
 import { collections, forRulesVersion, type FeatRow } from "@bertinis-vault/vetools-index";
 
@@ -164,6 +165,11 @@ export function proficiencyPlan(
       kind: "skill",
       from: "clase",
     });
+  }
+
+  // B2: the DMG 2024 background asks for one tool, any tool.
+  if (state.backgroundId === CUSTOM_BACKGROUND_ID && rulesVersion === "2024") {
+    offers.push({ options: [], count: 1, isOpen: true, kind: "tool", from: "trasfondo" });
   }
 
   if (background.skillChoice && background.skillChoice.count > 0) {

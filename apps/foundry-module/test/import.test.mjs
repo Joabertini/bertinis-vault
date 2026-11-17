@@ -651,3 +651,12 @@ test("a class feature that shares an item's name is left alone", async () => {
 
   assert.deepEqual(updates.map((update) => update._id), ["armour"]);
 });
+
+test("a background built with the DMG 2024 rules is not imported as a document", async () => {
+  const { customBackgroundItem } = await import("../src/import.js");
+  const custom = payload({ background: { custom: { name: "Trasfondo a medida" } } });
+
+  assert.ok(!orderedRefs(custom).some((entry) => entry.ref.prop === "background"));
+  assert.deepEqual(customBackgroundItem(custom), { name: "Trasfondo a medida", type: "background", system: {} });
+  assert.equal(customBackgroundItem(payload()), null);
+});

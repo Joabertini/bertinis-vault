@@ -86,7 +86,11 @@ export default function BackgroundGrant({
         <Line
           label={`Elegis ${grant.skillChoice.count} de`}
           accent={accent}
-          items={grant.skillChoice.options}
+          items={
+            grant.skillChoice.options.length
+              ? grant.skillChoice.options
+              : ["cualquier habilidad: se eligen en Competencias"]
+          }
           chosen
         />
       )}

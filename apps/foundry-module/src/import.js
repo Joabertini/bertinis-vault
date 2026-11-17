@@ -61,7 +61,8 @@ export function orderedRefs(payload) {
     if (entry.subclass) entries.push({ ref: entry.subclass, dataOpts: {}, featureLevel: level });
   }
 
-  entries.push({ ref: payload.background.ref, dataOpts: {} });
+  // A background the DM built (DMG 2024) has no document; see customBackgroundItem.
+  if (payload.background.ref) entries.push({ ref: payload.background.ref, dataOpts: {} });
   for (const feat of payload.feats ?? []) entries.push({ ref: feat.ref, dataOpts: {} });
   // Fighting styles, invocations, metamagic, maneuvers. They come after the
   // class that granted them, and before the spells an invocation can grant.
@@ -70,6 +71,17 @@ export function orderedRefs(payload) {
   for (const item of payload.equipment ?? []) entries.push({ ref: item.ref, dataOpts: {} });
 
   return entries;
+}
+
+/**
+ * The background item for a background built with the DMG 2024 rules, or null.
+ *
+ * Only its name: the skills, tool, feat and ability increases it chose already
+ * reach the actor through the proficiencies, the feats and the scores.
+ */
+export function customBackgroundItem(payload) {
+  const name = payload?.background?.custom?.name;
+  return name ? { name, type: "background", system: {} } : null;
 }
 
 /**
@@ -607,6 +619,16 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
     }
   } finally {
     windows = stopWatching();
+  }
+
+  const custom = customBackgroundItem(payload);
+  if (custom) {
+    const written = await addItem(actor, custom);
+    results.push(
+      written.ok
+        ? { ref: null, ok: true, name: custom.name }
+        : { ref: null, ok: false, reason: `${custom.name}: ${written.reason}` },
+    );
   }
 
   await actor.update({ ...proficiencyUpdates(payload), ...derivedUpdates(payload) });
