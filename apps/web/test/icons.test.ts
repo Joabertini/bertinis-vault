@@ -4,7 +4,6 @@
 
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -28,7 +27,7 @@ const exists = (key: string) => isSheetIcon(key as never) || key in ICON_SILHOUE
 
 describe("the pack", () => {
   it("has its sprite sheet and its credits next to the page", () => {
-    const dir = resolve(fileURLToPath(new URL(".", import.meta.url)), "../public/icons");
+    const dir = resolve(process.cwd(), "public/icons");
     expect(existsSync(resolve(dir, "atlas.webp"))).toBe(true);
     expect(existsSync(resolve(dir, "CREDITS.txt"))).toBe(true);
   });
