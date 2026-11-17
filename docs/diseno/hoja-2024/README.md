@@ -83,6 +83,36 @@ modo juego, tema oscuro). Todo esto hay que traerlo al producto:
   se copian. Los íconos de objetos de `icons/…` son del núcleo de Foundry; van
   imágenes nuestras.
 
+## Íconos (decidido 2026-11-17)
+
+Los íconos de Foundry (`icons/`, 5e.tools) no se pueden redistribuir. Pack propio, de
+licencia libre, en un solo archivo (sprite) para no pedir un ícono por llamada:
+
+1. **RPG Icons Set** (CC0, 245 íconos de 64 px): objetos.
+2. **Painterly Spell Icons 1-3**, J. W. Bjerk (CC-BY 3.0, hay que dar crédito): conjuros.
+3. **Fantasy RPG Icons 1-3**, Drummyfish (CC0, 60 íconos de 128 px): completa objetos.
+
+Lo que hay que cubrir, medido en el índice de la Forja (no son 50 categorías, son
+~4.750 elementos): 2.658 objetos, 1.050 conjuros, 276 dotes, 160 especies, 161
+trasfondos, 31 clases, 203 subclases, 213 rasgos opcionales.
+
+- **Objetos:** con 1+3 el 57 % tiene un ícono de su tipo (espada, armadura, anillo,
+  poción, pergamino, libro, escudo, bota, gema, moneda...). El 43 % restante no:
+  objetos mágicos sueltos (18 %), equipo y herramientas (15 %), monturas y vehículos
+  (4 %), instrumentos (3 %), cartas y dados, explosivos, lanzas, látigos.
+- **Conjuros:** el 60 % tiene un motivo propio (fuego, hielo, rayo, curación,
+  protección, encantamiento, ojo, necrótico, viento, tierra, planta, velocidad,
+  fuerza); el resto usa el ícono de su escuela (8).
+- **Dotes, especies, trasfondos, clases, subclases, rasgos:** ningún pack los trae.
+  Un ícono genérico por tipo (~20) y uno por clase (13).
+
+Hueco: ~43 % de los objetos y todo lo que no son objetos ni conjuros. Opción a
+resolver: game-icons.net (CC-BY 3.0, siluetas) teñido en dorado dentro del mismo
+recuadro oscuro con borde, para que no desentone.
+
+Atribuciones obligatorias: J. W. Bjerk (Painterly), y los autores de game-icons si se
+usa. Va en una página de créditos de la Forja.
+
 ## Estado
 
 - [x] Boceto de las 7 pestañas (2026-11-17), en `Desktop\capturas\hoja-2024-boceto`: `index.html` navegable y `comparar-<pestaña>.png` (original de Foundry al lado). Falta la aprobación del dueño.
