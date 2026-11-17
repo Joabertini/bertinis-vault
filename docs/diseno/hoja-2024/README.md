@@ -55,8 +55,36 @@ sistema, se vuelve a copiar desde ahí.
 | `pill-texture-race/background/type.webp` | 260×52 | píldoras de especie, trasfondo y tipo | arte nuestro o liso |
 | `classes/*.webp` | 350×453 | arte de clase en la hoja | arte nuestro o se saca |
 
+## Lo que la hoja necesita además de plantillas y CSS
+
+Medido al armar el boceto con una hoja real de foundry-b (mesa-ivan, dnd5e 6.0.6,
+modo juego, tema oscuro). Todo esto hay que traerlo al producto:
+
+- **Componentes con shadow DOM cerrado** de dnd5e (MIT): `filigree-box` (los
+  marcos de Habilidades y Salvaciones), `proficiency-cycle` (los círculos de
+  competencia), `dnd5e-icon`, `dnd5e-checkbox`, `slide-toggle`. Sin ellos la hoja
+  pierde los marcos. Se copian sus clases de `dnd5e.mjs`.
+- **Fuentes registradas por JS**: Roboto, Roboto Condensed y Roboto Slab no
+  están en `dnd5e.css`; dnd5e las registra en `CONFIG.fontDefinitions`. Van
+  como `@font-face` propios con los archivos de `fonts/`.
+- **Columnas del inventario por ancho**: `dnd5e-inventory` oculta columnas
+  (Roll, Formula, Charges…) según el ancho con un `ResizeObserver`
+  (`_cacheSections` + `_onResize`). Se copia esa lógica.
+- **Monedas**: la regla de los íconos de moneda la inyecta dnd5e por JS.
+- **Base del núcleo de Foundry**: 126 reglas de `foundry2.css` tocan la hoja,
+  repartidas en capas (`@layer reset, variables, elements, blocks,
+  applications, …`). **Las capas importan**: sin ellas, el núcleo le gana a
+  dnd5e y cambian los colores. En el producto se reescriben propias, en las
+  mismas capas. Fuentes del núcleo usadas: Signika (libre, Google Fonts),
+  Modesto Condensed (nombre del personaje), Amiri, Bruno Ace: revisar la
+  licencia de Modesto antes de usarla.
+- **Lo que no es de la hoja**: el botón "Level Up" junto a la experiencia y
+  las imágenes de objetos de `cdn.5e.tools` los agrega el módulo Plutonium; no
+  se copian. Los íconos de objetos de `icons/…` son del núcleo de Foundry; van
+  imágenes nuestras.
+
 ## Estado
 
-- [ ] Boceto de la pestaña Detalles con las plantillas reales (Desktop\capturas), para aprobar.
+- [x] Boceto de las 7 pestañas (2026-11-17), en `Desktop\capturas\hoja-2024-boceto`: `index.html` navegable y `comparar-<pestaña>.png` (original de Foundry al lado). Falta la aprobación del dueño.
 - [ ] Copia de plantillas y CSS al repo, con los avisos de licencia.
 - [ ] Arte propio y logo.
