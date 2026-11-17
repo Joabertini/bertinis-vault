@@ -15,6 +15,9 @@
 
 import PickList from "./PickList";
 import RuleNote from "@/components/ui/RuleNote";
+import type { RulesVersion } from "@bertinis-vault/vetools-ref";
+import { spellInfoFor } from "@/lib/index-options";
+import { spellIconKey } from "@/lib/icons";
 import { formatSpellLine, spellNameOf, type ClassSpellPlan } from "@/lib/spells";
 import { LABEL, META } from "@/styles/recipes";
 
@@ -25,6 +28,7 @@ export default function SpellClassSection({
   spells,
   book,
   characterLevel,
+  rulesVersion,
   accent,
   /** Off for a single-class character, where naming the class says nothing. */
   showName,
@@ -39,6 +43,7 @@ export default function SpellClassSection({
   spells: string[];
   book: string[];
   characterLevel: number;
+  rulesVersion: RulesVersion;
   accent: string;
   showName: boolean;
   granted: ReadonlySet<string>;
@@ -48,6 +53,11 @@ export default function SpellClassSection({
 }) {
   const picker = plan.picker;
   if (!picker) return null;
+
+  const iconFor = (option: string) => {
+    const name = spellNameOf(option);
+    return spellIconKey({ name, school: spellInfoFor(name, rulesVersion)?.school ?? "" });
+  };
 
   const isGranted = (option: string) => granted.has(spellNameOf(option));
   const lockedCantrips = plan.cantripOptions.filter(isGranted);
@@ -78,6 +88,7 @@ export default function SpellClassSection({
       {picker.availableCantripCount > 0 && (
         <PickList
           infoKind="spell"
+          iconFor={iconFor}
           title="Trucos"
           options={plan.cantripOptions}
           selected={cantrips}
@@ -112,6 +123,7 @@ export default function SpellClassSection({
           {plan.book.options.map(({ level, names }) => (
             <PickList
               infoKind="spell"
+          iconFor={iconFor}
               key={level}
               title={`Nivel ${level}`}
               options={names.map((name) => formatSpellLine(level, name))}
@@ -142,6 +154,7 @@ export default function SpellClassSection({
           {plan.spellsByLevel.map(({ level, names }) => (
             <PickList
               infoKind="spell"
+          iconFor={iconFor}
               key={level}
               title={`Nivel ${level}`}
               options={names.map((name) => formatSpellLine(level, name))}

@@ -24,6 +24,8 @@ import { normalizeForSearch } from "@bertinis-vault/vetools-index";
 import { useInfo } from "@/components/info/info-context";
 import type { CatalogEntry } from "@/lib/catalog";
 import type { RulesKind } from "@/lib/rules-text";
+import GameIcon from "@/components/icons/GameIcon";
+import type { IconKey } from "@/lib/icons";
 import Sigil from "@/components/sigils/Sigil";
 import SigilCard from "./SigilCard";
 
@@ -49,6 +51,7 @@ export default function SigilShelf({
    */
   groupFor,
   infoKind,
+  iconFor,
 }: {
   entries: CatalogEntry[];
   selectedId: string;
@@ -74,6 +77,8 @@ export default function SigilShelf({
   groupFor?: ((entry: CatalogEntry) => string | undefined) | undefined;
   /** What a card is, so the info panel can show it on hover and on choosing it. */
   infoKind?: RulesKind | undefined;
+  /** An icon per entry in place of the class sigil, for catalogs that have no sigils of their own. */
+  iconFor?: ((entry: CatalogEntry) => IconKey) | undefined;
 }) {
   const info = useInfo();
   const [query, setQuery] = useState("");
@@ -177,7 +182,7 @@ export default function SigilShelf({
                           if (ref) info.show(ref);
                         }}
                       >
-                        <Sigil name={entry.id} size={30} />
+                        {iconFor ? <GameIcon icon={iconFor(entry)} size={36} /> : <Sigil name={entry.id} size={30} />}
                       </SigilCard>
                     </div>
                   );

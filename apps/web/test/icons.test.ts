@@ -13,7 +13,9 @@ import {
   isSheetIcon,
   itemHasOwnIcon,
   itemIconKey,
+  backgroundIconKey,
   kindIconKey,
+  speciesIconKey,
   spellHasOwnIcon,
   spellIconKey,
   type IconItemRow,
@@ -105,6 +107,9 @@ describe("spells", () => {
     expect(spellIconKey({ name: "Hold Person", school: "E" })).toBe("spell-enchant");
     expect(spellIconKey({ name: "Gravity Fissure", school: "V" })).toBe("school-evocation");
     expect(spellIconKey({ name: "Reality Break", school: "X" })).toBe("spell-force");
+    // The pickers know a spell's school by the Spanish name the index gives.
+    expect(spellIconKey({ name: "Gravity Fissure", school: "Evocacion" })).toBe("school-evocation");
+    expect(spellIconKey({ name: "Reality Break", school: "Nigromancia" })).toBe("school-necromancy");
   });
 
   for (const version of ["2014", "2024"] as const) {
@@ -117,6 +122,27 @@ describe("spells", () => {
   it("mostly get a theme of their own", () => {
     const all = spells("2014").concat(spells("2024"));
     expect(all.filter(spellHasOwnIcon).length / all.length).toBeGreaterThan(0.5);
+  });
+});
+
+describe("species and backgrounds", () => {
+  it("wear their own drawing where the name says what they are", () => {
+    expect(speciesIconKey("Dragonborn")).toBe("dragon");
+    expect(speciesIconKey("Half-Orc")).toBe("orc");
+    expect(speciesIconKey("High Elf")).toBe("leaf");
+    expect(speciesIconKey("Mountain Dwarf")).toBe("hammer");
+    expect(speciesIconKey("Aarakocra")).toBe("bird");
+    expect(backgroundIconKey("Acolyte")).toBe("book-holy");
+    expect(backgroundIconKey("Sailor")).toBe("ship");
+    expect(backgroundIconKey("Soldier")).toBe("sword-long");
+  });
+
+  it("fall back to the mark of their kind, and every answer exists", () => {
+    expect(backgroundIconKey("Zzz Unknown")).toBe(kindIconKey("background"));
+    expect(speciesIconKey("Zzz Unknown")).toBe(kindIconKey("species"));
+    for (const name of ["Human", "Tiefling", "Genasi (Fire)", "Warforged", "Dhampir", "Triton"]) {
+      expect(exists(speciesIconKey(name))).toBe(true);
+    }
   });
 });
 

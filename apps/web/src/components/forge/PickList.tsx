@@ -12,7 +12,9 @@
  */
 
 import { motion } from "framer-motion";
+import GameIcon from "@/components/icons/GameIcon";
 import { useInfo } from "@/components/info/info-context";
+import type { IconKey } from "@/lib/icons";
 import type { RulesKind } from "@/lib/rules-text";
 import { LABEL, META, WHISPER_MB4 } from "@/styles/recipes";
 
@@ -31,6 +33,7 @@ export default function PickList({
   columns = 3,
   perList = false,
   infoKind,
+  iconFor,
 }: {
   title: string;
   hint?: string;
@@ -52,6 +55,8 @@ export default function PickList({
   perList?: boolean;
   /** What the options are, so hovering one shows its text in the info panel. */
   infoKind?: RulesKind;
+  /** The icon an option wears. Without it the list is text only. */
+  iconFor?: (option: string) => IconKey;
 }) {
   const info = useInfo();
   const lockedSet = new Set(locked);
@@ -115,6 +120,7 @@ export default function PickList({
               >
                 {isLocked ? "✓" : isChosen ? <span style={{ color: accent }}>✦</span> : ""}
               </span>
+              {iconFor && <GameIcon icon={iconFor(option)} size={28} />}
               <span
                 className="truncate font-body text-[15px]"
                 style={{ color: isChosen ? accent : isLocked ? "rgba(230,223,206,0.75)" : "#FFFFFF" }}

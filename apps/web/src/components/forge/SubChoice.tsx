@@ -1,4 +1,6 @@
+import GameIcon from "@/components/icons/GameIcon";
 import { useInfo } from "@/components/info/info-context";
+import { kindIconKey, speciesIconKey } from "@/lib/icons";
 import type { CatalogEntry } from "@/lib/catalog";
 import { DIVIDER_TIGHT, ITEM_META, ITEM_NAME, LABEL, WHISPER } from "@/styles/recipes";
 
@@ -54,17 +56,20 @@ export default function SubChoice({
                 onPick(entry);
                 info.show({ kind: infoKind, name: entry.label, source: entry.source, extra: [infoClass ?? ""] });
               }}
-              className="flex items-baseline justify-between gap-3 border-l-2 px-4 py-2.5 text-left transition-colors"
+              className="flex items-center justify-between gap-3 border-l-2 px-4 py-2.5 text-left transition-colors"
               style={{
                 borderLeftColor: active ? accent : "transparent",
                 background: active ? `${accent}12` : "transparent",
               }}
             >
-              <span
-                className={ITEM_NAME}
-                style={{ color: active ? accent : "#FFFFFF" }}
-              >
-                {entry.label}
+              <span className="flex min-w-0 items-center gap-3">
+                <GameIcon icon={infoKind === "race" ? speciesIconKey(entry.label) : kindIconKey("subclass")} size={28} />
+                <span
+                  className={ITEM_NAME}
+                  style={{ color: active ? accent : "#FFFFFF" }}
+                >
+                  {entry.label}
+                </span>
               </span>
               <span className={ITEM_META}>
                 {entry.source}
