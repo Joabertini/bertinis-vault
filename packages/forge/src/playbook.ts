@@ -162,7 +162,16 @@ export type Playbook = {
   rules: RuleBlock[];
   /** True when the sheet has nothing written for this class. */
   unwritten: boolean;
+  /**
+   * The notes were written for another edition than the character's (C2,
+   * reseñas 2026-11). The cheat sheet is 2014 throughout; a 2024 character
+   * reading "Rage: 2 uses" with no warning is worse than a note marked as old.
+   */
+  outdated: boolean;
 };
+
+/** The edition the cheat sheet was written for. Change it when the sheet gains 2024 notes. */
+export const NOTES_EDITION: RulesVersion = "2014";
 
 /*
  * The sheet keys its subclasses the way a player says them — "Berserker",
@@ -313,6 +322,7 @@ export function playbookFor(
     combos: combosFor([state.classId], [subclass?.label ?? ""], feats),
     rules: UNIVERSAL_RULES,
     unwritten: notes === null,
+    outdated: rulesVersion !== NOTES_EDITION,
   };
 }
 

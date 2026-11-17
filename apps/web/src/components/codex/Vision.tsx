@@ -85,7 +85,7 @@ function Section({
 }
 
 /** Una acción adicional o una reacción. La más chica de las tres tarjetas. */
-function ActionCard({ note, palette }: { note: PlayNote; palette: ClassPalette }) {
+function ActionCard({ note, palette, old }: { note: PlayNote; palette: ClassPalette; old?: boolean }) {
   return (
     <div
       style={{
@@ -101,6 +101,7 @@ function ActionCard({ note, palette }: { note: PlayNote; palette: ClassPalette }
         >
           {note.name}
         </span>
+        {old && <OldTag />}
         {note.resource && (
           <span
             style={{
@@ -121,8 +122,27 @@ function ActionCard({ note, palette }: { note: PlayNote; palette: ClassPalette }
   );
 }
 
+/** "Escrita para 2014": la nota no se revisó para la edición del personaje. */
+function OldTag() {
+  return (
+    <span
+      title="Nota escrita para las reglas 2014; no se revisó para 2024"
+      style={{
+        fontSize: 9,
+        padding: "1px 5px",
+        border: "1px solid #c8a83260",
+        borderRadius: 3,
+        color: "#c8a832",
+        letterSpacing: "0.06em",
+      }}
+    >
+      2014
+    </span>
+  );
+}
+
 /** Un rasgo de clase o de subclase. La píldora de recurso se va a la derecha. */
-function FeatureCard({ note, palette }: { note: PlayNote; palette: ClassPalette }) {
+function FeatureCard({ note, palette, old }: { note: PlayNote; palette: ClassPalette; old?: boolean }) {
   return (
     <div
       style={{
@@ -139,6 +159,7 @@ function FeatureCard({ note, palette }: { note: PlayNote; palette: ClassPalette 
         >
           {note.name}
         </span>
+        {old && <OldTag />}
         {note.resource && (
           <span
             style={{
@@ -407,6 +428,25 @@ export default function Vision({
         )}
       </div>
 
+      {/* ---- C2: notas de otra edición, dichas antes de leerlas ---- */}
+      {playbook.outdated && (
+        <div
+          style={{
+            margin: "10px 16px 0",
+            padding: "8px 12px",
+            border: "1px solid #c8a83250",
+            background: "#c8a83212",
+            borderRadius: 4,
+            fontSize: 12,
+            color: "#e8d9a8",
+            lineHeight: 1.5,
+          }}
+        >
+          Estas notas se escribieron para las reglas 2014. Tu personaje usa 2024: algunas pueden no
+          valer igual. Las marcadas «2014» todavía no se revisaron.
+        </div>
+      )}
+
       {/* ---- los números, que el original no podía tener ---- */}
       {playbook.vitals.length > 0 && (
         <div
@@ -521,7 +561,7 @@ export default function Vision({
               <Section title="⚡ ACCIONES ADICIONALES" palette={palette}>
                 {playbook.bonusActions.length > 0 ? (
                   playbook.bonusActions.map((note) => (
-                    <ActionCard key={note.name} note={note} palette={palette} />
+                    <ActionCard key={note.name} note={note} palette={palette} old={playbook.outdated} />
                   ))
                 ) : (
                   <p style={{ color: "#666", fontSize: 11, fontStyle: "", margin: 0 }}>
@@ -531,7 +571,7 @@ export default function Vision({
               </Section>
               <Section title="🔄 REACCIONES" palette={palette}>
                 {playbook.reactions.map((note) => (
-                  <ActionCard key={note.name} note={note} palette={palette} />
+                  <ActionCard key={note.name} note={note} palette={palette} old={playbook.outdated} />
                 ))}
                 <div
                   style={{
@@ -612,7 +652,7 @@ export default function Vision({
             ))}
             <div style={{ display: "grid", gap: 8 }}>
               {playbook.features.map((note) => (
-                <FeatureCard key={note.name} note={note} palette={palette} />
+                <FeatureCard key={note.name} note={note} palette={palette} old={playbook.outdated} />
               ))}
             </div>
             {playbook.feats.length > 0 && (
