@@ -8,6 +8,7 @@ import { coerceBuilderState, initialState } from "@/lib/builder";
 import { COVER_HEIGHT, COVER_WIDTH, MAX_COVER_CHARS, coverCrop, isCoverImage } from "@/lib/cover-image";
 import { CLASS_ICON_PATHS } from "@/lib/class-icon-paths";
 import { ROLES, sigilFor, sigilRoleFor } from "@/lib/role-sigil";
+import { CLASS_SIGILS } from "@/lib/class-sigils";
 
 const tiny = "data:image/webp;base64,UklGRhoAAABXRUJQVlA4TA0AAAAvAAAAEAcQERGIiP4HAA==";
 
@@ -49,9 +50,17 @@ describe("role sigil", () => {
     expect(sigilFor("lyre-of-nothing").fills).toBe(false);
   });
 
-  it("keeps the role colour whatever the glyph", () => {
-    expect(sigilFor("wizard").color).toBe(ROLES.control.color);
-    expect(sigilFor("fighter").color).toBe(ROLES.dano.color);
+  it("colours each class by the class, the same everywhere", () => {
+    // The colour belongs to the class (canon 2026-11-17), not to its role.
+    expect(sigilFor("wizard").color).toBe("#a76bff");
+    expect(sigilFor("fighter").color).toBe("#ff5a1f");
+    expect(sigilFor("druid").color).toBe("#5fd36a");
+    expect(sigilFor("ranger").color).toBe("#5fd36a");
+    expect(sigilFor("cleric").color).toBe(sigilFor("paladin").color);
+    expect(sigilFor("bard").color).toBe("#f2b437");
+    expect(sigilFor("artificer").color).toBe("#7fc4ff");
+    // A class the canon does not know keeps its role's colour.
+    expect(sigilFor("homebrew-class").color).toBe(ROLES.dano.color);
   });
 });
 
@@ -83,5 +92,18 @@ describe("cover image", () => {
     const legacy: Record<string, unknown> = { ...initialState };
     delete legacy.coverImage;
     expect(coerceBuilderState(legacy).coverImage).toBe("");
+  });
+});
+
+describe("class sigil canon", () => {
+  it("draws every class the cover knows, with its rings, and only the warlock fills the circle", () => {
+    for (const id of Object.keys(CLASS_ICON_PATHS)) {
+      const art = CLASS_SIGILS[id];
+      expect(art, id).toBeDefined();
+      expect(art!.glyph.length, id).toBeGreaterThan(100);
+      expect(art!.rings.length, id).toBeGreaterThan(100);
+      expect(sigilFor(id).art, id).toBe(art);
+    }
+    expect(Object.entries(CLASS_SIGILS).filter(([, art]) => art.fillCircle).map(([id]) => id)).toEqual(["warlock"]);
   });
 });

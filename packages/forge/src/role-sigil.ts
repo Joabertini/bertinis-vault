@@ -12,6 +12,7 @@
 
 import { CLASS_ICON_PATHS } from "./class-icon-paths";
 import { ROLE_ICON_PATHS } from "./role-icon-paths";
+import { CLASS_SIGILS, type ClassSigilArt } from "./class-sigils";
 
 export type SigilRole = "dano" | "defensa" | "sanacion" | "apoyo" | "control";
 
@@ -35,6 +36,8 @@ export type RoleSigil = Role & {
    * to the circle it would just be a bigger sword in a box.
    */
   fills: boolean;
+  /** The class's sigil of the canon, when it has one: draw this, in its colour, instead of the filled glyph. */
+  art?: ClassSigilArt;
 };
 
 export const ROLES: Record<SigilRole, Role> = {
@@ -76,5 +79,8 @@ export function sigilFor(classId: string): RoleSigil {
   const key = classId.trim().toLowerCase();
   const role = ROLES[sigilRoleFor(key)];
   const own = CLASS_ICON_PATHS[key];
+  const art = CLASS_SIGILS[key];
+  // The colour belongs to the class, not to its role (owner's canon, 2026-11-17).
+  if (own && art) return { ...role, color: art.color, core: art.core, paths: own.paths, fills: FILLS.has(key), art };
   return own ? { ...role, paths: own.paths, fills: FILLS.has(key) } : { ...role, fills: false };
 }
