@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 
 import { collections, forRulesVersion } from "@bertinis-vault/vetools-index";
-import { slugOf } from "../src/lib/index-options";
+import { slugOf, startingEquipmentRowsForClass } from "../src/lib/index-options";
 import { collapseGearLines } from "../src/lib/gear-lines";
 import type { KitOption } from "../src/lib/starting-kit";
 import { buildCanonicalSnapshot, initialState } from "../src/lib/builder";
@@ -223,5 +223,42 @@ describe("el oro inicial", () => {
 
     expect(taken).toContainEqual(coinOption);
     expect(taken.filter((option) => option.copper > 0 && option.items.length === 0)).toHaveLength(1);
+  });
+});
+
+describe("a category with a quantity asks for that many picks", () => {
+  test("the 2014 fighter's two martial weapons are two open picks", () => {
+    // "(a) a martial weapon and a shield or (b) two martial weapons": the second
+    // letter is one entry with quantity 2.
+    const options = kit("fighter", "2014")
+      .filter((row) => row.source === "class")
+      .flatMap((row) => row.options);
+    const martial = options.map((option) => option.openPicks.filter((pick) => pick.category === "weaponMartial").length);
+
+    expect(martial).toContain(2);
+    expect(martial).toContain(1);
+  });
+
+  test("every class option owes as many picks as its categories add up to", () => {
+    // Measured, not read off one class: eight classes print a category with a
+    // quantity, and a pick lost anywhere is a question the player never sees.
+    for (const rulesVersion of ["2014", "2024"] as const) {
+      for (const row of forRulesVersion(collections.class, rulesVersion)) {
+        const classId = slugOf(row.name);
+        const raw = startingEquipmentRowsForClass(classId, rulesVersion).flatMap((entry) => entry.options ?? []);
+        const owed = raw.map((option) =>
+          (option.entries ?? [])
+            .filter((entry) => entry.kind === "category")
+            .reduce((sum, entry) => sum + (entry.categories?.length ?? 0) * Math.max(1, Math.floor(entry.quantity ?? 1)), 0),
+        );
+        const shown = kit(classId, rulesVersion)
+          .filter((kitRow) => kitRow.source === "class")
+          .flatMap((kitRow) => kitRow.options)
+          .map((option) => option.openPicks.filter((pick) => pick.category !== "unresolved").length);
+
+        // The same options, in the same order.
+        expect(shown, `${row.name} ${rulesVersion}`).toEqual(owed);
+      }
+    }
   });
 });
