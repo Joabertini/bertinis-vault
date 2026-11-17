@@ -18,6 +18,7 @@
  */
 
 import type { CharacterBuild } from "@bertinis-vault/contracts";
+import { collections, forRulesVersion, type OptionalFeatureRow } from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder";
@@ -300,7 +301,9 @@ export function playbookFor(
     reactions: notes?.reactions ?? [],
     // The subclass's own features come after the class's, which is the order
     // a character gains them.
-    features: [...(notes?.classFeatures ?? []), ...(subNotes?.extra ?? [])],
+    features: [...(notes?.classFeatures ?? []), ...(subNotes?.extra ?? [])].map((note) =>
+      withChosen(note, state, rulesVersion),
+    ),
     tips: [notes?.forgottenTip, subNotes?.forgottenTip].filter((tip): tip is string =>
       Boolean(tip),
     ),
@@ -311,6 +314,26 @@ export function playbookFor(
     rules: UNIVERSAL_RULES,
     unwritten: notes === null,
   };
+}
+
+/**
+ * A note about a pool of choices, narrowed to what this character chose.
+ *
+ * The cheat sheet was written for every Rune Knight at once, so it listed all
+ * six runes; a tome is one character's, who knows two of them at level 3. A
+ * review read the six as six runes the character had. With nothing chosen
+ * yet, the note keeps its own text, which says where to choose.
+ */
+function withChosen(note: PlayNote, state: BuilderState, rulesVersion: RulesVersion): PlayNote {
+  if (!note.chosenFrom) return note;
+
+  const taken = new Set(state.optionalFeatureIds);
+  const chosen = (forRulesVersion(collections.optionalfeature ?? [], rulesVersion) as OptionalFeatureRow[])
+    .filter((row) => row.featureType.includes(note.chosenFrom ?? "") && taken.has(slugOf(row.name)))
+    .map((row) => row.name);
+  const names = [...new Set(chosen)];
+
+  return names.length > 0 ? { ...note, desc: `${names.join(", ")}.` } : note;
 }
 
 /**
