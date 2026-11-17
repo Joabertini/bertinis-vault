@@ -44,8 +44,13 @@ describe("el oro inicial paga lo que se agrega a mano", () => {
     expect(purse.balanceCopper).toBe(option.copper - spent);
     expect(purse.purchases.map((entry) => entry.id).sort()).toEqual(["chain-mail", "longsword", "shield"]);
 
-    // Lo que cruza a Foundry es lo que queda, no el oro entero.
-    expect(buildCanonicalSnapshot(state).choices.startingCopper).toBe(option.copper - spent);
+    // Lo que cruza a Foundry es lo que queda, no el oro entero. La ficha
+    // exportable pide especie y trasfondo; el trasfondo trae su propia fila
+    // de kit, asi que se compara contra el saldo del mismo estado.
+    const exportable = { ...state, raceId: "human", backgroundId: "soldier" };
+    const left = purseFor(exportable, "2024").balanceCopper;
+    expect(left).toBeLessThan(purseFor(exportable, "2024").startingCopper);
+    expect(buildCanonicalSnapshot(exportable).choices.startingCopper).toBe(left);
   });
 
   test("tomar el equipo no es comprarlo", () => {
@@ -107,7 +112,9 @@ describe("el oro inicial paga lo que se agrega a mano", () => {
 
     const purse = purseFor(state, "2024");
     expect(purse.balanceCopper).toBeLessThan(0);
-    expect(buildCanonicalSnapshot(state).choices.startingCopper).toBeUndefined();
+    expect(
+      buildCanonicalSnapshot({ ...state, raceId: "human", backgroundId: "soldier" }).choices.startingCopper,
+    ).toBeUndefined();
   });
 
   test("lo que no tiene precio no descuenta, y se cuenta", () => {
