@@ -17,7 +17,21 @@ export const MAX_SOURCE_BYTES = 15 * 1024 * 1024;
 
 const ACCEPTED = /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/;
 
+/**
+ * A picture stored whole in the build store (`POST /images`), by its address.
+ *
+ * The portrait and the token travel this way now: the original, not a copy
+ * shrunk to fit inside the character. The data URL form above stays accepted so
+ * characters saved before keep their cover.
+ */
+const STORED = /^https?:\/\/[^\s/]+\/images\/[A-Za-z0-9_-]{32}$/;
+
+export function isStoredImage(value: unknown): value is string {
+  return typeof value === "string" && value.length <= 300 && STORED.test(value);
+}
+
 export function isCoverImage(value: unknown): value is string {
+  if (isStoredImage(value)) return true;
   return typeof value === "string" && value.length <= MAX_COVER_CHARS && ACCEPTED.test(value);
 }
 

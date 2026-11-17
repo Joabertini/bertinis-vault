@@ -73,8 +73,8 @@ export default function CoverPicker({
 
         <div className="max-w-xs space-y-4">
           <p className="font-body text-[15px] leading-snug text-bone">
-            La imagen que quieras para la tapa. Se recorta a la forma del libro y se achica para
-            que entre en tu códice. El sigilo es el de tu rol ({sigil.name.toLowerCase()}).
+            El retrato del personaje. Se guarda tal cual lo subís, sin perder calidad, y llega a
+            Foundry como la imagen del actor. El sigilo es el de tu rol ({sigil.name.toLowerCase()}).
           </p>
           <div className="flex flex-wrap items-center gap-5">
             <button

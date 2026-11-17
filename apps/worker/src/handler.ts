@@ -12,6 +12,7 @@
 import { importPayloadSchema, type ImportPayload } from "@bertinis-vault/contracts";
 
 import { d1Store, type D1Like, type Store } from "./accounts.js";
+import { handleImageRead, handleImageUpload, type ImageStore } from "./images.js";
 import {
   bearerTokenOf,
   handleCallback,
@@ -36,7 +37,7 @@ import {
 export type BuildStore = {
   get(key: string, type: "text"): Promise<string | null>;
   put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
-};
+} & Partial<ImageStore>;
 
 /**
  * Cloudflare's rate limiter, as much of it as this uses.
@@ -513,6 +514,26 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
       }
     }
     return handleCreate(request, env, headers);
+  }
+
+  /*
+   * The pictures of a character, kept original. Written under the same limit as
+   * a build; read by anyone holding the address (Foundry downloads it).
+   */
+  if (url.pathname === "/images" && request.method === "POST") {
+    if (env.WRITE_LIMIT) {
+      const caller = request.headers.get("CF-Connecting-IP") ?? "unknown";
+      if (!(await env.WRITE_LIMIT.limit({ key: caller })).success) {
+        return error("Too many uploads. Wait a minute and try again.", 429, headers);
+      }
+    }
+    if (!env.BUILDS.getWithMetadata) return error("This store keeps no pictures.", 501, headers);
+    return handleImageUpload(request, env.BUILDS as ImageStore, headers);
+  }
+  const picture = /^\/images\/([^/]+)$/.exec(url.pathname);
+  if (picture && request.method === "GET") {
+    if (!env.BUILDS.getWithMetadata) return error("This store keeps no pictures.", 501, headers);
+    return handleImageRead(decodeURIComponent(picture[1] as string), env.BUILDS as ImageStore, headers);
   }
 
   if (url.pathname.startsWith("/auth/") || url.pathname === "/codex/sync") {
