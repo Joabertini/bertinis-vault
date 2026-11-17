@@ -509,8 +509,8 @@ export async function storePortrait(dataUrl, name) {
       // It already exists.
     }
     const file = new File([blob], `${slug}-${Date.now()}.${ext}`, { type: blob.type });
-    const response = await picker.upload("data", dir, file, {}, { notify: false });
-    return response?.path || dataUrl;
+    const uploaded = await picker.upload("data", dir, file, {}, { notify: false });
+    return uploaded?.path || dataUrl;
   } catch (error) {
     console.warn("bertinis-vault | portrait could not be stored, using it inline:", error);
     return dataUrl;
