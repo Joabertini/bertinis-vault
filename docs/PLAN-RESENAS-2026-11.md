@@ -180,5 +180,5 @@ cambia en A3 (moneda ya descontada); si cambia, avisar para el Worker.
 1. **B1:** el PHB 2014 y el 2024 no se cruzan; los suplementos sí, si el jugador los elige. Ya funciona así; solo test.
 2. **Reglas de mesa:** cada mesa decide. Las banderas quedan a mano del jugador, apagadas al crear.
 3. **A3:** sin respuesta; queda el aviso.
-4. **C1:** pedido: igual a la de D&D Beyond. Propuesta: mismas secciones, campos y orden que la hoja oficial 2024, con dibujo propio (el diseño de D&D Beyond es de Wizards). Pendiente de confirmar.
+4. **C1:** la hoja 2024 es la hoja de personaje de Foundry dnd5e (v2), copiada tal cual: su código es MIT (mantener el aviso de Andrew Clayton y los créditos de game-icons). Se reemplazan por arte nuestro las imágenes de `ui/official/` (copyright de Wizards: fondo del encabezado, texturas de las píldoras, arte de clase); lugar para el logo de la marca, aún sin definir. Font Awesome Pro por la versión libre; las variables del núcleo de Foundry las definimos nosotros. Boceto de la pestaña Detalles antes de codificar.
 5. **Nuevo:** vida máxima como tercer método (D1).
