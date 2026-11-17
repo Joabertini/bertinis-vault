@@ -100,8 +100,8 @@ export default function OriginChamber({
 
       {custom && (
         <p className={WHISPER}>
-          Las caracteristicas se reparten en Crecimiento (+2 y +1, o +1 a tres); las dos
-          habilidades y la herramienta, en Competencias; los 50 po, en Equipo.
+          Las caracteristicas se reparten en Mejora de caracteristica (+2 y +1, o +1 a tres); las dos
+          habilidades y la herramienta, en Dones; los 50 po, en Equipo.
         </p>
       )}
 

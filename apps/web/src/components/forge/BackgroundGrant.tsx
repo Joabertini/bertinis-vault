@@ -89,7 +89,7 @@ export default function BackgroundGrant({
           items={
             grant.skillChoice.options.length
               ? grant.skillChoice.options
-              : ["cualquier habilidad: se eligen en Competencias"]
+              : ["cualquier habilidad: se eligen en Dones"]
           }
           chosen
         />
