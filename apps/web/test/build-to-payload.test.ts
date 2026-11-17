@@ -61,7 +61,7 @@ test("a 2024 build exports 2024 documents", () => {
   const { payload } = buildToPayload(snapshot, new RefResolver("2024", collections));
 
   expect(payload?.rulesVersion).toBe("2024");
-  expect(payload?.background.ref.source).toBe("XPHB");
+  expect(payload?.background.ref?.source).toBe("XPHB");
 });
 
 test("the same picks under 2014 export 2014 documents", () => {
@@ -69,7 +69,7 @@ test("the same picks under 2014 export 2014 documents", () => {
   const { payload } = buildToPayload(snapshot, resolver);
 
   expect(payload?.rulesVersion).toBe("2014");
-  expect(payload?.background.ref.source).toBe("PHB");
+  expect(payload?.background.ref?.source).toBe("PHB");
 });
 
 /*
