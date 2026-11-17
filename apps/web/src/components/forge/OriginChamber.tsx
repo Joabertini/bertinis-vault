@@ -4,7 +4,7 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import BackgroundGrant from "@/components/forge/BackgroundGrant";
 import SigilShelf from "@/components/forge/SigilShelf";
-import { kindIconKey } from "@/lib/icons";
+import { backgroundIconKey } from "@/lib/icons";
 import VariantChoices from "@/components/forge/VariantChoices";
 import type { BuilderState } from "@/lib/builder-state";
 import type { CatalogEntry } from "@/lib/catalog";
@@ -48,7 +48,7 @@ export default function OriginChamber({
         onPick={onPickBackground}
         accent={accent}
         infoKind="background"
-        iconFor={() => kindIconKey("background")}
+        iconFor={(entry) => backgroundIconKey(entry.label)}
         label="Buscar trasfondo"
         placeholder="Buscar entre todos los trasfondos…"
         noteFor={(entry) => entry.source}

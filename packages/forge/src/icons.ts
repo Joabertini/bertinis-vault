@@ -280,3 +280,51 @@ export function kindIconKey(kind: IconKind): IconKey {
 export function silhouetteStrokes(key: SilhouetteIconKey): string {
   return ICON_SILHOUETTES[key];
 }
+
+/** Species, by what the name says; the rest keep the species mark. */
+const SPECIES: [RegExp, IconKey][] = [
+  [/dragon|drake|kobold/, "dragon"],
+  [/orc|goblin|hobgoblin|bugbear|ogre|giff/, "orc"],
+  [/tabaxi|leonin|lion|cat\b|grung|owlin/, "bigcat"],
+  [/aarakocra|aven|kenku|raven|harengon|bird/, "bird"],
+  [/elf|eladrin|drow|fey|sprite|satyr|shadar|hexblood|pixie/, "leaf"],
+  [/dwarf|duergar|dwarves/, "hammer"],
+  [/aasimar|firbolg|celestial/, "light"],
+  [/tiefling|fiend|infernal|yuan-ti|yuan ti/, "spell-fire"],
+  [/genasi|elemental|shardmind|earth|air\b/, "crystal"],
+  [/triton|merfolk|locathah|sea|aquatic|water/, "water"],
+  [/warforged|autognome|construct|plasmoid|android/, "tools"],
+  [/dhampir|revenant|undead|vampire|reborn|zombie/, "skull"],
+  [/centaur|minotaur|loxodon|horse|bovine/, "mount"],
+  [/lizardfolk|tortle|thri-kreen|changeling|shifter|lycan|beast|ratfolk|simic/, "paw"],
+  [/gnome|halfling|goliath|human|variant/, "kind-species"],
+];
+
+/** The icon for a species or subrace. */
+export function speciesIconKey(name: string): IconKey {
+  const n = name.toLowerCase();
+  return SPECIES.find(([rx]) => rx.test(n))?.[1] ?? kindIconKey("species");
+}
+
+/** Backgrounds: the common ones by trade, the rest keep the background mark. */
+const BACKGROUNDS: [RegExp, IconKey][] = [
+  [/acolyte|cloistered|monk|initiate|faith|priest|temple/, "book-holy"],
+  [/charlatan|gambler|rival|fortune|trickster|con\b/, "cards"],
+  [/criminal|spy|smuggler|thief|urban|haunted/, "lockpicks"],
+  [/entertainer|gladiator|performer|bard|minstrel|musician/, "instrument"],
+  [/folk hero|hero|farmer|local/, "banner"],
+  [/guild|artisan|merchant|craft|shopkeeper|investigator/, "tools"],
+  [/hermit|recluse|wanderer/, "campfire"],
+  [/noble|knight|retainer|courtier|royal|house/, "crown"],
+  [/outlander|ranger|hunter|exile|feral|forest|tribal/, "paw"],
+  [/sage|scholar|student|archaeolog|anthropolog|librarian|college|researcher/, "book-arcane"],
+  [/sailor|pirate|ship|marine|dock|fisher/, "ship"],
+  [/soldier|guard|mercenary|veteran|warrior|army|city watch|watch/, "sword-long"],
+  [/urchin|orphan|street|haunt|beggar|vagabond/, "bag"],
+  [/athlete|champion|boxer/, "fist"],
+];
+
+export function backgroundIconKey(name: string): IconKey {
+  const n = name.toLowerCase();
+  return BACKGROUNDS.find(([rx]) => rx.test(n))?.[1] ?? kindIconKey("background");
+}

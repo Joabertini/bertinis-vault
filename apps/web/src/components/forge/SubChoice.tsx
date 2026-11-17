@@ -1,6 +1,6 @@
 import GameIcon from "@/components/icons/GameIcon";
 import { useInfo } from "@/components/info/info-context";
-import { kindIconKey } from "@/lib/icons";
+import { kindIconKey, speciesIconKey } from "@/lib/icons";
 import type { CatalogEntry } from "@/lib/catalog";
 import { DIVIDER_TIGHT, ITEM_META, ITEM_NAME, LABEL, WHISPER } from "@/styles/recipes";
 
@@ -63,7 +63,7 @@ export default function SubChoice({
               }}
             >
               <span className="flex min-w-0 items-center gap-3">
-                <GameIcon icon={kindIconKey(infoKind === "race" ? "species" : "subclass")} size={28} />
+                <GameIcon icon={infoKind === "race" ? speciesIconKey(entry.label) : kindIconKey("subclass")} size={28} />
                 <span
                   className={ITEM_NAME}
                   style={{ color: active ? accent : "#FFFFFF" }}
