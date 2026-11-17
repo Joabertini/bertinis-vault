@@ -11,6 +11,9 @@ import { useMemo, useState } from "react";
 
 import ScryPicker from "@/components/forge/ScryPicker";
 import type { CatalogEntry } from "@/lib/catalog";
+import { factsFor } from "@/lib/item-facts";
+import { itemIconKey } from "@/lib/icons";
+import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 import type { RulesKind } from "@/lib/rules-text";
 
 /** The tiers a list can be narrowed to, in the order a table reads them. `none` is bought gear. */
@@ -33,6 +36,7 @@ export default function RarityScry({
   accent,
   emptyHint,
   infoKind,
+  rulesVersion,
 }: {
   label: string;
   placeholder: string;
@@ -43,12 +47,24 @@ export default function RarityScry({
   accent: string;
   emptyHint?: string;
   infoKind?: RulesKind;
+  /** With the edition, each row wears the icon of its kind of item. */
+  rulesVersion?: RulesVersion;
 }) {
   const [rarities, setRarities] = useState<string[]>(["none"]);
   const toggle = (key: string) =>
     setRarities((current) =>
       current.includes(key) ? current.filter((entry) => entry !== key) : [...current, key],
     );
+  const iconFor = useMemo(
+    () =>
+      rulesVersion
+        ? (entry: CatalogEntry) => {
+            const row = factsFor(entry.id, rulesVersion, entry.source)?.row;
+            return itemIconKey(row ?? { name: entry.label });
+          }
+        : undefined,
+    [rulesVersion],
+  );
   const searchHere = useMemo(() => (query: string) => search(query, rarities), [search, rarities]);
 
   return (
@@ -83,6 +99,7 @@ export default function RarityScry({
         accent={accent}
         {...(emptyHint ? { emptyHint } : {})}
         {...(infoKind ? { infoKind } : {})}
+        {...(iconFor ? { iconFor } : {})}
       />
     </div>
   );

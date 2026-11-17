@@ -18,6 +18,7 @@ import type { AbilityBonusMap } from "@bertinis-vault/domain";
 
 import BonusEditor from "@/components/forge/BonusEditor";
 import ScryPicker from "@/components/forge/ScryPicker";
+import { kindIconKey } from "@/lib/icons";
 import { ABILITY_IDS, abilityLabels, type AbilityId } from "@/lib/abilities";
 import type { BuilderState } from "@/lib/builder";
 import type { CatalogEntry } from "@/lib/catalog";
@@ -183,6 +184,7 @@ function LevelSlot({
                 placeholder="Buscar dote…"
                 search={featSearch}
                 infoKind="feat"
+                iconFor={() => kindIconKey("feat")}
                 selectedId={featId}
                 onPick={(entry: CatalogEntry) =>
                   onSetChoice(slotKey, { kind: "feat", featId: entry.id })
