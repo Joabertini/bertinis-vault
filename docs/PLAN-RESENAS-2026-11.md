@@ -26,6 +26,7 @@ Tres tipos de trabajo, en este orden, porque no pesan lo mismo:
 | B3 | 2014 deja repartir las características libremente, 2024 limita a 3 | es lo esperado; falta nombrarlo | UX | XS |
 | C1 | La hoja 2024 no está lista | la hoja imprimible no distingue edición | producto | L |
 | C2 | Los recordatorios son de 2014 | `playbook-data.ts` viene de la cheatsheet 2014 | producto | L |
+| D1 | Vida máxima por nivel | solo hay promedio o tirada | producto | S |
 
 ## A. Bugs de correctitud
 
@@ -95,6 +96,11 @@ conservadores y el jugador las cambia en la misma pantalla donde hoy elige la bi
 
 ### B1 — Contenido 2014 sin versión 2024
 
+> **Decidido (17-11):** el PHB 2014 y el 2024 no se cruzan. Las invocaciones
+> de los suplementos (Xanathar's, Tasha's…) sí, cuando el jugador arma el
+> personaje con suplementos. Eso ya es lo que hace `isSourceAllowed` con la
+> biblioteca `all`; B1 queda en un test que lo fija. Lo de abajo no se hace.
+
 Causa exacta: `isSourceAllowed` (`vetools-ref/src/sources.ts`) deja entrar a un
 personaje 2024 las ampliaciones 2014 (Tasha's, Xanathar's…) pero **excluye PHB/DMG/MM
 completos** "porque la revisión los reemplaza". Es cierto para lo reimpreso y falso
@@ -147,6 +153,16 @@ subclases, 22 dotes, 14 combinaciones), escrito para 2014. Tramos:
 1. **Rápido:** etiquetar cada nota con su edición y, en un personaje 2024, mostrar "nota escrita para 2014" donde no se haya revisado. Mejor eso que una nota equivocada sin avisar.
 2. Auditar por clase qué cambió en 2024 y escribir las variantes **en la cheatsheet** (el archivo dice "editá la cheatsheet, no este archivo"), regenerar.
 
+## D. Pedidos nuevos
+
+### D1 — Vida máxima
+
+Hoy `hpMethod` es `average | rolled`. Sumar `max`: el dado entero en cada
+nivel después del primero. Toca `builder-state` (tipo y coerción),
+el cálculo de vida, la pantalla donde se elige el método y el import desde
+Foundry (que hoy solo distingue promedio y tirada). Test: un guerrero 5 con
+CON +2 en máximo tiene 10 + 4·10 + 5·2.
+
 ## Orden de trabajo
 
 1. **Fase 0 — reproducir.** Un archivo de tests con las cuatro fixtures de las reseñas (brujo humano 2024, guerrero goblin + Giant Foundling, guerrero 2014 con "dos armas", guerrero con oro + equipo a mano, guerrero 3 Caballero Rúnico). Cada una falla antes de arreglarse.
@@ -159,9 +175,10 @@ Reglas del repo: un PR por hallazgo, verificado por el CI "Verify Workspace",
 sin tests ni builds locales, los PR los mergea el dueño. `ImportPayload` solo
 cambia en A3 (moneda ya descontada); si cambia, avisar para el Worker.
 
-## Decisiones del dueño
+## Decisiones del dueño (17-11)
 
-1. **B1:** ¿abrir solo invocaciones (y disciplinas) o medir el resto de colecciones? Propuesta: solo `optionalfeature` ahora.
-2. **B1/B2:** ¿las banderas arrancan apagadas (lo conservador) o encendidas?
-3. **A3:** saldo negativo: ¿se bloquea o se avisa?
-4. **C1:** ¿qué tan fiel a la hoja oficial 2024, o un diseño propio?
+1. **B1:** el PHB 2014 y el 2024 no se cruzan; los suplementos sí, si el jugador los elige. Ya funciona así; solo test.
+2. **Reglas de mesa:** cada mesa decide. Las banderas quedan a mano del jugador, apagadas al crear.
+3. **A3:** sin respuesta; queda el aviso.
+4. **C1:** pedido: igual a la de D&D Beyond. Propuesta: mismas secciones, campos y orden que la hoja oficial 2024, con dibujo propio (el diseño de D&D Beyond es de Wizards). Pendiente de confirmar.
+5. **Nuevo:** vida máxima como tercer método (D1).
