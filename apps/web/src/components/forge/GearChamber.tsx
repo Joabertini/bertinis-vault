@@ -87,8 +87,11 @@ export default function GearChamber({
       />
 
       <div className={kitRows.length > 0 ? DIVIDER : ""}>
-        <p className={LABEL_MB4}>
+        <p className={LABEL_MB2}>
           Arma
+        </p>
+        <p className={WHISPER_MB4}>
+          Tu arma principal. Si el equipo inicial te da mas de una, las demas van en Equipo adicional.
         </p>
         <RarityScry
           infoKind="item"
@@ -146,7 +149,7 @@ export default function GearChamber({
         <p className={WHISPER_MB4}>
           {castsAnything
             ? "El libro de conjuros va aca."
-            : "Mochila, cuerda, raciones, herramientas."}
+            : "Mochila, cuerda, raciones, herramientas y las armas de repuesto."}
         </p>
         <GearBag
           carried={carried}

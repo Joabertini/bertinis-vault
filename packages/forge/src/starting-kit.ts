@@ -100,8 +100,17 @@ function toOption(
     } else if (entry.kind === "coins") {
       copper += entry.copper ?? 0;
     } else if (entry.kind === "category") {
-      for (const category of entry.categories ?? []) {
-        openPicks.push({ category, label: equipmentCategoryLabel(category) });
+      /*
+       * "Two martial weapons" is one entry with a quantity of 2, and it asks for
+       * two picks. It used to become one, so the 2014 fighter's "(b) two martial
+       * weapons" showed a single question and a player could only ever name one
+       * of the two.
+       */
+      const times = Math.max(1, Math.floor(entry.quantity ?? 1));
+      for (let n = 0; n < times; n += 1) {
+        for (const category of entry.categories ?? []) {
+          openPicks.push({ category, label: equipmentCategoryLabel(category) });
+        }
       }
     }
     // `special` is prose the index could not resolve to an item — it shows in
