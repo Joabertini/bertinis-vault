@@ -178,6 +178,18 @@ Reglas del repo: un PR por hallazgo, verificado por el CI "Verify Workspace",
 sin tests ni builds locales, los PR los mergea el dueño. `ImportPayload` solo
 cambia en A3 (moneda ya descontada); si cambia, avisar para el Worker.
 
+## Estado (17-11)
+
+| # | Estado | PR |
+|---|---|---|
+| B1 | hecho: solo test (suplementos sí, PHB 2014/2024 no se cruzan) | #175 |
+| B3 | hecho: el título nombra la regla (especie / Tasha's / trasfondo 2024) | #176 |
+| C2 tramo 1 | hecho: aviso y etiqueta «2014» en el tomo de un personaje 2024 | #177 |
+| D1 | hecho: «Máxima» como tercer método de PG | #174 |
+| B2 | pendiente: leer el texto del DMG 2024 antes de codificar | — |
+| C1 | pendiente: boceto de la pestaña Detalles antes de codificar | — |
+| C2 tramo 2 | pendiente: variantes 2024 en la cheatsheet | — |
+
 ## Decisiones del dueño (17-11)
 
 1. **B1:** el PHB 2014 y el 2024 no se cruzan; los suplementos sí, si el jugador los elige. Ya funciona así; solo test.
