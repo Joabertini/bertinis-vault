@@ -8,6 +8,8 @@ import RarityScry from "@/components/forge/RarityScry";
 import StartingKit from "@/components/forge/StartingKit";
 import WeaponMastery from "@/components/forge/WeaponMastery";
 import type { CatalogEntry } from "@/lib/catalog";
+import type { Purse } from "@/lib/purse";
+import { coinLabel } from "@/lib/starting-kit";
 import { DIVIDER, LABEL_MB2, LABEL_MB4, WHISPER_MB4 } from "@/styles/recipes";
 
 type Facts = ComponentProps<typeof ItemFacts>["facts"] | null | undefined | false;
@@ -40,6 +42,7 @@ export default function GearChamber({
   load,
   attunement,
   onToggleAttunement,
+  purse,
   accent,
 }: {
   kitRows: ComponentProps<typeof StartingKit>["rows"];
@@ -68,6 +71,7 @@ export default function GearChamber({
   load: ComponentProps<typeof CarryingLoad>["load"];
   attunement: ComponentProps<typeof Attunement>["state"];
   onToggleAttunement: ComponentProps<typeof Attunement>["onToggle"];
+  purse: Purse;
   accent: string;
 }) {
   return (
@@ -160,6 +164,12 @@ export default function GearChamber({
           onRemove={onRemoveGear}
         />
 
+        {(purse.startingCopper > 0 || purse.purchases.length > 0) && (
+          <div className={DIVIDER}>
+            <PurseLine purse={purse} accent={accent} />
+          </div>
+        )}
+
         <div className={DIVIDER}>
           <CarryingLoad load={load} accent={accent} />
         </div>
@@ -174,6 +184,55 @@ export default function GearChamber({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * The coins, after what was bought with them.
+ *
+ * Shown as soon as there is money or a purchase: a player who took the gold and
+ * is filling the bag by hand needs to see it go down while they shop, not find
+ * out at the table.
+ */
+function PurseLine({ purse, accent }: { purse: Purse; accent: string }) {
+  const owed = purse.balanceCopper < 0;
+
+  return (
+    <div>
+      <p className={LABEL_MB2}>Monedas</p>
+      <p className="font-body text-[15px] leading-relaxed text-bone">
+        {purse.startingCopper > 0 ? (
+          <>
+            Empezas con <span style={{ color: accent }}>{coinLabel(purse.startingCopper)}</span>
+          </>
+        ) : (
+          <>Tu equipo inicial no trae monedas</>
+        )}
+        {purse.spentCopper > 0 && (
+          <>
+            , gastas <span style={{ color: accent }}>{coinLabel(purse.spentCopper)}</span> en lo que agregaste
+          </>
+        )}
+        {owed ? "." : (
+          <>
+            {" "}y te queda{" "}
+            <span style={{ color: accent }}>{coinLabel(purse.balanceCopper) || "nada"}</span>.
+          </>
+        )}
+      </p>
+      {owed && (
+        <p className="mt-2 font-body text-[15px] text-ember">
+          Te faltan {coinLabel(-purse.balanceCopper)}. Saca algo o preguntale a tu DM.
+        </p>
+      )}
+      {purse.unpriced > 0 && (
+        <p className="mt-2 font-body text-[15px] leading-relaxed text-bone">
+          {purse.unpriced === 1
+            ? "Una cosa que agregaste no tiene precio en el libro y no descuenta."
+            : `${purse.unpriced} cosas que agregaste no tienen precio en el libro y no descuentan.`}
+        </p>
+      )}
     </div>
   );
 }

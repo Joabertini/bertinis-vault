@@ -68,6 +68,7 @@ import { gearProficienciesFor } from "@/lib/gear-proficiencies";
 import { speciesProficienciesFor } from "@/lib/species";
 import { assignLanguages, languagePlanFor, languagesSatisfied } from "@/lib/languages";
 import { branchIsRequiredFor } from "@/lib/species-branch";
+import { purseFor } from "@/lib/purse";
 import { startingKitFor } from "@/lib/starting-kit";
 import {
   abilitiesSettled,
@@ -713,6 +714,9 @@ export default function Forge() {
    * that also granted a handaxe.
    */
   const answerKitRow = (rowKey: string, optionKey: string) => act({ type: "answerKitRow", rowKey, optionKey });
+
+  /** The kit's coins, minus what the player has bought by hand since. */
+  const purse = useMemo(() => purseFor(draft, rulesVersion), [draft, rulesVersion]);
 
   const weaponFacts = useMemo(
     () =>
@@ -1408,6 +1412,7 @@ export default function Forge() {
                   load={load}
                   attunement={attunement}
                   onToggleAttunement={toggleAttunement}
+                  purse={purse}
                   accent={accent}
                 />
               )}
