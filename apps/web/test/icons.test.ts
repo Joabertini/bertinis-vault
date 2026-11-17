@@ -22,7 +22,7 @@ import {
 } from "@/lib/icons";
 
 const items = (version: "2014" | "2024") => forRulesVersion(collections.item ?? [], version) as IconItemRow[];
-const spells = (version: "2014" | "2024") => forRulesVersion(collections.spell ?? [], version) as IconSpellRow[];
+const spells = (version: "2014" | "2024") => forRulesVersion(collections.spell ?? [], version) as unknown as IconSpellRow[];
 
 const exists = (key: string) => isSheetIcon(key as never) || key in ICON_SILHOUETTES;
 
