@@ -51,6 +51,61 @@ export function backgroundFeatIdsFor(state: BuilderState): string[] {
   return [...new Set(entry?.grantedFeatIds ?? [])];
 }
 
+/**
+ * A benefit a feat makes the player pick when it is taken.
+ *
+ * Strike of the Giants is the case that was missing: the Giant Foundling
+ * background grants it, and the feat itself says "choose one of the benefits
+ * listed below" — Cloud, Fire, Frost, Hill, Stone or Storm Strike. The builder
+ * granted the feat and never asked, so the sheet carried a feat that does
+ * nothing until a choice nobody could make. A review read that as the feat
+ * being missing, and on the table it was.
+ *
+ * Written here rather than read from the index because the index keeps no feat
+ * prose, and the benefits exist only as named paragraphs in that prose. One
+ * feat, six names, from the book (BGG p. 19).
+ */
+export type FeatBenefit = { name: string; summary: string };
+
+const FEAT_BENEFITS: Record<string, FeatBenefit[]> = {
+  "strike-of-the-giants": [
+    { name: "Cloud Strike", summary: "+1d4 trueno; salvación de Sabiduría o te vuelves invisible para el objetivo" },
+    { name: "Fire Strike", summary: "+1d10 fuego" },
+    { name: "Frost Strike", summary: "+1d6 frío; salvación de Constitución o su velocidad baja a 0" },
+    { name: "Hill Strike", summary: "+1d6 del tipo del arma; salvación de Fuerza o queda derribado" },
+    { name: "Stone Strike", summary: "+1d6 fuerza; salvación de Fuerza o lo empujás 10 pies" },
+    { name: "Storm Strike", summary: "+1d6 relámpago; salvación de Constitución o desventaja en ataques" },
+  ],
+};
+
+/**
+ * Where the answer is kept: in `spellVariantChoices`, under its own prefix.
+ *
+ * That map is already the draft's home for "which named variant of a grant",
+ * keyed by what asks (`race`, `feat:magic-initiate`), and it is already
+ * coerced, saved and restored. A second map with the same shape would be the
+ * same thing in two places.
+ */
+export function featBenefitKey(featId: string): string {
+  return `benefit:${featId}`;
+}
+
+/** The benefits a feat asks the player to pick from, or none. */
+export function featBenefitsFor(featId: string): FeatBenefit[] {
+  return FEAT_BENEFITS[featId] ?? [];
+}
+
+/** The benefit chosen for a feat, if it is one the feat offers. */
+export function chosenFeatBenefit(state: BuilderState, featId: string): string | null {
+  const answer = state.spellVariantChoices[featBenefitKey(featId)];
+  return answer && featBenefitsFor(featId).some((benefit) => benefit.name === answer) ? answer : null;
+}
+
+/** Of these feats, the ones still owed a benefit. */
+export function unansweredFeatBenefits(state: BuilderState, featIds: string[]): string[] {
+  return featIds.filter((featId) => featBenefitsFor(featId).length > 0 && !chosenFeatBenefit(state, featId));
+}
+
 /** Every feat the character has, once each, in the order they were taken. */
 export function featIdsFor(state: BuilderState): string[] {
   return [
@@ -82,7 +137,11 @@ export function featFeatureEntriesFor(
 
   return featIdsFor(state).flatMap((featId) => {
     const feat = feats.find((row) => slugOf(row.name) === featId);
-    return feat ? [{ featureId: featId, label: feat.name, source: "feat" as const }] : [];
+    if (!feat) return [];
+    // The benefit is part of what the feat is on the sheet: "Strike of the
+    // Giants" alone does not say what the strike does.
+    const benefit = chosenFeatBenefit(state, featId);
+    return [{ featureId: featId, label: benefit ? `${feat.name} (${benefit})` : feat.name, source: "feat" as const }];
   });
 }
 

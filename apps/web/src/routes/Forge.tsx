@@ -60,7 +60,7 @@ import {
   slugOf,
   startingEquipmentForClass,
 } from "@/lib/index-options";
-import { featIdsFor } from "@/lib/feats";
+import { backgroundFeatIdsFor, featIdsFor, unansweredFeatBenefits } from "@/lib/feats";
 import { collapseGearLines } from "@/lib/gear-lines";
 import { factsFor, nameFor } from "@/lib/item-facts";
 import { armorWarningFor, weaponWarningFor } from "@/lib/gear-warnings";
@@ -868,6 +868,8 @@ export default function Forge() {
     origin:
       Boolean(draft.backgroundId) &&
       (backgroundFeatIds.length < 2 || Boolean(draft.backgroundFeatId)) &&
+      // Strike of the Giants is granted, and still asks which strike.
+      unansweredFeatBenefits(draft, backgroundFeatIdsFor(draft)).length === 0 &&
       grantsSettled("origin"),
     // Asked of the method the player chose. Point buy binds nothing — its
     // steppers write straight onto the draft — so the old one-question-for-all

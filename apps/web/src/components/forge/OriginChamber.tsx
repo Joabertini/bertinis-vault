@@ -7,6 +7,7 @@ import SigilShelf from "@/components/forge/SigilShelf";
 import VariantChoices from "@/components/forge/VariantChoices";
 import type { BuilderState } from "@/lib/builder-state";
 import type { CatalogEntry } from "@/lib/catalog";
+import { backgroundFeatIdsFor, chosenFeatBenefit, featBenefitKey } from "@/lib/feats";
 import { DIVIDER } from "@/styles/recipes";
 
 /** The background: its shelf, what it hands you, and the spell questions it opens. */
@@ -70,6 +71,13 @@ export default function OriginChamber({
               accent={accent}
               featId={draft.backgroundFeatId}
               onPickFeat={(backgroundFeatId) => patchDraft({ backgroundFeatId })}
+              benefit={chosenFeatBenefit(draft, backgroundFeatIdsFor(draft)[0] ?? "") ?? ""}
+              onPickBenefit={(featId, name) => {
+                const next = { ...draft.spellVariantChoices };
+                if (name) next[featBenefitKey(featId)] = name;
+                else delete next[featBenefitKey(featId)];
+                patchDraft({ spellVariantChoices: next });
+              }}
             />
           </div>
         </div>
