@@ -1,0 +1,14 @@
+Íconos de la Forja
+==================
+
+Pintados (hoja de sprites atlas.webp)
+- RPG Icons Set. Dominio público (CC0). https://opengameart.org/content/rpg-icons-set
+- Fantasy RPG Icons 1, 2 y 3, Drummyfish. Dominio público (CC0).
+  https://opengameart.org/content/fantasy-rpg-icons-0
+- Painterly Spell Icons 1-3, J. W. Bjerk (eleazzaar), https://opengameart.org/content/painterly-spell-icons-part-1
+  Licencia CC BY 3.0 https://creativecommons.org/licenses/by/3.0/ . Se recortaron y
+  se escalaron; no se modificó su dibujo.
+
+Siluetas (trazos en packages/forge/src/icon-atlas.ts)
+- game-icons.net, CC BY 3.0 https://creativecommons.org/licenses/by/3.0/ . Autores de cada
+  ícono: delapouite, lorc, sbed
