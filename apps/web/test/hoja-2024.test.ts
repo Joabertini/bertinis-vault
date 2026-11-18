@@ -43,7 +43,7 @@ describe("la hoja 2024", () => {
   test("lleva el nombre, la clase y el nivel del personaje", () => {
     const { doc } = sheet();
     expect(doc.querySelector(".sheet-header .document-name")?.textContent).toBe("Brannoc Vell");
-    expect(doc.querySelector(".sheet-header .class")?.textContent).toMatch(/Fighter 5/);
+    expect(doc.querySelector(".sheet-header .class")?.textContent).toBe("Fighter");
     expect(doc.querySelector(".sheet-header .level-badge")?.textContent).toBe("5");
   });
 
