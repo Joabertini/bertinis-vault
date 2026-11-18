@@ -24,6 +24,7 @@ import ShareButton from "@/components/codex/ShareButton";
 import Sigil from "@/components/sigils/Sigil";
 import Vision from "@/components/codex/Vision";
 import CharacterSheet from "@/components/sheet/CharacterSheet";
+import Hoja2024 from "@/components/sheet/Hoja2024";
 import FloatingWindow from "@/components/ui/FloatingWindow";
 import { playbookFor } from "@/lib/playbook";
 import { entryById, hitDieFor } from "@/lib/catalog";
@@ -403,7 +404,7 @@ function TomeWindow({
       title={state.characterName}
       subtitle={subtitle}
       accent={accent}
-      width={view === "hoja" ? 1040 : 900}
+      width={view === "hoja" ? (rulesVersion === "2024" ? 880 : 1040) : 900}
       onClose={onClose}
     >
       <div className="flex items-center gap-4 border-b border-iron/30 px-6 py-2">
@@ -431,7 +432,12 @@ function TomeWindow({
 
       {view === "hoja" ? (
         snapshot ? (
-          <CharacterSheet state={state} build={snapshot} accent={accent} />
+          rulesVersion === "2024" ? (
+            // C1: the 2024 sheet is Foundry's own (owner's decision, 2026-11-17).
+            <Hoja2024 state={state} build={snapshot} rulesVersion={rulesVersion} />
+          ) : (
+            <CharacterSheet state={state} build={snapshot} accent={accent} />
+          )
         ) : (
           <p className="px-8 py-10 font-body text-[15px] text-bone">
             Este tomo no se puede derivar: le falta especie, clase o trasfondo. Reforjalo y
