@@ -307,20 +307,9 @@
 }
 }
 
-/* El lugar del logo de la marca, sobre el banner (aún sin definir). */
-.marca-logo {
-  position: absolute;
-  top: 24px;
-  left: 310px;
-  width: 178px;
-  height: 71px;
-  border: 2px dashed rgba(201, 164, 106, 0.35);
-  border-radius: 6px;
-  display: grid;
-  place-items: center;
-  font: 25px/1 Georgia, serif;
-  letter-spacing: 6px;
-  color: rgba(201, 164, 106, 0.5);
-  pointer-events: none;
-  z-index: 1;
-}
+/* Las monedas: Foundry pone el dibujo con JavaScript; aquí van en la hoja de estilos. */
+i.currency.pp { background-image: url("systems/dnd5e/icons/currency/platinum.webp"); }
+i.currency.gp { background-image: url("systems/dnd5e/icons/currency/gold.webp"); }
+i.currency.ep { background-image: url("systems/dnd5e/icons/currency/electrum.webp"); }
+i.currency.sp { background-image: url("systems/dnd5e/icons/currency/silver.webp"); }
+i.currency.cp { background-image: url("systems/dnd5e/icons/currency/copper.webp"); }

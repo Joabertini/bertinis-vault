@@ -5642,6 +5642,14 @@ svg { fill: var(--icon-fill, #000); width: var(--icon-width, var(--icon-size, 1e
 <script>
   // Pestañas: mismo comportamiento que la hoja de Foundry.
   const form = document.querySelector("form.application");
+
+  // Cerrar y Recordatorios son del marco que sostiene el iframe, no de la hoja.
+  const aviso = (hoja) => parent.postMessage({ hoja }, "*");
+  form.addEventListener("click", (e) => {
+    const accion = e.target.closest('.window-header [data-action="close"], .window-header [data-action="vision"]');
+    if (accion) aviso(accion.dataset.action === "close" ? "cerrar" : "vision");
+  });
+  addEventListener("keydown", (e) => { if (e.key === "Escape") aviso("cerrar"); });
   form.addEventListener("click", (e) => {
     const a = e.target.closest('nav.tabs [data-action="tab"]');
     if (!a) return;
