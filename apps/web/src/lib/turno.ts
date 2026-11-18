@@ -107,12 +107,44 @@ function firstSentence(record: Record<string, unknown> | null, max = 140): strin
   return sentence.length > max ? `${sentence.slice(0, max - 1).trimEnd()}…` : sentence;
 }
 
-/** A feature's first clause: enough to know what it is, never a paragraph. */
-function shortLine(record: Record<string, unknown> | null, max = 72): string {
-  const sentence = firstSentence(record, 400);
-  const comma = sentence.indexOf(", ");
-  const clause = comma >= 25 ? sentence.slice(0, comma) : sentence;
-  return clause.length > max ? `${clause.slice(0, max - 1).trimEnd()}…` : clause;
+/** The strings of a record's entries, in order, one level of nesting deep. */
+function textsOf(record: Record<string, unknown> | null): string[] {
+  const out: string[] = [];
+  const walk = (node: unknown, depth: number) => {
+    if (typeof node === "string") out.push(node);
+    else if (depth < 3 && node && typeof node === "object") {
+      const inner = (node as { entries?: unknown }).entries;
+      for (const child of Array.isArray(node) ? node : Array.isArray(inner) ? inner : []) walk(child, depth + 1);
+    }
+  };
+  walk(record?.["entries"], 0);
+  return out;
+}
+
+/**
+ * What a feature does, in one line: the sentence that names what it costs ("As a Bonus Action, you
+ * give yourself Advantage...") and not the flavour sentence before it ("You can imbue yourself with
+ * a primal power..."). Falls back to the first sentence.
+ */
+function shortLine(record: Record<string, unknown> | null, max = 100): string {
+  const sentences = textsOf(record).flatMap((text) => plain(text).split(/(?<=[.!?])\s/));
+  const costly = sentences.find((sentence) => /Bonus Action|Reaction|Magic action/.test(sentence));
+  const line = costly ?? sentences[0] ?? "";
+  return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
+}
+
+/** What a reaction does, without repeating what sets it off: the words after "take a Reaction". */
+function effectLine(record: Record<string, unknown> | null, max = 90): string {
+  for (const text of textsOf(record)) {
+    const after = text.split(/\{@variantrule Reaction[^}]*\}/)[1];
+    if (!after) continue;
+    const effect = plain(after).replace(/^(?:\s*,)?\s*(?:to |and )?/, "").replace(/[.]+$/, "");
+    if (effect.length > 3) {
+      const line = effect.charAt(0).toUpperCase() + effect.slice(1);
+      return line.length > max ? `${line.slice(0, max - 1).trimEnd()}…` : line;
+    }
+  }
+  return shortLine(record, max);
 }
 
 /** Average of a dice formula: "2d10+3" is 14. Used only to order what to show first. */
@@ -383,7 +415,7 @@ export function turnoFor(
         id: `f:${name}`,
         when: trigger ? plain(trigger).slice(0, 90) : "Cuando se dispara",
         name,
-        line: shortLine(record, 90),
+        line: effectLine(record),
         role: roleOf(text, false),
       });
     } else if (cost === "bonus" || cost === "action") {
