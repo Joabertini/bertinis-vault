@@ -16,6 +16,7 @@ import {
   type HojaUi,
 } from "@/lib/hoja-2024";
 import { loadKind } from "@/lib/rules-text";
+import { useRolls } from "@/lib/roll-store";
 
 /** The page is the same for every character; read it once. */
 let template: Promise<string> | null = null;
@@ -130,7 +131,12 @@ export default function Hoja2024({
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.source !== frame.current?.contentWindow) return;
-      const message = event.data as { hoja?: string; estado?: HojaEstado; edit?: HojaEdit; ui?: HojaUi } | null;
+      const message = event.data as ({
+        hoja?: string;
+        estado?: HojaEstado;
+        edit?: HojaEdit;
+        ui?: HojaUi;
+      } & Record<string, unknown>) | null;
       switch (message?.hoja) {
         case "cerrar":
           return onClose();
@@ -138,6 +144,18 @@ export default function Hoja2024({
           return onVision();
         case "editar":
           return onEdit();
+        case "tirada":
+          // Every roll and every notice of the sheet lands in the roll tray, not on the sheet.
+          useRolls.getState().push({
+            titulo: String(message.titulo ?? ""),
+            formula: String(message.formula ?? ""),
+            total: typeof message.total === "number" ? message.total : null,
+            detalle: String(message.detalle ?? ""),
+            modo: message.modo === "ventaja" || message.modo === "desventaja" ? message.modo : "normal",
+            d20: typeof message.d20 === "number" ? message.d20 : null,
+            aviso: typeof message.aviso === "string" ? message.aviso : null,
+          });
+          return;
         case "ui":
           if (message.ui) ui.current = message.ui;
           return;

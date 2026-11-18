@@ -31,15 +31,18 @@ import type { BuilderState } from "../src/lib/builder";
 const pageText = () => (document.body.textContent ?? "").replace(/\s+/g, " ");
 
 /*
- * La hoja vive en un shadow root, así que `document.body.textContent` no la ve.
- * Estos dos ayudantes miran adentro: `sheetHost` es el div que la sostiene y su
- * ausencia es lo que significa "la hoja no está".
+ * La hoja es la de Foundry y vive en un iframe (`srcDoc`), así que `document.body.textContent`
+ * no la ve. `sheetHost` es el iframe y su ausencia es lo que significa "la hoja no está";
+ * `sheetText` lee el texto de su documento.
  */
-const sheetHost = () => [...document.querySelectorAll("div")].find((element) => element.shadowRoot);
-const sheetText = () => (sheetHost()?.shadowRoot?.textContent ?? "").replace(/\s+/g, " ");
+const sheetHost = () => document.querySelector<HTMLIFrameElement>('iframe[title^="Hoja de"]') ?? undefined;
+const sheetText = () => {
+  const srcdoc = sheetHost()?.getAttribute("srcdoc") ?? "";
+  return (new DOMParser().parseFromString(srcdoc, "text/html").body.textContent ?? "").replace(/\s+/g, " ");
+};
 
-/** Un rótulo que sólo puede venir de la hoja de roll20. */
-const EN_LA_HOJA = "FUERZA";
+/** Un rótulo que sólo puede venir de la hoja de Foundry. */
+const EN_LA_HOJA = "Hit Points";
 
 /** Un personaje entero, con un arma en la mochila. */
 function characterWith(overrides: Partial<BuilderState>): BuilderState {
@@ -79,14 +82,16 @@ beforeAll(() => {
   );
   HTMLCanvasElement.prototype.getContext = (() => noop) as never;
 
-  // La hoja se busca en `public/hoja`, que en un navegador sirve Vite y acá no
-  // sirve nadie. El build ya la dejó en disco (`pretest`), así que el `fetch`
-  // de la prueba la lee de ahí.
-  const hoja = join(process.cwd(), "public", "hoja");
+  // La hoja y el texto de reglas se piden a `public/`, que en un navegador sirve Vite y acá
+  // no sirve nadie: el `fetch` de la prueba los lee de disco.
   globalThis.fetch = ((input: RequestInfo | URL) => {
-    const name = String(input).replace("/hoja/", "");
-    const body = readFileSync(join(hoja, name), "utf8");
-    return Promise.resolve({ ok: true, text: () => Promise.resolve(body) } as Response);
+    const path = join(process.cwd(), "public", String(input));
+    const body = readFileSync(path, "utf8");
+    return Promise.resolve({
+      ok: true,
+      text: () => Promise.resolve(body),
+      json: () => Promise.resolve(JSON.parse(body)),
+    } as Response);
   }) as typeof fetch;
 });
 
@@ -170,7 +175,7 @@ describe("el tomo abre en un selector", () => {
     expect(text).toContain(String(resolved.snapshot.derived.hp));
     expect(text).toContain(String(resolved.snapshot.derived.ac));
     // Las seis puntuaciones, cada una con su rótulo.
-    expect(text).toContain("CARISMA");
+    expect(text).toContain("CHA");
   });
 
   test("se puede pasar a los recordatorios sin cerrar la ventana", async () => {

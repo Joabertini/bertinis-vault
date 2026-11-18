@@ -5710,46 +5710,50 @@ svg { fill: var(--icon-fill, #000); width: var(--icon-width, var(--icon-size, 1e
   };
 
   // Dados -------------------------------------------------------------------
-  function tirar(formula) {
+  // Alt = ventaja, Ctrl = desventaja (el mismo atajo que Foundry). Se lee en cada clic.
+  let modoTirada = "normal";
+  form.addEventListener(
+    "click",
+    (e) => { modoTirada = e.altKey ? "ventaja" : e.ctrlKey || e.metaKey ? "desventaja" : "normal"; },
+    true,
+  );
+  function tirar(formula, modo) {
     const f = String(formula).replace(/\s+/g, "").replace(/−/g, "-");
     let total = 0;
+    let d20 = null;
+    let par = null;
+    let primero = true;
     const partes = [];
-    for (const m of f.matchAll(/([+-]?)(\d*)d(\d+)|([+-]?)(\d+)/g)) {
+    for (const m of f.matchAll(/([+-]?)(?:(\d*)d(\d+)|(\d+))/g)) {
       if (m[3]) {
         const signo = m[1] === "-" ? -1 : 1;
         const n = Number(m[2] || 1);
         const caras = Number(m[3]);
-        const r = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * caras));
+        let r = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * caras));
+        if (primero && caras === 20 && n === 1 && modo !== "normal") {
+          par = [r[0], 1 + Math.floor(Math.random() * 20)];
+          r = [modo === "ventaja" ? Math.max(...par) : Math.min(...par)];
+        }
+        if (primero && caras === 20 && n === 1) d20 = r[0];
+        primero = false;
         total += signo * r.reduce((a, b) => a + b, 0);
-        partes.push(`${m[1] || ""}${n}d${caras} [${r.join(", ")}]`);
-      } else if (m[5]) {
-        total += (m[4] === "-" ? -1 : 1) * Number(m[5]);
-        partes.push(`${m[4] || "+"}${m[5]}`);
+        partes.push(`${m[1] === "-" ? "-" : partes.length ? "+" : ""}${n}d${caras} [${r.join(", ")}]`);
+      } else if (m[4]) {
+        total += (m[1] === "-" ? -1 : 1) * Number(m[4]);
+        partes.push(`${m[1] === "-" ? "-" : "+"}${m[4]}`);
       }
     }
-    return { total, detalle: partes.join(" ") };
+    return { total, detalle: partes.join(" ") + (par ? ` (${par.join(" / ")})` : ""), d20 };
   }
 
-  const bandeja = document.createElement("div");
-  bandeja.className = "hoja-tiradas";
-  form.append(bandeja);
+  // Todo lo que se tira y todo aviso va a la bandeja de dados del marco, no a la hoja.
+  const aMarco = (datos) => parent.postMessage({ hoja: "tirada", ...datos }, "*");
   function tarjeta(titulo, cuerpo, pie) {
-    const card = document.createElement("div");
-    card.className = "hoja-tirada";
-    card.innerHTML = `<header>${esc(titulo)}</header><strong>${cuerpo}</strong>${pie ? `<small>${pie}</small>` : ""}`;
-    card.addEventListener("click", () => card.remove());
-    bandeja.prepend(card);
-    while (bandeja.children.length > 4) bandeja.lastElementChild.remove();
-    setTimeout(() => card.classList.add("vieja"), 9000);
-    setTimeout(() => card.remove(), 12000);
-    return card;
+    aMarco({ titulo, aviso: [cuerpo, pie].filter(Boolean).join(" · "), formula: "", total: null, detalle: "", modo: "normal", d20: null });
   }
   function mostrarTirada(titulo, formula) {
-    const r = tirar(formula);
-    const d20 = /^1d20/.test(String(formula).replace(/\s/g, "")) ? Number((r.detalle.match(/1d20 \[(\d+)\]/) || [])[1]) : 0;
-    const card = tarjeta(titulo, String(r.total), `${esc(formula)} · ${esc(r.detalle)}`);
-    if (d20 === 20) card.classList.add("critico");
-    if (d20 === 1) card.classList.add("pifia");
+    const r = tirar(formula, modoTirada);
+    aMarco({ titulo, formula: String(formula).replace(/\s+/g, ""), total: r.total, detalle: r.detalle, modo: modoTirada, d20: r.d20, aviso: null });
     return r;
   }
 
