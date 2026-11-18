@@ -175,7 +175,8 @@ describe("el tomo abre en un selector", () => {
     expect(text).toContain(String(resolved.snapshot.derived.hp));
     expect(text).toContain(String(resolved.snapshot.derived.ac));
     // Las seis puntuaciones, cada una con su rótulo.
-    expect(text).toContain("CHA");
+    const doc = new DOMParser().parseFromString(sheetHost()?.getAttribute("srcdoc") ?? "", "text/html");
+    expect(doc.querySelectorAll(".ability-scores .ability-score")).toHaveLength(6);
   });
 
   test("se puede pasar a los recordatorios sin cerrar la ventana", async () => {
