@@ -124,6 +124,17 @@ describe("la hoja 2024", () => {
     expect(text).toContain("Segundo párrafo.");
   });
 
+  test("sin recuadro de logo, con las monedas dibujadas y con X y Recordatorios que avisan al marco", () => {
+    const { doc } = sheet();
+    expect(doc.querySelector(".marca-logo")).toBeNull();
+    expect(doc.body.textContent).not.toContain("LOGO");
+    const css = readFileSync(resolve(process.cwd(), "public/hoja-2024/nucleo.css"), "utf8");
+    for (const coin of ["platinum", "gold", "electrum", "silver", "copper"]) expect(css).toContain(`currency/${coin}.webp`);
+    expect(doc.querySelector('.window-header [data-action="close"]')).not.toBeNull();
+    expect(doc.querySelector('.window-header [data-action="vision"]')).not.toBeNull();
+    expect(doc.querySelector('.window-header [data-action="copyUuid"]')).toBeNull();
+  });
+
   test("el banner es el de la clase cuando no hay uno propio", () => {
     const { doc } = sheet();
     const style = doc.querySelector("form.application")?.getAttribute("style") ?? "";

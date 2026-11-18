@@ -399,14 +399,19 @@ function TomeWindow({
     background ? ` · ${background.label}` : ""
   }`;
 
+  // La hoja 2024 es su propia ventana (con su propia X): nada del marco alrededor.
+  const soloHoja = rulesVersion === "2024" && view === "hoja" && Boolean(snapshot);
+
   return (
     <FloatingWindow
       title={state.characterName}
       subtitle={subtitle}
       accent={accent}
       width={view === "hoja" ? (rulesVersion === "2024" ? 880 : 1040) : 900}
+      bare={soloHoja}
       onClose={onClose}
     >
+      {!soloHoja && (
       <div className="flex items-center gap-4 border-b border-iron/30 px-6 py-2">
         {(
           [
@@ -429,12 +434,13 @@ function TomeWindow({
           </button>
         ))}
       </div>
+      )}
 
       {view === "hoja" ? (
         snapshot ? (
           rulesVersion === "2024" ? (
             // C1: the 2024 sheet is Foundry's own (owner's decision, 2026-11-17).
-            <Hoja2024 state={state} build={snapshot} rulesVersion={rulesVersion} />
+            <Hoja2024 state={state} build={snapshot} rulesVersion={rulesVersion} onClose={onClose} onVision={() => onSwitch("vision")} />
           ) : (
             <CharacterSheet state={state} build={snapshot} accent={accent} />
           )

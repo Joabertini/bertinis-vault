@@ -29,6 +29,7 @@ export default function FloatingWindow({
   subtitle,
   accent = "#F2C14E",
   width = 880,
+  bare = false,
   onClose,
   children,
 }: {
@@ -37,6 +38,8 @@ export default function FloatingWindow({
   /** The class tint, so an open window says whose it is at a glance. */
   accent?: string;
   width?: number;
+  /** Only the content: no title bar. The 2024 sheet is its own window, with its own close button. */
+  bare?: boolean;
   onClose: () => void;
   children: React.ReactNode;
 }) {
@@ -73,12 +76,19 @@ export default function FloatingWindow({
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.98 }}
         transition={{ type: "spring", stiffness: 220, damping: 26 }}
-        style={{
-          borderColor: `${accent}55`,
-          boxShadow: `0 30px 90px rgba(0,0,0,0.75), inset 0 0 60px ${accent}08`,
-        }}
-        className="pointer-events-auto flex h-full w-full flex-col border bg-[#000000] md:h-auto md:max-h-[86vh] md:w-auto md:resize md:overflow-auto"
+        style={
+          bare
+            ? { boxShadow: "0 30px 90px rgba(0,0,0,0.75)" }
+            : {
+                borderColor: `${accent}55`,
+                boxShadow: `0 30px 90px rgba(0,0,0,0.75), inset 0 0 60px ${accent}08`,
+              }
+        }
+        className={`pointer-events-auto flex h-full w-full flex-col md:h-auto md:max-h-[86vh] md:w-auto md:resize md:overflow-auto ${
+          bare ? "bg-transparent" : "border bg-[#000000]"
+        }`}
       >
+        {!bare && (
         <div
           onPointerDown={(event) => {
             // Only the primary button drags: a right-click on the bar is a
@@ -105,6 +115,7 @@ export default function FloatingWindow({
             ✕
           </button>
         </div>
+        )}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="md:w-[--window-width]" style={{ ["--window-width" as string]: `${width}px` }}>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { CharacterBuild } from "@bertinis-vault/contracts";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
@@ -24,11 +24,18 @@ export default function Hoja2024({
   state,
   build,
   rulesVersion,
+  onClose,
+  onVision,
 }: {
   state: BuilderState;
   build: CharacterBuild;
   rulesVersion: RulesVersion;
+  /** The sheet's own X and Escape. */
+  onClose: () => void;
+  /** The sheet's "Recordatorios" button. */
+  onVision: () => void;
 }) {
+  const frame = useRef<HTMLIFrameElement>(null);
   const [page, setPage] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const data = useMemo(() => hojaDataFor(state, build, rulesVersion), [state, build, rulesVersion]);
@@ -43,6 +50,17 @@ export default function Hoja2024({
     };
   }, [data]);
 
+  // The page inside the iframe asks for what only this page can do.
+  useEffect(() => {
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== frame.current?.contentWindow) return;
+      if (event.data?.hoja === "cerrar") onClose();
+      else if (event.data?.hoja === "vision") onVision();
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [onClose, onVision]);
+
   if (failed) {
     return <p className="px-8 py-10 font-body text-[15px] text-bone">No pude cargar la hoja. Probá de nuevo.</p>;
   }
@@ -50,6 +68,7 @@ export default function Hoja2024({
 
   return (
     <iframe
+      ref={frame}
       title={`Hoja de ${data.name}`}
       srcDoc={page}
       className="block w-full border-0"

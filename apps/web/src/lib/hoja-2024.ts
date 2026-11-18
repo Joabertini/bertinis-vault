@@ -391,10 +391,17 @@ export function renderHoja(template: string, data: HojaData): string {
     form.style.margin = "0 auto";
     form.style.setProperty("--dnd5e-character-background-image", `url("${data.banner}")`);
     form.style.setProperty("--dnd5e-character-header-image", "transparent");
-    const logo = doc.createElement("div");
-    logo.className = "marca-logo";
-    logo.textContent = "LOGO";
-    form.querySelector(".window-content")?.prepend(logo);
+  }
+
+  // The window's own buttons: close and "Recordatorios" talk to the page that holds the iframe.
+  doc.querySelector(".window-header .preparation-warnings")?.remove();
+  const reminders = doc.querySelector('.window-header [data-action="copyUuid"]');
+  if (reminders) {
+    reminders.setAttribute("data-action", "vision");
+    reminders.setAttribute("data-tooltip", "Recordatorios");
+    reminders.setAttribute("aria-label", "Recordatorios");
+    reminders.setAttribute("class", "header-control fa-solid fa-lightbulb icon");
+    reminders.removeAttribute("draggable");
   }
 
   // Header.
