@@ -10,7 +10,7 @@
  * there has to change.
  */
 
-import { isCoverImage } from "./cover-image";
+import { isCoverImage, isStoredImage } from "./cover-image";
 import type { AbilityBonusMap, ExpertiseAnswer, LevelChoice } from "@bertinis-vault/domain";
 
 import { ABILITY_IDS, type AbilityId } from "./abilities";
@@ -113,6 +113,12 @@ export type BuilderState = {
    * prototype token's texture.
    */
   tokenImage: string;
+  /**
+   * The sheet's banner, when the player uploaded one: its address in the build
+   * store, kept whole. "" shows the class's own (`classBannerSvg`). It is also
+   * the banner Nerissa's `/showpj` card is to print.
+   */
+  bannerImage: string;
   playerName: string;
   alignment: string;
   raceId: string;
@@ -350,6 +356,7 @@ export const initialState: BuilderState = {
   characterName: "Seraphina Vale",
   coverImage: "",
   tokenImage: "",
+  bannerImage: "",
   playerName: "Martin",
   alignment: "Neutral Bueno",
   raceId: "human",
@@ -423,6 +430,7 @@ export function coerceBuilderState(value: unknown): BuilderState {
     // hand-edited or corrupted save cannot push a character past the limit.
     coverImage: isCoverImage(candidate.coverImage) ? candidate.coverImage : "",
     tokenImage: isCoverImage(candidate.tokenImage) ? candidate.tokenImage : "",
+    bannerImage: isStoredImage(candidate.bannerImage) ? candidate.bannerImage : "",
     playerName: typeof candidate.playerName === "string" ? candidate.playerName : initialState.playerName,
     alignment: typeof candidate.alignment === "string" ? candidate.alignment : initialState.alignment,
     raceId: typeof candidate.raceId === "string" ? candidate.raceId : initialState.raceId,

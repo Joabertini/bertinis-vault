@@ -1,3 +1,4 @@
+import BannerPicker from "@/components/codex/BannerPicker";
 import CoverPicker from "@/components/codex/CoverPicker";
 import TokenPicker from "@/components/codex/TokenPicker";
 import ForgeField from "@/components/forge/ForgeField";
@@ -54,6 +55,12 @@ export default function IdentityChamber({
         value={draft.tokenImage}
         portrait={draft.coverImage}
         onChange={(tokenImage) => patchDraft({ tokenImage })}
+      />
+
+      <BannerPicker
+        value={draft.bannerImage}
+        classId={draft.classId}
+        onChange={(bannerImage) => patchDraft({ bannerImage })}
       />
 
       {/* These travel in the payload's `identity.biography` and
