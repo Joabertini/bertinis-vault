@@ -5646,8 +5646,8 @@ svg { fill: var(--icon-fill, #000); width: var(--icon-width, var(--icon-size, 1e
   // Cerrar y Recordatorios son del marco que sostiene el iframe, no de la hoja.
   const aviso = (hoja) => parent.postMessage({ hoja }, "*");
   form.addEventListener("click", (e) => {
-    const accion = e.target.closest('.window-header [data-action="close"], .window-header [data-action="vision"], .window-header [data-action="changeMode"]');
-    if (accion) aviso({ close: "cerrar", vision: "vision", changeMode: "editar" }[accion.dataset.action]);
+    const accion = e.target.closest('.window-header [data-action="close"], .window-header [data-action="vision"]');
+    if (accion) aviso({ close: "cerrar", vision: "vision" }[accion.dataset.action]);
   });
   addEventListener("keydown", (e) => { if (e.key === "Escape") aviso("cerrar"); });
   form.addEventListener("click", (e) => {
@@ -6201,6 +6201,201 @@ svg { fill: var(--icon-fill, #000); width: var(--icon-width, var(--icon-size, 1e
     const conInfo = t.closest("[data-info]");
     if (conInfo) return abrirInfo(info[conInfo.dataset.info], conInfo);
   });
+
+  // ---------------------------------------------------------------------------
+  // Modo edición, como el de Foundry: la llave de arriba a la izquierda vuelve
+  // editable la hoja. Cada cambio va al personaje (mensaje "cambio") y la hoja
+  // vuelve a dibujarse en la misma pestaña y en el mismo modo.
+  // ---------------------------------------------------------------------------
+  const llave = form.querySelector(".window-header .mode-slider");
+  let editando = form.classList.contains("editable");
+  const pestañaActiva = () => form.querySelector('nav.tabs [data-action="tab"].active')?.dataset.tab;
+  const avisarUi = () => parent.postMessage({ hoja: "ui", ui: { tab: pestañaActiva(), editing: editando } }, "*");
+  const cambio = (edit) => {
+    avisarUi();
+    parent.postMessage({ hoja: "cambio", edit }, "*");
+  };
+  form.addEventListener("click", (e) => {
+    if (e.target.closest('nav.tabs [data-action="tab"]')) setTimeout(avisarUi, 0);
+  });
+
+  // Textos que se escriben en la hoja: nombre, biografía, características físicas.
+  const CAMPOS_BIO = {
+    Alignment: "alignment", Age: "age", Height: "height", Weight: "weight", Eyes: "eyes", Hair: "hair",
+    Skin: "skin", Gender: "gender", Faith: "faith",
+  };
+  const CAJAS_BIO = { Ideals: "ideal", Bonds: "bond", Flaws: "flaw", "Personality Traits": "trait", Appearance: "appearance" };
+  const editables = [];
+  const nombre = form.querySelector(".sheet-header .document-name");
+  if (nombre) editables.push([nombre, "characterName"]);
+  for (const li of form.querySelectorAll('section.tab[data-tab="biography"] ul.characteristics > li')) {
+    const campo = CAMPOS_BIO[li.querySelector(".label")?.textContent?.trim()];
+    const valor = li.querySelector(".value");
+    if (campo && valor) editables.push([valor, campo]);
+  }
+  for (const caja of form.querySelectorAll('section.tab[data-tab="biography"] .textbox')) {
+    const campo = CAJAS_BIO[caja.querySelector("h3 span")?.textContent?.trim()];
+    const p = caja.querySelector("p");
+    if (campo && p) editables.push([p, campo]);
+  }
+  const historia = form.querySelector('section.tab[data-tab="biography"] .editor-content');
+  if (historia) editables.push([historia, "notes"]);
+  for (const [el, campo] of editables) {
+    el.addEventListener("focus", () => {
+      if (el.innerText.trim() === "—") el.innerText = "";
+    });
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && campo !== "notes" && !el.matches(".textbox p")) {
+        e.preventDefault();
+        el.blur();
+      }
+      if (e.key === "Escape") e.stopPropagation();
+    });
+    el.addEventListener("blur", () => {
+      if (!editando) return;
+      const valor = el.innerText.replace(/ /g, " ").trim();
+      if (valor === (el.dataset.original ?? "")) {
+        if (!valor) el.innerText = "—";
+        return;
+      }
+      cambio({ tipo: "campo", campo, valor });
+    });
+  }
+
+  // Puntajes de característica.
+  const puntajes = [...form.querySelectorAll(".ability-scores .ability-score")].map((caja) => [caja.querySelector(".score"), caja.dataset.ability]);
+  for (const [el, habilidad] of puntajes) {
+    if (!el) continue;
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); el.blur(); }
+      else if (e.key.length === 1 && !/\d/.test(e.key)) e.preventDefault();
+    });
+    el.addEventListener("blur", () => {
+      if (!editando) return;
+      const valor = parseInt(el.innerText, 10);
+      if (Number.isFinite(valor) && String(valor) !== el.dataset.original) cambio({ tipo: "caracteristica", habilidad, valor });
+      else el.innerText = el.dataset.original;
+    });
+  }
+
+  // Un tacho en cada fila de objeto, conjuro y rasgo. Primer toque: "¿Quitar?"; segundo: quita.
+  const LISTA_DE = { inventory: "objeto", spells: "conjuro", features: "rasgo" };
+  for (const li of form.querySelectorAll("section.tab li.item[data-hoja]")) {
+    const lista = LISTA_DE[li.closest("section.tab")?.dataset.tab];
+    const controles = li.querySelector(":scope > .item-row .item-controls");
+    if (!lista || !controles) continue;
+    const tacho = document.createElement("button");
+    tacho.type = "button";
+    tacho.className = "unbutton config-button item-control hoja-borrar";
+    tacho.title = "Quitar de la hoja";
+    tacho.innerHTML = '<i class="fa-solid fa-trash" inert></i>';
+    controles.prepend(tacho);
+  }
+
+  function modoEdicion(activo) {
+    editando = activo;
+    form.classList.toggle("editable", activo);
+    llave?.toggleAttribute("checked", activo);
+    for (const [el] of [...editables, ...puntajes]) {
+      if (!el) continue;
+      if (activo) {
+        el.dataset.original = el.innerText.trim() === "—" ? "" : el.innerText.trim();
+        el.setAttribute("contenteditable", "plaintext-only");
+        el.setAttribute("spellcheck", "false");
+      } else el.removeAttribute("contenteditable");
+    }
+    avisarUi();
+  }
+  modoEdicion(editando);
+
+  function preguntar(titulo, etiqueta, valor, tipo, alAceptar, cerca) {
+    abrirInfo(
+      {
+        title: titulo,
+        html: `<p><label class="hoja-campo">${esc(etiqueta)}<input type="${tipo}" value="${esc(valor)}"></label></p><p><button type="button" class="hoja-aceptar">Aceptar</button></p>`,
+      },
+      cerca,
+    );
+    const input = panel.querySelector("input");
+    const aceptar = () => {
+      const v = input.value.trim();
+      cerrarInfo();
+      if (v) alAceptar(v);
+    };
+    panel.querySelector(".hoja-aceptar").addEventListener("click", (e) => { e.stopPropagation(); aceptar(); });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); aceptar(); }
+      if (e.key === "Escape") { e.stopPropagation(); cerrarInfo(); }
+    });
+    input.focus({ preventScroll: true });
+    input.select();
+  }
+
+  // Lo que el modo edición cambia de un clic. Corre antes que el resto (fase de captura).
+  form.addEventListener(
+    "click",
+    (e) => {
+      const t = e.target;
+      if (t.closest('.window-header [data-action="changeMode"]')) {
+        e.stopPropagation();
+        e.preventDefault();
+        modoEdicion(!editando);
+        return;
+      }
+      if (t.closest('[data-action="addDocument"]')) {
+        e.stopPropagation();
+        const pestaña = pestañaActiva();
+        const lista = LISTA_DE[pestaña] || "objeto";
+        const que = { objeto: "objeto", conjuro: "conjuro", rasgo: "rasgo o dote" }[lista];
+        preguntar(`Agregar ${que}`, "Nombre", "", "text", (nombre) => cambio({ tipo: "agregar", lista, nombre }), t.closest('[data-action="addDocument"]'));
+        return;
+      }
+      const tacho = t.closest(".hoja-borrar");
+      if (tacho) {
+        e.stopPropagation();
+        const li = tacho.closest("li.item");
+        if (!tacho.classList.contains("confirmar")) {
+          for (const otro of form.querySelectorAll(".hoja-borrar.confirmar")) otro.classList.remove("confirmar");
+          tacho.classList.add("confirmar");
+          tacho.title = "Tocá de nuevo para quitar";
+          return;
+        }
+        const lista = LISTA_DE[li.closest("section.tab")?.dataset.tab];
+        const titulo = li.querySelector(".item-row .name .title")?.textContent?.trim();
+        if (lista && titulo) {
+          li.style.opacity = "0.4";
+          cambio({ tipo: "quitar", lista, nombre: titulo });
+        }
+        return;
+      }
+      if (!editando) return;
+      // En modo edición: la vida máxima, el nivel de cada clase, la competencia en habilidades.
+      if (t.closest(".sidebar .meter.hit-points .progress") && !t.closest("input")) {
+        e.stopPropagation();
+        preguntar("Vida máxima", "Puntos de golpe máximos", String(hpMax), "number", (v) => cambio({ tipo: "vida-max", valor: Number(v) }), t.closest(".progress"));
+        return;
+      }
+      const pildora = t.closest('section.tab[data-tab="features"] .classes .class[data-info]');
+      if (pildora) {
+        e.stopPropagation();
+        const classId = pildora.dataset.info.replace(/^class:/, "");
+        const nivel = pildora.querySelector(".level span")?.textContent?.trim() || "1";
+        preguntar(`Nivel de ${pildora.querySelector(".title")?.textContent || "la clase"}`, "Nivel", nivel, "number", (v) => cambio({ tipo: "nivel", classId, valor: Number(v) }), pildora);
+        return;
+      }
+      const ciclo = t.closest('section.tab[data-tab="details"] .skills proficiency-cycle');
+      if (ciclo) {
+        e.stopPropagation();
+        const li = ciclo.closest("li");
+        const skill = li?.querySelector('[data-action="roll"]')?.textContent?.trim();
+        if (skill) cambio({ tipo: "pericia", skill, activa: ciclo.getAttribute("value") === "0" });
+        return;
+      }
+      // Lo que se escribe no tira dados ni abre ventanas mientras se edita.
+      if (t.closest('[contenteditable]')) e.stopPropagation();
+    },
+    true,
+  );
 </script>
 </body>
 </html>
