@@ -55,7 +55,7 @@ await shot("armadura-fuera");
 await page.click('section.tab[data-tab="inventory"] li.container');
 await page.waitForTimeout(500);
 await shot("mochila");
-await page.click('section.tab[data-tab="inventory"] li.item:has(.title:text-is("Thieves' Tools")) [data-action="increase"]');
+await page.click(`section.tab[data-tab="inventory"] li.item:has(.title:text-is("Thieves' Tools")) [data-action="increase"]`);
 log.push(`Carga tras +1 herramientas: ${(await page.textContent(".encumbrance .label .value")).trim()}`);
 await page.click(".sidebar .meter.hit-points .progress .label");
 await page.keyboard.type("-7");
