@@ -53,6 +53,7 @@ jobs:
           node tools/hoja-capturas/capturar.mjs /tmp/pw/node_modules/playwright http://localhost:4173 capturas
 
       - name: Upload
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: hoja-capturas

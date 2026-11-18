@@ -363,3 +363,7 @@
   background: rgba(0,0,0,.55); color: #fff; border: 0;
 }
 .dnd5e2 .containers .container .container-image { display: block; }
+/* La bandeja de salvaciones de muerte vive detrás de la tarjeta (Foundry lo logra con un
+   contexto 3D del core). Cerrada no recibe clics, así la vida y los dados de golpe sí. */
+.dnd5e2.sheet.actor.character .sheet-body .sidebar .card .death-tray:not(.open) { pointer-events: none; }
+.dnd5e2.sheet.actor.character .sheet-body .sidebar .card .death-tray:not(.open) * { pointer-events: none; }
