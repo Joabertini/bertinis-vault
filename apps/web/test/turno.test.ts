@@ -124,6 +124,10 @@ describe("el turno de un bárbaro de nivel 1", () => {
     expect(rage?.short).toBe("one");
   });
 
+  test("Weapon Mastery tiene un número en la tabla y nada que gastar: no es un recurso", () => {
+    expect(turno.resources.map((resource) => resource.name)).not.toContain("Weapon Mastery");
+  });
+
   test("todo cuerpo a cuerpo da un ataque de oportunidad", () => {
     const opportunity = turno.reactions.find((reaction) => reaction.name === "Ataque de oportunidad");
     expect(opportunity?.roll?.formula).toMatch(/^1d20/);
@@ -145,6 +149,17 @@ describe("el turno de una maga de nivel 5", () => {
     expect(names("action")).toContain("Fire Bolt");
     expect(names("action")).toContain("Fireball");
     expect(names("bonus")).toContain("Misty Step");
+  });
+
+  test("Spellcasting no es un recurso, y el rasgo útil cabe en una frase", () => {
+    expect(turno.resources.map((resource) => resource.name)).not.toContain("Spellcasting");
+    if (turno.feature) expect(turno.feature.text.length).toBeLessThanOrEqual(150);
+  });
+
+  test("Fire Bolt dice su bonus de ataque y los conjuros no muestran blancos sueltos como '1 point'", () => {
+    const bolt = turno.slots.find((slot) => slot.id === "action")?.options.find((option) => option.name === "Fire Bolt");
+    expect(bolt?.small).toMatch(/^\+\d+ ataque$/);
+    expect(bolt?.line).not.toMatch(/1 point|1 creature/);
   });
 
   test("Shield es una reacción, con lo que la dispara", () => {

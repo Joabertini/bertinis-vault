@@ -159,6 +159,9 @@
   gap: 22px;
   align-items: start;
 }
+.tn-turn > section {
+  min-width: 0;
+}
 .tn-low {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -270,7 +273,10 @@
   text-overflow: ellipsis;
 }
 .tn-opt .nu {
+  display: flex;
   flex: none;
+  flex-direction: column;
+  justify-content: center;
   min-width: 82px;
   align-self: stretch;
   padding: 0 14px 0 6px;
