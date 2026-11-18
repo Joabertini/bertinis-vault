@@ -19,6 +19,17 @@ Estructura y panel de información. Detalle en [`docs/FARO-FRONT.md`](docs/FARO-
 - Se quitó la nota falsa de que la subraza no cruza a Foundry (#155).
 - **En pausa:** migración de Vercel a Cloudflare (plan en `docs/MIGRACION-CLOUDFLARE.md`, #143).
 
+## [Foundry module 0.4.0] — 2026-11-17
+
+- **Retrato y token originales** (#164): la web guarda la imagen entera en el almacén
+  (`POST /images`) y el código lleva su dirección; el módulo la descarga sin pérdida y
+  la pone de retrato, y el token propio, si el jugador subió uno, de textura del token.
+- **Trasfondo a medida** (#179): un personaje 2024 con el trasfondo de la Guía del DM llega
+  con un ítem de trasfondo con su nombre; habilidades, herramienta, dote y
+  características llegan como siempre.
+- Corregido: la subida del retrato declaraba dos veces la misma variable y el módulo
+  no cargaba.
+
 ## [Foundry module 0.3.0] — 2026-11-11
 
 - La imagen que el jugador sube en la web como tapa del personaje viaja dentro
