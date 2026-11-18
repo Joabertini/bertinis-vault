@@ -5753,7 +5753,10 @@ svg { fill: var(--icon-fill, #000); width: var(--icon-width, var(--icon-size, 1e
   }
   function mostrarTirada(titulo, formula) {
     const r = tirar(formula, modoTirada);
-    aMarco({ titulo, formula: String(formula).replace(/\s+/g, ""), total: r.total, detalle: r.detalle, modo: modoTirada, d20: r.d20, aviso: null });
+    const critico = /Crítico$/.test(titulo);
+    aMarco({ titulo, formula: String(formula).replace(/\s+/g, ""), total: r.total, detalle: r.detalle, modo: modoTirada, d20: r.d20, aviso: null, critico });
+    // Un 20 natural al atacar es crítico: el daño se tira con el botón Crítico de esa arma o conjuro.
+    if (r.d20 === 20 && /Ataque/.test(titulo)) tarjeta("¡Crítico!", "20 natural", "Tirá el daño con el botón Crítico: dados dobles.");
     return r;
   }
 

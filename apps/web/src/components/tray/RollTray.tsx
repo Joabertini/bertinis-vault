@@ -13,7 +13,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { isFormula, rollFormula, type RollMode } from "@/lib/roll-formula";
+import { critFormula, isFormula, rollFormula, type RollMode } from "@/lib/roll-formula";
 import { useRolls, type RollEntry } from "@/lib/roll-store";
 
 const DICE = [4, 6, 8, 10, 12, 20, 100] as const;
@@ -35,6 +35,7 @@ export default function RollTray({ accent = "#F2C14E" }: { accent?: string }) {
   const clear = useRolls((s) => s.clear);
   const [mode, setMode] = useState<RollMode>("normal");
   const [formula, setFormula] = useState("");
+  const [crit, setCrit] = useState(false);
   const [open, setOpen] = useState(true);
   const [invalid, setInvalid] = useState(false);
   const seen = useRef(0);
@@ -52,10 +53,13 @@ export default function RollTray({ accent = "#F2C14E" }: { accent?: string }) {
       return;
     }
     setInvalid(false);
-    const result = rollFormula(text, mode);
+    // A critical hit doubles the dice and leaves the modifier: 1d8+3 becomes 2d8+3.
+    const used = crit ? critFormula(text) : text;
+    const result = rollFormula(used, mode);
     push({
-      titulo: title,
-      formula: text.replace(/\s+/g, ""),
+      titulo: crit ? `${title} · Crítico` : title,
+      critico: crit,
+      formula: used.replace(/\s+/g, ""),
       total: result.total,
       detalle: result.pair ? `${result.detalle} (${result.pair.join(" / ")})` : result.detalle,
       modo: mode,
@@ -113,9 +117,12 @@ export default function RollTray({ accent = "#F2C14E" }: { accent?: string }) {
                   transition={{ type: "spring", stiffness: 420, damping: 18 }}
                 >
                   <p className="truncate font-mono text-[12px] uppercase tracking-[0.08em] text-bone/70">{latest.titulo}</p>
+                  {latest.critico && (
+                    <p className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-[#F2C14E]">¡Crítico!</p>
+                  )}
                   {latest.total !== null ? (
                     <>
-                      <p className="font-display text-[44px] font-bold leading-none" style={{ color: tone(latest) }}>
+                      <p className="font-display text-[44px] font-bold leading-none" style={{ color: latest.critico ? "#F2C14E" : tone(latest) }}>
                         {latest.total}
                       </p>
                       <p className="mt-1 font-mono text-[11px] text-bone/60">
@@ -161,6 +168,21 @@ export default function RollTray({ accent = "#F2C14E" }: { accent?: string }) {
               </button>
             ))}
           </div>
+
+          <button
+            type="button"
+            onClick={() => setCrit((value) => !value)}
+            aria-pressed={crit}
+            title="Dados dobles, modificador una vez"
+            className="mx-3 mb-2 w-[calc(100%-1.5rem)] border py-1 font-mono text-[10px] uppercase tracking-[0.06em] transition-colors"
+            style={
+              crit
+                ? { borderColor: "#F2C14E", color: "#F2C14E", background: "#F2C14E1f" }
+                : { borderColor: "rgba(120,120,120,0.4)", color: "rgba(255,255,255,0.6)" }
+            }
+          >
+            Crítico: dados dobles {crit ? "(activo)" : ""}
+          </button>
 
           <form
             className="flex gap-1 px-3 pb-3"

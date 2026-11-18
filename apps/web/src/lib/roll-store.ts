@@ -20,6 +20,8 @@ export type RollEntry = {
   modo: RollMode;
   /** The natural d20: 20 and 1 are marked. */
   d20: number | null;
+  /** A critical hit: the dice were doubled. */
+  critico?: boolean;
   /** A line the sheet wants to say, not a roll: "Descanso largo", "Sintonía 3 / 3". */
   aviso: string | null;
 };
