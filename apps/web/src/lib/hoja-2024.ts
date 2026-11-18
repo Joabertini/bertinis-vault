@@ -1439,7 +1439,7 @@ export function hojaDataFor(
       const kind = item.armor ? ITEM_TYPES[item.armor.kind]?.label : record["weaponCategory"] ? `${String(record["weaponCategory"])[0]!.toUpperCase()}${String(record["weaponCategory"]).slice(1)} ${String(record["type"]).startsWith("R") ? "Ranged" : "Melee"} Weapon` : "";
       if (record["dmg1"]) {
         const type = { S: "Slashing", P: "Piercing", B: "Bludgeoning" }[String(record["dmgType"])] ?? "";
-        parts.push(`<p><strong>${escapeHtml(kind)}.</strong> Damage ${escapeHtml(String(record["dmg1"]))} ${type}${record["dmg2"] ? ` (${escapeHtml(String(record["dmg2"]))} two-handed)` : ""}.</p>`);
+        parts.push(`<p><strong>${escapeHtml(kind ?? "Weapon")}.</strong> Damage ${escapeHtml(String(record["dmg1"]))} ${type}${record["dmg2"] ? ` (${escapeHtml(String(record["dmg2"]))} two-handed)` : ""}.</p>`);
       } else if (item.armor) {
         const dex = item.armor.kind === "LA" ? " + Dex modifier" : item.armor.kind === "MA" ? " + Dex modifier (max 2)" : "";
         parts.push(`<p><strong>${escapeHtml(kind ?? "Armor")}.</strong> AC ${item.armor.kind === "S" ? "+" : ""}${item.armor.ac}${dex}.${record["stealth"] ? " Disadvantage on Dexterity (Stealth) checks." : ""}${record["strength"] ? ` Strength ${escapeHtml(String(record["strength"]))} required.` : ""}</p>`);
