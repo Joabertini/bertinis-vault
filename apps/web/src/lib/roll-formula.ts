@@ -69,3 +69,21 @@ export function scaleDice(formula: string, factor: number): string {
 }
 
 export const critFormula = (formula: string): string => scaleDice(formula, 2);
+
+/** How a critical hit adds up. */
+export type CritRule = "dobles" | "perkins";
+
+/**
+ * Perkins crits: every die is taken at its maximum, then rolled as well, and the modifier is added
+ * once. `perkinsFormula("1d8+3")` is "8+1d8+3": a critical never rolls under the dice's own top.
+ */
+export function perkinsFormula(formula: string): string {
+  let top = 0;
+  for (const match of formula.replace(/\s+/g, "").matchAll(/(\d*)d(\d+)/gi)) {
+    top += Math.max(1, Number(match[1] || 1)) * Number(match[2]);
+  }
+  return top > 0 ? `${top}+${formula.replace(/\s+/g, "")}` : formula;
+}
+
+/** The damage formula of a critical hit under `rule`. */
+export const critFor = (formula: string, rule: CritRule): string => (rule === "perkins" ? perkinsFormula(formula) : critFormula(formula));

@@ -13,8 +13,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { critFormula, isFormula, rollFormula, type RollMode } from "@/lib/roll-formula";
-import { useRolls, type RollEntry } from "@/lib/roll-store";
+import { critFor, isFormula, rollFormula, type CritRule, type RollMode } from "@/lib/roll-formula";
+import { useCritRule, useRolls, type RollEntry } from "@/lib/roll-store";
 
 const DICE = [4, 6, 8, 10, 12, 20, 100] as const;
 const MODES: Array<[RollMode, string]> = [
@@ -36,6 +36,8 @@ export default function RollTray({ accent = "#F2C14E" }: { accent?: string }) {
   const [mode, setMode] = useState<RollMode>("normal");
   const [formula, setFormula] = useState("");
   const [crit, setCrit] = useState(false);
+  const rule = useCritRule((s) => s.rule);
+  const setRule = useCritRule((s) => s.set);
   const [open, setOpen] = useState(true);
   const [invalid, setInvalid] = useState(false);
   const seen = useRef(0);
@@ -53,8 +55,8 @@ export default function RollTray({ accent = "#F2C14E" }: { accent?: string }) {
       return;
     }
     setInvalid(false);
-    // A critical hit doubles the dice and leaves the modifier: 1d8+3 becomes 2d8+3.
-    const used = crit ? critFormula(text) : text;
+    // 1d8+3 as a critical: 2d8+3 (dobles) or 8+1d8+3 (Perkins).
+    const used = crit ? critFor(text, rule) : text;
     const result = rollFormula(used, mode);
     push({
       titulo: crit ? `${title} · Crítico` : title,
@@ -173,7 +175,7 @@ export default function RollTray({ accent = "#F2C14E" }: { accent?: string }) {
             type="button"
             onClick={() => setCrit((value) => !value)}
             aria-pressed={crit}
-            title="Dados dobles, modificador una vez"
+            title="Tira como crítico lo que escribas o los dados sueltos"
             className="mx-3 mb-2 w-[calc(100%-1.5rem)] border py-1 font-mono text-[10px] uppercase tracking-[0.06em] transition-colors"
             style={
               crit
@@ -181,8 +183,32 @@ export default function RollTray({ accent = "#F2C14E" }: { accent?: string }) {
                 : { borderColor: "rgba(120,120,120,0.4)", color: "rgba(255,255,255,0.6)" }
             }
           >
-            Crítico: dados dobles {crit ? "(activo)" : ""}
+            Crítico {crit ? "(activo)" : ""}
           </button>
+          <div className="mx-3 mb-2 flex gap-1" role="group" aria-label="Regla de crítico">
+            {(
+              [
+                ["dobles", "Dados dobles"],
+                ["perkins", "Perkins: máx + tirada"],
+              ] as Array<[CritRule, string]>
+            ).map(([id, label]) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setRule(id)}
+                aria-pressed={rule === id}
+                title={id === "dobles" ? "1d8+3 → 2d8+3" : "1d8+3 → 8+1d8+3"}
+                className="flex-1 border py-0.5 font-mono text-[10px] transition-colors"
+                style={
+                  rule === id
+                    ? { borderColor: accent, color: accent }
+                    : { borderColor: "rgba(120,120,120,0.35)", color: "rgba(255,255,255,0.5)" }
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
           <form
             className="flex gap-1 px-3 pb-3"

@@ -6,8 +6,9 @@
  */
 
 import { create } from "zustand";
+import { persist } from "zustand/middleware";
 
-import type { RollMode } from "@/lib/roll-formula";
+import type { CritRule, RollMode } from "@/lib/roll-formula";
 
 export type RollEntry = {
   id: number;
@@ -40,3 +41,11 @@ export const useRolls = create<RollStore>((set) => ({
   push: (entry) => set((s) => ({ rolls: [{ ...entry, id: next++ }, ...s.rolls].slice(0, LIMIT) })),
   clear: () => set({ rolls: [] }),
 }));
+
+/**
+ * The table's rule for a critical hit. Kept in this browser: it is how this player's table plays,
+ * not a fact about a character.
+ */
+export const useCritRule = create<{ rule: CritRule; set: (rule: CritRule) => void }>()(
+  persist((set) => ({ rule: "dobles", set: (rule) => set({ rule }) }), { name: "bertinis-vault:regla-critico" }),
+);

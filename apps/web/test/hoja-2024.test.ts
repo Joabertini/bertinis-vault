@@ -219,6 +219,11 @@ describe("la hoja 2024", () => {
     expect(scimitar?.rolls?.map((roll) => roll.label)).toEqual(["Ataque", "Daño", "Crítico"]);
     const [, damage, crit] = scimitar!.rolls!;
     expect(crit!.formula).toBe(damage!.formula.replace("1d6", "2d6"));
+    // La regla Perkins cambia el botón: dado al máximo, más la tirada, más el modificador.
+    const perkins = hojaDataFor(state, build, "2024", rules, "perkins");
+    const card = Object.values(perkins.info).find((entry) => entry.title === "Scimitar");
+    expect(card?.rolls?.map((roll) => roll.label)).toEqual(["Ataque", "Daño", "Crítico Perkins"]);
+    expect(card?.rolls?.[2]?.formula).toBe(`6+${damage!.formula.replace(/\s+/g, "")}`);
     expect(scimitar?.html).not.toContain("Las reglas no traen");
     const pack = Object.values(datos.info as Record<string, { title: string; html: string }>).find((card) => /pack/i.test(card.title));
     expect(pack?.html).toContain("Contiene");
