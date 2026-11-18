@@ -102,6 +102,8 @@ export type HojaRules = {
   condition?: RulesTable;
   itemProperty?: RulesTable;
   mastery?: RulesTable;
+  /** Each class's level table: the columns that say how many Rages, how much Rage Damage. */
+  classTable?: Record<string, { labels: string[]; rows: string[][] }>;
 };
 
 /** The kinds `Hoja2024` fetches before it draws the sheet. */
@@ -1161,8 +1163,11 @@ export function classFeaturesFrom(rules: HojaRules, classes: HojaData["classes"]
   return [...new Set(names)];
 }
 
+/** The record of a class or subclass feature found by the last `classFeaturesFrom`. */
+export const featureRecordOf = (name: string): Record<string, unknown> | null => lastFeatureRecords.get(name) ?? null;
+
 /** The 5etools record of a spell, in the edition's book first. */
-function spellRecord(rules: HojaRules, name: string, rulesVersion: RulesVersion): Record<string, unknown> | null {
+export function spellRecord(rules: HojaRules, name: string, rulesVersion: RulesVersion): Record<string, unknown> | null {
   const table = rules.spell;
   if (!table) return null;
   for (const book of BOOKS[rulesVersion]) {
@@ -1265,7 +1270,7 @@ export function entriesHtml(entries: unknown): string {
 }
 
 /** A record of a table by name, in the edition's book first, then any book. */
-function recordNamed(table: RulesTable | undefined, name: string, rulesVersion: RulesVersion): Record<string, unknown> | null {
+export function recordNamed(table: RulesTable | undefined, name: string, rulesVersion: RulesVersion): Record<string, unknown> | null {
   if (!table || !name) return null;
   const lower = name.toLowerCase();
   for (const book of BOOKS[rulesVersion]) {
@@ -1296,7 +1301,7 @@ const CONDITIONS = [
   "paralyzed", "petrified", "poisoned", "prone", "restrained", "stunned", "unconscious",
 ];
 
-const PROPERTY_NAMES: Record<string, string> = {
+export const PROPERTY_NAMES: Record<string, string> = {
   F: "Finesse", L: "Light", H: "Heavy", R: "Reach", T: "Thrown", "2H": "Two-Handed", V: "Versatile",
   A: "Ammunition", LD: "Loading", S: "Special", AF: "Ammunition", RLD: "Reload", BF: "Burst Fire",
 };

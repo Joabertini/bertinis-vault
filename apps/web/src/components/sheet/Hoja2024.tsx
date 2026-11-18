@@ -30,7 +30,7 @@ function loadTemplate(): Promise<string> {
 
 /** Class features and spell details come from the rules text; without it the sheet still opens. */
 let rulesText: Promise<HojaRules> | null = null;
-function loadRules(): Promise<HojaRules> {
+export function loadHojaRules(): Promise<HojaRules> {
   rulesText ??= Promise.all(HOJA_RULE_KINDS.map((kind) => loadKind(kind)))
     .then((tables) => Object.fromEntries(HOJA_RULE_KINDS.map((kind, index) => [kind, tables[index]])) as HojaRules)
     .catch(() => {
@@ -90,7 +90,7 @@ export default function Hoja2024({
   const [rules, setRules] = useState<HojaRules | null>(null);
   useEffect(() => {
     let live = true;
-    void loadRules().then((loaded) => live && setRules(loaded));
+    void loadHojaRules().then((loaded) => live && setRules(loaded));
     return () => {
       live = false;
     };

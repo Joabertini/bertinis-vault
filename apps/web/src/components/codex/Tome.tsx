@@ -22,11 +22,10 @@ import { motion, AnimatePresence } from "framer-motion";
 
 import ShareButton from "@/components/codex/ShareButton";
 import Sigil from "@/components/sigils/Sigil";
-import Vision from "@/components/codex/Vision";
+import Turno from "@/components/codex/Turno";
 import RollTray from "@/components/tray/RollTray";
 import Hoja2024 from "@/components/sheet/Hoja2024";
 import FloatingWindow from "@/components/ui/FloatingWindow";
-import { playbookFor } from "@/lib/playbook";
 import { entryById, hitDieFor } from "@/lib/catalog";
 import { characterLevelFor, classingLabelFor } from "@/lib/builder";
 import { tintFor } from "@/lib/class-tint";
@@ -378,21 +377,7 @@ function TomeWindow({
    */
   const snapshot = resolved.status === "ready" ? resolved.snapshot : null;
 
-  // The cheat sheet, narrowed to this character. Cheap enough to build on
-  // open: it is lookups and filters over data already in the bundle.
-  const playbook = useMemo(
-    () => playbookFor(state, snapshot, rulesVersion),
-    [state, snapshot, rulesVersion],
-  );
-
   const race = entryById("race", rulesVersion, state.raceId, state.sourceBooks[`race:${state.raceId}`]);
-  // La cheatsheet la muestra como una píldora al lado de la de la clase.
-  const subclass = entryById(
-    "subclass",
-    rulesVersion,
-    state.subclassId,
-    state.sourceBooks[`subclass:${state.subclassId}`],
-  );
   const background = entryById(
     "background",
     rulesVersion,
@@ -412,7 +397,7 @@ function TomeWindow({
       title={state.characterName}
       subtitle={subtitle}
       accent={accent}
-      width={view === "hoja" ? (rulesVersion === "2024" ? 850 : 1040) : 900}
+      width={view === "hoja" ? (rulesVersion === "2024" ? 850 : 1040) : 1100}
       bare={soloHoja}
       onClose={onClose}
     >
@@ -457,14 +442,17 @@ function TomeWindow({
         )
       ) : (
         <>
-          <Vision
-            playbook={playbook}
-            classId={state.classId}
-            className={className}
-            subclassLabel={subclass?.label ?? null}
-            name={state.characterName}
-            subtitle={subtitle}
-          />
+          {snapshot ? (
+            <>
+              <Turno state={state} build={snapshot} rulesVersion={rulesVersion} onPatch={(patch) => updateCharacter(character.id, patch)} />
+              <RollTray accent={accent} />
+            </>
+          ) : (
+            <p className="px-8 py-10 font-body text-[15px] text-bone">
+              Este tomo no se puede derivar: le falta especie, clase o trasfondo. Reforjalo y
+              terminalo para ver los recordatorios.
+            </p>
+          )}
 
           <dl className="flex flex-wrap gap-x-8 gap-y-2 border-t border-iron/30 px-8 py-5 font-mono text-sm">
             {hitDie && <Row k="Dado de golpe" v={`d${hitDie}`} />}
