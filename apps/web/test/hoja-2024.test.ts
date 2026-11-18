@@ -124,6 +124,23 @@ describe("la hoja 2024", () => {
     expect(text).toContain("Segundo párrafo.");
   });
 
+  test("cada fila de Inventario lleva un ícono de los packs, no la imagen de muestra", () => {
+    const { data } = sheet();
+    const bag = {
+      ...data,
+      attacks: [{ name: "Longsword", quantity: 1, ranged: false, attackBonus: 5, damage: "1d8 + 3", note: "cortante" }],
+      equipment: [{ label: "Backpack", quantity: 1 }, { label: "Thieves' Tools", quantity: 1 }],
+    };
+    const doc = new DOMParser().parseFromString(renderHoja(template, bag), "text/html");
+    const pictures = [...doc.querySelectorAll('section.tab[data-tab="inventory"] .item-row .item-image')];
+    expect(pictures).toHaveLength(3);
+    for (const picture of pictures) {
+      expect(picture.getAttribute("src") ?? "").not.toContain("propio/imagen.svg");
+      const drawn = picture.getAttribute("style")?.includes("/icons/atlas.webp") || picture.getAttribute("src")?.startsWith("data:image/svg+xml");
+      expect(drawn).toBe(true);
+    }
+  });
+
   test("sin recuadro de logo, con las monedas dibujadas y con X y Recordatorios que avisan al marco", () => {
     const { doc } = sheet();
     expect(doc.querySelector(".marca-logo")).toBeNull();

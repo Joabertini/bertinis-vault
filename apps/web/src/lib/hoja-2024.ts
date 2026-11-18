@@ -16,6 +16,16 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 import type { AbilityId } from "./abilities";
 import type { BuilderState } from "./builder-state";
 import { bannerFor } from "./class-banner";
+import { ICON_COLS, ICON_SHEET_KEYS, ICON_SILHOUETTES, type SilhouetteIconKey } from "./icon-atlas";
+import {
+  backgroundIconKey,
+  isSheetIcon,
+  itemIconKey,
+  kindIconKey,
+  speciesIconKey,
+  spellIconKey,
+  type IconKey,
+} from "./icons";
 import { sheetDataFor } from "./sheet-data";
 
 export const HOJA_BASE = "/hoja-2024/";
@@ -57,7 +67,7 @@ export type HojaData = {
   feats: string[];
   backgroundFeatures: string[];
 
-  attacks: Array<{ name: string; quantity: number; attackBonus: number; damage: string | null; note: string }>;
+  attacks: Array<{ name: string; quantity: number; ranged: boolean; attackBonus: number; damage: string | null; note: string }>;
   equipment: Array<{ label: string; quantity: number }>;
   purse: { pp: number; gp: number; ep: number; sp: number; cp: number };
 
@@ -128,7 +138,49 @@ function pills(doc: Document, heading: string, values: string[]) {
 
 const tab = (name: string) => `section.tab[data-tab="${name}"]`;
 
-type Row = { title: string; subtitle?: string; quantity?: number; roll?: number; formula?: string | null };
+type Row = { title: string; subtitle?: string; icon?: IconKey; quantity?: number; roll?: number; formula?: string | null };
+
+const ICON_SIZE = 40;
+
+/**
+ * The icon the sheet draws where Foundry draws an item's picture: one cell of the sprite sheet
+ * the Forge already uses, or a gold silhouette on a dark tile. Same two looks as `GameIcon`.
+ */
+function iconNode(doc: Document, key: IconKey): Element {
+  if (isSheetIcon(key)) {
+    const index = ICON_SHEET_KEYS.indexOf(key);
+    const node = doc.createElement("span");
+    node.className = "item-image gold-icon";
+    node.setAttribute(
+      "style",
+      [
+        "display:inline-block",
+        `width:${ICON_SIZE}px`,
+        `height:${ICON_SIZE}px`,
+        "border-radius:5px",
+        "background-color:#0d0b0b",
+        'background-image:url("/icons/atlas.webp")',
+        "background-repeat:no-repeat",
+        `background-size:${ICON_COLS * ICON_SIZE}px auto`,
+        `background-position:${-(index % ICON_COLS) * ICON_SIZE}px ${-Math.floor(index / ICON_COLS) * ICON_SIZE}px`,
+      ].join(";"),
+    );
+    return node;
+  }
+  const svg =
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect x="8" y="8" width="496" height="496" rx="64" fill="#15151b" stroke="#9f9275" stroke-opacity="0.45" stroke-width="10"/>` +
+    `<path d="${ICON_SILHOUETTES[key as SilhouetteIconKey]}" fill="#c9a46a" transform="translate(64 64) scale(0.75)"/></svg>`;
+  const image = doc.createElement("img");
+  image.className = "item-image gold-icon";
+  image.setAttribute("src", `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`);
+  image.setAttribute("alt", "");
+  return image;
+}
+
+/** Puts `key` where the page was saved with the sample picture (`propio/imagen.svg`). */
+function setIcon(doc: Document, picture: Element | null, key: IconKey) {
+  picture?.replaceWith(iconNode(doc, key));
+}
 
 const headingOf = (section: Element) => section.querySelector("h3.item-name")?.textContent?.trim() ?? "";
 
@@ -151,6 +203,7 @@ function blankDetails(row: Element, keep: string[] = []) {
  */
 function fillRows(target: Element | null, rows: Row[], keep: string[] = []) {
   if (!target) return;
+  const doc = target.ownerDocument;
   const list = target.querySelector("ol.item-list");
   const sample = list?.querySelector(":scope > li.item");
   if (!list || !sample || rows.length === 0) {
@@ -164,6 +217,7 @@ function fillRows(target: Element | null, rows: Row[], keep: string[] = []) {
       // The expanded description holds the sample item's own activities.
       item.querySelector(".item-description .wrapper")?.replaceChildren();
       for (const marked of item.querySelectorAll("[data-item-id]")) marked.removeAttribute("data-item-id");
+      if (row.icon) setIcon(doc, item.querySelector(".item-row .item-image"), row.icon);
       text(item.querySelector(".item-row .name .title"), row.title);
       const subtitle = item.querySelector(".item-row .name .subtitle");
       if (row.subtitle) text(subtitle, row.subtitle);
@@ -219,12 +273,12 @@ function featuresTab(doc: Document, data: HojaData) {
   const classSection = all[0] ?? null;
   const classTitle = classSection?.querySelector("h3.item-name");
   text(classTitle ?? null, `${data.classes[0]?.name ?? "Class"} Features`);
-  fillRows(classSection, data.classFeatures.map((title) => ({ title })));
-  fillRows(section(doc, "features", "Species Features"), data.speciesTraits.map((title) => ({ title })));
-  fillRows(section(doc, "features", "Background Features"), data.backgroundFeatures.map((title) => ({ title })));
+  fillRows(classSection, data.classFeatures.map((title) => ({ title, icon: kindIconKey("feature") })));
+  fillRows(section(doc, "features", "Species Features"), data.speciesTraits.map((title) => ({ title, icon: kindIconKey("species") })));
+  fillRows(section(doc, "features", "Background Features"), data.backgroundFeatures.map((title) => ({ title, icon: kindIconKey("background") })));
   const other = section(doc, "features", "Other Features");
   text(other?.querySelector("h3.item-name") ?? null, "Feats");
-  fillRows(other, data.feats.map((title) => ({ title })));
+  fillRows(other, data.feats.map((title) => ({ title, icon: kindIconKey("feat") })));
   section(doc, "features", "Active Abilities")?.remove();
   section(doc, "features", "Passive Abilities")?.remove();
 }
@@ -245,6 +299,7 @@ function inventoryTab(doc: Document, data: HojaData) {
     weapons,
     data.attacks.map((attack) => ({
       title: attack.name,
+      icon: itemIconKey({ name: attack.name, type: attack.ranged ? "R" : "M" }),
       subtitle: attack.note,
       quantity: attack.quantity,
       roll: attack.attackBonus,
@@ -255,7 +310,7 @@ function inventoryTab(doc: Document, data: HojaData) {
   const armed = new Set(data.attacks.map((attack) => attack.name));
   fillRows(
     equipment,
-    data.equipment.filter((entry) => !armed.has(entry.label)).map((entry) => ({ title: entry.label, quantity: entry.quantity })),
+    data.equipment.filter((entry) => !armed.has(entry.label)).map((entry) => ({ title: entry.label, icon: itemIconKey({ name: entry.label }), quantity: entry.quantity })),
     ["item-quantity"],
   );
 }
@@ -299,7 +354,11 @@ function spellsTab(doc: Document, data: HojaData) {
     );
     fillRows(
       part,
-      bucket.spells.map((spell) => ({ title: spell.label, subtitle: spell.prepared ? "" : "Not prepared" })),
+      bucket.spells.map((spell) => ({
+        title: spell.label,
+        icon: spellIconKey({ name: spell.label, school: "" }),
+        subtitle: spell.prepared ? "" : "Not prepared",
+      })),
     );
     if (bucket.level > 0 && slots > 0 && pipsSample && pipSample) {
       const pips = pipsSample.cloneNode(false) as Element;
@@ -381,6 +440,11 @@ export function renderHoja(template: string, data: HojaData): string {
   const base = doc.createElement("base");
   base.href = new URL(HOJA_BASE, globalThis.location?.origin ?? "http://localhost").href;
   doc.head.prepend(base);
+
+  // The sheet floats alone: nothing of the page's own around it, so the app shows through.
+  const bare = doc.createElement("style");
+  bare.textContent = "html, body { background: transparent !important; margin: 0; overflow: hidden; }";
+  doc.head.append(bare);
 
   const form = doc.querySelector("form.application") as HTMLElement | null;
   if (form) {
@@ -486,6 +550,10 @@ export function renderHoja(template: string, data: HojaData): string {
   text(background?.querySelector(".title") ?? null, data.background);
   background?.querySelector("img")?.setAttribute("alt", data.background);
 
+  setIcon(doc, type?.querySelector("img") ?? null, kindIconKey("species"));
+  setIcon(doc, race?.querySelector("img") ?? null, speciesIconKey(data.species));
+  setIcon(doc, background?.querySelector("img") ?? null, backgroundIconKey(data.background));
+
   pills(doc, "Armor", data.armor);
   pills(doc, "Weapons", data.weapons);
   pills(doc, "Languages", data.languages);
@@ -500,6 +568,14 @@ export function renderHoja(template: string, data: HojaData): string {
   return `<!doctype html>\n${doc.documentElement.outerHTML}`;
 }
 
+
+function readable(label: string): string {
+  if (label.includes(" ") || !label.includes("-")) return label;
+  return label
+    .replace(/-s-/g, "'s ")
+    .replace(/-/g, " ")
+    .replace(/(^|\s)[a-z]/g, (start) => start.toUpperCase());
+}
 
 /**
  * "Fighter 5 / Wizard 2" → one pill each; a single class is "Fighter" and its level is the character's.
@@ -586,11 +662,13 @@ export function hojaDataFor(
     attacks: sheet.attacks.map((attack) => ({
       name: attack.name,
       quantity: attack.quantity,
+      ranged: attack.ranged,
       attackBonus: attack.attackBonus,
       damage: attack.damage,
       note: [attack.damageType, ...attack.properties].filter(Boolean).join(" • "),
     })),
-    equipment: sheet.equipment,
+    // The kit's pieces come as ids ("explorer-s-pack"): the sheet says "Explorer's Pack".
+    equipment: sheet.equipment.map((entry) => ({ ...entry, label: readable(entry.label) })),
     purse: { pp: sheet.purse.pp, gp: sheet.purse.gp, ep: sheet.purse.ep, sp: sheet.purse.sp, cp: sheet.purse.cp },
     spellcasting: sheet.spellcasting
       ? {

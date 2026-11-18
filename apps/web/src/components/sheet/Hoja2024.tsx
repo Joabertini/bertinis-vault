@@ -64,7 +64,7 @@ export default function Hoja2024({
   if (failed) {
     return <p className="px-8 py-10 font-body text-[15px] text-bone">No pude cargar la hoja. Probá de nuevo.</p>;
   }
-  if (!page) return <div className="h-[760px]" aria-busy="true" />;
+  if (!page) return <div className="h-[720px]" aria-busy="true" />;
 
   return (
     <iframe
@@ -72,7 +72,7 @@ export default function Hoja2024({
       title={`Hoja de ${data.name}`}
       srcDoc={page}
       className="block w-full border-0"
-      style={{ height: 760, background: "transparent" }}
+      style={{ height: 720, background: "transparent", colorScheme: "normal" }}
     />
   );
 }

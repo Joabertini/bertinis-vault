@@ -84,10 +84,22 @@ export default function FloatingWindow({
                 boxShadow: `0 30px 90px rgba(0,0,0,0.75), inset 0 0 60px ${accent}08`,
               }
         }
-        className={`pointer-events-auto flex h-full w-full flex-col md:h-auto md:max-h-[86vh] md:w-auto md:resize md:overflow-auto ${
-          bare ? "bg-transparent" : "border bg-[#000000]"
+        className={`pointer-events-auto relative flex h-full w-full flex-col md:h-auto md:max-h-[86vh] md:w-auto ${
+          bare ? "bg-transparent" : "border bg-[#000000] md:resize md:overflow-auto"
         }`}
       >
+        {bare && (
+          // The sheet draws its own header; this is the handle over it, so the window moves by the
+          // sheet's title strip as it does in Foundry. The buttons at the right stay clickable.
+          <div
+            aria-hidden
+            onPointerDown={(event) => {
+              if (event.button === 0) dragControls.start(event);
+            }}
+            className="absolute left-0 top-0 z-10 hidden h-9 cursor-grab active:cursor-grabbing md:block"
+            style={{ right: 130 }}
+          />
+        )}
         {!bare && (
         <div
           onPointerDown={(event) => {
