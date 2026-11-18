@@ -1,0 +1,326 @@
+/*
+ * La base sobre la que se apoya la hoja de dnd5e: lo que en Foundry pone el
+ * núcleo (ventana, pestañas, botones, campos). Escrito para la Forja; no es el
+ * CSS de Foundry. Las fuentes son libres (OFL), ver fonts/.
+ */
+
+@font-face { font-family: "Oswald"; src: url("fonts/oswald/oswald.woff2") format("woff2"); font-weight: 200 700; font-style: normal; }
+@font-face { font-family: Amiri; src: url("fonts/amiri/amiri-regular.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: Amiri; src: url("fonts/amiri/amiri-bold.woff2") format("woff2"); font-weight: 700; }
+@font-face { font-family: Signika; src: url("fonts/signika/signika-light.woff2") format("woff2"); font-weight: 300; }
+@font-face { font-family: Signika; src: url("fonts/signika/signika-regular.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: Signika; src: url("fonts/signika/signika-medium.woff2") format("woff2"); font-weight: 500; }
+@font-face { font-family: Signika; src: url("fonts/signika/signika-semibold.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: Signika; src: url("fonts/signika/signika-bold.woff2") format("woff2"); font-weight: 700; }
+@font-face { font-family: "Bruno Ace"; src: url("fonts/bruno-ace/bruno-ace.woff2") format("woff2"); }
+@font-face { font-family: "Bruno Ace SC"; src: url("fonts/bruno-ace/bruno-ace-sc.woff2") format("woff2"); }
+@font-face { font-family: "Roboto"; src: url("systems/dnd5e/fonts/roboto/Roboto-Regular.woff2"); font-weight: 400; }
+@font-face { font-family: "Roboto"; src: url("systems/dnd5e/fonts/roboto/Roboto-Bold.woff2"); font-weight: 700; }
+@font-face { font-family: "Roboto"; src: url("systems/dnd5e/fonts/roboto/Roboto-Italic.woff2"); font-weight: 400; font-style: italic; }
+@font-face { font-family: "Roboto"; src: url("systems/dnd5e/fonts/roboto/Roboto-BoldItalic.woff2"); font-weight: 700; font-style: italic; }
+@font-face { font-family: "Roboto Condensed"; src: url("systems/dnd5e/fonts/roboto-condensed/RobotoCondensed-Regular.woff2"); font-weight: 400; }
+@font-face { font-family: "Roboto Condensed"; src: url("systems/dnd5e/fonts/roboto-condensed/RobotoCondensed-Bold.woff2"); font-weight: 700; }
+@font-face { font-family: "Roboto Condensed"; src: url("systems/dnd5e/fonts/roboto-condensed/RobotoCondensed-Italic.woff2"); font-weight: 400; font-style: italic; }
+@font-face { font-family: "Roboto Condensed"; src: url("systems/dnd5e/fonts/roboto-condensed/RobotoCondensed-BoldItalic.woff2"); font-weight: 700; font-style: italic; }
+@font-face { font-family: "Roboto Slab"; src: url("systems/dnd5e/fonts/roboto-slab/RobotoSlab-Regular.ttf"); font-weight: 400; }
+@font-face { font-family: "Roboto Slab"; src: url("systems/dnd5e/fonts/roboto-slab/RobotoSlab-Bold.ttf"); font-weight: 700; }
+
+@layer reset, variables, elements, blocks, applications, compatibility, layouts, system, modules, exceptions;
+
+@layer reset {
+  *, ::before, ::after { box-sizing: border-box; }
+  body, h1, h2, h3, h4, p, figure, blockquote, dl, dd { margin: 0; }
+  img { display: block; max-width: 100%; }
+  input, button, textarea, select { font: inherit; }
+}
+
+@layer elements {
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: transparent;
+    color: var(--color-text-primary);
+    font-family: var(--font-body);
+    font-size: var(--font-size-14);
+    line-height: 1.25;
+    text-rendering: optimizeSpeed;
+    overflow: hidden;
+  }
+  * { scrollbar-width: thin; scrollbar-color: var(--color-scrollbar) var(--color-scrollbar-track); }
+  h1, h2, h3, h4, h5, h6 { margin: 0 0 1rem; line-height: 1; }
+  h1 { font-family: var(--font-h1); font-size: var(--font-h1-size); color: var(--color-text-emphatic); }
+  h2 { font-family: var(--font-h2); font-size: var(--font-h2-size); color: var(--color-text-emphatic); }
+  h3 { font-family: var(--font-h3); font-size: var(--font-h3-size); color: var(--color-text-primary); }
+  p { margin: 0.5rem 0; }
+  ul, ol { margin: 1rem 0; padding-left: 1.5em; }
+  li { margin-bottom: 0.25rem; }
+  li:last-child { margin-bottom: 0; }
+  a { cursor: pointer; }
+  a:hover { text-shadow: 0 0 8px var(--color-shadow-primary); }
+
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    height: var(--input-height);
+    line-height: var(--input-height);
+    padding: 0 0.5rem;
+    background: var(--input-background-color);
+    color: var(--input-text-color);
+    border: 1px solid var(--input-border-color);
+    border-radius: 4px;
+  }
+  input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { appearance: none; }
+  input:focus { outline: 2px solid var(--input-focus-outline-color); outline-offset: -2px; }
+  input:disabled { cursor: inherit; opacity: 1; }
+  select { cursor: pointer; box-shadow: none; }
+
+  button, a.button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: var(--button-size);
+    min-height: var(--button-size);
+    background: var(--button-background-color);
+    color: var(--button-text-color);
+    border: 1px solid var(--button-border-color);
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  button > *, a.button > * { pointer-events: none; }
+  button:hover, a.button:hover { background: var(--button-hover-background-color); color: var(--button-hover-text-color); border-color: var(--button-hover-border-color); }
+  button:disabled { cursor: inherit; }
+  button.icon, a.button.icon { flex: 0 0 var(--button-size); width: var(--button-size); padding: 0; }
+}
+
+@layer blocks {
+  .flexrow { display: flex; flex-flow: row wrap; align-items: center; }
+  .flexrow > * { flex: 1; }
+  .flexcol { display: flex; flex-direction: column; }
+  .flexcol > * { flex: none; }
+  .hidden, [hidden] { display: none !important; }
+  .draggable { cursor: grab; }
+  .standard-form { display: flex; flex-direction: column; gap: var(--spacer-16); }
+  .standard-form .tab { flex-direction: column; gap: var(--spacer-16); }
+  .standard-form .tab.active { display: flex; }
+  nav.tabs { display: flex; align-items: center; justify-content: space-evenly; gap: var(--spacer-16); }
+  nav.tabs [data-tab] { color: var(--color-text-secondary); text-align: center; cursor: pointer; }
+  nav.tabs [data-tab] > * { pointer-events: none; }
+  nav.tabs [data-tab].active, nav.tabs [data-tab]:hover { text-shadow: 0 0 10px var(--color-shadow-primary); }
+  nav.tabs [data-tab].active { color: var(--color-text-emphatic); }
+  .tab[data-tab]:not(.active) { display: none; }
+}
+
+@layer applications {
+  .application {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 200px;
+    max-height: none;
+    background: var(--background);
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    box-shadow: 0 0 10px #000;
+    color: var(--color-text-primary);
+  }
+  .application .window-header {
+    position: relative;
+    display: flex;
+    flex: 0 0 var(--header-height);
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0 0.5rem;
+    overflow: hidden;
+    background: var(--color-header-background);
+    font-size: var(--font-size-13);
+    color: var(--color-light-1);
+  }
+  .application .window-header .window-icon { flex: none; }
+  .application .window-header .window-title { flex: 1; margin: 0; font: inherit; line-height: var(--header-height); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .application .window-header button.header-control { flex: 0 0 24px; width: 24px; height: 24px; margin: 0; padding: 0; background: none; border: none; color: inherit; font-size: var(--font-size-12); }
+  .application .window-content { display: flex; flex: 1; flex-direction: column; padding: var(--spacer-16); overflow: hidden; }
+}
+
+/* Variables del núcleo que la hoja usa, definidas para la Forja (no se copia el CSS de Foundry). */
+@layer variables {
+ body {
+  --background: var(--color-cool-5-90);
+  --calendar-day-progress: 0;
+  --calendar-night-progress: 1;
+  --color-border: var(--color-cool-4);
+  --color-border-dark-5: #666;
+  --color-border-light-1: #ddd;
+  --color-border-light-2: #999;
+  --color-border-light-tertiary: #7a7971;
+  --color-cool-4: #302831;
+  --color-cool-5-50: rgba(11, 10, 19, 0.5);
+  --color-cool-5-90: rgba(11, 10, 19, 0.9);
+  --color-dark-1: #111;
+  --color-fieldset-border: var(--color-light-6);
+  --color-form-hint: var(--color-light-5);
+  --color-form-label: var(--color-light-4);
+  --color-form-label-hover: var(--color-light-2);
+  --color-header-background: rgba(0, 0, 0, 0.5);
+  --color-level-error: #ce0707;
+  --color-level-error-border: #750003;
+  --color-level-success: #26b231;
+  --color-level-success-border: #1b8f23;
+  --color-light-1: #f7f3e8;
+  --color-light-2: #efe6d8;
+  --color-light-3: #e7d1b1;
+  --color-light-4: #d0b8a3;
+  --color-light-5: #9f8475;
+  --color-light-6: #816b66;
+  --color-scrollbar: #5d142b;
+  --color-scrollbar-track: transparent;
+  --color-shadow-dark: #111;
+  --color-shadow-highlight: #ee9b3a;
+  --color-shadow-primary: #c9593f;
+  --color-text-accent: #ee9b3a;
+  --color-text-dark-5: #666;
+  --color-text-dark-inactive: #7a7971;
+  --color-text-dark-primary: #191813;
+  --color-text-emphatic: var(--color-light-1);
+  --color-text-hyperlink: #ff6400;
+  --color-text-light-0: #fff;
+  --color-text-light-1: #eee;
+  --color-text-light-5: #aaa;
+  --color-text-light-6: #999;
+  --color-text-primary: var(--color-light-2);
+  --color-text-secondary: var(--color-light-3);
+  --color-warm-2: #c9593f;
+  --cursor-default: default;
+  --cursor-grab: grab;
+  --cursor-pointer: pointer;
+  --dnd5e-background-10: rgba(0, 0, 0, 0.1);
+  --dnd5e-background-25: rgba(0, 0, 0, 0.25);
+  --dnd5e-background-5: rgba(0, 0, 0, 0.05);
+  --dnd5e-background-parchment: #f1ebe8;
+  --dnd5e-background-texture-denim: #0d0b0b;
+  --dnd5e-background-texture-paper-gray: url("ui/texture-gray1.webp") no-repeat top left, #f1ebe8 url("ui/texture-gray2.webp") no-repeat bottom right;
+  --dnd5e-background-texture-paper-red: url("ui/texture1.webp") no-repeat top center / auto 770px,
+    #f1ebe8 url("ui/texture2.webp") no-repeat bottom center / auto 704px;
+  --dnd5e-block-float-max: 50%;
+  --dnd5e-block-header-font: "Roboto Slab", serif;
+  --dnd5e-block-width-base: 100px;
+  --dnd5e-border-groove: 2px groove #eeede0;
+  --dnd5e-color-application-damage: #9c5b47;
+  --dnd5e-color-application-healing: #3c7f58;
+  --dnd5e-color-application-temp: #007F7F;
+  --dnd5e-color-beige: #b5b3a4;
+  --dnd5e-color-black: #000;
+  --dnd5e-color-blue: cornflowerblue;
+  --dnd5e-color-blue-gray-1: #242731;
+  --dnd5e-color-blue-gray-2: #252830;
+  --dnd5e-color-blue-gray-3: #434857;
+  --dnd5e-color-blue-gray-4: #333742;
+  --dnd5e-color-blue-white: #cfd2da;
+  --dnd5e-color-card: #f8f4f1;
+  --dnd5e-color-crimson: #44191A;
+  --dnd5e-color-dark: #191813;
+  --dnd5e-color-dark-gray: #0d0b0b;
+  --dnd5e-color-failure: #6e0000;
+  --dnd5e-color-failure-background: #ffdddd;
+  --dnd5e-color-failure-critical: red;
+  --dnd5e-color-faint: #c9c7b8;
+  --dnd5e-color-gold: #9f9275;
+  --dnd5e-color-green: #205b15;
+  --dnd5e-color-groove: #eeede0;
+  --dnd5e-color-hd-1: #401f25;
+  --dnd5e-color-hd-2: #741b2b;
+  --dnd5e-color-hp-1: #1b4b29;
+  --dnd5e-color-hp-2: #3ba55d;
+  --dnd5e-color-hp-3: #276d3c;
+  --dnd5e-color-iron-gray: #313131;
+  --dnd5e-color-light-gray: #3d3d3d;
+  --dnd5e-color-maroon: #741b2b;
+  --dnd5e-color-note-info: #5c87b9;
+  --dnd5e-color-note-warn: #9b6903;
+  --dnd5e-color-olive: #4b4a44;
+  --dnd5e-color-parchment: #f1ebe8;
+  --dnd5e-color-purple: #c44dff;
+  --dnd5e-color-red: #ed1c24;
+  --dnd5e-color-sc-1: #433754;
+  --dnd5e-color-sc-2: #776493;
+  --dnd5e-color-scrollbar: #9f9275;
+  --dnd5e-color-success: #006c00;
+  --dnd5e-color-success-background: #c7d0c0;
+  --dnd5e-color-success-critical: green;
+  --dnd5e-color-tan: #7a7971;
+  --dnd5e-font-modesto: "Oswald", "Palatino Linotype", serif;
+  --dnd5e-font-roboto: Roboto, sans-serif;
+  --dnd5e-font-roboto-condensed: "Roboto Condensed", sans-serif;
+  --dnd5e-font-roboto-slab: "Roboto Slab", serif;
+  --dnd5e-highlight-10: rgba(255, 255, 255, 0.1);
+  --dnd5e-highlight-40: rgba(255, 255, 255, 0.4);
+  --dnd5e-highlight-45: rgba(255, 255, 255, 0.45);
+  --dnd5e-journal-h1-size: 2.5em;
+  --dnd5e-journal-h2-size: 2em;
+  --dnd5e-journal-h3-size: 1.5em;
+  --dnd5e-journal-h4-size: 1.1em;
+  --dnd5e-journal-title-size: 2.875rem;
+  --dnd5e-notable-decor: no-repeat url("ui/notable-right-corner.svg") 0%/contain,
+    no-repeat url("ui/notable-left-corner.svg") 100%/contain;
+  --dnd5e-scrollbar-width: 10px;
+  --dnd5e-shadow-15: rgba(0, 0, 0, 0.15);
+  --dnd5e-shadow-45: rgba(0, 0, 0, 0.45);
+  --dnd5e-sheet-background: url("ui/parchment.jpg") repeat;
+  --dnd5e-statblock-column-width: 400px;
+  --fa-width: auto;
+  --font-awesome: "Font Awesome 7 Pro";
+  --font-body: "Signika", ui-sans-serif, sans-serif;
+  --font-h1: "Oswald", serif;
+  --font-h1-size: 3rem;
+  --font-h2: "Amiri", serif;
+  --font-h2-size: 2rem;
+  --font-h3: "Signika", ui-sans-serif, sans-serif;
+  --font-h3-size: 1.75rem;
+  --font-h5: "Amiri", serif;
+  --font-primary: Signika, sans-serif;
+  --font-sans: "Signika", ui-sans-serif, sans-serif;
+  --font-size-10: 0.625rem;
+  --font-size-11: 0.6875rem;
+  --font-size-12: 0.75rem;
+  --font-size-13: 0.8125rem;
+  --font-size-14: 0.875rem;
+  --font-size-15: 0.9375rem;
+  --font-size-16: 1rem;
+  --font-size-18: 1.125rem;
+  --font-size-20: 1.25rem;
+  --font-size-23: 1.4375rem;
+  --font-size-24: 1.5rem;
+  --font-size-28: 1.75rem;
+  --font-size-30: 1.875rem;
+  --font-size-32: 2rem;
+  --font-size-36: 2.25rem;
+  --font-size-42: 2.625rem;
+  --font-size-46: 2.875rem;
+  --font-size-8: 0.5rem;
+  --font-size-9: 0.5625rem;
+  --form-field-height: 26px;
+  --header-height: 36px;
+  --input-height: 2rem;
+  --sidebar-info-link-color: #ff6400;
+  --spacer-16: 1rem;
+  --table-background-color: var(--color-cool-5-50);
+  --ui-fade-duration: 500ms;
+  --z-index-tooltip: 9999;
+}
+}
+
+/* El lugar del logo de la marca, sobre el banner (aún sin definir). */
+.marca-logo {
+  position: absolute;
+  top: 24px;
+  left: 310px;
+  width: 178px;
+  height: 71px;
+  border: 2px dashed rgba(201, 164, 106, 0.35);
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  font: 25px/1 Georgia, serif;
+  letter-spacing: 6px;
+  color: rgba(201, 164, 106, 0.5);
+  pointer-events: none;
+  z-index: 1;
+}
