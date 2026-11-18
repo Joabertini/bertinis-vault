@@ -204,8 +204,7 @@ describe("la hoja 2024", () => {
       subclassId: "arcane-trickster",
       weaponId: "scimitar",
       armorId: "studded-leather-armor",
-      extraEquipmentText: "Explorer's Pack
-Thieves' Tools",
+      extraEquipmentText: ["Explorer's Pack", "Thieves' Tools"].join("\n"),
     };
     const build = buildCanonicalSnapshot(state);
     const data = hojaDataFor(state, build, "2024", rules);

@@ -92,8 +92,7 @@ const avisos = await page.evaluate(() => window.__avisos.map((a) => a.hoja));
 log.push(`Avisos al marco: ${[...new Set(avisos)].join(", ")}`);
 const ultimo = await page.evaluate(() => [...window.__avisos].reverse().find((a) => a.hoja === "estado")?.estado);
 log.push(`Estado guardado: ${JSON.stringify(ultimo)}`);
-console.log(log.join("
-"));
+for (const line of log) console.log(line);
 
 await browser.close();
 if (errors.length) console.log(errors.join("\n"));
