@@ -10,6 +10,10 @@ on:
       - 'apps/web/public/hoja-2024/**'
       - 'apps/web/src/lib/hoja-2024.ts'
       - 'apps/web/probes/hoja-2024-capturas.ts'
+      - 'apps/web/probes/turno-capturas.tsx'
+      - 'apps/web/src/components/codex/Turno*.tsx'
+      - 'apps/web/src/lib/turno.ts'
+      - 'apps/web/src/styles/turno.css'
       - 'tools/hoja-capturas/**'
       - '.github/workflows/hoja-capturas.yml'
 
@@ -40,6 +44,8 @@ jobs:
         run: |
           corepack pnpm exec vite build --ssr probes/hoja-2024-capturas.ts --outDir .probe
           node .probe/hoja-2024-capturas.js http://localhost:4173
+          corepack pnpm exec vite build --ssr probes/turno-capturas.tsx --outDir .probe-turno
+          node .probe-turno/turno-capturas.js
 
       - name: Install Chromium
         run: |

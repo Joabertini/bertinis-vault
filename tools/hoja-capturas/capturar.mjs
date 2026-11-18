@@ -115,6 +115,18 @@ const ultimo = await page.evaluate(() => [...window.__avisos].reverse().find((a)
 log.push(`Estado guardado: ${JSON.stringify(ultimo)}`);
 for (const line of log) console.log(line);
 
+// "Tu turno": la pantalla de recordatorios, de escritorio y de celular.
+for (const pj of ["enrique", "lea", "vin"]) {
+  for (const [nombre, ancho] of [["pc", 1100], ["cel", 430]]) {
+    const vista = await browser.newPage({ viewport: { width: ancho, height: 900 }, deviceScaleFactor: 1 });
+    await vista.goto(`${origin}/turno/_capturas/${pj}.html`, { waitUntil: "networkidle" });
+    await vista.evaluate(() => document.fonts.ready);
+    await vista.waitForTimeout(300);
+    await vista.screenshot({ path: join(out, `turno-${pj}-${nombre}.png`), fullPage: true });
+    await vista.close();
+  }
+}
+
 await browser.close();
 if (errors.length) console.log(errors.join("\n"));
 console.log("capturas en", out);
