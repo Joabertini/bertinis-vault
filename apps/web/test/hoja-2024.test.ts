@@ -124,6 +124,22 @@ describe("la hoja 2024", () => {
     expect(text).toContain("Segundo párrafo.");
   });
 
+  test("cada fila de Inventario lleva un ícono de los packs, no la imagen de muestra", () => {
+    const { doc } = sheet();
+    const pictures = [...doc.querySelectorAll('section.tab[data-tab="inventory"] .item-row .item-image')];
+    expect(pictures.length).toBeGreaterThan(0);
+    for (const picture of pictures) {
+      expect(picture.getAttribute("src") ?? "").not.toContain("propio/imagen.svg");
+      const drawn = picture.getAttribute("style")?.includes("/icons/atlas.webp") || picture.getAttribute("src")?.startsWith("data:image/svg+xml");
+      expect(drawn).toBe(true);
+    }
+  });
+
+  test("los nombres del kit no llegan como ids", () => {
+    const { data } = sheet();
+    for (const entry of data.equipment) expect(entry.label).not.toMatch(/-s-|^[a-z]+-[a-z-]+$/);
+  });
+
   test("sin recuadro de logo, con las monedas dibujadas y con X y Recordatorios que avisan al marco", () => {
     const { doc } = sheet();
     expect(doc.querySelector(".marca-logo")).toBeNull();
