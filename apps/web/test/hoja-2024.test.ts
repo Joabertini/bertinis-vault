@@ -43,7 +43,7 @@ describe("la hoja 2024", () => {
   test("lleva el nombre, la clase y el nivel del personaje", () => {
     const { doc } = sheet();
     expect(doc.querySelector(".sheet-header .document-name")?.textContent).toBe("Brannoc Vell");
-    expect(doc.querySelector(".sheet-header .class")?.textContent).toBe("Fighter");
+    expect(doc.querySelector(".sheet-header .class")?.textContent).toBe("Fighter 5");
     expect(doc.querySelector(".sheet-header .level-badge")?.textContent).toBe("5");
   });
 
@@ -105,7 +105,7 @@ describe("la hoja 2024", () => {
     const gold = doc.querySelector('section.tab[data-tab="inventory"] input[name="system.currency.gp"]');
     expect(gold?.getAttribute("value")).toBe(String(data.purse.gp));
     const titles = [...doc.querySelectorAll('section.tab[data-tab="inventory"] .item-row .name .title')].map((node) => node.textContent);
-    for (const attack of data.attacks) expect(titles).toContain(attack.name);
+    for (const item of data.items) expect(titles).toContain(item.name);
   });
 
   test("un guerrero no lleva pestaña de conjuros", () => {
@@ -124,21 +124,72 @@ describe("la hoja 2024", () => {
     expect(text).toContain("Segundo párrafo.");
   });
 
-  test("cada fila de Inventario lleva un ícono de los packs, no la imagen de muestra", () => {
+  const bagged = () => {
     const { data } = sheet();
-    const bag = {
+    return {
       ...data,
-      attacks: [{ name: "Longsword", quantity: 1, ranged: false, attackBonus: 5, damage: "1d8 + 3", note: "cortante" }],
-      equipment: [{ label: "Backpack", quantity: 1 }, { label: "Thieves' Tools", quantity: 1 }],
+      items: [
+        {
+          name: "Longsword", quantity: 1, weight: 3, group: "weapon" as const, subtitle: "Martial Melee • Action", icon: "sword-long" as const,
+          attack: { bonus: 5, damage: "1d8 + 3", damageType: "slashing" as const },
+        },
+        { name: "Explorer's Pack", quantity: 1, weight: 59, group: "container" as const, subtitle: "Container", icon: "backpack" as const },
+        { name: "Thieves' Tools", quantity: 1, weight: 1, group: "tool" as const, subtitle: "Tool", icon: "lockpicks" as const },
+        { name: "Studded Leather Armor", quantity: 1, weight: 13, group: "equipment" as const, subtitle: "Light Armor", icon: "armor-leather" as const },
+      ],
+      encumbrance: { value: 76, max: 240, strength: 16, size: "Md", multiplier: 1 },
     };
-    const doc = new DOMParser().parseFromString(renderHoja(template, bag), "text/html");
+  };
+
+  test("cada fila de Inventario lleva un ícono de los packs, no la imagen de muestra", () => {
+    const doc = new DOMParser().parseFromString(renderHoja(template, bagged()), "text/html");
     const pictures = [...doc.querySelectorAll('section.tab[data-tab="inventory"] .item-row .item-image')];
-    expect(pictures).toHaveLength(3);
+    expect(pictures).toHaveLength(4);
     for (const picture of pictures) {
       expect(picture.getAttribute("src") ?? "").not.toContain("propio/imagen.svg");
       const drawn = picture.getAttribute("style")?.includes("/icons/atlas.webp") || picture.getAttribute("src")?.startsWith("data:image/svg+xml");
       expect(drawn).toBe(true);
     }
+  });
+
+  test("Inventario: medidor de carga, mochila, armas con tirada y daño, equipo con peso", () => {
+    const doc = new DOMParser().parseFromString(renderHoja(template, bagged()), "text/html");
+    const inventory = doc.querySelector('section.tab[data-tab="inventory"]')!;
+    expect(inventory.querySelector(".encumbrance .label .value")?.textContent).toBe("76");
+    expect(inventory.querySelector(".encumbrance .label .max")?.textContent).toBe("240");
+    expect(inventory.querySelector(".encumbrance .strength .value")?.textContent).toBe("16");
+    expect(inventory.querySelectorAll("ul.containers li.container")).toHaveLength(1);
+    const headings = [...inventory.querySelectorAll(".items-section h3.item-name")].map((node) => node.textContent?.trim());
+    expect(headings).toEqual(["Weapons", "Equipment", "Tools", "Containers"]);
+    const sword = [...inventory.querySelectorAll("li.item")].find((row) => row.querySelector(".title")?.textContent === "Longsword")!;
+    expect(sword.querySelector(".item-roll")?.textContent?.replace(/\s/g, "")).toBe("+5");
+    expect(sword.querySelector(".item-formula .formula")?.textContent).toBe("1d8 + 3");
+    expect(sword.querySelector(".subtitle")?.textContent).toBe("Martial Melee • Action");
+    const armor = [...inventory.querySelectorAll("li.item")].find((row) => row.querySelector(".title")?.textContent === "Studded Leather Armor")!;
+    expect(armor.querySelector(".item-weight")?.textContent?.trim()).toBe("13");
+    expect(armor.querySelector(".item-quantity input")?.getAttribute("value")).toBe("1");
+  });
+
+  test("encabezado con la barra de experiencia del nivel y el interruptor de edición", () => {
+    const { doc } = sheet();
+    expect(doc.querySelector(".sheet-header .xp-label .value")?.textContent).toBe("6,500");
+    expect(doc.querySelector(".sheet-header .xp-label .max")?.textContent).toBe("14,000");
+    expect(doc.querySelector(".window-header .mode-slider")?.getAttribute("data-action")).toBe("changeMode");
+  });
+
+  test("Efectos muestra las condiciones y ninguna lista de la muestra", () => {
+    const { doc } = sheet();
+    const effects = doc.querySelector('section.tab[data-tab="effects"]')!;
+    expect(effects.querySelectorAll(".items-section")).toHaveLength(0);
+    expect(effects.querySelectorAll(".conditions-list .condition").length).toBeGreaterThan(10);
+  });
+
+  test("Rasgos especiales marca lo que la clase da: Reliable Talent de un pícaro 7", () => {
+    const { doc } = sheet({ ...fighter(), classId: "rogue", level: 7 });
+    const box = doc.querySelector('section.tab[data-tab="specialTraits"] dnd5e-checkbox[name="flags.dnd5e.reliableTalent"]');
+    expect(box?.hasAttribute("checked")).toBe(true);
+    const jack = doc.querySelector('section.tab[data-tab="specialTraits"] dnd5e-checkbox[name="flags.dnd5e.jackOfAllTrades"]');
+    expect(jack?.hasAttribute("checked")).toBe(false);
   });
 
   test("las pestañas quedan, la hoja va a la izquierda del marco y el tipo lleva ícono propio", () => {

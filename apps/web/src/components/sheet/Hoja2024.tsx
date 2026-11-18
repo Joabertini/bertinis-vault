@@ -26,6 +26,7 @@ export default function Hoja2024({
   rulesVersion,
   onClose,
   onVision,
+  onEdit,
 }: {
   state: BuilderState;
   build: CharacterBuild;
@@ -34,6 +35,8 @@ export default function Hoja2024({
   onClose: () => void;
   /** The sheet's "Recordatorios" button. */
   onVision: () => void;
+  /** The sheet's edit switch: editing a character is the Forge's job. */
+  onEdit: () => void;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [page, setPage] = useState<string | null>(null);
@@ -56,10 +59,11 @@ export default function Hoja2024({
       if (event.source !== frame.current?.contentWindow) return;
       if (event.data?.hoja === "cerrar") onClose();
       else if (event.data?.hoja === "vision") onVision();
+      else if (event.data?.hoja === "editar") onEdit();
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [onClose, onVision]);
+  }, [onClose, onVision, onEdit]);
 
   if (failed) {
     return <p className="px-8 py-10 font-body text-[15px] text-bone">No pude cargar la hoja. Probá de nuevo.</p>;

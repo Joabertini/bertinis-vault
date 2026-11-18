@@ -1,0 +1,59 @@
+name: Capturas de la hoja 2024
+
+# Una captura por pestaña de dos personajes, para compararlas con los bocetos
+# (docs/diseno/hoja-2024). jsdom no ve la cascada; Chromium sí.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'apps/web/public/hoja-2024/**'
+      - 'apps/web/src/lib/hoja-2024.ts'
+      - 'apps/web/probes/hoja-2024-capturas.ts'
+      - 'tools/hoja-capturas/**'
+      - '.github/workflows/hoja-capturas.yml'
+
+jobs:
+  capturas:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup Corepack
+        run: corepack enable
+
+      - name: Install Dependencies
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Build Shared Packages
+        run: corepack pnpm packages:build
+
+      - name: Write The Filled Sheets
+        working-directory: apps/web
+        run: |
+          corepack pnpm exec vite build --ssr probes/hoja-2024-capturas.ts --outDir .probe
+          node .probe/hoja-2024-capturas.js http://localhost:4173
+
+      - name: Install Chromium
+        run: |
+          npm install --no-save --prefix /tmp/pw playwright@1.49.1
+          npx --prefix /tmp/pw playwright install --with-deps chromium
+
+      - name: Take The Screenshots
+        run: |
+          python3 -m http.server 4173 --directory apps/web/public >/dev/null 2>&1 &
+          sleep 1
+          node tools/hoja-capturas/capturar.mjs /tmp/pw/node_modules/playwright http://localhost:4173 capturas
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: hoja-capturas
+          path: capturas

@@ -7,15 +7,20 @@
  * writes the character's values where the sheet prints them, and hands back
  * the HTML for an iframe, so the sheet's CSS never touches the app's.
  *
- * Owner's decision, 2026-11-17: the sheet is Foundry's, copied as it is.
+ * Owner's decision, 2026-11-17: the sheet is Foundry's, copied as it is. The
+ * design is `docs/diseno/hoja-2024` and the owner's mock-ups of every tab;
+ * each tab here prints what the mock-up prints.
  */
 
 import { skillIdFor, toolAbilityFor, toolIdFor, type CharacterBuild } from "@bertinis-vault/contracts";
+import { collections, type SpellRow } from "@bertinis-vault/vetools-index";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { AbilityId } from "./abilities";
 import type { BuilderState } from "./builder-state";
+import { entryById } from "./catalog";
 import { bannerFor } from "./class-banner";
+import { CLASS_ICON_PATHS } from "./class-icon-paths";
 import { ICON_COLS, ICON_SHEET_KEYS, ICON_SILHOUETTES, type SilhouetteIconKey } from "./icon-atlas";
 import {
   backgroundIconKey,
@@ -26,6 +31,7 @@ import {
   spellIconKey,
   type IconKey,
 } from "./icons";
+import { itemInfoFor, rowsBySlug, slugOf, spellInfoFor } from "./index-options";
 import { sheetDataFor } from "./sheet-data";
 
 export const HOJA_BASE = "/hoja-2024/";
@@ -34,11 +40,46 @@ const DETAILS = 'section.tab[data-tab="details"]';
 
 export type HojaCheck = { modifier: number; proficient: boolean; expert: boolean };
 
+export type HojaItemGroup = "weapon" | "equipment" | "consumable" | "tool" | "container" | "loot";
+
+export type HojaItem = {
+  name: string;
+  quantity: number;
+  /** Pounds for one; null when the catalogue gives none. */
+  weight: number | null;
+  group: HojaItemGroup;
+  /** "Simple Melee • Action", "Light Armor"… what Foundry prints under the name. */
+  subtitle: string;
+  icon: IconKey;
+  /** Weapons only. */
+  attack?: { bonus: number; damage: string | null; damageType: "slashing" | "piercing" | "bludgeoning" | null };
+};
+
+export type HojaSpell = {
+  label: string;
+  prepared: boolean;
+  /** "V, S, M". */
+  components: string;
+  /** "A", "BA", "R", "1m", "1h": the condensed column. */
+  time: string;
+  /** `{ value: 120, unit: "ft" }`, or a word ("Touch", "Self"). */
+  range: { value: number; unit: string } | string;
+  /** "evocation"… lower case, as the icons are named. */
+  school: string;
+  /** The spell attack, when the spell makes one. */
+  attack: number | null;
+  ritual: boolean;
+  concentration: boolean;
+  icon: IconKey;
+};
+
 export type HojaData = {
   name: string;
   /** "Warlock 1", "Fighter 5 / Wizard 2": as Foundry's header prints it. */
   classLine: string;
   level: number;
+  /** A new character sits at the start of their level: the threshold, out of the next one. */
+  xp: { value: number; max: number };
   portrait: string;
   /** The banner: the player's, or their class's own. A URL. */
   banner: string;
@@ -61,24 +102,37 @@ export type HojaData = {
   languages: string[];
 
   /** One pill per class in the Features tab. */
-  classes: Array<{ name: string; subclass: string; level: number }>;
+  classes: Array<{ classId: string; name: string; subclass: string; level: number }>;
   classFeatures: string[];
   speciesTraits: string[];
   feats: string[];
   backgroundFeatures: string[];
 
-  attacks: Array<{ name: string; quantity: number; ranged: boolean; attackBonus: number; damage: string | null; note: string }>;
-  equipment: Array<{ label: string; quantity: number }>;
+  items: HojaItem[];
   purse: { pp: number; gp: number; ep: number; sp: number; cp: number };
+  encumbrance: { value: number; max: number; strength: number; size: string; multiplier: number };
+  attuned: number;
 
   /** Absent for a character who casts nothing: the Spells tab goes. */
-  spellcasting: { ability: AbilityId; attackBonus: number; saveDC: number; slots: Record<string, number>; pactLevel: number | null } | null;
-  spells: Array<{ level: number; spells: Array<{ label: string; prepared: boolean }> }>;
+  spellcasting: {
+    ability: AbilityId;
+    attackBonus: number;
+    saveDC: number;
+    slots: Record<string, number>;
+    pactLevel: number | null;
+    prepared: number;
+  } | null;
+  spells: Array<{ level: number; spells: HojaSpell[] }>;
 
   alignment: string;
-  appearance: Array<{ label: string; value: string }>;
+  characteristics: Array<{ label: string; value: string }>;
   personality: { trait: string; ideal: string; bond: string; flaw: string };
-  backstory: string;
+  /** The free-text "Appearance" box. */
+  appearance: string;
+  /** The Biography editor at the bottom. */
+  biography: string;
+  /** dnd5e's special-trait flags this character has, e.g. "jackOfAllTrades". */
+  traits: string[];
 };
 
 const ABILITIES: AbilityId[] = ["str", "dex", "con", "int", "wis", "cha"];
@@ -88,6 +142,16 @@ export const SKILL_KEYS = [
   "acr", "ani", "arc", "ath", "dec", "his", "ins", "itm", "inv",
   "med", "nat", "prc", "prf", "per", "rel", "slt", "ste", "sur",
 ] as const;
+
+/** Experience a character has on reaching each level, 1 to 20. */
+const XP_THRESHOLDS = [
+  0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
+  85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000,
+];
+
+/* -------------------------------------------------------------------------- */
+/*  Small writers                                                              */
+/* -------------------------------------------------------------------------- */
 
 function signed(target: Element | null, value: number) {
   if (!target) return;
@@ -138,49 +202,87 @@ function pills(doc: Document, heading: string, values: string[]) {
 
 const tab = (name: string) => `section.tab[data-tab="${name}"]`;
 
-type Row = { title: string; subtitle?: string; icon?: IconKey; quantity?: number; roll?: number; formula?: string | null };
+/* -------------------------------------------------------------------------- */
+/*  Icons                                                                      */
+/* -------------------------------------------------------------------------- */
 
 const ICON_SIZE = 40;
+
+function tile(paths: string[]): string {
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect x="8" y="8" width="496" height="496" rx="64" fill="#15151b" stroke="#9f9275" stroke-opacity="0.45" stroke-width="10"/>` +
+    paths.map((d) => `<path d="${d}" fill="#c9a46a" transform="translate(64 64) scale(0.75)"/>`).join("") +
+    `</svg>`
+  );
+}
+
+function svgImage(doc: Document, svg: string, className: string): Element {
+  const image = doc.createElement("img");
+  image.className = className;
+  image.setAttribute("src", `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`);
+  image.setAttribute("alt", "");
+  image.setAttribute("draggable", "false");
+  return image;
+}
 
 /**
  * The icon the sheet draws where Foundry draws an item's picture: one cell of the sprite sheet
  * the Forge already uses, or a gold silhouette on a dark tile. Same two looks as `GameIcon`.
  */
-function iconNode(doc: Document, key: IconKey): Element {
+function iconNode(doc: Document, key: IconKey, className = "item-image gold-icon", size = ICON_SIZE): Element {
   if (isSheetIcon(key)) {
     const index = ICON_SHEET_KEYS.indexOf(key);
     const node = doc.createElement("span");
-    node.className = "item-image gold-icon";
+    node.className = className;
     node.setAttribute(
       "style",
       [
         "display:inline-block",
-        `width:${ICON_SIZE}px`,
-        `height:${ICON_SIZE}px`,
+        `width:${size}px`,
+        `height:${size}px`,
         "border-radius:5px",
         "background-color:#0d0b0b",
         'background-image:url("/icons/atlas.webp")',
         "background-repeat:no-repeat",
-        `background-size:${ICON_COLS * ICON_SIZE}px auto`,
-        `background-position:${-(index % ICON_COLS) * ICON_SIZE}px ${-Math.floor(index / ICON_COLS) * ICON_SIZE}px`,
+        `background-size:${ICON_COLS * size}px auto`,
+        `background-position:${-(index % ICON_COLS) * size}px ${-Math.floor(index / ICON_COLS) * size}px`,
       ].join(";"),
     );
     return node;
   }
-  const svg =
-    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect x="8" y="8" width="496" height="496" rx="64" fill="#15151b" stroke="#9f9275" stroke-opacity="0.45" stroke-width="10"/>` +
-    `<path d="${ICON_SILHOUETTES[key as SilhouetteIconKey]}" fill="#c9a46a" transform="translate(64 64) scale(0.75)"/></svg>`;
-  const image = doc.createElement("img");
-  image.className = "item-image gold-icon";
-  image.setAttribute("src", `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`);
-  image.setAttribute("alt", "");
-  return image;
+  return svgImage(doc, tile([ICON_SILHOUETTES[key as SilhouetteIconKey]]), className);
 }
 
-/** Puts `key` where the page was saved with the sample picture (`propio/imagen.svg`). */
+/** Puts `key` where the page was saved with the sample picture. Keeps the picture's own classes. */
 function setIcon(doc: Document, picture: Element | null, key: IconKey) {
-  picture?.replaceWith(iconNode(doc, key));
+  if (!picture) return;
+  picture.replaceWith(iconNode(doc, key, picture.getAttribute("class") || "item-image gold-icon"));
 }
+
+/**
+ * The dnd5e icons the page was saved with, by file name ("evocation", "slashing"…).
+ * Each carries its drawing in a shadow root, so a copy draws without a request.
+ */
+function iconBank(doc: Document): Map<string, Element> {
+  const bank = new Map<string, Element>();
+  for (const icon of doc.querySelectorAll("dnd5e-icon[src]")) {
+    const name = /([^/]+)\.svg$/.exec(icon.getAttribute("src") ?? "")?.[1];
+    if (name && !bank.has(name)) bank.set(name, icon.cloneNode(true) as Element);
+  }
+  return bank;
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Item lists                                                                 */
+/* -------------------------------------------------------------------------- */
+
+type Row = {
+  title: string;
+  subtitle?: string;
+  icon?: IconKey;
+  /** Writes the columns this row has; every other column is left empty. */
+  fill?: (item: Element) => void;
+};
 
 const headingOf = (section: Element) => section.querySelector("h3.item-name")?.textContent?.trim() ?? "";
 
@@ -188,24 +290,21 @@ function section(doc: Document, tabName: string, heading: string): Element | nul
   return [...doc.querySelectorAll(`${tab(tabName)} .items-section`)].find((entry) => headingOf(entry) === heading) ?? null;
 }
 
-/** A row's columns the sheet prints from the item itself; we carry none of them, so they go. */
-function blankDetails(row: Element, keep: string[] = []) {
-  for (const detail of row.querySelectorAll(":scope > .item-row > .item-detail")) {
-    if (detail.classList.contains("item-controls") || keep.some((name) => detail.classList.contains(name))) continue;
-    detail.replaceChildren();
-    detail.classList.add("empty");
-  }
+function detail(item: Element, column: string): Element | null {
+  const cell = item.querySelector(`:scope > .item-row > .item-detail.item-${column}`);
+  cell?.classList.remove("empty");
+  return cell;
 }
 
 /**
  * One row per value, cloned from the first row the section was saved with.
  * A section with nothing to list is dropped rather than printed empty.
  */
-function fillRows(target: Element | null, rows: Row[], keep: string[] = []) {
+function fillRows(target: Element | null, rows: Row[], fallback: Element | null = null) {
   if (!target) return;
   const doc = target.ownerDocument;
   const list = target.querySelector("ol.item-list");
-  const sample = list?.querySelector(":scope > li.item");
+  const sample = list?.querySelector(":scope > li.item") ?? fallback;
   if (!list || !sample || rows.length === 0) {
     target.remove();
     return;
@@ -214,41 +313,70 @@ function fillRows(target: Element | null, rows: Row[], keep: string[] = []) {
     ...rows.map((row) => {
       const item = sample.cloneNode(true) as Element;
       item.removeAttribute("data-item-id");
+      item.removeAttribute("data-uuid");
       // The expanded description holds the sample item's own activities.
       item.querySelector(".item-description .wrapper")?.replaceChildren();
       for (const marked of item.querySelectorAll("[data-item-id]")) marked.removeAttribute("data-item-id");
       if (row.icon) setIcon(doc, item.querySelector(".item-row .item-image"), row.icon);
       text(item.querySelector(".item-row .name .title"), row.title);
       const subtitle = item.querySelector(".item-row .name .subtitle");
-      if (row.subtitle) text(subtitle, row.subtitle);
-      else subtitle?.remove();
-      blankDetails(item, keep);
-      if (row.quantity !== undefined) {
-        const detail = item.querySelector(".item-quantity");
-        detail?.classList.remove("empty");
-        detail?.querySelector("input")?.setAttribute("value", String(row.quantity));
+      if (row.subtitle) {
+        if (subtitle) text(subtitle, row.subtitle);
+        else {
+          const added = doc.createElement("span");
+          added.className = "subtitle";
+          added.textContent = row.subtitle;
+          item.querySelector(".item-row .name")?.append(added);
+        }
+      } else subtitle?.remove();
+      for (const cell of item.querySelectorAll(":scope > .item-row > .item-detail")) {
+        if (cell.classList.contains("item-controls")) continue;
+        cell.replaceChildren();
+        cell.classList.add("empty");
       }
-      if (row.roll !== undefined) {
-        const detail = item.querySelector(".item-roll");
-        detail?.classList.remove("empty");
-        signed(detail?.querySelector(".value") ?? null, row.roll);
-      }
-      if (row.formula !== undefined) {
-        const detail = item.querySelector(".item-formula");
-        detail?.classList.remove("empty");
-        text(detail?.querySelector(".formula") ?? null, row.formula ?? "—");
-        // The sample weapon's damage-type icon.
-        for (const extra of detail?.querySelectorAll(".row > :not(.formula)") ?? []) extra.remove();
-      }
+      row.fill?.(item);
       return item;
     }),
   );
 }
 
-function ordinal(level: number): string {
-  const suffix = level === 1 ? "st" : level === 2 ? "nd" : level === 3 ? "rd" : "th";
-  return `${level}${suffix}`;
+function quantityCell(doc: Document, item: Element, quantity: number) {
+  const cell = detail(item, "quantity");
+  if (!cell) return;
+  const minus = doc.createElement("a");
+  minus.className = "adjustment-button always-interactive";
+  minus.setAttribute("data-action", "decrease");
+  minus.innerHTML = '<i class="fa-solid fa-minus" inert></i>';
+  const input = doc.createElement("input");
+  input.className = "always-interactive";
+  input.setAttribute("type", "text");
+  input.setAttribute("value", String(quantity));
+  input.setAttribute("disabled", "");
+  const plus = doc.createElement("a");
+  plus.className = "adjustment-button always-interactive";
+  plus.setAttribute("data-action", "increase");
+  plus.innerHTML = '<i class="fa-solid fa-plus" inert></i>';
+  cell.replaceChildren(minus, input, plus);
 }
+
+function weightCell(doc: Document, item: Element, weight: number | null) {
+  if (weight === null) return;
+  const cell = detail(item, "weight");
+  if (!cell) return;
+  const icon = doc.createElement("i");
+  icon.className = "fa-solid fa-weight-hanging";
+  icon.setAttribute("inert", "");
+  cell.replaceChildren(icon, doc.createTextNode(` ${weight}`));
+}
+
+function dash(doc: Document, item: Element, column: string) {
+  const cell = detail(item, column);
+  if (cell) cell.replaceChildren(doc.createTextNode("—"));
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Tabs                                                                       */
+/* -------------------------------------------------------------------------- */
 
 function featuresTab(doc: Document, data: HojaData) {
   const pillList = doc.querySelector(`${tab("features")} .classes`);
@@ -258,7 +386,17 @@ function featuresTab(doc: Document, data: HojaData) {
       ...data.classes.map((entry) => {
         const pill = pillSample.cloneNode(true) as Element;
         pill.removeAttribute("data-item-id");
-        pill.querySelector(".icons")?.remove();
+        const [classIcon, subclassIcon] = [...pill.querySelectorAll(".icons img")];
+        const drawing = CLASS_ICON_PATHS[entry.classId];
+        if (classIcon) {
+          if (drawing) classIcon.replaceWith(svgImage(doc, tile(drawing.paths), classIcon.getAttribute("class") ?? "gold-icon"));
+          else setIcon(doc, classIcon, kindIconKey("feature"));
+        }
+        if (subclassIcon) {
+          if (entry.subclass) setIcon(doc, subclassIcon, kindIconKey("subclass"));
+          else subclassIcon.remove();
+        }
+        for (const marked of pill.querySelectorAll("[data-item-id]")) marked.removeAttribute("data-item-id");
         text(pill.querySelector(".title"), entry.name);
         const subtitle = pill.querySelector(".subtitle");
         if (entry.subclass) text(subtitle, entry.subclass);
@@ -270,52 +408,137 @@ function featuresTab(doc: Document, data: HojaData) {
   }
 
   const all = [...doc.querySelectorAll(`${tab("features")} .items-section`)];
+  const usesAndRecovery = (item: Element) => {
+    dash(doc, item, "uses");
+    dash(doc, item, "recovery");
+  };
   const classSection = all[0] ?? null;
-  const classTitle = classSection?.querySelector("h3.item-name");
-  text(classTitle ?? null, `${data.classes[0]?.name ?? "Class"} Features`);
-  fillRows(classSection, data.classFeatures.map((title) => ({ title, icon: kindIconKey("feature") })));
-  fillRows(section(doc, "features", "Species Features"), data.speciesTraits.map((title) => ({ title, icon: kindIconKey("species") })));
-  fillRows(section(doc, "features", "Background Features"), data.backgroundFeatures.map((title) => ({ title, icon: kindIconKey("background") })));
+  text(classSection?.querySelector("h3.item-name") ?? null, `${data.classes[0]?.name ?? "Class"} Features`);
+  fillRows(classSection, data.classFeatures.map((title) => ({ title, icon: kindIconKey("feature"), fill: usesAndRecovery })));
+  fillRows(
+    section(doc, "features", "Species Features"),
+    data.speciesTraits.map((title) => ({ title, icon: kindIconKey("species"), fill: usesAndRecovery })),
+  );
+  fillRows(
+    section(doc, "features", "Background Features"),
+    data.backgroundFeatures.map((title) => ({ title, icon: kindIconKey("background"), fill: usesAndRecovery })),
+  );
   const other = section(doc, "features", "Other Features");
   text(other?.querySelector("h3.item-name") ?? null, "Feats");
-  fillRows(other, data.feats.map((title) => ({ title, icon: kindIconKey("feat") })));
+  fillRows(other, data.feats.map((title) => ({ title, subtitle: "Feat", icon: kindIconKey("feat"), fill: usesAndRecovery })));
   section(doc, "features", "Active Abilities")?.remove();
   section(doc, "features", "Passive Abilities")?.remove();
 }
 
-function inventoryTab(doc: Document, data: HojaData) {
-  // Encumbrance and containers: the Forge weighs nothing and has no bags.
-  doc.querySelector(`${tab("inventory")} .top`)?.remove();
-  for (const coin of ["pp", "gp", "ep", "sp", "cp"] as const) {
-    doc.querySelector(`${tab("inventory")} input[name="system.currency.${coin}"]`)?.setAttribute("value", String(data.purse[coin]));
+const DAMAGE_LABEL = { slashing: "Slashing", piercing: "Piercing", bludgeoning: "Bludgeoning" } as const;
+
+function inventoryTab(doc: Document, data: HojaData, bank: Map<string, Element>) {
+  const root = doc.querySelector(tab("inventory"));
+
+  // Encumbrance: what everything in the bag weighs, against what the character can carry.
+  const meter = root?.querySelector(".encumbrance .meter");
+  if (meter) {
+    const percent = data.encumbrance.max > 0 ? Math.min(100, (data.encumbrance.value / data.encumbrance.max) * 100) : 0;
+    meter.setAttribute("aria-valuenow", String(percent));
+    meter.setAttribute("aria-valuetext", String(data.encumbrance.value));
+    meter.setAttribute("aria-valuemax", String(data.encumbrance.max));
+    (meter as HTMLElement).style.setProperty("--bar-percentage", `${percent}%`);
+    text(meter.querySelector(".label .value"), String(data.encumbrance.value));
+    text(meter.querySelector(".label .max"), String(data.encumbrance.max));
+  }
+  text(root?.querySelector(".encumbrance .strength .value") ?? null, String(data.encumbrance.strength));
+  text(root?.querySelector(".encumbrance .size .value") ?? null, data.encumbrance.size);
+  const multiplier = root?.querySelector(".encumbrance .multiplier .value");
+  if (multiplier) {
+    const sign = doc.createElement("span");
+    sign.className = "sign";
+    sign.textContent = "×";
+    multiplier.replaceChildren(sign, doc.createTextNode(String(data.encumbrance.multiplier)));
   }
 
-  const weapons = section(doc, "inventory", "Weapons");
-  const equipment = section(doc, "inventory", "Equipment");
-  for (const entry of doc.querySelectorAll(`${tab("inventory")} .items-section`)) {
-    if (entry !== weapons && entry !== equipment) entry.remove();
+  // Containers: one card per bag, as Foundry shows them beside the meter.
+  const containerList = root?.querySelector("ul.containers");
+  const containerSample = containerList?.querySelector("li.container");
+  const containers = data.items.filter((item) => item.group === "container");
+  if (containerList && containerSample) {
+    if (containers.length === 0) containerList.replaceChildren();
+    else {
+      containerList.replaceChildren(
+        ...containers.map((bag) => {
+          const card = containerSample.cloneNode(true) as Element;
+          card.removeAttribute("data-item-id");
+          card.removeAttribute("data-uuid");
+          card.querySelector("a")?.setAttribute("aria-label", bag.name);
+          card.querySelector(".meter")?.setAttribute("style", "--bar-percentage: 0%");
+          const picture = card.querySelector("img");
+          if (picture) picture.replaceWith(iconNode(doc, bag.icon, "", 72));
+          return card;
+        }),
+      );
+    }
   }
-  fillRows(
-    weapons,
-    data.attacks.map((attack) => ({
-      title: attack.name,
-      icon: itemIconKey({ name: attack.name, type: attack.ranged ? "R" : "M" }),
-      subtitle: attack.note,
-      quantity: attack.quantity,
-      roll: attack.attackBonus,
-      formula: attack.damage,
-    })),
-    ["item-quantity", "item-roll", "item-formula"],
-  );
-  const armed = new Set(data.attacks.map((attack) => attack.name));
-  fillRows(
-    equipment,
-    data.equipment.filter((entry) => !armed.has(entry.label)).map((entry) => ({ title: entry.label, icon: itemIconKey({ name: entry.label }), quantity: entry.quantity })),
-    ["item-quantity"],
-  );
+
+  for (const coin of ["pp", "gp", "ep", "sp", "cp"] as const) {
+    root?.querySelector(`input[name="system.currency.${coin}"]`)?.setAttribute("value", String(data.purse[coin]));
+  }
+  text(root?.querySelector(".attunement .value") ?? null, String(data.attuned));
+
+  const rowFor = (item: HojaItem): Row => ({
+    title: item.name,
+    subtitle: item.subtitle,
+    icon: item.icon,
+    fill: (row) => {
+      if (item.attack) {
+        signed(detail(row, "roll"), item.attack.bonus);
+        const cell = detail(row, "formula");
+        if (cell) {
+          const line = doc.createElement("div");
+          line.className = "row";
+          const formula = doc.createElement("span");
+          formula.className = "formula";
+          formula.textContent = item.attack.damage ?? "—";
+          line.append(formula);
+          const kind = item.attack.damageType;
+          const drawing = kind ? bank.get(kind) : undefined;
+          if (kind && drawing) {
+            const holder = doc.createElement("span");
+            holder.setAttribute("aria-label", DAMAGE_LABEL[kind]);
+            holder.append(drawing.cloneNode(true));
+            line.append(holder);
+          }
+          cell.replaceChildren(line);
+        }
+      } else {
+        weightCell(doc, row, item.weight);
+        quantityCell(doc, row, item.quantity);
+      }
+      dash(doc, row, "uses");
+    },
+  });
+
+  const keep: Record<string, HojaItemGroup> = {
+    Weapons: "weapon",
+    Equipment: "equipment",
+    Consumables: "consumable",
+    Tools: "tool",
+    Containers: "container",
+    Loot: "loot",
+  };
+  // Some sections were saved empty (the sample had no containers or loot): their rows borrow
+  // the shape of an equipment row, which has the same columns.
+  const borrowed = (section(doc, "inventory", "Equipment")?.querySelector("li.item")?.cloneNode(true) as Element | undefined) ?? null;
+  for (const entry of [...(root?.querySelectorAll(".items-section") ?? [])]) {
+    const group = keep[headingOf(entry)];
+    if (!group) {
+      entry.remove();
+      continue;
+    }
+    entry.removeAttribute("hidden");
+    fillRows(entry, data.items.filter((item) => item.group === group).map(rowFor), borrowed);
+  }
 }
 
-function spellsTab(doc: Document, data: HojaData) {
+function spellsTab(doc: Document, data: HojaData, bank: Map<string, Element>) {
   const root = doc.querySelector(tab("spells"));
   if (!data.spellcasting && data.spells.length === 0) {
     root?.remove();
@@ -331,17 +554,53 @@ function spellsTab(doc: Document, data: HojaData) {
     signed(card.querySelector(".ability .value"), data.abilities[casting.ability].modifier);
     signed(card.querySelector(".attack .value"), casting.attackBonus);
     text(card.querySelector(".save .value"), String(casting.saveDC));
+    // The Forge lets a player pick exactly as many as the class prepares.
+    text(card.querySelector(".prepared .count"), String(casting.prepared));
+    text(card.querySelector(".prepared .max"), String(casting.prepared));
   } else card?.remove();
-  // How many are prepared today is not something the build knows.
-  card?.querySelector(".prepared")?.remove();
 
   const list = root?.querySelector(".spells-list");
   const sections = [...(list?.querySelectorAll(".items-section") ?? [])];
   const sample = section(doc, "spells", "Cantrips") ?? sections[0] ?? null;
-  const pactSample = sections.find((entry) => entry.querySelector(".pips")) ?? null;
-  const pipSample = pactSample?.querySelector(".pips .pip") ?? null;
-  const pipsSample = pactSample?.querySelector(".pips") ?? null;
+  const pipsSample = sections.map((entry) => entry.querySelector(".pips")).find(Boolean) ?? null;
+  const pipSample = pipsSample?.querySelector(".pip") ?? null;
   if (!list || !sample) return;
+
+  const rowFor = (spell: HojaSpell): Row => ({
+    title: spell.label,
+    subtitle: spell.components,
+    icon: spell.icon,
+    fill: (item) => {
+      const school = detail(item, "school");
+      const drawing = bank.get(spell.school);
+      if (school && drawing) {
+        school.setAttribute("aria-label", spell.school);
+        school.replaceChildren(drawing.cloneNode(true));
+      } else school?.classList.add("empty");
+      const time = detail(item, "time");
+      if (time) {
+        const condensed = doc.createElement("span");
+        condensed.className = "condensed";
+        condensed.textContent = spell.time;
+        time.replaceChildren(condensed);
+      }
+      const range = detail(item, "range");
+      if (range) {
+        if (typeof spell.range === "string") {
+          const word = doc.createElement("span");
+          word.className = "condensed";
+          word.textContent = spell.range;
+          range.replaceChildren(word);
+        } else {
+          range.innerHTML = `<span class="integer">${spell.range.value}</span><span class="literal"> </span><span class="unit">${spell.range.unit}</span>`;
+        }
+      }
+      dash(doc, item, "target");
+      if (spell.attack !== null) signed(detail(item, "roll"), spell.attack);
+      else dash(doc, item, "roll");
+      dash(doc, item, "uses");
+    },
+  });
 
   const built = data.spells.map((bucket) => {
     const part = sample.cloneNode(true) as Element;
@@ -352,14 +611,7 @@ function spellsTab(doc: Document, data: HojaData) {
       part.querySelector("h3.item-name"),
       bucket.level === 0 ? "Cantrips" : pact ? `Pact Magic — ${ordinal(bucket.level)} Level` : `${ordinal(bucket.level)} Level`,
     );
-    fillRows(
-      part,
-      bucket.spells.map((spell) => ({
-        title: spell.label,
-        icon: spellIconKey({ name: spell.label, school: "" }),
-        subtitle: spell.prepared ? "" : "Not prepared",
-      })),
-    );
+    fillRows(part, bucket.spells.map(rowFor));
     if (bucket.level > 0 && slots > 0 && pipsSample && pipSample) {
       const pips = pipsSample.cloneNode(false) as Element;
       pips.replaceChildren(...Array.from({ length: slots }, () => pipSample.cloneNode(true) as Element));
@@ -370,13 +622,22 @@ function spellsTab(doc: Document, data: HojaData) {
   list.replaceChildren(...built);
 }
 
+function ordinal(level: number): string {
+  const suffix = level === 1 ? "st" : level === 2 ? "nd" : level === 3 ? "rd" : "th";
+  return `${level}${suffix}`;
+}
+
+function effectsTab(doc: Document) {
+  // A new character has no effects: Foundry hides the empty lists and shows the conditions.
+  for (const entry of doc.querySelectorAll(`${tab("effects")} .items-section`)) entry.remove();
+  for (const condition of doc.querySelectorAll(`${tab("effects")} .conditions-list .condition`)) {
+    condition.classList.remove("active");
+  }
+}
+
 function biographyTab(doc: Document, data: HojaData) {
   const values = new Map<string, string>([["Alignment", data.alignment]]);
-  const keys: Array<[string, string]> = [
-    ["Edad", "Age"], ["Altura", "Height"], ["Peso", "Weight"], ["Ojos", "Eyes"],
-    ["Pelo", "Hair"], ["Piel", "Skin"], ["Genero", "Gender"], ["Fe", "Faith"],
-  ];
-  for (const [spanish, label] of keys) values.set(label, data.appearance.find((entry) => entry.label === spanish)?.value ?? "");
+  for (const entry of data.characteristics) values.set(entry.label, entry.value);
   for (const row of doc.querySelectorAll(`${tab("biography")} ul.characteristics > li`)) {
     const value = values.get(row.querySelector(".label")?.textContent?.trim() ?? "");
     text(row.querySelector(".value"), value?.trim() ? value : "—");
@@ -387,21 +648,23 @@ function biographyTab(doc: Document, data: HojaData) {
     Bonds: data.personality.bond,
     Flaws: data.personality.flaw,
     "Personality Traits": data.personality.trait,
+    Appearance: data.appearance,
   };
   for (const box of doc.querySelectorAll(`${tab("biography")} .textbox`)) {
-    const label = box.querySelector("h3 span")?.textContent?.trim() ?? "";
-    const value = boxes[label];
-    // The free-text "Appearance" has no field in the builder: the characteristics row carries it.
-    if (value === undefined) {
-      box.remove();
-      continue;
-    }
-    box.querySelector("p")?.replaceChildren(doc.createTextNode(value.trim() || "—"));
+    const value = boxes[box.querySelector("h3 span")?.textContent?.trim() ?? ""] ?? "";
+    const paragraph = box.querySelector("p");
+    if (!paragraph) continue;
+    paragraph.replaceChildren();
+    const lines = value.trim() ? value.trim().split(/\n+/) : ["—"];
+    lines.forEach((line, index) => {
+      if (index > 0) paragraph.append(doc.createElement("br"), doc.createElement("br"));
+      paragraph.append(doc.createTextNode(line));
+    });
   }
 
   const editor = doc.querySelector(`${tab("biography")} .editor-content`);
   if (editor) {
-    const paragraphs = data.backstory.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+    const paragraphs = data.biography.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
     editor.replaceChildren(
       ...(paragraphs.length ? paragraphs : ["—"]).map((part) => {
         const paragraph = doc.createElement("p");
@@ -412,17 +675,10 @@ function biographyTab(doc: Document, data: HojaData) {
   }
 }
 
-function effectsTab(doc: Document) {
-  for (const entry of doc.querySelectorAll(`${tab("effects")} .items-section`)) {
-    // The sheet's enchantments are items that enchant other items: nothing here makes one.
-    if (/Enchantments/.test(headingOf(entry))) entry.remove();
-    else entry.querySelector("ol.item-list")?.replaceChildren();
-  }
-}
-
 function specialTraitsTab(doc: Document, data: HojaData) {
-  const option = doc.querySelector(`${tab("specialTraits")} select[name="system.details.originalClass"]`);
-  option?.replaceChildren(
+  const root = doc.querySelector(tab("specialTraits"));
+  const select = root?.querySelector('select[name="system.details.originalClass"]');
+  select?.replaceChildren(
     ...data.classes.slice(0, 1).map((entry) => {
       const choice = doc.createElement("option");
       choice.textContent = entry.name;
@@ -430,11 +686,21 @@ function specialTraitsTab(doc: Document, data: HojaData) {
       return choice;
     }),
   );
+  for (const box of root?.querySelectorAll("dnd5e-checkbox[name^='flags.dnd5e.']") ?? []) {
+    const flag = box.getAttribute("name")!.slice("flags.dnd5e.".length);
+    if (data.traits.includes(flag)) box.setAttribute("checked", "");
+    else box.removeAttribute("checked");
+  }
 }
+
+/* -------------------------------------------------------------------------- */
+/*  The page                                                                   */
+/* -------------------------------------------------------------------------- */
 
 /** The sheet's HTML for this character. `template` is `hoja.html` as served. */
 export function renderHoja(template: string, data: HojaData): string {
   const doc = new DOMParser().parseFromString(template, "text/html");
+  const bank = iconBank(doc);
 
   // The page's own links resolve from its folder, wherever the iframe lives.
   const base = doc.createElement("base");
@@ -457,7 +723,7 @@ export function renderHoja(template: string, data: HojaData): string {
     form.style.setProperty("--dnd5e-character-header-image", "transparent");
   }
 
-  // The window's own buttons: close and "Recordatorios" talk to the page that holds the iframe.
+  // The window's own buttons: close, edit and "Recordatorios" talk to the page that holds the iframe.
   doc.querySelector(".window-header .preparation-warnings")?.remove();
   const reminders = doc.querySelector('.window-header [data-action="copyUuid"]');
   if (reminders) {
@@ -467,6 +733,9 @@ export function renderHoja(template: string, data: HojaData): string {
     reminders.setAttribute("class", "header-control fa-solid fa-lightbulb icon");
     reminders.removeAttribute("draggable");
   }
+  const mode = doc.querySelector(".window-header .mode-slider");
+  mode?.setAttribute("data-tooltip", "Editar en la Forja");
+  mode?.setAttribute("aria-label", "Editar en la Forja");
 
   // Header.
   text(doc.querySelector(".window-title"), data.name);
@@ -475,8 +744,13 @@ export function renderHoja(template: string, data: HojaData): string {
   const badge = doc.querySelector(".sheet-header .level-badge");
   text(badge, String(data.level));
   badge?.setAttribute("aria-label", `Level ${data.level}`);
-  // The Forge keeps no experience points; an empty bar would say "0 XP".
-  for (const part of doc.querySelectorAll(".sheet-header .xp-label, .sheet-header .xp-bar")) part.remove();
+  text(doc.querySelector(".sheet-header .xp-label .value"), data.xp.value.toLocaleString("en-US"));
+  text(doc.querySelector(".sheet-header .xp-label .max"), data.xp.max.toLocaleString("en-US"));
+  const xpBar = doc.querySelector(".sheet-header .xp-bar") as HTMLElement | null;
+  xpBar?.setAttribute("aria-valuenow", String(data.xp.value));
+  xpBar?.setAttribute("aria-valuemax", String(data.xp.max));
+  xpBar?.setAttribute("aria-valuetext", "0%");
+  xpBar?.style.setProperty("--bar-percentage", "0%");
 
   for (const ability of ABILITIES) {
     const box = doc.querySelector(`.ability-scores .ability-score[data-ability="${ability}"]`);
@@ -545,11 +819,8 @@ export function renderHoja(template: string, data: HojaData): string {
   const race = doc.querySelector(`${DETAILS} .pill-lg.race`);
   text(race?.querySelector(".title") ?? null, data.species);
   text(race?.querySelector(".subtitle") ?? null, data.size);
-  race?.querySelector("img")?.setAttribute("alt", data.species);
   const background = doc.querySelector(`${DETAILS} .pill-lg.background`);
   text(background?.querySelector(".title") ?? null, data.background);
-  background?.querySelector("img")?.setAttribute("alt", data.background);
-
   setIcon(doc, type?.querySelector(".creature-type") ?? null, kindIconKey("species"));
   setIcon(doc, race?.querySelector("img") ?? null, speciesIconKey(data.species));
   setIcon(doc, background?.querySelector("img") ?? null, backgroundIconKey(data.background));
@@ -559,8 +830,8 @@ export function renderHoja(template: string, data: HojaData): string {
   pills(doc, "Languages", data.languages);
 
   featuresTab(doc, data);
-  inventoryTab(doc, data);
-  spellsTab(doc, data);
+  inventoryTab(doc, data, bank);
+  spellsTab(doc, data, bank);
   effectsTab(doc);
   biographyTab(doc, data);
   specialTraitsTab(doc, data);
@@ -568,6 +839,9 @@ export function renderHoja(template: string, data: HojaData): string {
   return `<!doctype html>\n${doc.documentElement.outerHTML}`;
 }
 
+/* -------------------------------------------------------------------------- */
+/*  The data                                                                   */
+/* -------------------------------------------------------------------------- */
 
 function readable(label: string): string {
   if (label.includes(" ") || !label.includes("-")) return label;
@@ -577,20 +851,98 @@ function readable(label: string): string {
     .replace(/(^|\s)[a-z]/g, (start) => start.toUpperCase());
 }
 
-/**
- * "Fighter 5 / Wizard 2" → one pill each; a single class is "Fighter" and its level is the character's.
- * The subclass belongs to the first class: the builder keeps one.
- */
-function classesOf(classLine: string, subclass: string, level: number): HojaData["classes"] {
-  const parts = classLine.split(" / ").map((part) => part.trim()).filter(Boolean);
-  return parts.map((part, index) => {
-    const match = /^(.*?)(?:\s+(\d+))?$/.exec(part);
-    return {
-      name: match?.[1] || part,
-      subclass: index === 0 ? subclass : "",
-      level: match?.[2] ? Number(match[2]) : level,
-    };
-  });
+/** 5etools item types, as Foundry names them under the item. */
+const ITEM_TYPES: Record<string, { label: string; group: HojaItemGroup }> = {
+  LA: { label: "Light Armor", group: "equipment" },
+  MA: { label: "Medium Armor", group: "equipment" },
+  HA: { label: "Heavy Armor", group: "equipment" },
+  S: { label: "Shield", group: "equipment" },
+  RG: { label: "Ring", group: "equipment" },
+  RD: { label: "Rod", group: "equipment" },
+  WD: { label: "Wand", group: "equipment" },
+  SCF: { label: "Spellcasting Focus", group: "equipment" },
+  G: { label: "Adventuring Gear", group: "loot" },
+  TG: { label: "Trade Good", group: "loot" },
+  $: { label: "Treasure", group: "loot" },
+  P: { label: "Potion", group: "consumable" },
+  SC: { label: "Scroll", group: "consumable" },
+  A: { label: "Ammunition", group: "consumable" },
+  AF: { label: "Ammunition", group: "consumable" },
+  FD: { label: "Food and Drink", group: "consumable" },
+  EXP: { label: "Explosive", group: "consumable" },
+  AT: { label: "Artisan's Tools", group: "tool" },
+  T: { label: "Tool", group: "tool" },
+  GS: { label: "Gaming Set", group: "tool" },
+  INS: { label: "Musical Instrument", group: "tool" },
+  MNT: { label: "Mount", group: "loot" },
+  VEH: { label: "Vehicle", group: "loot" },
+};
+
+const CONTAINER = /\b(pack|backpack|bag|sack|pouch|case|chest|quiver|satchel|basket|barrel)\b/i;
+
+const DAMAGE_TYPES: Record<string, "slashing" | "piercing" | "bludgeoning"> = {
+  cortante: "slashing",
+  perforante: "piercing",
+  contundente: "bludgeoning",
+  S: "slashing",
+  P: "piercing",
+  B: "bludgeoning",
+};
+
+function damageTypeOf(code: string | null): "slashing" | "piercing" | "bludgeoning" | null {
+  return code ? (DAMAGE_TYPES[code] ?? null) : null;
+}
+
+const SIZES: Array<[RegExp, string, number]> = [
+  [/tiny|diminut/i, "Tiny", 0.5],
+  [/small|peque/i, "Sm", 1],
+  [/large|grande/i, "Lg", 2],
+  [/huge|enorme/i, "Hg", 4],
+  [/gargantuan|gargant/i, "Grg", 8],
+];
+
+function sizeOf(label: string): { size: string; multiplier: number } {
+  const found = SIZES.find(([pattern]) => pattern.test(label));
+  return found ? { size: found[1], multiplier: found[2] } : { size: "Md", multiplier: 1 };
+}
+
+/** "1 bonus action" → "BA", as the condensed column prints it. */
+function condensedTime(label: string): string {
+  const lower = label.toLowerCase();
+  if (/bonus/.test(lower)) return "BA";
+  if (/reaction/.test(lower)) return "R";
+  if (/action/.test(lower)) return "A";
+  const amount = /(\d+)\s*(minute|hour|round|day)/.exec(lower);
+  if (amount) return `${amount[1]}${{ minute: "m", hour: "h", round: "r", day: "d" }[amount[2] as "minute" | "hour" | "round" | "day"]}`;
+  return label;
+}
+
+function spellRange(label: string): HojaSpell["range"] {
+  const distance = /^(\d+)\s*(feet|foot|ft|miles?|mi)\b/i.exec(label.trim());
+  if (distance) return { value: Number(distance[1]), unit: /^mi/i.test(distance[2]!) ? "mi" : "ft" };
+  const word = label.trim().split(/[\s(]/)[0] ?? "";
+  return word ? word[0]!.toUpperCase() + word.slice(1) : "—";
+}
+
+/** The special-trait flags this character has, by what its classes, feats and species say. */
+function traitsOf(classes: HojaData["classes"], feats: string[], species: string, rulesVersion: RulesVersion): string[] {
+  const levelIn = (classId: string) => classes.find((entry) => entry.classId === classId)?.level ?? 0;
+  const subclassOf = (classId: string) => classes.find((entry) => entry.classId === classId)?.subclass.toLowerCase() ?? "";
+  const hasFeat = (name: RegExp) => feats.some((feat) => name.test(feat));
+  const traits: string[] = [];
+  if (levelIn("bard") >= 2) traits.push("jackOfAllTrades");
+  if (levelIn("rogue") >= 7) traits.push("reliableTalent");
+  if (levelIn("monk") >= 14) traits.push("diamondSoul");
+  if (levelIn("artificer") >= 6) traits.push("toolExpertise");
+  if (/champion/.test(subclassOf("fighter")) && levelIn("fighter") >= (rulesVersion === "2024" ? 3 : 7)) traits.push("remarkableAthlete");
+  if (hasFeat(/^alert\b/i)) traits.push("initiativeAlert");
+  if (hasFeat(/^observant\b/i)) traits.push("observantFeat");
+  if (hasFeat(/^tavern brawler\b/i)) traits.push("tavernBrawlerFeat");
+  if (hasFeat(/^elven accuracy\b/i)) traits.push("elvenAccuracy");
+  if (/halfling/i.test(species)) traits.push("halflingLucky");
+  if (/goliath|firbolg|bugbear|orc/i.test(species)) traits.push("powerfulBuild");
+  if (/half-orc/i.test(species)) traits.push("savageAttacks");
+  return traits;
 }
 
 /** Everything the sheet prints, from the character and its derived build. */
@@ -632,10 +984,99 @@ export function hojaDataFor(
     sheet.armorTraining.shields && "Shields",
   ].filter((entry): entry is string => Boolean(entry));
 
+  // Classes, from the state: the class line is a label, and the pills need ids.
+  const classLabel = (classId: string) => entryById("class", rulesVersion, classId)?.label ?? readable(classId);
+  const subclassLabel = (subclassId: string) =>
+    subclassId
+      ? (entryById("subclass", rulesVersion, subclassId, state.sourceBooks[`subclass:${subclassId}`])?.label ?? readable(subclassId))
+      : "";
+  const extras = state.extraClasses.filter((extra) => extra.classId && extra.level >= 1);
+  const classes: HojaData["classes"] = state.classId
+    ? [
+        { classId: state.classId, name: classLabel(state.classId), subclass: subclassLabel(state.subclassId), level: state.level },
+        ...extras.map((extra) => ({
+          classId: extra.classId,
+          name: classLabel(extra.classId),
+          subclass: subclassLabel(extra.subclassId),
+          level: extra.level,
+        })),
+      ]
+    : [];
+
+  // The bag: every piece, with what the catalogue says it weighs and is.
+  const bag = build.choices.normalized?.equipment ?? [];
+  const infoOf = (entry: (typeof bag)[number]) => (entry.itemId ? itemInfoFor(entry.itemId, rulesVersion) : null);
+  const items: HojaItem[] = [];
+  for (const attack of sheet.attacks) {
+    const entry = bag.find((piece) => piece.label === attack.name || piece.itemId === slugOf(attack.name));
+    const info = entry ? infoOf(entry) : null;
+    const category = info?.weaponCategory ? `${info.weaponCategory[0]!.toUpperCase()}${info.weaponCategory.slice(1)} ` : "";
+    items.push({
+      name: attack.name,
+      quantity: attack.quantity,
+      weight: info?.weight ?? null,
+      group: "weapon",
+      subtitle: `${category}${attack.ranged ? "Ranged" : "Melee"} • Action`,
+      icon: itemIconKey({ name: attack.name, type: info?.type ?? (attack.ranged ? "R" : "M"), rarity: info?.rarity, weaponCategory: info?.weaponCategory }),
+      attack: {
+        bonus: attack.attackBonus,
+        damage: attack.damage,
+        damageType: damageTypeOf(attack.damageType) ?? damageTypeOf(info?.damageType ?? null),
+      },
+    });
+  }
+  const armed = new Set(items.map((item) => item.name));
+  for (const entry of bag) {
+    const name = readable(entry.label);
+    if (armed.has(entry.label) || armed.has(name) || entry.category === "weapon") continue;
+    const info = infoOf(entry);
+    const code = (info?.type ?? "").split("|")[0] ?? "";
+    const known = ITEM_TYPES[code];
+    const group: HojaItemGroup = CONTAINER.test(name) ? "container" : (known?.group ?? (entry.category === "armor" || entry.category === "shield" ? "equipment" : "loot"));
+    items.push({
+      name,
+      quantity: entry.quantity,
+      weight: info?.weight ?? null,
+      group,
+      subtitle: known?.label ?? (group === "container" ? "Container" : ""),
+      icon: CONTAINER.test(name) && !info ? "backpack" : itemIconKey({ name, type: info?.type, rarity: info?.rarity, weaponCategory: info?.weaponCategory }),
+    });
+  }
+
+  const strength = abilities.str.score;
+  const { size, multiplier } = sizeOf(sheet.sizeLabel);
+  const carried = items.reduce((sum, item) => sum + (item.weight ?? 0) * item.quantity, 0);
+
+  // Spells, with what the index knows of each.
+  const spells: HojaData["spells"] = sheet.spellsByLevel.map((bucket) => ({
+    level: bucket.level,
+    spells: bucket.spells.map((spell) => {
+      const info = spellInfoFor(spell.label, rulesVersion);
+      const row = rowsBySlug<SpellRow>(collections.spell, rulesVersion, slugOf(spell.label))[0];
+      const school = (info?.school ?? "").toLowerCase();
+      return {
+        label: spell.label,
+        prepared: spell.prepared,
+        components: info?.componentsLabel.replace(/\b(Verbal|Somatic|Material)\b/g, (word) => word[0]!) ?? "",
+        time: condensedTime(info?.castingTimeLabel ?? ""),
+        range: spellRange(info?.rangeLabel ?? ""),
+        school,
+        attack: row && row.attack.length > 0 && sheet.spellcasting ? sheet.spellcasting.attackBonus : null,
+        ritual: info?.ritual ?? false,
+        concentration: info?.concentration ?? false,
+        icon: spellIconKey({ name: spell.label, school: info?.school ?? "" }),
+      };
+    }),
+  }));
+
+  const characteristic = (spanish: string) => sheet.appearance.find((entry) => entry.label === spanish)?.value ?? "";
+  const level = sheet.level;
+
   return {
     name: sheet.characterName || "Sin nombre",
-    classLine: sheet.classLine,
-    level: sheet.level,
+    classLine: classes.length ? classes.map((entry) => `${entry.name} ${entry.level}`).join(" / ") : sheet.classLine,
+    level,
+    xp: { value: XP_THRESHOLDS[Math.max(0, level - 1)] ?? 0, max: XP_THRESHOLDS[Math.min(19, level)] ?? 355000 },
     portrait: state.coverImage,
     banner: bannerFor(state),
     abilities,
@@ -646,7 +1087,7 @@ export function hojaDataFor(
     speed: sheet.speed,
     proficiencyBonus: sheet.proficiencyBonus,
     hitPoints: sheet.hitPoints,
-    hitDice: sheet.level,
+    hitDice: level,
     creatureType: "Humanoid",
     species: sheet.speciesLabel,
     size: sheet.sizeLabel,
@@ -654,22 +1095,21 @@ export function hojaDataFor(
     armor,
     weapons: sheet.weaponProficiencies,
     languages: sheet.languages,
-    classes: classesOf(sheet.classLine, sheet.subclassLabel, sheet.level),
+    classes,
     classFeatures: sheet.classFeatures,
     speciesTraits: sheet.speciesTraits,
     feats: sheet.feats,
     backgroundFeatures: sheet.backgroundFeatures,
-    attacks: sheet.attacks.map((attack) => ({
-      name: attack.name,
-      quantity: attack.quantity,
-      ranged: attack.ranged,
-      attackBonus: attack.attackBonus,
-      damage: attack.damage,
-      note: [attack.damageType, ...attack.properties].filter(Boolean).join(" • "),
-    })),
-    // The kit's pieces come as ids ("explorer-s-pack"): the sheet says "Explorer's Pack".
-    equipment: sheet.equipment.map((entry) => ({ ...entry, label: readable(entry.label) })),
+    items,
     purse: { pp: sheet.purse.pp, gp: sheet.purse.gp, ep: sheet.purse.ep, sp: sheet.purse.sp, cp: sheet.purse.cp },
+    encumbrance: {
+      value: Math.round(carried * 10) / 10,
+      max: Math.round(strength * 15 * multiplier),
+      strength,
+      size,
+      multiplier,
+    },
+    attuned: sheet.attunedCount,
     spellcasting: sheet.spellcasting
       ? {
           ability: sheet.spellcasting.ability,
@@ -677,12 +1117,18 @@ export function hojaDataFor(
           saveDC: sheet.spellcasting.saveDC,
           slots: sheet.spellcasting.slots,
           pactLevel: sheet.spellcasting.pactLevel ?? null,
+          prepared: spells.filter((bucket) => bucket.level > 0).flatMap((bucket) => bucket.spells).filter((spell) => spell.prepared).length,
         }
       : null,
-    spells: sheet.spellsByLevel,
+    spells,
     alignment: sheet.alignment,
-    appearance: sheet.appearance,
+    characteristics: [
+      ["Age", "Edad"], ["Height", "Altura"], ["Weight", "Peso"], ["Eyes", "Ojos"],
+      ["Hair", "Pelo"], ["Skin", "Piel"], ["Gender", "Genero"], ["Faith", "Fe"],
+    ].map(([label, spanish]) => ({ label: label!, value: characteristic(spanish!) })),
     personality: sheet.personality,
-    backstory: sheet.backstory,
+    appearance: state.appearance,
+    biography: state.notes,
+    traits: traitsOf(classes, sheet.feats, sheet.speciesLabel, rulesVersion),
   };
 }
