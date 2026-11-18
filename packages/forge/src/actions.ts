@@ -20,6 +20,7 @@ import { rulesVersionOf, type BuilderState, type ExtraClass } from "./builder-st
 import { allOptions, type CatalogEntry } from "./catalog";
 import { classEntriesFor, emptyExtraClass } from "./classing";
 import { resolveDraft } from "./derive";
+import { speciesFeatGrantFor } from "./feats";
 import { fromLines, toLines } from "./grants";
 import { levellingFor } from "./index-options";
 import { fixedLanguagesOf, grantedProficienciesOf } from "./settle";
@@ -232,8 +233,12 @@ export function releasedByPick(
     // the Forge say so out loud instead of dropping it in silence.
     if (draft.sizeChoice) shed.push("el tamano elegido");
     // The feat a species grants (human) is the old species' too.
-    if (draft.featId) shed.push("la dote de la especie");
-    return { patch: { subraceId: "", sizeChoice: "", abilityBonuses: {}, featId: "" }, shed };
+    const speciesFeat = speciesFeatGrantFor(draft) !== null && Boolean(draft.featId);
+    if (speciesFeat) shed.push("la dote de la especie");
+    return {
+      patch: { subraceId: "", sizeChoice: "", abilityBonuses: {}, ...(speciesFeat ? { featId: "" } : {}) },
+      shed,
+    };
   }
 
   const shed: string[] = [];
