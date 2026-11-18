@@ -5896,7 +5896,7 @@ svg { fill: var(--icon-fill, #000); width: var(--icon-width, var(--icon-size, 1e
     hpInput.hidden = false;
     hp.querySelector(".progress > .label")?.setAttribute("hidden", "");
     hpInput.value = String(estado.hp ?? hpMax);
-    hpInput.focus();
+    hpInput.focus({ preventScroll: true });
     hpInput.select();
   }
   function cerrarVida(aplicar) {
@@ -6177,7 +6177,7 @@ svg { fill: var(--icon-fill, #000); width: var(--icon-width, var(--icon-size, 1e
         accion.classList.toggle("active");
         return;
       case "currency":
-        form.querySelector('section.currency input[name="system.currency.gp"]')?.focus();
+        form.querySelector('section.currency input[name="system.currency.gp"]')?.focus({ preventScroll: true });
         return;
     }
 
