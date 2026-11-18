@@ -141,6 +141,17 @@ describe("la hoja 2024", () => {
     }
   });
 
+  test("las pestañas quedan, la hoja va a la izquierda del marco y el tipo lleva ícono propio", () => {
+    const { doc } = sheet();
+    const tabs = [...doc.querySelectorAll('nav.tabs [data-action="tab"]')].map((node) => node.getAttribute("data-tab"));
+    expect(tabs).toEqual(["details", "inventory", "features", "effects", "biography", "specialTraits"].filter((name) => tabs.includes(name)));
+    expect(tabs.length).toBeGreaterThanOrEqual(6);
+    expect(doc.querySelector("form.application")?.getAttribute("style")).toContain("margin: 0");
+    const type = doc.querySelector('section.tab[data-tab="details"] .pill-lg.type');
+    expect(type?.querySelector(".creature-type")).toBeNull();
+    expect(type?.querySelector(".item-image")).not.toBeNull();
+  });
+
   test("sin recuadro de logo, con las monedas dibujadas y con X y Recordatorios que avisan al marco", () => {
     const { doc } = sheet();
     expect(doc.querySelector(".marca-logo")).toBeNull();

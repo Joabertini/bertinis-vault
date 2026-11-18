@@ -71,8 +71,8 @@ export default function Hoja2024({
       ref={frame}
       title={`Hoja de ${data.name}`}
       srcDoc={page}
-      className="block w-full border-0"
-      style={{ height: 720, background: "transparent", colorScheme: "normal" }}
+      className="block border-0"
+      style={{ width: 850, height: 720, background: "transparent", colorScheme: "normal" }}
     />
   );
 }
