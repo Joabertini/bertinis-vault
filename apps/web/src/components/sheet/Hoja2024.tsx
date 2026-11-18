@@ -16,7 +16,7 @@ import {
   type HojaUi,
 } from "@/lib/hoja-2024";
 import { loadKind } from "@/lib/rules-text";
-import { useRolls } from "@/lib/roll-store";
+import { useCritRule, useRolls } from "@/lib/roll-store";
 
 /** The page is the same for every character; read it once. */
 let template: Promise<string> | null = null;
@@ -108,10 +108,11 @@ export default function Hoja2024({
   const played = (state.hoja ?? {}) as HojaEstado;
   // What the sheet's edits keep in `hoja` does change what it prints: things taken off, hit point maximum.
   const characterKey = JSON.stringify({ ...state, hoja: { quitados: played.quitados, hpMax: played.hpMax } });
+  const critRule = useCritRule((store) => store.rule);
   const data = useMemo(
-    () => hojaDataFor(latest.current.state, latest.current.build, rulesVersion, rules ?? {}),
+    () => hojaDataFor(latest.current.state, latest.current.build, rulesVersion, rules ?? {}, critRule),
     // The key stands for state and build: the build derives from the same character.
-    [characterKey, rulesVersion, rules],
+    [characterKey, rulesVersion, rules, critRule],
   );
 
   useEffect(() => {

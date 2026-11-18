@@ -33,7 +33,7 @@ import {
   type IconKey,
 } from "./icons";
 import { itemInfoFor, rowsBySlug, slugOf, spellInfoFor } from "./index-options";
-import { critFormula, scaleDice } from "./roll-formula";
+import { critFor, scaleDice, type CritRule } from "./roll-formula";
 import { sheetDataFor } from "./sheet-data";
 
 export const HOJA_BASE = "/hoja-2024/";
@@ -1307,6 +1307,7 @@ export function hojaDataFor(
   build: CharacterBuild,
   rulesVersion: RulesVersion,
   rules: HojaRules = {},
+  critRule: CritRule = "dobles",
 ): HojaData {
   const sheet = sheetDataFor(state, build, rulesVersion);
   const abilities = {} as HojaData["abilities"];
@@ -1451,6 +1452,7 @@ export function hojaDataFor(
     }),
   }));
 
+  const critLabel = critRule === "perkins" ? "Crítico Perkins" : "Crítico";
   // What a click shows. Every key the page carries has an entry, even when the books have no text.
   const info: Record<string, HojaInfo> = {};
   const fromRecord = (record: Record<string, unknown> | null, fallback = "<p>Las reglas no traen texto para esto.</p>") =>
@@ -1516,7 +1518,7 @@ export function hojaDataFor(
             ...(item.attack.damage
               ? [
                   { label: "Daño", formula: item.attack.damage },
-                  { label: "Crítico", formula: critFormula(item.attack.damage) },
+                  { label: critLabel, formula: critFor(item.attack.damage, critRule) },
                 ]
               : []),
           ]
@@ -1546,7 +1548,7 @@ export function hojaDataFor(
             ? [
                 { label: "Daño", formula: damage },
                 // A critical needs an attack roll to crit on: saving-throw spells do not have one.
-                ...(spell.attack !== null ? [{ label: "Crítico", formula: critFormula(damage) }] : []),
+                ...(spell.attack !== null ? [{ label: critLabel, formula: critFor(damage, critRule) }] : []),
               ]
             : []),
         ],

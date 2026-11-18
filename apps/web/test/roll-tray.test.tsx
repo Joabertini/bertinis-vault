@@ -7,8 +7,8 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import RollTray from "../src/components/tray/RollTray";
-import { critFormula, isFormula, rollFormula, scaleDice } from "../src/lib/roll-formula";
-import { useRolls } from "../src/lib/roll-store";
+import { critFor, critFormula, isFormula, perkinsFormula, rollFormula, scaleDice } from "../src/lib/roll-formula";
+import { useCritRule, useRolls } from "../src/lib/roll-store";
 
 /** Dados que dan lo que se les pide, en orden, y 1 cuando se acaban. */
 const loaded = (...faces: number[]) => {
@@ -59,6 +59,16 @@ describe("críticos", () => {
     expect(critFormula("2d6+4")).toBe("4d6+4");
     expect(critFormula("1d6 + 1d4 + 2")).toBe("2d6 + 2d4 + 2");
     expect(critFormula("d12")).toBe("2d12");
+  });
+
+  test("Perkins: el dado al máximo, más la tirada, más el modificador", () => {
+    expect(perkinsFormula("1d8+3")).toBe("8+1d8+3");
+    expect(perkinsFormula("2d6 + 4")).toBe("12+2d6+4");
+    expect(perkinsFormula("1d6+1d4+2")).toBe("10+1d6+1d4+2");
+    expect(critFor("1d8+3", "perkins")).toBe("8+1d8+3");
+    expect(critFor("1d8+3", "dobles")).toBe("2d8+3");
+    // Se tira como cualquier fórmula: 8 fijo + 1d8 (5) + 3.
+    expect(rollFormula(perkinsFormula("1d8+3"), "normal", loaded(5)).total).toBe(16);
   });
 
   test("scaleDice escala el truco con el nivel", () => {
@@ -124,7 +134,7 @@ describe("la bandeja", () => {
   test("el interruptor de crítico dobla los dados de lo que se tira", async () => {
     const user = userEvent.setup();
     render(<RollTray />);
-    await user.click(screen.getByRole("button", { name: /Crítico: dados dobles/ }));
+    await user.click(screen.getByRole("button", { name: /^Crítico/ }));
     await user.type(screen.getByLabelText("Fórmula de dados"), "1d8+3");
     await user.click(screen.getByText("Tirar"));
     const [roll] = useRolls.getState().rolls;
@@ -132,6 +142,22 @@ describe("la bandeja", () => {
     expect(roll!.critico).toBe(true);
     expect(roll!.titulo).toContain("Crítico");
     expect(screen.getAllByText("¡Crítico!").length).toBeGreaterThan(0);
+  });
+
+  test("con la regla Perkins el crítico de la bandeja es máximo más tirada", async () => {
+    const user = userEvent.setup();
+    useCritRule.setState({ rule: "dobles" });
+    render(<RollTray />);
+    await user.click(screen.getByRole("button", { name: /Perkins/ }));
+    expect(useCritRule.getState().rule).toBe("perkins");
+    await user.click(screen.getByRole("button", { name: /^Crítico/ }));
+    await user.type(screen.getByLabelText("Fórmula de dados"), "1d8+3");
+    await user.click(screen.getByText("Tirar"));
+    const [roll] = useRolls.getState().rolls;
+    expect(roll!.formula).toBe("8+1d8+3");
+    expect(roll!.total).toBeGreaterThanOrEqual(12);
+    expect(roll!.total).toBeLessThanOrEqual(19);
+    useCritRule.setState({ rule: "dobles" });
   });
 
   test("limpiar vacía el historial", async () => {
