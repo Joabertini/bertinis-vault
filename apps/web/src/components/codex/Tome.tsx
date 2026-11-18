@@ -444,7 +444,7 @@ function TomeWindow({
         snapshot ? (
           rulesVersion === "2024" ? (
             // C1: the 2024 sheet is Foundry's own (owner's decision, 2026-11-17).
-            <Hoja2024 state={state} build={snapshot} rulesVersion={rulesVersion} onClose={onClose} onVision={() => onSwitch("vision")} onEdit={onReforge} />
+            <Hoja2024 characterId={character.id} state={state} build={snapshot} rulesVersion={rulesVersion} onClose={onClose} onVision={() => onSwitch("vision")} onEdit={onReforge} />
           ) : (
             <CharacterSheet state={state} build={snapshot} accent={accent} />
           )

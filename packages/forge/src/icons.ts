@@ -88,7 +88,7 @@ const WEAPONS: [RegExp, (row: IconItemRow) => IconKey][] = [
   [/greatsword|claymore|zweih/, (r) => (magical(r) ? "magic-sword" : "greatsword")],
   [/rapier|estoc/, (r) => (magical(r) ? "magic-sword" : "sword-rapier")],
   [/shortsword|short sword|gladius/, (r) => (magical(r) ? "magic-sword" : "sword-short")],
-  [/scimitar|sabre|saber|cutlass|falchion|katana/, (r) => (magical(r) ? "magic-sword" : "sword")],
+  [/scimitar|sabre|saber|cutlass|falchion|katana|shamshir/, (r) => (magical(r) ? "magic-sword" : "scimitar")],
   [/.*/, (r) => (magical(r) ? "magic-sword" : "sword-long")],
 ];
 

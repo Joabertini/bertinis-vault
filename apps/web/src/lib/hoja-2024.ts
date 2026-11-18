@@ -18,7 +18,7 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { AbilityId } from "./abilities";
 import type { BuilderState } from "./builder-state";
-import { entryById } from "./catalog";
+import { entryById, hitDieFor } from "./catalog";
 import { bannerFor } from "./class-banner";
 import { CLASS_ICON_PATHS } from "./class-icon-paths";
 import { ICON_COLS, ICON_SHEET_KEYS, ICON_SILHOUETTES, type SilhouetteIconKey } from "./icon-atlas";
@@ -43,6 +43,8 @@ export type HojaCheck = { modifier: number; proficient: boolean; expert: boolean
 export type HojaItemGroup = "weapon" | "equipment" | "consumable" | "tool" | "container" | "loot";
 
 export type HojaItem = {
+  /** What the page and the saved play state call this row: "i0", "i1"… */
+  key: string;
   name: string;
   quantity: number;
   /** Pounds for one; null when the catalogue gives none. */
@@ -51,11 +53,19 @@ export type HojaItem = {
   /** "Simple Melee • Action", "Light Armor"… what Foundry prints under the name. */
   subtitle: string;
   icon: IconKey;
+  /** Armor and shields: what they add to the Armor Class when worn. */
+  armor?: { kind: "LA" | "MA" | "HA" | "S"; ac: number };
+  /** Starts equipped: weapons and armor do, a bag of flour does not. */
+  equipped: boolean;
+  attuned: boolean;
+  /** Needs attunement. */
+  attunement: boolean;
   /** Weapons only. */
   attack?: { bonus: number; damage: string | null; damageType: "slashing" | "piercing" | "bludgeoning" | null };
 };
 
 export type HojaSpell = {
+  key: string;
   label: string;
   prepared: boolean;
   /** "V, S, M". */
@@ -79,9 +89,51 @@ export type HojaSpell = {
 
 /** The rules text the app fetches from `public/rules/<kind>.json`, keyed as those files are. */
 export type RulesTable = Record<string, Record<string, unknown>>;
-export type HojaRules = { classFeature?: RulesTable; subclassFeature?: RulesTable; spell?: RulesTable };
+export type HojaRules = {
+  classFeature?: RulesTable;
+  subclassFeature?: RulesTable;
+  spell?: RulesTable;
+  item?: RulesTable;
+  race?: RulesTable;
+  background?: RulesTable;
+  feat?: RulesTable;
+  condition?: RulesTable;
+};
+
+/** The kinds `Hoja2024` fetches before it draws the sheet. */
+export const HOJA_RULE_KINDS = ["classFeature", "subclassFeature", "spell", "item", "race", "background", "feat", "condition"] as const;
+
+/** What a click on something shows: its rules text, and the rolls it makes. */
+export type HojaInfo = {
+  title: string;
+  subtitle?: string;
+  html: string;
+  rolls?: Array<{ label: string; formula: string }>;
+};
+
+/**
+ * What the player changes while playing, kept per character by the page that holds the sheet.
+ * Everything optional: an absent field is the sheet's own starting value.
+ */
+export type HojaEstado = {
+  hp?: number;
+  temp?: number;
+  hd?: number;
+  inspiration?: boolean;
+  pips?: Record<string, number>;
+  conditions?: string[];
+  equipped?: Record<string, boolean>;
+  attuned?: Record<string, boolean>;
+  prepared?: Record<string, boolean>;
+  quantity?: Record<string, number>;
+  currency?: Record<string, number>;
+};
 
 export type HojaData = {
+  /** Rules text and rolls for everything on the sheet, by the key its element carries. */
+  info: Record<string, HojaInfo>;
+  /** Numbers the page needs to play: rolling a hit die, putting armor on and off. */
+  play: { hitDie: number; con: number; dex: number; unarmoredAC: number; carryMax: number };
   name: string;
   /** "Warlock 1", "Fighter 5 / Wizard 2": as Foundry's header prints it. */
   classLine: string;
@@ -285,6 +337,8 @@ function iconBank(doc: Document): Map<string, Element> {
 /* -------------------------------------------------------------------------- */
 
 type Row = {
+  /** The key of its `info` entry and its saved state. */
+  key?: string;
   title: string;
   subtitle?: string;
   icon?: IconKey;
@@ -322,6 +376,7 @@ function fillRows(target: Element | null, rows: Row[], fallback: Element | null 
       const item = sample.cloneNode(true) as Element;
       item.removeAttribute("data-item-id");
       item.removeAttribute("data-uuid");
+      if (row.key) item.setAttribute("data-hoja", row.key);
       // The expanded description holds the sample item's own activities.
       item.querySelector(".item-description .wrapper")?.replaceChildren();
       for (const marked of item.querySelectorAll("[data-item-id]")) marked.removeAttribute("data-item-id");
@@ -394,6 +449,7 @@ function featuresTab(doc: Document, data: HojaData) {
       ...data.classes.map((entry) => {
         const pill = pillSample.cloneNode(true) as Element;
         pill.removeAttribute("data-item-id");
+        pill.setAttribute("data-info", `class:${entry.classId}`);
         const [classIcon, subclassIcon] = [...pill.querySelectorAll(".icons img")];
         const drawing = CLASS_ICON_PATHS[entry.classId];
         if (classIcon) {
@@ -422,18 +478,18 @@ function featuresTab(doc: Document, data: HojaData) {
   };
   const classSection = all[0] ?? null;
   text(classSection?.querySelector("h3.item-name") ?? null, `${data.classes[0]?.name ?? "Class"} Features`);
-  fillRows(classSection, data.classFeatures.map((title) => ({ title, icon: kindIconKey("feature"), fill: usesAndRecovery })));
+  fillRows(classSection, data.classFeatures.map((title) => ({ key: `feature:${title}`, title, icon: kindIconKey("feature"), fill: usesAndRecovery })));
   fillRows(
     section(doc, "features", "Species Features"),
-    data.speciesTraits.map((title) => ({ title, icon: kindIconKey("species"), fill: usesAndRecovery })),
+    data.speciesTraits.map((title) => ({ key: `species:${title}`, title, icon: kindIconKey("species"), fill: usesAndRecovery })),
   );
   fillRows(
     section(doc, "features", "Background Features"),
-    data.backgroundFeatures.map((title) => ({ title, icon: kindIconKey("background"), fill: usesAndRecovery })),
+    data.backgroundFeatures.map((title) => ({ key: `background:${title}`, title, icon: kindIconKey("background"), fill: usesAndRecovery })),
   );
   const other = section(doc, "features", "Other Features");
   text(other?.querySelector("h3.item-name") ?? null, "Feats");
-  fillRows(other, data.feats.map((title) => ({ title, subtitle: "Feat", icon: kindIconKey("feat"), fill: usesAndRecovery })));
+  fillRows(other, data.feats.map((title) => ({ key: `feat:${title}`, title, subtitle: "Feat", icon: kindIconKey("feat"), fill: usesAndRecovery })));
   section(doc, "features", "Active Abilities")?.remove();
   section(doc, "features", "Passive Abilities")?.remove();
 }
@@ -476,10 +532,17 @@ function inventoryTab(doc: Document, data: HojaData, bank: Map<string, Element>)
           const card = containerSample.cloneNode(true) as Element;
           card.removeAttribute("data-item-id");
           card.removeAttribute("data-uuid");
+          card.setAttribute("data-hoja", bag.key);
+          // The card is the bag's picture, as large as Foundry draws it.
+          card.setAttribute("style", "width: 78px; height: 78px;");
           card.querySelector("a")?.setAttribute("aria-label", bag.name);
           card.querySelector(".meter")?.setAttribute("style", "--bar-percentage: 0%");
           const picture = card.querySelector("img");
-          if (picture) picture.replaceWith(iconNode(doc, bag.icon, "", 72));
+          if (picture) {
+            const drawn = iconNode(doc, bag.icon, "container-image", 72);
+            drawn.setAttribute("style", `${drawn.getAttribute("style") ?? ""};flex:1;width:100%;min-height:0;object-fit:contain;`);
+            picture.replaceWith(drawn);
+          }
           return card;
         }),
       );
@@ -492,6 +555,7 @@ function inventoryTab(doc: Document, data: HojaData, bank: Map<string, Element>)
   text(root?.querySelector(".attunement .value") ?? null, String(data.attuned));
 
   const rowFor = (item: HojaItem): Row => ({
+    key: item.key,
     title: item.name,
     subtitle: item.subtitle,
     icon: item.icon,
@@ -520,7 +584,26 @@ function inventoryTab(doc: Document, data: HojaData, bank: Map<string, Element>)
         weightCell(doc, row, item.weight);
         quantityCell(doc, row, item.quantity);
       }
+      if (item.attack) weightCell(doc, row, item.weight);
+      row.setAttribute("data-weight", String(item.weight ?? 0));
       dash(doc, row, "uses");
+      const equip = row.querySelector('[data-action="equip"]');
+      if (equip) {
+        const wearable = item.group === "weapon" || Boolean(item.armor) || item.attunement;
+        equip.setAttribute("aria-disabled", wearable ? "false" : "true");
+        equip.classList.toggle("active", wearable && item.equipped);
+        equip.setAttribute("aria-label", item.equipped ? "Equipado" : "Sin equipar");
+        equip.setAttribute("data-tooltip", wearable ? "Equipar / desequipar" : "No se equipa");
+        if (item.attunement) {
+          const attune = equip.cloneNode(true) as Element;
+          attune.setAttribute("data-action", "attune");
+          attune.classList.toggle("active", item.attuned);
+          attune.setAttribute("aria-label", item.attuned ? "Sintonizado" : "Sin sintonizar");
+          attune.setAttribute("data-tooltip", "Sintonizar");
+          attune.innerHTML = '<i class="fa-solid fa-sun" inert></i>';
+          equip.after(attune);
+        }
+      }
     },
   });
 
@@ -575,6 +658,7 @@ function spellsTab(doc: Document, data: HojaData, bank: Map<string, Element>) {
   if (!list || !sample) return;
 
   const rowFor = (spell: HojaSpell): Row => ({
+    key: spell.key,
     title: spell.label,
     subtitle: spell.components,
     icon: spell.icon,
@@ -622,6 +706,14 @@ function spellsTab(doc: Document, data: HojaData, bank: Map<string, Element>) {
         }
       } else dash(doc, item, "roll");
       dash(doc, item, "uses");
+      const prepare = item.querySelector('[data-action="prepare"]');
+      if (prepare) {
+        const cantrip = spell.key.startsWith("spell:0:");
+        prepare.setAttribute("aria-disabled", cantrip ? "true" : "false");
+        prepare.classList.toggle("active", cantrip || spell.prepared);
+        prepare.setAttribute("aria-label", cantrip ? "Siempre preparado" : spell.prepared ? "Preparado" : "Sin preparar");
+        prepare.setAttribute("data-tooltip", cantrip ? "Truco: siempre preparado" : "Preparar / quitar");
+      }
     },
   });
 
@@ -657,6 +749,9 @@ function effectsTab(doc: Document) {
   }
   for (const condition of doc.querySelectorAll(`${tab("effects")} .conditions-list .condition`)) {
     condition.classList.remove("active");
+    condition.removeAttribute("data-tooltip-html");
+    const id = condition.getAttribute("data-condition-id");
+    if (id) condition.setAttribute("data-info", `condition:${id}`);
   }
 }
 
@@ -723,7 +818,7 @@ function specialTraitsTab(doc: Document, data: HojaData) {
 /* -------------------------------------------------------------------------- */
 
 /** The sheet's HTML for this character. `template` is `hoja.html` as served. */
-export function renderHoja(template: string, data: HojaData): string {
+export function renderHoja(template: string, data: HojaData, estado: HojaEstado = {}): string {
   const doc = new DOMParser().parseFromString(template, "text/html");
   const bank = iconBank(doc);
 
@@ -847,6 +942,11 @@ export function renderHoja(template: string, data: HojaData): string {
   const background = doc.querySelector(`${DETAILS} .pill-lg.background`);
   text(background?.querySelector(".title") ?? null, data.background);
   type?.querySelector(".creature-type")?.replaceWith(iconNode(doc, kindIconKey("species")));
+  type?.setAttribute("data-info", "pill:type");
+  race?.setAttribute("data-info", "pill:species");
+  background?.setAttribute("data-info", "pill:background");
+  // Foundry's tooltips load a document over its socket; here the click shows the text instead.
+  for (const node of doc.querySelectorAll("[data-tooltip-html]")) node.removeAttribute("data-tooltip-html");
   setIcon(doc, race?.querySelector("img") ?? null, speciesIconKey(data.species));
   setIcon(doc, background?.querySelector("img") ?? null, backgroundIconKey(data.background));
 
@@ -860,6 +960,13 @@ export function renderHoja(template: string, data: HojaData): string {
   effectsTab(doc);
   biographyTab(doc, data);
   specialTraitsTab(doc, data);
+
+  // What the page's own script plays with: the rules text of each thing, the numbers, the saved state.
+  const datos = doc.createElement("script");
+  datos.setAttribute("type", "application/json");
+  datos.id = "hoja-datos";
+  datos.textContent = JSON.stringify({ info: data.info, play: data.play, estado }).replace(/</g, "\\u003c");
+  doc.body.prepend(datos);
 
   return `<!doctype html>\n${doc.documentElement.outerHTML}`;
 }
@@ -977,6 +1084,9 @@ const NOT_A_FEATURE = /^(ability score improvement|subclass feature|.+ subclass|
 
 const SUBCLASS_PREFIX = /^(The|Path of the|Oath of|College of|Circle of the|Circle of|School of|Way of the|Way of)\s+/i;
 
+/** The records behind the names the last `classFeaturesFrom` returned, for their text. */
+let lastFeatureRecords = new Map<string, Record<string, unknown>>();
+
 /**
  * Every class and subclass feature a character of these classes has, from the rules text,
  * in level order: Foundry gives a character each of them as an item.
@@ -988,13 +1098,13 @@ export function classFeaturesFrom(rules: HojaRules, classes: HojaData["classes"]
     const book = books.find((name) => records.some((record) => same(record[field], name))) ?? String(records[0]?.[field] ?? "");
     return records.filter((record) => same(record[field], book));
   };
-  const found: Array<{ name: string; level: number }> = [];
+  const found: Array<{ name: string; level: number; record: Record<string, unknown> }> = [];
   for (const entry of classes) {
     const own = Object.values(rules.classFeature ?? {}).filter(
       (record) => same(record["className"], entry.name) && Number(record["level"]) <= entry.level,
     );
     const ofBook = pick(own, "classSource").filter((record) => same(record["source"], String(record["classSource"])));
-    for (const record of ofBook) found.push({ name: String(record["name"]), level: Number(record["level"]) });
+    for (const record of ofBook) found.push({ name: String(record["name"]), level: Number(record["level"]), record });
     if (!entry.subclass) continue;
     const shortName = entry.subclass.replace(SUBCLASS_PREFIX, "");
     const sub = Object.values(rules.subclassFeature ?? {}).filter(
@@ -1006,9 +1116,10 @@ export function classFeaturesFrom(rules: HojaRules, classes: HojaData["classes"]
     for (const record of pick(sub, "source")) {
       const name = String(record["name"]);
       if (same(name, entry.subclass) || same(name, shortName)) continue;
-      found.push({ name, level: Number(record["level"]) });
+      found.push({ name, level: Number(record["level"]), record });
     }
   }
+  lastFeatureRecords = new Map(found.map((entry) => [entry.name, entry.record]));
   const names = found
     .sort((a, b) => a.level - b.level)
     .map((entry) => entry.name)
@@ -1044,6 +1155,117 @@ function spellTarget(record: Record<string, unknown> | null, range: HojaSpell["r
   if (one) return `1 ${one[2] ?? ""}${one[3]!.toLowerCase()}`;
   return "";
 }
+
+/* -------------------------------------------------------------------------- */
+/*  Rules text as HTML                                                         */
+/* -------------------------------------------------------------------------- */
+
+const escapeHtml = (value: string) =>
+  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+/** `{@condition Blinded|XPHB}` reads "Blinded"; `{@damage 1d6}` reads "1d6". */
+function plainTags(value: string): string {
+  let out = value;
+  for (let pass = 0; pass < 4 && out.includes("{@"); pass += 1) {
+    out = out.replace(/\{@(\w+)\s*([^{}]*)\}/g, (_, tag: string, body: string) => {
+      const first = body.split("|")[0] ?? "";
+      if (tag === "h") return "Hit: ";
+      if (tag === "atk" || tag === "atkr") return "Attack: ";
+      if (tag === "dc") return `DC ${first}`;
+      if (tag === "hit") return `+${first}`;
+      return first;
+    });
+  }
+  return escapeHtml(out);
+}
+
+function cellHtml(cell: unknown): string {
+  if (typeof cell === "string") return plainTags(cell);
+  if (cell && typeof cell === "object") {
+    const roll = (cell as { roll?: { exact?: number; min?: number; max?: number } }).roll;
+    if (roll) return roll.exact !== undefined ? String(roll.exact) : `${roll.min}–${roll.max}`;
+    const entry = (cell as { entry?: unknown }).entry;
+    if (typeof entry === "string") return plainTags(entry);
+  }
+  return "";
+}
+
+/** 5etools entries, as the plain HTML a description box shows. */
+export function entriesHtml(entries: unknown): string {
+  if (!Array.isArray(entries)) return typeof entries === "string" ? `<p>${plainTags(entries)}</p>` : "";
+  return entries
+    .map((entry) => {
+      if (typeof entry === "string") return `<p>${plainTags(entry)}</p>`;
+      if (!entry || typeof entry !== "object") return "";
+      const node = entry as Record<string, unknown>;
+      const name = typeof node["name"] === "string" ? `<strong>${plainTags(node["name"])}.</strong> ` : "";
+      switch (node["type"]) {
+        case "list":
+          return `<ul>${((node["items"] as unknown[]) ?? [])
+            .map((item) => {
+              if (typeof item === "string") return `<li>${plainTags(item)}</li>`;
+              const it = item as Record<string, unknown>;
+              const head = typeof it["name"] === "string" ? `<strong>${plainTags(it["name"])}.</strong> ` : "";
+              const body = typeof it["entry"] === "string" ? plainTags(it["entry"]) : entriesHtml(it["entries"]).replace(/<\/?p>/g, " ");
+              return `<li>${head}${body}</li>`;
+            })
+            .join("")}</ul>`;
+        case "table": {
+          const caption = typeof node["caption"] === "string" ? `<caption>${plainTags(node["caption"])}</caption>` : "";
+          const head = ((node["colLabels"] as unknown[]) ?? []).map((label) => `<th>${cellHtml(label)}</th>`).join("");
+          const rows = ((node["rows"] as unknown[][]) ?? [])
+            .map((row) => `<tr>${(Array.isArray(row) ? row : []).map((cell) => `<td>${cellHtml(cell)}</td>`).join("")}</tr>`)
+            .join("");
+          return `<table>${caption}${head ? `<thead><tr>${head}</tr></thead>` : ""}<tbody>${rows}</tbody></table>`;
+        }
+        case "item":
+          return `<p>${name}${typeof node["entry"] === "string" ? plainTags(node["entry"]) : ""}</p>${entriesHtml(node["entries"])}`;
+        default: {
+          const inner = entriesHtml(node["entries"]);
+          if (!inner) return typeof node["entry"] === "string" ? `<p>${name}${plainTags(node["entry"])}</p>` : "";
+          return name ? inner.replace(/^<p>/, `<p>${name}`) || `<p>${name}</p>${inner}` : inner;
+        }
+      }
+    })
+    .join("");
+}
+
+/** A record of a table by name, in the edition's book first, then any book. */
+function recordNamed(table: RulesTable | undefined, name: string, rulesVersion: RulesVersion): Record<string, unknown> | null {
+  if (!table || !name) return null;
+  const lower = name.toLowerCase();
+  for (const book of BOOKS[rulesVersion]) {
+    const hit = table[`${lower}|${book.toLowerCase()}`];
+    if (hit) return hit;
+  }
+  const key = Object.keys(table).find((entry) => entry.startsWith(`${lower}|`));
+  return key ? (table[key] ?? null) : null;
+}
+
+/** The entry called `name` anywhere inside a record's entries: a species trait inside its species. */
+function namedEntry(entries: unknown, name: string): unknown[] | null {
+  if (!Array.isArray(entries)) return null;
+  for (const entry of entries) {
+    if (!entry || typeof entry !== "object") continue;
+    const node = entry as Record<string, unknown>;
+    if (typeof node["name"] === "string" && node["name"].toLowerCase() === name.toLowerCase()) {
+      return (node["entries"] as unknown[]) ?? (typeof node["entry"] === "string" ? [node["entry"]] : []);
+    }
+    const inner = namedEntry(node["entries"] ?? node["items"], name);
+    if (inner) return inner;
+  }
+  return null;
+}
+
+const CONDITIONS = [
+  "blinded", "charmed", "deafened", "exhaustion", "frightened", "grappled", "incapacitated", "invisible",
+  "paralyzed", "petrified", "poisoned", "prone", "restrained", "stunned", "unconscious",
+];
+
+const PROPERTY_NAMES: Record<string, string> = {
+  F: "Finesse", L: "Light", H: "Heavy", R: "Reach", T: "Thrown", "2H": "Two-Handed", V: "Versatile",
+  A: "Ammunition", LD: "Loading", S: "Special", AF: "Ammunition", RLD: "Reload", BF: "Burst Fire",
+};
 
 /** Everything the sheet prints, from the character and its derived build. */
 export function hojaDataFor(
@@ -1113,6 +1335,10 @@ export function hojaDataFor(
     const info = entry ? infoOf(entry) : null;
     const category = info?.weaponCategory ? `${info.weaponCategory[0]!.toUpperCase()}${info.weaponCategory.slice(1)} ` : "";
     items.push({
+      key: `i${items.length}`,
+      equipped: true,
+      attuned: Boolean(entry?.attuned),
+      attunement: Boolean(info?.attunement),
       name: attack.name,
       quantity: attack.quantity,
       weight: info?.weight ?? null,
@@ -1134,7 +1360,13 @@ export function hojaDataFor(
     const code = (info?.type ?? "").split("|")[0] ?? "";
     const known = ITEM_TYPES[code];
     const group: HojaItemGroup = CONTAINER.test(name) ? "container" : (known?.group ?? (entry.category === "armor" || entry.category === "shield" ? "equipment" : "loot"));
+    const kind = code === "LA" || code === "MA" || code === "HA" || code === "S" ? code : null;
     items.push({
+      key: `i${items.length}`,
+      ...(kind ? { armor: { kind, ac: info?.ac ?? (kind === "S" ? 2 : 10) } } : {}),
+      equipped: Boolean(kind) || Boolean(entry.attuned),
+      attuned: Boolean(entry.attuned),
+      attunement: Boolean(info?.attunement),
       name,
       quantity: entry.quantity,
       weight: info?.weight ?? null,
@@ -1159,6 +1391,7 @@ export function hojaDataFor(
       const record = spellRecord(rules, spell.label, rulesVersion);
       const saves = (record?.["savingThrow"] as string[] | undefined) ?? [];
       return {
+        key: `spell:${bucket.level}:${spell.label}`,
         label: spell.label,
         prepared: spell.prepared,
         components: [...(row?.components ?? "")].map((letter) => letter.toUpperCase()).join(", "),
@@ -1175,10 +1408,135 @@ export function hojaDataFor(
     }),
   }));
 
+  // What a click shows. Every key the page carries has an entry, even when the books have no text.
+  const info: Record<string, HojaInfo> = {};
+  const fromRecord = (record: Record<string, unknown> | null, fallback = "<p>Las reglas no traen texto para esto.</p>") =>
+    record ? entriesHtml(record["entries"]) + entriesHtml(record["entriesHigherLevel"]) || fallback : fallback;
+  const conMod = abilities.con.modifier;
+  for (const item of items) {
+    const record = recordNamed(rules.item, item.name, rulesVersion);
+    let html = fromRecord(record, "");
+    const contents = (record?.["packContents"] as unknown[] | undefined) ?? [];
+    if (contents.length) {
+      const list = contents
+        .map((entry) => {
+          if (typeof entry === "string") return readable(entry.split("|")[0] ?? entry);
+          const node = entry as { item?: string; quantity?: number; special?: string };
+          const label = node.item ? readable(node.item.split("|")[0] ?? node.item) : (node.special ?? "");
+          return node.quantity && node.quantity > 1 ? `${label} (${node.quantity})` : label;
+        })
+        .map((label) => `<li>${escapeHtml(label.replace(/(^|\s)[a-z]/g, (start) => start.toUpperCase()))}</li>`)
+        .join("");
+      html = `<p><strong>Contiene:</strong></p><ul>${list}</ul>${html}`;
+    }
+    const properties = ((record?.["property"] as unknown[] | undefined) ?? [])
+      .map((entry) => (typeof entry === "string" ? entry : (entry as { uid?: string }).uid ?? ""))
+      .map((code) => PROPERTY_NAMES[code.split("|")[0] ?? ""] ?? "")
+      .filter(Boolean);
+    const facts = [
+      item.subtitle,
+      item.weight !== null ? `${item.weight} lb` : "",
+      properties.join(", "),
+      item.armor ? `CA ${item.armor.kind === "S" ? "+" : ""}${item.armor.ac}` : "",
+    ].filter(Boolean);
+    info[item.key] = {
+      title: item.name,
+      subtitle: facts.join(" · "),
+      html: html || "<p>Las reglas no traen texto para este objeto.</p>",
+      rolls: item.attack
+        ? [
+            { label: "Ataque", formula: `1d20${item.attack.bonus >= 0 ? "+" : ""}${item.attack.bonus}` },
+            ...(item.attack.damage ? [{ label: "Daño", formula: item.attack.damage }] : []),
+          ]
+        : [],
+    };
+  }
+  for (const bucket of spells) {
+    for (const spell of bucket.spells) {
+      const record = spellRecord(rules, spell.label, rulesVersion);
+      const facts = [
+        bucket.level === 0 ? "Truco" : `Nivel ${bucket.level}`,
+        spell.school ? spell.school[0]!.toUpperCase() + spell.school.slice(1) : "",
+        spell.components,
+        spell.concentration ? "Concentración" : "",
+        spell.ritual ? "Ritual" : "",
+      ].filter(Boolean);
+      info[spell.key] = {
+        title: spell.label,
+        subtitle: facts.join(" · "),
+        html: fromRecord(record),
+        rolls: spell.attack !== null ? [{ label: "Ataque de conjuro", formula: `1d20+${spell.attack}` }] : [],
+      };
+    }
+  }
+  const classFeatureNames = [...new Set([...classFeaturesFrom(rules, classes, rulesVersion), ...sheet.classFeatures])];
+  for (const name of classFeatureNames) {
+    info[`feature:${name}`] = { title: name, subtitle: "Rasgo de clase", html: fromRecord(lastFeatureRecords.get(name) ?? null) };
+  }
+  const speciesRecord = recordNamed(rules.race, sheet.speciesLabel, rulesVersion);
+  for (const name of sheet.speciesTraits) {
+    const entries = namedEntry(speciesRecord?.["entries"], name);
+    info[`species:${name}`] = {
+      title: name,
+      subtitle: sheet.speciesLabel,
+      html: entries ? entriesHtml(entries) : "<p>Las reglas no traen texto para este rasgo.</p>",
+    };
+  }
+  const backgroundRecord = recordNamed(rules.background, sheet.backgroundLabel, rulesVersion);
+  for (const name of sheet.backgroundFeatures) {
+    const entries = namedEntry(backgroundRecord?.["entries"], name);
+    const feat = recordNamed(rules.feat, name.replace(/^feat:\s*/i, ""), rulesVersion);
+    info[`background:${name}`] = {
+      title: name,
+      subtitle: sheet.backgroundLabel,
+      html: feat ? fromRecord(feat) : entries ? entriesHtml(entries) : "<p>Las reglas no traen texto para esto.</p>",
+    };
+  }
+  for (const name of sheet.feats) {
+    info[`feat:${name}`] = {
+      title: name,
+      subtitle: "Dote",
+      html: fromRecord(recordNamed(rules.feat, name.replace(/\s*\(.*\)$/, ""), rulesVersion)),
+    };
+  }
+  for (const id of CONDITIONS) {
+    const record = recordNamed(rules.condition, id, rulesVersion);
+    info[`condition:${id}`] = { title: id[0]!.toUpperCase() + id.slice(1), subtitle: "Condición", html: fromRecord(record) };
+  }
+  info["pill:type"] = {
+    title: "Humanoid",
+    subtitle: "Tipo de criatura",
+    html: "<p>Los humanoides son la gente del mundo: personas de cualquier especie jugable.</p>",
+  };
+  info["pill:species"] = { title: sheet.speciesLabel, subtitle: `Especie · ${sheet.sizeLabel}`, html: fromRecord(speciesRecord) };
+  info["pill:background"] = { title: sheet.backgroundLabel, subtitle: "Trasfondo", html: fromRecord(backgroundRecord) };
+  for (const entry of classes) {
+    const own = classFeatureNames.filter((name) => lastFeatureRecords.get(name)?.["className"] === entry.name || !lastFeatureRecords.has(name));
+    info[`class:${entry.classId}`] = {
+      title: `${entry.name} ${entry.level}`,
+      subtitle: entry.subclass || "Clase",
+      html: `<p><strong>Rasgos hasta el nivel ${entry.level}:</strong></p><ul>${own.map((name) => `<li>${escapeHtml(name)}</li>`).join("")}</ul>`,
+    };
+  }
+
+  // Armor on and off: what the character's AC would be wearing nothing.
+  const dexMod = abilities.dex.modifier;
+  const wornArmor = items.find((item) => item.armor && item.armor.kind !== "S");
+  const wornShield = items.find((item) => item.armor?.kind === "S");
+  const unarmoredAC = wornArmor ? 10 + dexMod : sheet.armorClass - (wornShield ? wornShield.armor!.ac : 0);
+
   const characteristic = (spanish: string) => sheet.appearance.find((entry) => entry.label === spanish)?.value ?? "";
   const level = sheet.level;
 
   return {
+    info,
+    play: {
+      hitDie: hitDieFor(state.classId, rulesVersion) ?? 8,
+      con: conMod,
+      dex: dexMod,
+      unarmoredAC,
+      carryMax: Math.round(strength * 15 * multiplier),
+    },
     name: sheet.characterName || "Sin nombre",
     classLine: classes.length ? classes.map((entry) => `${entry.name} ${entry.level}`).join(" / ") : sheet.classLine,
     level,
@@ -1202,7 +1560,7 @@ export function hojaDataFor(
     weapons: sheet.weaponProficiencies,
     languages: sheet.languages,
     classes,
-    classFeatures: [...new Set([...classFeaturesFrom(rules, classes, rulesVersion), ...sheet.classFeatures])],
+    classFeatures: classFeatureNames,
     speciesTraits: sheet.speciesTraits,
     feats: sheet.feats,
     backgroundFeatures: sheet.backgroundFeatures,

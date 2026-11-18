@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import { buildCanonicalSnapshot } from "../src/lib/builder";
 import { freshDraft, type BuilderState } from "../src/lib/builder-state";
-import { classFeaturesFrom, hojaDataFor, renderHoja } from "../src/lib/hoja-2024";
+import { HOJA_RULE_KINDS, classFeaturesFrom, hojaDataFor, renderHoja } from "../src/lib/hoja-2024";
 
 const template = readFileSync(resolve(process.cwd(), "public/hoja-2024/hoja.html"), "utf8");
 
@@ -130,12 +130,12 @@ describe("la hoja 2024", () => {
       ...data,
       items: [
         {
-          name: "Longsword", quantity: 1, weight: 3, group: "weapon" as const, subtitle: "Martial Melee • Action", icon: "sword-long" as const,
+          key: "i0", equipped: true, attuned: false, attunement: false, name: "Longsword", quantity: 1, weight: 3, group: "weapon" as const, subtitle: "Martial Melee • Action", icon: "sword-long" as const,
           attack: { bonus: 5, damage: "1d8 + 3", damageType: "slashing" as const },
         },
-        { name: "Explorer's Pack", quantity: 1, weight: 59, group: "container" as const, subtitle: "Container", icon: "backpack" as const },
-        { name: "Thieves' Tools", quantity: 1, weight: 1, group: "tool" as const, subtitle: "Tool", icon: "lockpicks" as const },
-        { name: "Studded Leather Armor", quantity: 1, weight: 13, group: "equipment" as const, subtitle: "Light Armor", icon: "armor-leather" as const },
+        { key: "i1", equipped: false, attuned: false, attunement: false, name: "Explorer's Pack", quantity: 1, weight: 59, group: "container" as const, subtitle: "Container", icon: "backpack" as const },
+        { key: "i2", equipped: false, attuned: false, attunement: false, name: "Thieves' Tools", quantity: 1, weight: 1, group: "tool" as const, subtitle: "Tool", icon: "lockpicks" as const },
+        { key: "i3", armor: { kind: "LA" as const, ac: 12 }, equipped: true, attuned: false, attunement: false, name: "Studded Leather Armor", quantity: 1, weight: 13, group: "equipment" as const, subtitle: "Light Armor", icon: "armor-leather" as const },
       ],
       encumbrance: { value: 76, max: 240, strength: 16, size: "Md", multiplier: 1 },
     };
@@ -193,6 +193,37 @@ describe("la hoja 2024", () => {
     for (const name of ["Sneak Attack", "Cunning Action", "Uncanny Dodge", "Mage Hand Legerdemain"]) expect(features).toContain(name);
     expect(features).not.toContain("Ability Score Improvement");
     expect(features).not.toContain("Arcane Trickster");
+  });
+
+  test("todo lo que se toca tiene su texto: cada fila, píldora y condición lleva una clave con info", () => {
+    const reglas = (kind: string) => JSON.parse(readFileSync(resolve(process.cwd(), `public/rules/${kind}.json`), "utf8"));
+    const rules = Object.fromEntries(HOJA_RULE_KINDS.map((kind) => [kind, reglas(kind)]));
+    const state = {
+      ...fighter(),
+      classId: "rogue",
+      subclassId: "arcane-trickster",
+      weaponId: "scimitar",
+      armorId: "studded-leather-armor",
+      extraEquipmentText: "Explorer's Pack
+Thieves' Tools",
+    };
+    const build = buildCanonicalSnapshot(state);
+    const data = hojaDataFor(state, build, "2024", rules);
+    const doc = new DOMParser().parseFromString(renderHoja(template, data, { hp: 3 }), "text/html");
+    const datos = JSON.parse(doc.getElementById("hoja-datos")?.textContent ?? "{}");
+    expect(datos.estado.hp).toBe(3);
+    const keys = [...doc.querySelectorAll("[data-hoja]")].map((node) => node.getAttribute("data-hoja")!);
+    const infos = [...doc.querySelectorAll("[data-info]")].map((node) => node.getAttribute("data-info")!);
+    expect(keys.length).toBeGreaterThan(10);
+    for (const key of [...keys, ...infos]) expect(datos.info[key], key).toBeTruthy();
+    const scimitar = Object.values(datos.info as Record<string, { title: string; rolls?: unknown[]; html: string }>).find((card) => card.title === "Scimitar");
+    expect(scimitar?.rolls).toHaveLength(2);
+    expect(scimitar?.html).not.toContain("Las reglas no traen");
+    const pack = Object.values(datos.info as Record<string, { title: string; html: string }>).find((card) => /pack/i.test(card.title));
+    expect(pack?.html).toContain("Contiene");
+    expect(datos.info["condition:blinded"].html).toMatch(/see/i);
+    expect(doc.querySelector("li.container")?.getAttribute("data-hoja")).toBeTruthy();
+    expect(doc.querySelector("[data-tooltip-html]")).toBeNull();
   });
 
   test("Rasgos especiales marca lo que la clase da: Reliable Talent de un pícaro 7", () => {

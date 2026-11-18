@@ -5689,6 +5689,521 @@ svg { fill: var(--icon-fill, #000); width: var(--icon-width, var(--icon-size, 1e
       }
     }).observe(inv);
   }
+
+  // ---------------------------------------------------------------------------
+  // Jugar con la hoja: todo lo que se toca responde. Los datos (texto de reglas,
+  // números, estado guardado) vienen en #hoja-datos, escritos por renderHoja.
+  // ---------------------------------------------------------------------------
+  const datos = JSON.parse(document.getElementById("hoja-datos")?.textContent || "{}");
+  const info = datos.info || {};
+  const play = datos.play || { hitDie: 8, con: 0, dex: 0, unarmoredAC: 10, carryMax: 0 };
+  const estado = Object.assign(
+    { pips: {}, conditions: [], equipped: {}, attuned: {}, prepared: {}, quantity: {}, currency: {} },
+    datos.estado || {},
+  );
+  const guardar = () => parent.postMessage({ hoja: "estado", estado: JSON.parse(JSON.stringify(estado)) }, "*");
+  const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  const numero = (texto) => {
+    const limpio = String(texto || "").replace(/\s/g, "").replace("−", "-");
+    const n = parseInt(limpio, 10);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  // Dados -------------------------------------------------------------------
+  function tirar(formula) {
+    const f = String(formula).replace(/\s+/g, "").replace(/−/g, "-");
+    let total = 0;
+    const partes = [];
+    for (const m of f.matchAll(/([+-]?)(\d*)d(\d+)|([+-]?)(\d+)/g)) {
+      if (m[3]) {
+        const signo = m[1] === "-" ? -1 : 1;
+        const n = Number(m[2] || 1);
+        const caras = Number(m[3]);
+        const r = Array.from({ length: n }, () => 1 + Math.floor(Math.random() * caras));
+        total += signo * r.reduce((a, b) => a + b, 0);
+        partes.push(`${m[1] || ""}${n}d${caras} [${r.join(", ")}]`);
+      } else if (m[5]) {
+        total += (m[4] === "-" ? -1 : 1) * Number(m[5]);
+        partes.push(`${m[4] || "+"}${m[5]}`);
+      }
+    }
+    return { total, detalle: partes.join(" ") };
+  }
+
+  const bandeja = document.createElement("div");
+  bandeja.className = "hoja-tiradas";
+  form.append(bandeja);
+  function tarjeta(titulo, cuerpo, pie) {
+    const card = document.createElement("div");
+    card.className = "hoja-tirada";
+    card.innerHTML = `<header>${esc(titulo)}</header><strong>${cuerpo}</strong>${pie ? `<small>${pie}</small>` : ""}`;
+    card.addEventListener("click", () => card.remove());
+    bandeja.prepend(card);
+    while (bandeja.children.length > 4) bandeja.lastElementChild.remove();
+    setTimeout(() => card.classList.add("vieja"), 9000);
+    setTimeout(() => card.remove(), 12000);
+    return card;
+  }
+  function mostrarTirada(titulo, formula) {
+    const r = tirar(formula);
+    const d20 = /^1d20/.test(String(formula).replace(/\s/g, "")) ? Number((r.detalle.match(/1d20 \[(\d+)\]/) || [])[1]) : 0;
+    const card = tarjeta(titulo, String(r.total), `${esc(formula)} · ${esc(r.detalle)}`);
+    if (d20 === 20) card.classList.add("critico");
+    if (d20 === 1) card.classList.add("pifia");
+    return r;
+  }
+
+  // Ventana de información --------------------------------------------------
+  const panel = document.createElement("div");
+  panel.className = "hoja-info";
+  panel.hidden = true;
+  form.append(panel);
+  function abrirInfo(card, cerca) {
+    if (!card) return;
+    const tiradas = (card.rolls || [])
+      .map((t) => `<button type="button" class="hoja-tirar" data-formula="${esc(t.formula)}" data-titulo="${esc(card.title + " · " + t.label)}">${esc(t.label)} <span>${esc(t.formula)}</span></button>`)
+      .join("");
+    panel.innerHTML =
+      `<header><h4>${esc(card.title)}</h4><button type="button" class="hoja-cerrar" aria-label="Cerrar">×</button></header>` +
+      (card.subtitle ? `<p class="sub">${esc(card.subtitle)}</p>` : "") +
+      (tiradas ? `<div class="hoja-botones">${tiradas}</div>` : "") +
+      `<div class="cuerpo">${card.html || ""}</div>`;
+    panel.hidden = false;
+    const caja = form.getBoundingClientRect();
+    const ref = cerca ? cerca.getBoundingClientRect() : { left: caja.left + 260, bottom: caja.top + 180, top: caja.top + 180 };
+    const ancho = panel.offsetWidth;
+    const alto = panel.offsetHeight;
+    let left = ref.left - caja.left;
+    let top = ref.bottom - caja.top + 6;
+    if (left + ancho > caja.width - 50) left = caja.width - 50 - ancho;
+    if (top + alto > caja.height - 10) top = Math.max(40, ref.top - caja.top - alto - 6);
+    if (top + alto > caja.height - 10) top = Math.max(40, caja.height - 10 - alto);
+    panel.style.left = `${Math.max(10, left)}px`;
+    panel.style.top = `${top}px`;
+  }
+  const cerrarInfo = () => (panel.hidden = true);
+
+  // Descripción desplegable de una fila, como en Foundry ---------------------
+  function desplegar(li) {
+    const card = info[li.dataset.hoja];
+    const caja = li.querySelector(":scope > .item-description");
+    if (!caja) return abrirInfo(card, li);
+    const wrapper = caja.querySelector(".wrapper") || caja;
+    if (!li.classList.contains("expanded") && card) {
+      const tiradas = (card.rolls || [])
+        .map((t) => `<button type="button" class="hoja-tirar" data-formula="${esc(t.formula)}" data-titulo="${esc(card.title + " · " + t.label)}">${esc(t.label)} <span>${esc(t.formula)}</span></button>`)
+        .join("");
+      wrapper.innerHTML =
+        `<div class="hoja-descripcion">${card.subtitle ? `<p class="sub">${esc(card.subtitle)}</p>` : ""}` +
+        (tiradas ? `<div class="hoja-botones">${tiradas}</div>` : "") +
+        `${card.html || ""}</div>`;
+    }
+    li.classList.toggle("expanded");
+  }
+
+  // Clase de armadura según lo que lleva puesto ------------------------------
+  function recalcularCA() {
+    let ca = play.unarmoredAC;
+    let escudo = 0;
+    for (const li of form.querySelectorAll('section.tab[data-tab="inventory"] li.item[data-hoja]')) {
+      const card = info[li.dataset.hoja];
+      const boton = li.querySelector('[data-action="equip"]');
+      if (!card || !boton || !boton.classList.contains("active")) continue;
+      const m = /CA (\+?)(\d+)/.exec(card.subtitle || "");
+      if (!m) continue;
+      const valor = Number(m[2]);
+      const tipo = card.subtitle;
+      if (m[1] === "+") escudo = Math.max(escudo, valor);
+      else if (/Heavy Armor/.test(tipo)) ca = Math.max(ca, valor);
+      else if (/Medium Armor/.test(tipo)) ca = Math.max(ca, valor + Math.min(play.dex, 2));
+      else ca = Math.max(ca, valor + play.dex);
+    }
+    const badge = form.querySelector(".sidebar .ac-badge > div");
+    if (badge) badge.textContent = String(ca + escudo);
+  }
+
+  // Carga: peso por cantidad de cada fila del inventario ---------------------
+  function recalcularCarga() {
+    let peso = 0;
+    for (const li of form.querySelectorAll('section.tab[data-tab="inventory"] li.item[data-hoja]')) {
+      const input = li.querySelector(".item-quantity input");
+      const cantidad = input ? numero(input.value) : 1;
+      peso += Number(li.dataset.weight || 0) * cantidad;
+    }
+    peso = Math.round(peso * 10) / 10;
+    const meter = form.querySelector(".encumbrance .meter");
+    if (!meter) return;
+    const pct = play.carryMax > 0 ? Math.min(100, (peso / play.carryMax) * 100) : 0;
+    meter.style.setProperty("--bar-percentage", `${pct}%`);
+    const valor = meter.querySelector(".label .value");
+    if (valor) valor.textContent = String(peso);
+  }
+
+  function contarSintonia() {
+    const n = form.querySelectorAll('section.tab[data-tab="inventory"] [data-action="attune"].active').length;
+    const valor = form.querySelector(".attunement .value");
+    if (valor) valor.textContent = String(n);
+    return n;
+  }
+  function contarPreparados() {
+    const n = form.querySelectorAll('section.tab[data-tab="spells"] li.item:not([data-hoja^="spell:0:"]) [data-action="prepare"].active').length;
+    const valor = form.querySelector(".spellcasting .prepared .count");
+    if (valor) valor.textContent = String(n);
+  }
+
+  // Vida y dados de golpe ----------------------------------------------------
+  const hp = form.querySelector(".sidebar .meter.hit-points");
+  const hpBar = hp?.querySelector(".progress");
+  const hpInput = hp?.querySelector('input[name="system.attributes.hp.value"]');
+  const tempInput = hp?.querySelector('input[name="system.attributes.hp.temp"]');
+  const hpMax = numero(hp?.querySelector(".label .max")?.textContent);
+  const hd = form.querySelector(".sidebar .meter.hit-dice");
+  const hdMax = numero(hd?.querySelector(".label .max")?.textContent);
+  function pintarVida() {
+    const valor = Math.max(0, Math.min(hpMax, estado.hp ?? hpMax));
+    estado.hp = valor;
+    const etiqueta = hp?.querySelector(".label .value");
+    if (etiqueta) etiqueta.textContent = String(valor);
+    if (hpInput) hpInput.value = String(valor);
+    hpBar?.style.setProperty("--bar-percentage", `${hpMax ? (valor / hpMax) * 100 : 0}%`);
+    if (tempInput) tempInput.value = estado.temp ? String(estado.temp) : "";
+    const dados = Math.max(0, Math.min(hdMax, estado.hd ?? hdMax));
+    estado.hd = dados;
+    const hdValor = hd?.querySelector(".label .value");
+    if (hdValor) hdValor.textContent = String(dados);
+    hd?.style.setProperty("--bar-percentage", `${hdMax ? (dados / hdMax) * 100 : 0}%`);
+  }
+  function aplicarVida(texto) {
+    const t = String(texto).trim();
+    if (!t) return;
+    const actual = estado.hp ?? hpMax;
+    if (/^[+-]/.test(t)) {
+      const delta = numero(t);
+      if (delta < 0) {
+        let dano = -delta;
+        const temp = estado.temp || 0;
+        const absorbe = Math.min(temp, dano);
+        estado.temp = temp - absorbe;
+        dano -= absorbe;
+        estado.hp = actual - dano;
+      } else estado.hp = actual + delta;
+    } else estado.hp = numero(t);
+    pintarVida();
+    guardar();
+  }
+  function editarVida() {
+    if (!hpInput) return;
+    hpInput.hidden = false;
+    hp.querySelector(".progress > .label")?.setAttribute("hidden", "");
+    hpInput.value = String(estado.hp ?? hpMax);
+    hpInput.focus();
+    hpInput.select();
+  }
+  function cerrarVida(aplicar) {
+    if (!hpInput || hpInput.hidden) return;
+    if (aplicar) aplicarVida(hpInput.value);
+    hpInput.hidden = true;
+    hp.querySelector(".progress > .label")?.removeAttribute("hidden");
+    pintarVida();
+  }
+  hpInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") { e.preventDefault(); cerrarVida(true); }
+    if (e.key === "Escape") { e.stopPropagation(); cerrarVida(false); }
+  });
+  hpInput?.addEventListener("blur", () => cerrarVida(true));
+  tempInput?.addEventListener("change", () => {
+    estado.temp = Math.max(0, numero(tempInput.value));
+    pintarVida();
+    guardar();
+  });
+  function gastarDado() {
+    if ((estado.hd ?? hdMax) <= 0) {
+      tarjeta("Dados de golpe", "0", "No te quedan dados de golpe. Se recuperan con un descanso largo.");
+      return;
+    }
+    const formula = `1d${play.hitDie}${play.con >= 0 ? "+" : ""}${play.con}`;
+    const r = mostrarTirada("Dado de golpe", formula);
+    estado.hd = (estado.hd ?? hdMax) - 1;
+    estado.hp = Math.min(hpMax, (estado.hp ?? hpMax) + Math.max(0, r.total));
+    pintarVida();
+    guardar();
+  }
+  function descansoLargo() {
+    estado.hp = hpMax;
+    estado.temp = 0;
+    estado.hd = Math.min(hdMax, (estado.hd ?? hdMax) + Math.max(1, Math.floor(hdMax / 2)));
+    estado.pips["system.attributes.death.success"] = 0;
+    estado.pips["system.attributes.death.failure"] = 0;
+    estado.pips["system.attributes.exhaustion"] = Math.max(0, (estado.pips["system.attributes.exhaustion"] || 0) - 1);
+    pintarPips();
+    pintarVida();
+    guardar();
+    tarjeta("Descanso largo", `${hpMax} / ${hpMax}`, `Vida al máximo; dados de golpe ${estado.hd} / ${hdMax}.`);
+  }
+  function descansoCorto(boton) {
+    abrirInfo(
+      {
+        title: "Descanso corto",
+        subtitle: `Dados de golpe: ${estado.hd ?? hdMax} / ${hdMax} (d${play.hitDie} ${play.con >= 0 ? "+" : ""}${play.con})`,
+        html: "<p>Una hora de descanso. Podés gastar dados de golpe: cada uno cura lo que sale más tu modificador de Constitución.</p><p><button type=\"button\" class=\"hoja-gastar\">Gastar un dado de golpe</button></p>",
+      },
+      boton,
+    );
+  }
+
+  // Pips (agotamiento, salvaciones de muerte) y condiciones ------------------
+  function pintarPips() {
+    for (const grupo of form.querySelectorAll(".pips[data-prop]")) {
+      const n = estado.pips[grupo.dataset.prop] || 0;
+      for (const pip of grupo.querySelectorAll(".pip")) {
+        const lleno = Number(pip.dataset.n) <= n;
+        pip.classList.toggle("filled", lleno);
+        pip.classList.toggle("active", lleno);
+        pip.setAttribute("aria-pressed", String(lleno));
+      }
+    }
+  }
+  function pintarCondiciones() {
+    for (const li of form.querySelectorAll(".conditions-list .condition")) {
+      const activa = estado.conditions.includes(li.dataset.conditionId);
+      li.classList.toggle("active", activa);
+      const icono = li.querySelector("i.fa-toggle-off, i.fa-toggle-on");
+      if (icono) icono.className = `fa-solid ${activa ? "fa-toggle-on" : "fa-toggle-off"}`;
+    }
+  }
+
+  // Estado guardado al abrir -------------------------------------------------
+  for (const [clave, valor] of Object.entries(estado.equipped)) {
+    const boton = form.querySelector(`li.item[data-hoja="${clave}"] [data-action="equip"]`);
+    boton?.classList.toggle("active", Boolean(valor));
+  }
+  for (const [clave, valor] of Object.entries(estado.attuned)) {
+    form.querySelector(`li.item[data-hoja="${clave}"] [data-action="attune"]`)?.classList.toggle("active", Boolean(valor));
+  }
+  for (const [clave, valor] of Object.entries(estado.prepared)) {
+    form.querySelector(`li.item[data-hoja="${CSS.escape(clave)}"] [data-action="prepare"]`)?.classList.toggle("active", Boolean(valor));
+  }
+  for (const [clave, valor] of Object.entries(estado.quantity)) {
+    const input = form.querySelector(`li.item[data-hoja="${clave}"] .item-quantity input`);
+    if (input) input.value = String(valor);
+  }
+  for (const [moneda, valor] of Object.entries(estado.currency)) {
+    const input = form.querySelector(`input[name="system.currency.${moneda}"]`);
+    if (input) input.value = String(valor);
+  }
+  if (estado.inspiration) form.querySelector('[data-action="toggleInspiration"]')?.classList.add("active");
+  form.querySelector('[data-action="toggleInspiration"]')?.setAttribute("aria-pressed", String(Boolean(estado.inspiration)));
+  pintarVida();
+  pintarPips();
+  pintarCondiciones();
+  recalcularCA();
+  recalcularCarga();
+  contarSintonia();
+  contarPreparados();
+
+  // Las monedas se escriben a mano, como en Foundry.
+  for (const input of form.querySelectorAll('section.currency input[name^="system.currency."]')) {
+    input.removeAttribute("disabled");
+    input.addEventListener("change", () => {
+      estado.currency[input.name.split(".").pop()] = Math.max(0, numero(input.value));
+      input.value = String(estado.currency[input.name.split(".").pop()]);
+      guardar();
+    });
+  }
+
+  // Cada cosa con nombre dice qué es al pasar el mouse.
+  for (const el of form.querySelectorAll("[data-tooltip], [aria-label]")) {
+    if (el.title) continue;
+    const t = el.getAttribute("data-tooltip");
+    const texto = t && !/^[A-Z0-9]+\.[A-Za-z]/.test(t) ? t : el.getAttribute("aria-label");
+    if (texto) el.title = texto;
+  }
+
+  // Búsqueda en cada pestaña -------------------------------------------------
+  for (const input of form.querySelectorAll("item-list-controls input, .item-list-controls input, input[type=search]")) {
+    input.removeAttribute("disabled");
+    input.addEventListener("input", () => {
+      const q = input.value.trim().toLowerCase();
+      const pestaña = input.closest("section.tab");
+      for (const li of pestaña?.querySelectorAll("li.item, .conditions-list .condition") || []) {
+        const nombre = (li.querySelector(".title")?.textContent || li.textContent || "").toLowerCase();
+        li.style.display = !q || nombre.includes(q) ? "" : "none";
+      }
+    });
+  }
+
+  // Un clic, una respuesta ---------------------------------------------------
+  form.addEventListener("click", (e) => {
+    const t = e.target;
+    if (t.closest(".hoja-cerrar")) return cerrarInfo();
+    const tirada = t.closest(".hoja-tirar");
+    if (tirada) return void mostrarTirada(tirada.dataset.titulo, tirada.dataset.formula);
+    if (t.closest(".hoja-gastar")) { gastarDado(); return descansoCorto(t.closest(".hoja-gastar")); }
+    if (!t.closest(".hoja-info") && !panel.hidden) cerrarInfo();
+    if (t.closest(".hoja-info, .hoja-tiradas")) return;
+
+    const accion = t.closest("[data-action]");
+    const nombre = accion?.dataset.action;
+    const li = t.closest("li.item[data-hoja]");
+
+    // Hit points y dados de golpe.
+    if (hp && t.closest(".sidebar .meter.hit-points .progress") && !t.closest("input")) return editarVida();
+    if (hd && t.closest(".sidebar .meter.hit-dice")) return gastarDado();
+
+    switch (nombre) {
+      case "equip": {
+        if (accion.getAttribute("aria-disabled") === "true" || !li) return;
+        const activo = !accion.classList.contains("active");
+        accion.classList.toggle("active", activo);
+        accion.setAttribute("aria-label", activo ? "Equipado" : "Sin equipar");
+        estado.equipped[li.dataset.hoja] = activo;
+        recalcularCA();
+        guardar();
+        return;
+      }
+      case "attune": {
+        if (!li) return;
+        const activo = !accion.classList.contains("active");
+        if (activo && contarSintonia() >= 3) return void tarjeta("Sintonía", "3 / 3", "Ya estás sintonizado con tres objetos.");
+        accion.classList.toggle("active", activo);
+        estado.attuned[li.dataset.hoja] = activo;
+        contarSintonia();
+        guardar();
+        return;
+      }
+      case "prepare": {
+        if (accion.getAttribute("aria-disabled") === "true" || !li) return;
+        const activo = !accion.classList.contains("active");
+        accion.classList.toggle("active", activo);
+        estado.prepared[li.dataset.hoja] = activo;
+        contarPreparados();
+        guardar();
+        return;
+      }
+      case "increase":
+      case "decrease": {
+        const input = accion.closest(".item-quantity")?.querySelector("input");
+        if (!input || !li) return;
+        const n = Math.max(0, numero(input.value) + (nombre === "increase" ? 1 : -1));
+        input.value = String(n);
+        estado.quantity[li.dataset.hoja] = n;
+        recalcularCarga();
+        guardar();
+        return;
+      }
+      case "toggleExpand":
+      case "use":
+        if (li) return desplegar(li);
+        break;
+      case "rest":
+        return accion.dataset.type === "long" ? descansoLargo() : descansoCorto(accion);
+      case "toggleInspiration": {
+        estado.inspiration = !estado.inspiration;
+        accion.classList.toggle("active", estado.inspiration);
+        accion.setAttribute("aria-pressed", String(estado.inspiration));
+        tarjeta("Inspiración", estado.inspiration ? "Sí" : "No", estado.inspiration ? "Tenés inspiración heroica." : "Usaste tu inspiración.");
+        guardar();
+        return;
+      }
+      case "togglePip": {
+        const grupo = accion.closest(".pips[data-prop]");
+        if (!grupo) return;
+        const n = Number(accion.dataset.n);
+        const actual = estado.pips[grupo.dataset.prop] || 0;
+        estado.pips[grupo.dataset.prop] = actual >= n ? n - 1 : n;
+        pintarPips();
+        guardar();
+        return;
+      }
+      case "toggleDeathTray":
+        form.querySelector(".death-tray")?.classList.toggle("open");
+        return;
+      case "toggleSidebar":
+        form.classList.toggle("sidebar-collapsed");
+        return;
+      case "toggleCondition": {
+        const id = accion.dataset.conditionId;
+        if (t.closest("i.fa-toggle-off, i.fa-toggle-on")) {
+          estado.conditions = estado.conditions.includes(id) ? estado.conditions.filter((c) => c !== id) : [...estado.conditions, id];
+          pintarCondiciones();
+          guardar();
+        } else abrirInfo(info[`condition:${id}`], accion);
+        return;
+      }
+      case "showArtwork": {
+        const src = accion.getAttribute("src");
+        abrirInfo({ title: form.querySelector(".document-name")?.textContent || "", html: `<img class="hoja-retrato" src="${esc(src)}" alt="">` }, accion);
+        return;
+      }
+      case "roll": {
+        const caja = accion.closest("li, .ability-score, .lozenge") || accion;
+        const bonus = numero((caja.querySelector(".bonus, .mod, .value") || caja).textContent);
+        let etiqueta =
+          accion.dataset.type === "initiative"
+            ? "Iniciativa"
+            : (caja.querySelector(".tool-name")?.textContent || accion.textContent || accion.getAttribute("aria-label") || "Tirada").trim();
+        if (etiqueta.length <= 3) etiqueta = etiqueta.toUpperCase();
+        const tipo = caja.closest(".saves") ? " (salvación)" : caja.classList.contains("ability-score") ? " (prueba)" : "";
+        return void mostrarTirada(etiqueta + tipo, `1d20${bonus >= 0 ? "+" : ""}${bonus}`);
+      }
+      case "addDocument":
+        return aviso("editar");
+      case "toggleControls":
+        abrirInfo(
+          {
+            title: form.querySelector(".document-name")?.textContent || "Hoja",
+            html: '<p><button type="button" class="hoja-menu" data-menu="editar">Editar en la Forja</button></p><p><button type="button" class="hoja-menu" data-menu="vision">Recordatorios</button></p><p><button type="button" class="hoja-menu" data-menu="cerrar">Cerrar la hoja</button></p>',
+          },
+          accion,
+        );
+        return;
+      case "sort": {
+        const pestaña = accion.closest("section.tab");
+        for (const lista of pestaña?.querySelectorAll("ol.item-list") || []) {
+          const filas = [...lista.children];
+          filas.sort((a, b) => (a.querySelector(".title")?.textContent || "").localeCompare(b.querySelector(".title")?.textContent || ""));
+          lista.append(...filas);
+        }
+        accion.classList.toggle("active");
+        return;
+      }
+      case "clear": {
+        const input = accion.closest("section.tab")?.querySelector(".item-list-controls input, input[type=search]");
+        if (input) { input.value = ""; input.dispatchEvent(new Event("input")); }
+        return;
+      }
+      case "filter":
+      case "group":
+        accion.classList.toggle("active");
+        return;
+      case "currency":
+        form.querySelector('section.currency input[name="system.currency.gp"]')?.focus();
+        return;
+    }
+
+    const menu = t.closest(".hoja-menu");
+    if (menu) return aviso(menu.dataset.menu);
+
+    // Las tarjetas de contenedores llevan a su fila, desplegada.
+    const caja = t.closest("li.container[data-hoja]");
+    if (caja) {
+      e.preventDefault();
+      const fila = form.querySelector(`section.tab[data-tab="inventory"] li.item[data-hoja="${caja.dataset.hoja}"]`);
+      if (fila) {
+        if (!fila.classList.contains("expanded")) desplegar(fila);
+        fila.scrollIntoView({ block: "center", behavior: "smooth" });
+      } else abrirInfo(info[caja.dataset.hoja], caja);
+      return;
+    }
+
+    // El menú ⋮ de una fila y cualquier parte de la fila que no sea un control: su texto.
+    if (li && t.closest("[data-context-menu]")) return abrirInfo(info[li.dataset.hoja], t.closest("[data-context-menu]"));
+    if (li && t.closest(".item-row") && !t.closest("button, input, a")) return desplegar(li);
+
+    // Píldoras de clase, especie, trasfondo y tipo; y las condiciones.
+    const conInfo = t.closest("[data-info]");
+    if (conInfo) return abrirInfo(info[conInfo.dataset.info], conInfo);
+  });
 </script>
 </body>
 </html>

@@ -13,7 +13,7 @@ import { JSDOM } from "jsdom";
 
 import { buildCanonicalSnapshot } from "@/lib/builder";
 import { freshDraft, type BuilderState } from "@/lib/builder-state";
-import { hojaDataFor, renderHoja, type HojaRules } from "@/lib/hoja-2024";
+import { HOJA_RULE_KINDS, hojaDataFor, renderHoja, type HojaRules } from "@/lib/hoja-2024";
 
 const origin = process.argv[2] ?? "http://localhost:4173";
 const window = new JSDOM("").window;
@@ -66,7 +66,7 @@ const personajes: Record<string, BuilderState> = {
 };
 
 const reglas = (kind: string) => JSON.parse(readFileSync(join(process.cwd(), "public", "rules", `${kind}.json`), "utf8"));
-const rules: HojaRules = { classFeature: reglas("classFeature"), subclassFeature: reglas("subclassFeature"), spell: reglas("spell") };
+const rules = Object.fromEntries(HOJA_RULE_KINDS.map((kind) => [kind, reglas(kind)])) as HojaRules;
 
 for (const [clave, state] of Object.entries(personajes)) {
   const build = buildCanonicalSnapshot(state);
