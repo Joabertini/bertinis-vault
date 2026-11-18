@@ -13,7 +13,7 @@ import { JSDOM } from "jsdom";
 
 import { buildCanonicalSnapshot } from "@/lib/builder";
 import { freshDraft, type BuilderState } from "@/lib/builder-state";
-import { hojaDataFor, renderHoja } from "@/lib/hoja-2024";
+import { hojaDataFor, renderHoja, type HojaRules } from "@/lib/hoja-2024";
 
 const origin = process.argv[2] ?? "http://localhost:4173";
 const window = new JSDOM("").window;
@@ -60,14 +60,17 @@ const personajes: Record<string, BuilderState> = {
     wis: 12,
     cha: 10,
     cantripsText: "Fire Bolt\nMage Hand\nPrestidigitation",
-    spellsText: "Nv1: Magic Missile, Shield\nNv2: Misty Step\nNv3: Fireball",
+    spellsText: "Nv1: Magic Missile\nNv1: Shield\nNv2: Misty Step\nNv3: Fireball",
     extraEquipmentText: "Backpack\nQuarterstaff",
   },
 };
 
+const reglas = (kind: string) => JSON.parse(readFileSync(join(process.cwd(), "public", "rules", `${kind}.json`), "utf8"));
+const rules: HojaRules = { classFeature: reglas("classFeature"), subclassFeature: reglas("subclassFeature"), spell: reglas("spell") };
+
 for (const [clave, state] of Object.entries(personajes)) {
   const build = buildCanonicalSnapshot(state);
-  const html = renderHoja(template, hojaDataFor(state, build, "2024"));
+  const html = renderHoja(template, hojaDataFor(state, build, "2024", rules));
   writeFileSync(join(carpeta, "_capturas", `${clave}.html`), html, "utf8");
   console.log(`_capturas/${clave}.html`);
 }

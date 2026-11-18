@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import { buildCanonicalSnapshot } from "../src/lib/builder";
 import { freshDraft, type BuilderState } from "../src/lib/builder-state";
-import { hojaDataFor, renderHoja } from "../src/lib/hoja-2024";
+import { classFeaturesFrom, hojaDataFor, renderHoja } from "../src/lib/hoja-2024";
 
 const template = readFileSync(resolve(process.cwd(), "public/hoja-2024/hoja.html"), "utf8");
 
@@ -180,8 +180,19 @@ describe("la hoja 2024", () => {
   test("Efectos muestra las condiciones y ninguna lista de la muestra", () => {
     const { doc } = sheet();
     const effects = doc.querySelector('section.tab[data-tab="effects"]')!;
-    expect(effects.querySelectorAll(".items-section")).toHaveLength(0);
+    const headings = [...effects.querySelectorAll(".items-section h3")].map((node) => node.textContent?.trim());
+    expect(headings).toEqual(["Conditions"]);
     expect(effects.querySelectorAll(".conditions-list .condition").length).toBeGreaterThan(10);
+  });
+
+  test("Rasgos lista los rasgos de clase y de subclase que trae el texto de reglas", () => {
+    const rules = Object.fromEntries(
+      ["classFeature", "subclassFeature"].map((kind) => [kind, JSON.parse(readFileSync(resolve(process.cwd(), `public/rules/${kind}.json`), "utf8"))]),
+    );
+    const features = classFeaturesFrom(rules, [{ classId: "rogue", name: "Rogue", subclass: "Arcane Trickster", level: 5 }], "2024");
+    for (const name of ["Sneak Attack", "Cunning Action", "Uncanny Dodge", "Mage Hand Legerdemain"]) expect(features).toContain(name);
+    expect(features).not.toContain("Ability Score Improvement");
+    expect(features).not.toContain("Arcane Trickster");
   });
 
   test("Rasgos especiales marca lo que la clase da: Reliable Talent de un pícaro 7", () => {

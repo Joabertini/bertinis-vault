@@ -4,7 +4,8 @@ import type { CharacterBuild } from "@bertinis-vault/contracts";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "@/lib/builder";
-import { HOJA_BASE, hojaDataFor, renderHoja } from "@/lib/hoja-2024";
+import { HOJA_BASE, hojaDataFor, renderHoja, type HojaRules } from "@/lib/hoja-2024";
+import { loadKind } from "@/lib/rules-text";
 
 /** The page is the same for every character; read it once. */
 let template: Promise<string> | null = null;
@@ -14,6 +15,18 @@ function loadTemplate(): Promise<string> {
     return response.text();
   });
   return template;
+}
+
+/** Class features and spell details come from the rules text; without it the sheet still opens. */
+let rulesText: Promise<HojaRules> | null = null;
+function loadRules(): Promise<HojaRules> {
+  rulesText ??= Promise.all([loadKind("classFeature"), loadKind("subclassFeature"), loadKind("spell")])
+    .then(([classFeature, subclassFeature, spell]) => ({ classFeature, subclassFeature, spell }) as HojaRules)
+    .catch(() => {
+      rulesText = null;
+      return {};
+    });
+  return rulesText;
 }
 
 /**
@@ -41,9 +54,18 @@ export default function Hoja2024({
   const frame = useRef<HTMLIFrameElement>(null);
   const [page, setPage] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
-  const data = useMemo(() => hojaDataFor(state, build, rulesVersion), [state, build, rulesVersion]);
+  const [rules, setRules] = useState<HojaRules | null>(null);
+  useEffect(() => {
+    let live = true;
+    void loadRules().then((loaded) => live && setRules(loaded));
+    return () => {
+      live = false;
+    };
+  }, []);
+  const data = useMemo(() => hojaDataFor(state, build, rulesVersion, rules ?? {}), [state, build, rulesVersion, rules]);
 
   useEffect(() => {
+    if (!rules) return;
     let live = true;
     loadTemplate()
       .then((html) => live && setPage(renderHoja(html, data)))
@@ -51,7 +73,7 @@ export default function Hoja2024({
     return () => {
       live = false;
     };
-  }, [data]);
+  }, [data, rules]);
 
   // The page inside the iframe asks for what only this page can do.
   useEffect(() => {

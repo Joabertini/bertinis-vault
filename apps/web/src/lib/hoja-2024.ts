@@ -66,12 +66,20 @@ export type HojaSpell = {
   range: { value: number; unit: string } | string;
   /** "evocation"… lower case, as the icons are named. */
   school: string;
+  /** "1 creature", "20 ft sphere": what the spell's text says it reaches. */
+  target: string;
   /** The spell attack, when the spell makes one. */
   attack: number | null;
+  /** The saving throw it calls for: "DEX", against the caster's DC. */
+  save: { ability: string; dc: number } | null;
   ritual: boolean;
   concentration: boolean;
   icon: IconKey;
 };
+
+/** The rules text the app fetches from `public/rules/<kind>.json`, keyed as those files are. */
+export type RulesTable = Record<string, Record<string, unknown>>;
+export type HojaRules = { classFeature?: RulesTable; subclassFeature?: RulesTable; spell?: RulesTable };
 
 export type HojaData = {
   name: string;
@@ -573,10 +581,12 @@ function spellsTab(doc: Document, data: HojaData, bank: Map<string, Element>) {
     fill: (item) => {
       const school = detail(item, "school");
       const drawing = bank.get(spell.school);
-      if (school && drawing) {
+      if (school) {
         school.setAttribute("aria-label", spell.school);
-        school.replaceChildren(drawing.cloneNode(true));
-      } else school?.classList.add("empty");
+        if (drawing) school.replaceChildren(drawing.cloneNode(true));
+        else if (spell.school) school.replaceChildren(iconNode(doc, `school-${spell.school}` as IconKey, "school-icon", 18));
+        else school.classList.add("empty");
+      }
       const time = detail(item, "time");
       if (time) {
         const condensed = doc.createElement("span");
@@ -595,9 +605,22 @@ function spellsTab(doc: Document, data: HojaData, bank: Map<string, Element>) {
           range.innerHTML = `<span class="integer">${spell.range.value}</span><span class="literal"> </span><span class="unit">${spell.range.unit}</span>`;
         }
       }
-      dash(doc, item, "target");
+      const target = detail(item, "target");
+      if (target) {
+        const words = doc.createElement("span");
+        words.className = "condensed";
+        words.textContent = spell.target || "—";
+        target.replaceChildren(words);
+      }
       if (spell.attack !== null) signed(detail(item, "roll"), spell.attack);
-      else dash(doc, item, "roll");
+      else if (spell.save) {
+        const roll = detail(item, "roll");
+        if (roll) {
+          roll.innerHTML = `<div class="stacked"><span class="ability"></span><span class="value"></span></div>`;
+          text(roll.querySelector(".ability"), spell.save.ability);
+          text(roll.querySelector(".value"), String(spell.save.dc));
+        }
+      } else dash(doc, item, "roll");
       dash(doc, item, "uses");
     },
   });
@@ -629,7 +652,9 @@ function ordinal(level: number): string {
 
 function effectsTab(doc: Document) {
   // A new character has no effects: Foundry hides the empty lists and shows the conditions.
-  for (const entry of doc.querySelectorAll(`${tab("effects")} .items-section`)) entry.remove();
+  for (const entry of doc.querySelectorAll(`${tab("effects")} .items-section`)) {
+    if (!entry.querySelector(".conditions-list")) entry.remove();
+  }
   for (const condition of doc.querySelectorAll(`${tab("effects")} .conditions-list .condition`)) {
     condition.classList.remove("active");
   }
@@ -945,11 +970,87 @@ function traitsOf(classes: HojaData["classes"], feats: string[], species: string
   return traits;
 }
 
+const BOOKS: Record<RulesVersion, string[]> = { "2024": ["XPHB", "PHB"], "2014": ["PHB", "XPHB"] };
+
+/** Names 5etools gives a level that hands the player a choice, not a feature. */
+const NOT_A_FEATURE = /^(ability score improvement|subclass feature|.+ subclass|epic boon)$|\(cost: /i;
+
+const SUBCLASS_PREFIX = /^(The|Path of the|Oath of|College of|Circle of the|Circle of|School of|Way of the|Way of)\s+/i;
+
+/**
+ * Every class and subclass feature a character of these classes has, from the rules text,
+ * in level order: Foundry gives a character each of them as an item.
+ */
+export function classFeaturesFrom(rules: HojaRules, classes: HojaData["classes"], rulesVersion: RulesVersion): string[] {
+  const books = BOOKS[rulesVersion];
+  const same = (value: unknown, expected: string) => String(value ?? "").toLowerCase() === expected.toLowerCase();
+  const pick = (records: Array<Record<string, unknown>>, field: string) => {
+    const book = books.find((name) => records.some((record) => same(record[field], name))) ?? String(records[0]?.[field] ?? "");
+    return records.filter((record) => same(record[field], book));
+  };
+  const found: Array<{ name: string; level: number }> = [];
+  for (const entry of classes) {
+    const own = Object.values(rules.classFeature ?? {}).filter(
+      (record) => same(record["className"], entry.name) && Number(record["level"]) <= entry.level,
+    );
+    const ofBook = pick(own, "classSource").filter((record) => same(record["source"], String(record["classSource"])));
+    for (const record of ofBook) found.push({ name: String(record["name"]), level: Number(record["level"]) });
+    if (!entry.subclass) continue;
+    const shortName = entry.subclass.replace(SUBCLASS_PREFIX, "");
+    const sub = Object.values(rules.subclassFeature ?? {}).filter(
+      (record) =>
+        same(record["className"], entry.name) &&
+        (same(record["subclassShortName"], entry.subclass) || same(record["subclassShortName"], shortName)) &&
+        Number(record["level"]) <= entry.level,
+    );
+    for (const record of pick(sub, "source")) {
+      const name = String(record["name"]);
+      if (same(name, entry.subclass) || same(name, shortName)) continue;
+      found.push({ name, level: Number(record["level"]) });
+    }
+  }
+  const names = found
+    .sort((a, b) => a.level - b.level)
+    .map((entry) => entry.name)
+    .filter((name) => !NOT_A_FEATURE.test(name));
+  return [...new Set(names)];
+}
+
+/** The 5etools record of a spell, in the edition's book first. */
+function spellRecord(rules: HojaRules, name: string, rulesVersion: RulesVersion): Record<string, unknown> | null {
+  const table = rules.spell;
+  if (!table) return null;
+  for (const book of BOOKS[rulesVersion]) {
+    const record = table[`${name.toLowerCase()}|${book.toLowerCase()}`];
+    if (record) return record;
+  }
+  return null;
+}
+
+const NUMBERS: Record<string, string> = { a: "1", an: "1", one: "1", two: "2", three: "3", four: "4", five: "5", six: "6" };
+
+/** What a spell reaches, read off its first paragraph the way Foundry fills its Target field. */
+function spellTarget(record: Record<string, unknown> | null, range: HojaSpell["range"]): string {
+  const self = typeof range === "string" && /^self$/i.test(range);
+  const entries = (record?.["entries"] as unknown[] | undefined) ?? [];
+  const first = entries.find((entry): entry is string => typeof entry === "string") ?? "";
+  const plain = first.replace(/\{@\w+ ([^|}]+)[^}]*\}/g, "$1");
+  const area = /(\d+)-foot(?:-radius)?[- ](sphere|cube|cone|line|cylinder|emanation|radius|square)/i.exec(plain);
+  if (area) return `${area[1]} ft ${area[2]!.toLowerCase()}`;
+  if (self) return "Self";
+  const many = /up to (\w+) (willing )?creatures/i.exec(plain);
+  if (many) return `${NUMBERS[many[1]!.toLowerCase()] ?? many[1]} ${many[2] ?? ""}creatures`;
+  const one = /\b(a|an|one) (willing )?(creature|object|humanoid|beast|corpse|point)/i.exec(plain);
+  if (one) return `1 ${one[2] ?? ""}${one[3]!.toLowerCase()}`;
+  return "";
+}
+
 /** Everything the sheet prints, from the character and its derived build. */
 export function hojaDataFor(
   state: BuilderState,
   build: CharacterBuild,
   rulesVersion: RulesVersion,
+  rules: HojaRules = {},
 ): HojaData {
   const sheet = sheetDataFor(state, build, rulesVersion);
   const abilities = {} as HojaData["abilities"];
@@ -1017,7 +1118,7 @@ export function hojaDataFor(
       weight: info?.weight ?? null,
       group: "weapon",
       subtitle: `${category}${attack.ranged ? "Ranged" : "Melee"} • Action`,
-      icon: itemIconKey({ name: attack.name, type: info?.type ?? (attack.ranged ? "R" : "M"), rarity: info?.rarity, weaponCategory: info?.weaponCategory }),
+      icon: itemIconKey({ name: attack.name, type: info?.type ?? (attack.ranged ? "R" : "M"), rarity: info?.rarity ?? null, weaponCategory: info?.weaponCategory ?? null }),
       attack: {
         bonus: attack.attackBonus,
         damage: attack.damage,
@@ -1039,7 +1140,7 @@ export function hojaDataFor(
       weight: info?.weight ?? null,
       group,
       subtitle: known?.label ?? (group === "container" ? "Container" : ""),
-      icon: CONTAINER.test(name) && !info ? "backpack" : itemIconKey({ name, type: info?.type, rarity: info?.rarity, weaponCategory: info?.weaponCategory }),
+      icon: CONTAINER.test(name) && !info ? "backpack" : itemIconKey({ name, type: info?.type ?? null, rarity: info?.rarity ?? null, weaponCategory: info?.weaponCategory ?? null }),
     });
   }
 
@@ -1054,12 +1155,17 @@ export function hojaDataFor(
       const info = spellInfoFor(spell.label, rulesVersion);
       const row = rowsBySlug<SpellRow>(collections.spell, rulesVersion, slugOf(spell.label))[0];
       const school = (info?.school ?? "").toLowerCase();
+      const range = spellRange(info?.rangeLabel ?? "");
+      const record = spellRecord(rules, spell.label, rulesVersion);
+      const saves = (record?.["savingThrow"] as string[] | undefined) ?? [];
       return {
         label: spell.label,
         prepared: spell.prepared,
-        components: info?.componentsLabel.replace(/\b(Verbal|Somatic|Material)\b/g, (word) => word[0]!) ?? "",
+        components: [...(row?.components ?? "")].map((letter) => letter.toUpperCase()).join(", "),
         time: condensedTime(info?.castingTimeLabel ?? ""),
-        range: spellRange(info?.rangeLabel ?? ""),
+        range,
+        target: spellTarget(record, range),
+        save: saves[0] && sheet.spellcasting ? { ability: saves[0].slice(0, 3).toUpperCase(), dc: sheet.spellcasting.saveDC } : null,
         school,
         attack: row && row.attack.length > 0 && sheet.spellcasting ? sheet.spellcasting.attackBonus : null,
         ritual: info?.ritual ?? false,
@@ -1096,7 +1202,7 @@ export function hojaDataFor(
     weapons: sheet.weaponProficiencies,
     languages: sheet.languages,
     classes,
-    classFeatures: sheet.classFeatures,
+    classFeatures: [...new Set([...classFeaturesFrom(rules, classes, rulesVersion), ...sheet.classFeatures])],
     speciesTraits: sheet.speciesTraits,
     feats: sheet.feats,
     backgroundFeatures: sheet.backgroundFeatures,

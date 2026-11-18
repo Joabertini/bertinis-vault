@@ -308,8 +308,8 @@
 }
 
 /* Las monedas: Foundry pone el dibujo con JavaScript; aquí van en la hoja de estilos. */
-i.currency.pp { background-image: url("systems/dnd5e/icons/currency/platinum.webp"); }
-i.currency.gp { background-image: url("systems/dnd5e/icons/currency/gold.webp"); }
-i.currency.ep { background-image: url("systems/dnd5e/icons/currency/electrum.webp"); }
-i.currency.sp { background-image: url("systems/dnd5e/icons/currency/silver.webp"); }
-i.currency.cp { background-image: url("systems/dnd5e/icons/currency/copper.webp"); }
+.dnd5e2 i.currency.pp { background-image: url("systems/dnd5e/icons/currency/platinum.webp") !important; width: 1.25em; height: 1.25em; }
+.dnd5e2 i.currency.gp { background-image: url("systems/dnd5e/icons/currency/gold.webp") !important; width: 1.25em; height: 1.25em; }
+.dnd5e2 i.currency.ep { background-image: url("systems/dnd5e/icons/currency/electrum.webp") !important; width: 1.25em; height: 1.25em; }
+.dnd5e2 i.currency.sp { background-image: url("systems/dnd5e/icons/currency/silver.webp") !important; width: 1.25em; height: 1.25em; }
+.dnd5e2 i.currency.cp { background-image: url("systems/dnd5e/icons/currency/copper.webp") !important; width: 1.25em; height: 1.25em; }
