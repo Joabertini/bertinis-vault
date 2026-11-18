@@ -231,7 +231,9 @@ export function releasedByPick(
     // re-checks it anyway and would ignore it; clearing it here is what makes
     // the Forge say so out loud instead of dropping it in silence.
     if (draft.sizeChoice) shed.push("el tamano elegido");
-    return { patch: { subraceId: "", sizeChoice: "", abilityBonuses: {} }, shed };
+    // The feat a species grants (human) is the old species' too.
+    if (draft.featId) shed.push("la dote de la especie");
+    return { patch: { subraceId: "", sizeChoice: "", abilityBonuses: {}, featId: "" }, shed };
   }
 
   const shed: string[] = [];

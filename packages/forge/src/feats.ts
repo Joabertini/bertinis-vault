@@ -106,6 +106,64 @@ export function unansweredFeatBenefits(state: BuilderState, featIds: string[]): 
   return featIds.filter((featId) => featBenefitsFor(featId).length > 0 && !chosenFeatBenefit(state, featId));
 }
 
+/**
+ * The origin feats, by id: the ones a 2024 human may take with Versatile.
+ * Read off the feat data's category "O"; the index rows do not carry the category.
+ */
+export const ORIGIN_FEAT_IDS: ReadonlySet<string> = new Set([
+  "alert",
+  "arcane-artist",
+  "arcane-eloquence",
+  "arcane-infiltrator",
+  "arcane-omens",
+  "arcane-overload",
+  "arcane-safeguard",
+  "arcane-undertaker",
+  "child-of-the-sun",
+  "crafter",
+  "cult-of-the-dragon-initiate",
+  "emerald-enclave-fledgling",
+  "familiar-friend",
+  "harper-agent",
+  "healer",
+  "lords-alliance-agent",
+  "lucky",
+  "magic-initiate",
+  "musician",
+  "portal-jumper",
+  "purple-dragon-rook",
+  "savage-attacker",
+  "shadowmoor-hexer",
+  "sharp-eye",
+  "skilled",
+  "spellfire-spark",
+  "survivor",
+  "tavern-brawler",
+  "tireless-reveler",
+  "tough",
+  "transmuted-anatomy",
+  "tyro-of-the-gauntlet",
+  "vampire-hunter",
+  "vampire-s-plaything",
+  "zhentarim-ruffian",
+]);
+
+/**
+ * The feat a species hands over on top of the background's, if it does.
+ *
+ * Only three species do, and they are the whole list in the data: the 2024
+ * human (Versatile: an origin feat), the 2014 variant human (any feat) and the
+ * Tasha's custom lineage (any feat). "origin" restricts the pick to origin
+ * feats; "any" leaves the whole feat list open. Null for every other species.
+ */
+export function speciesFeatGrantFor(state: BuilderState): "origin" | "any" | null {
+  const is2024 = state.rulesVersion === "5e-2024";
+  if (is2024) return state.raceId === "human" ? "origin" : null;
+  if (state.raceId === "custom-lineage") return "any";
+  if (state.raceId === "human" && state.subraceId === "human-variant") return "any";
+  return null;
+}
+
 /** Every feat the character has, once each, in the order they were taken. */
 export function featIdsFor(state: BuilderState): string[] {
   return [

@@ -2,12 +2,16 @@ import type { ComponentProps } from "react";
 
 import SigilShelf from "@/components/forge/SigilShelf";
 import { speciesIconKey } from "@/lib/icons";
+import ScryPicker from "@/components/forge/ScryPicker";
 import SizeChoice from "@/components/forge/SizeChoice";
 import SubChoice from "@/components/forge/SubChoice";
 import VariantChoices from "@/components/forge/VariantChoices";
 import type { BuilderState } from "@/lib/builder-state";
 import type { CatalogEntry } from "@/lib/catalog";
 import { VAULT_GOLD } from "@/lib/class-tint";
+import { ORIGIN_FEAT_IDS, speciesFeatGrantFor } from "@/lib/feats";
+import { kindIconKey } from "@/lib/icons";
+import { optionsFor } from "@/lib/index-options";
 
 /** The species: its shelf, the branch under it, the size it leaves open, and the spells it asks about. */
 export default function AncestryChamber({
@@ -41,6 +45,15 @@ export default function AncestryChamber({
   onChooseVariant: ComponentProps<typeof VariantChoices>["onPick"];
   onChooseSpellAbility: ComponentProps<typeof VariantChoices>["onPickAbility"];
 }) {
+  const featGrant = speciesFeatGrantFor(draft);
+  const edition = draft.rulesVersion === "5e-2024" ? "2024" : "2014";
+  // A human's feat is a question of its own: Versatile in 2024 takes an origin
+  // feat, the variant human and the custom lineage take any.
+  const featSearch = (query: string): CatalogEntry[] =>
+    optionsFor({ prop: "feat", rulesVersion: edition, search: query, limit: null }).filter(
+      (entry) => featGrant !== "origin" || ORIGIN_FEAT_IDS.has(entry.id),
+    );
+
   return (
     <div className="space-y-10">
       <SigilShelf
@@ -102,6 +115,26 @@ export default function AncestryChamber({
           accent={VAULT_GOLD}
           onPick={(letter) => patchDraft({ sizeChoice: letter })}
         />
+      )}
+
+      {featGrant && (
+        <div className="space-y-2">
+          <ScryPicker
+            label={featGrant === "origin" ? "Dote de origen (Versatile)" : "Dote de la especie"}
+            placeholder="Buscar dote…"
+            search={featSearch}
+            infoKind="feat"
+            iconFor={() => kindIconKey("feat")}
+            selectedId={draft.featId}
+            onPick={(entry: CatalogEntry) => patchDraft({ featId: draft.featId === entry.id ? "" : entry.id })}
+            accent={VAULT_GOLD}
+          />
+          <p className="font-body text-sm text-bone/70">
+            {featGrant === "origin"
+              ? "Se suma a la dote del trasfondo."
+              : "Se suma a las dotes de nivel. Podés cambiarla o dejarla vacía."}
+          </p>
+        </div>
       )}
     </div>
   );
