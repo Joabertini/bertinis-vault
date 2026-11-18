@@ -846,7 +846,7 @@ export function renderHoja(template: string, data: HojaData): string {
   text(race?.querySelector(".subtitle") ?? null, data.size);
   const background = doc.querySelector(`${DETAILS} .pill-lg.background`);
   text(background?.querySelector(".title") ?? null, data.background);
-  setIcon(doc, type?.querySelector(".creature-type") ?? null, kindIconKey("species"));
+  type?.querySelector(".creature-type")?.replaceWith(iconNode(doc, kindIconKey("species")));
   setIcon(doc, race?.querySelector("img") ?? null, speciesIconKey(data.species));
   setIcon(doc, background?.querySelector("img") ?? null, backgroundIconKey(data.background));
 
