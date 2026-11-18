@@ -1,4 +1,5 @@
 import { ICON_COLS, ICON_SHEET_KEYS, ICON_SILHOUETTES, type SilhouetteIconKey } from "@/lib/icon-atlas";
+import { silhouetteFill } from "@/lib/icons";
 import { isSheetIcon, type IconKey } from "@/lib/icons";
 
 /**
@@ -49,7 +50,7 @@ export default function GameIcon({
   return (
     <svg {...a11y} className={className} viewBox="0 0 512 512" width={size} height={size} style={{ flex: "none" }}>
       <rect x="8" y="8" width="496" height="496" rx="64" fill="#15151b" stroke="#9f9275" strokeOpacity="0.45" strokeWidth="10" />
-      <path d={ICON_SILHOUETTES[icon as SilhouetteIconKey]} fill="#c9a46a" transform="translate(64 64) scale(0.75)" />
+      <path d={ICON_SILHOUETTES[icon as SilhouetteIconKey]} fill={silhouetteFill(icon)} transform="translate(64 64) scale(0.75)" />
     </svg>
   );
 }

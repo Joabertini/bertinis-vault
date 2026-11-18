@@ -341,6 +341,12 @@ export type BuilderState = {
    */
   kitAppliedFor: string;
   sourceBooks: Record<string, string>;
+  /**
+   * What the player changed on the sheet while playing: current hit points, hit dice spent,
+   * what is worn, conditions, things taken off the sheet. Owned by the 2024 sheet
+   * (`apps/web/src/lib/hoja-2024.ts`, `HojaEstado`); the Forge never reads it.
+   */
+  hoja: Record<string, unknown>;
 };
 
 export const initialState: BuilderState = {
@@ -411,6 +417,7 @@ export const initialState: BuilderState = {
   kitChoices: {},
   kitAppliedFor: "",
   sourceBooks: {},
+  hoja: {},
 };
 
 export function coerceBuilderState(value: unknown): BuilderState {
@@ -522,6 +529,10 @@ export function coerceBuilderState(value: unknown): BuilderState {
       : [],
     featAbilityChoices: coerceFeatAbilityChoices(candidate.featAbilityChoices, candidate.levelChoices),
     sourceBooks: coerceSourceBooks(candidate.sourceBooks),
+    hoja:
+      candidate.hoja && typeof candidate.hoja === "object" && !Array.isArray(candidate.hoja)
+        ? (candidate.hoja as Record<string, unknown>)
+        : {},
     // A draft saved before the switch existed took the average, and still does.
     hpMethod: candidate.hpMethod === "rolled" || candidate.hpMethod === "max" ? candidate.hpMethod : "average",
     hpRolls: coerceHpRolls(candidate.hpRolls),

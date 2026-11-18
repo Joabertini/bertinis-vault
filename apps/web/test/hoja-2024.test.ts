@@ -11,7 +11,7 @@ import { describe, expect, test } from "vitest";
 
 import { buildCanonicalSnapshot } from "../src/lib/builder";
 import { freshDraft, type BuilderState } from "../src/lib/builder-state";
-import { HOJA_RULE_KINDS, classFeaturesFrom, hojaDataFor, renderHoja } from "../src/lib/hoja-2024";
+import { HOJA_RULE_KINDS, applyHojaEdit, classFeaturesFrom, hojaDataFor, renderHoja } from "../src/lib/hoja-2024";
 
 const template = readFileSync(resolve(process.cwd(), "public/hoja-2024/hoja.html"), "utf8");
 
@@ -223,6 +223,37 @@ describe("la hoja 2024", () => {
     expect(datos.info["condition:blinded"].html).toMatch(/see/i);
     expect(doc.querySelector("li.container")?.getAttribute("data-hoja")).toBeTruthy();
     expect(doc.querySelector("[data-tooltip-html]")).toBeNull();
+  });
+
+  test("las dotes salen en Rasgos (Alert del Criminal) y Alert suma la competencia a la iniciativa", () => {
+    const state = { ...fighter(), classId: "rogue", backgroundId: "criminal", raceId: "human" };
+    const build = buildCanonicalSnapshot(state);
+    const data = hojaDataFor(state, build, "2024");
+    expect(data.feats.some((feat) => /^alert/i.test(feat))).toBe(true);
+    expect(data.initiative).toBe(data.abilities.dex.modifier + data.proficiencyBonus);
+    const doc = new DOMParser().parseFromString(renderHoja(template, data), "text/html");
+    const titles = [...doc.querySelectorAll('section.tab[data-tab="features"] .item-row .name .title')].map((node) => node.textContent);
+    expect(titles.some((title) => /^alert/i.test(title ?? ""))).toBe(true);
+  });
+
+  test("lo que se edita en la hoja vuelve como cambio del personaje", () => {
+    const state = { ...fighter(), extraEquipmentText: ["Rope", "Torch"].join("\n"), featuresText: "", spellsText: "Nv1: Shield", cantripsText: "Light" };
+    const build = buildCanonicalSnapshot(state);
+    expect(applyHojaEdit(state, build, { tipo: "campo", campo: "characterName", valor: "Otro" })).toEqual({ characterName: "Otro" });
+    expect(applyHojaEdit(state, build, { tipo: "campo", campo: "classId", valor: "wizard" })).toEqual({});
+    const str = applyHojaEdit(state, build, { tipo: "caracteristica", habilidad: "str", valor: build.abilities.final.str + 2 });
+    expect(str).toEqual({ str: state.str + 2 });
+    expect(applyHojaEdit(state, build, { tipo: "quitar", lista: "objeto", nombre: "Rope" })).toEqual({ extraEquipmentText: "Torch" });
+    expect(applyHojaEdit(state, build, { tipo: "quitar", lista: "conjuro", nombre: "Shield" })).toEqual({ spellsText: "" });
+    expect(applyHojaEdit(state, build, { tipo: "quitar", lista: "conjuro", nombre: "Light" })).toEqual({ cantripsText: "" });
+    const off = applyHojaEdit(state, build, { tipo: "quitar", lista: "rasgo", nombre: "Second Wind" });
+    expect((off.hoja as { quitados: string[] }).quitados).toContain("Second Wind");
+    const gone = hojaDataFor({ ...state, ...off }, build, "2024");
+    expect(gone.classFeatures).not.toContain("Second Wind");
+    expect(applyHojaEdit({ ...state, ...off }, build, { tipo: "agregar", lista: "rasgo", nombre: "Second Wind" }).hoja).toEqual({ quitados: [] });
+    expect(applyHojaEdit(state, build, { tipo: "agregar", lista: "objeto", nombre: "Lantern" })).toEqual({ extraEquipmentText: ["Rope", "Torch", "Lantern"].join("\n") });
+    expect(applyHojaEdit(state, build, { tipo: "nivel", classId: state.classId, valor: 6 })).toEqual({ level: 6 });
+    expect(applyHojaEdit(state, build, { tipo: "vida-max", valor: 50 })).toEqual({ hoja: { hpMax: 50 } });
   });
 
   test("Rasgos especiales marca lo que la clase da: Reliable Talent de un pícaro 7", () => {

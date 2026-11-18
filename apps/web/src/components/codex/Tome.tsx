@@ -31,7 +31,7 @@ import { entryById, hitDieFor } from "@/lib/catalog";
 import { characterLevelFor, classingLabelFor } from "@/lib/builder";
 import { tintFor } from "@/lib/class-tint";
 import { resolveDraft } from "@/lib/derive";
-import { rulesVersionOf, type SealedCharacter } from "@/lib/vault-store";
+import { rulesVersionOf, useVault, type SealedCharacter } from "@/lib/vault-store";
 
 export default function Tome({
   character,
@@ -367,6 +367,7 @@ function TomeWindow({
   onReforge: () => void;
 }) {
   const { state } = character;
+  const updateCharacter = useVault((store) => store.updateCharacter);
 
   const rulesVersion = rulesVersionOf(state);
   const resolved = useMemo(() => resolveDraft(state), [state]);
@@ -444,7 +445,7 @@ function TomeWindow({
         snapshot ? (
           rulesVersion === "2024" ? (
             // C1: the 2024 sheet is Foundry's own (owner's decision, 2026-11-17).
-            <Hoja2024 characterId={character.id} state={state} build={snapshot} rulesVersion={rulesVersion} onClose={onClose} onVision={() => onSwitch("vision")} onEdit={onReforge} />
+            <Hoja2024 characterId={character.id} onPatch={(patch) => updateCharacter(character.id, patch)} state={state} build={snapshot} rulesVersion={rulesVersion} onClose={onClose} onVision={() => onSwitch("vision")} onEdit={onReforge} />
           ) : (
             <CharacterSheet state={state} build={snapshot} accent={accent} />
           )

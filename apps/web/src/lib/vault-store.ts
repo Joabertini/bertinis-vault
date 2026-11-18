@@ -147,6 +147,12 @@ type VaultStore = {
    * character and has to reach the account's other machines.
    */
   setCover: (id: string, coverImage: string) => void;
+  /**
+   * Change a sealed character from its sheet: what the player edits or plays there.
+   *
+   * An edit like any other — `sealedAt` moves — so it reaches the account's other machines.
+   */
+  updateCharacter: (id: string, patch: Partial<BuilderState>) => void;
   burn: (id: string) => void;
   /**
    * Fold an imported Codex into this one.
@@ -309,6 +315,15 @@ export const useVault = create<VaultStore>()(
           characters: s.characters.map((entry) =>
             entry.id === id
               ? { ...entry, sealedAt: new Date().toISOString(), state: { ...entry.state, coverImage } }
+              : entry,
+          ),
+        })),
+
+      updateCharacter: (id, patch) =>
+        set((s) => ({
+          characters: s.characters.map((entry) =>
+            entry.id === id
+              ? { ...entry, sealedAt: new Date().toISOString(), state: { ...entry.state, ...patch } }
               : entry,
           ),
         })),

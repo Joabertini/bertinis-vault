@@ -367,3 +367,16 @@
    contexto 3D del core). Cerrada no recibe clics, así la vida y los dados de golpe sí. */
 .dnd5e2.sheet.actor.character .sheet-body .sidebar .card .death-tray:not(.open) { pointer-events: none; }
 .dnd5e2.sheet.actor.character .sheet-body .sidebar .card .death-tray:not(.open) * { pointer-events: none; }
+
+/* Modo edición. */
+.dnd5e2:not(.editable) .hoja-borrar { display: none; }
+.dnd5e2 .hoja-borrar { color: #b5a582; }
+.dnd5e2 .hoja-borrar.confirmar { color: #ff6b6b; }
+.dnd5e2.editable [contenteditable] { outline: 1px dashed rgba(201, 164, 106, 0.7); outline-offset: 2px; cursor: text; min-width: 1.5em; display: inline-block; }
+.dnd5e2.editable .ability-score .score[contenteditable] { display: block; }
+.dnd5e2.editable .sidebar .meter.hit-points .progress,
+.dnd5e2.editable .classes .class,
+.dnd5e2.editable .skills proficiency-cycle { outline: 1px dashed rgba(201, 164, 106, 0.7); outline-offset: 1px; }
+.hoja-campo { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #b5a582; }
+.hoja-campo input { background: #0f0c0a; color: #f0e2c0; border: 1px solid #9f9275; border-radius: 4px; padding: 4px 8px; font-size: 14px; }
+.hoja-aceptar { border: 1px solid #9f9275; background: #2a2420; color: #f0e2c0; border-radius: 4px; padding: 3px 12px; font-weight: bold; cursor: pointer; width: auto; }

@@ -328,3 +328,14 @@ export function backgroundIconKey(name: string): IconKey {
   const n = name.toLowerCase();
   return BACKGROUNDS.find(([rx]) => rx.test(n))?.[1] ?? kindIconKey("background");
 }
+
+/**
+ * Silhouettes of blades and metal heads, drawn in steel rather than the gold the rest wear:
+ * a gold scimitar reads as a wooden one.
+ */
+export const STEEL_SILHOUETTES: ReadonlySet<string> = new Set(["scimitar", "spear", "halberd", "trident", "flail", "scythe"]);
+
+/** The colour a silhouette is drawn in. */
+export function silhouetteFill(key: string): string {
+  return STEEL_SILHOUETTES.has(key) ? "#d5dce3" : "#c9a46a";
+}

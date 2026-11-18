@@ -26,6 +26,7 @@ import {
   backgroundIconKey,
   isSheetIcon,
   itemIconKey,
+  silhouetteFill,
   kindIconKey,
   speciesIconKey,
   spellIconKey,
@@ -120,6 +121,10 @@ export type HojaInfo = {
  * Everything optional: an absent field is the sheet's own starting value.
  */
 export type HojaEstado = {
+  /** Maximum hit points set by hand on the sheet, over the Forge's. */
+  hpMax?: number;
+  /** Names taken off the sheet that no text field holds: kit items, derived features. */
+  quitados?: string[];
   hp?: number;
   temp?: number;
   hd?: number;
@@ -272,10 +277,10 @@ const tab = (name: string) => `section.tab[data-tab="${name}"]`;
 
 const ICON_SIZE = 40;
 
-function tile(paths: string[]): string {
+function tile(paths: string[], fill = "#c9a46a"): string {
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><rect x="8" y="8" width="496" height="496" rx="64" fill="#15151b" stroke="#9f9275" stroke-opacity="0.45" stroke-width="10"/>` +
-    paths.map((d) => `<path d="${d}" fill="#c9a46a" transform="translate(64 64) scale(0.75)"/>`).join("") +
+    paths.map((d) => `<path d="${d}" fill="${fill}" transform="translate(64 64) scale(0.75)"/>`).join("") +
     `</svg>`
   );
 }
@@ -314,7 +319,7 @@ function iconNode(doc: Document, key: IconKey, className = "item-image gold-icon
     );
     return node;
   }
-  return svgImage(doc, tile([ICON_SILHOUETTES[key as SilhouetteIconKey]]), className);
+  return svgImage(doc, tile([ICON_SILHOUETTES[key as SilhouetteIconKey]], silhouetteFill(key)), className);
 }
 
 /** Puts `key` where the page was saved with the sample picture. Keeps the picture's own classes. */
@@ -476,24 +481,29 @@ function featuresTab(doc: Document, data: HojaData) {
   }
 
   const all = [...doc.querySelectorAll(`${tab("features")} .items-section`)];
+  // Other Features was saved without a row: it borrows the shape of a class feature's.
+  const borrowed = (all[0]?.querySelector("li.item")?.cloneNode(true) as Element | undefined) ?? null;
   const usesAndRecovery = (item: Element) => {
     dash(doc, item, "uses");
     dash(doc, item, "recovery");
   };
   const classSection = all[0] ?? null;
   text(classSection?.querySelector("h3.item-name") ?? null, `${data.classes[0]?.name ?? "Class"} Features`);
-  fillRows(classSection, data.classFeatures.map((title) => ({ key: `feature:${title}`, title, icon: kindIconKey("feature"), fill: usesAndRecovery })));
+  fillRows(classSection, data.classFeatures.map((title) => ({ key: `feature:${title}`, title, icon: kindIconKey("feature"), fill: usesAndRecovery })), borrowed);
   fillRows(
     section(doc, "features", "Species Features"),
     data.speciesTraits.map((title) => ({ key: `species:${title}`, title, icon: kindIconKey("species"), fill: usesAndRecovery })),
+    borrowed,
   );
   fillRows(
     section(doc, "features", "Background Features"),
     data.backgroundFeatures.map((title) => ({ key: `background:${title}`, title, icon: kindIconKey("background"), fill: usesAndRecovery })),
+    borrowed,
   );
   const other = section(doc, "features", "Other Features");
   text(other?.querySelector("h3.item-name") ?? null, "Feats");
-  fillRows(other, data.feats.map((title) => ({ key: `feat:${title}`, title, subtitle: "Feat", icon: kindIconKey("feat"), fill: usesAndRecovery })));
+  other?.removeAttribute("hidden");
+  fillRows(other, data.feats.map((title) => ({ key: `feat:${title}`, title, subtitle: "Feat", icon: kindIconKey("feat"), fill: usesAndRecovery })), borrowed);
   section(doc, "features", "Active Abilities")?.remove();
   section(doc, "features", "Passive Abilities")?.remove();
 }
@@ -822,7 +832,11 @@ function specialTraitsTab(doc: Document, data: HojaData) {
 /* -------------------------------------------------------------------------- */
 
 /** The sheet's HTML for this character. `template` is `hoja.html` as served. */
-export function renderHoja(template: string, data: HojaData, estado: HojaEstado = {}): string {
+/** Where the player was: the sheet comes back on the same tab, in the same mode, after an edit. */
+export type HojaUi = { tab?: string; editing?: boolean };
+
+export function renderHoja(template: string, data: HojaData, estado: HojaEstado = {}, ui: HojaUi = {}): string {
+  if (typeof estado.hpMax === "number" && estado.hpMax > 0) data = { ...data, hitPoints: estado.hpMax };
   const doc = new DOMParser().parseFromString(template, "text/html");
   const bank = iconBank(doc);
 
@@ -858,8 +872,8 @@ export function renderHoja(template: string, data: HojaData, estado: HojaEstado 
     reminders.removeAttribute("draggable");
   }
   const mode = doc.querySelector(".window-header .mode-slider");
-  mode?.setAttribute("data-tooltip", "Editar en la Forja");
-  mode?.setAttribute("aria-label", "Editar en la Forja");
+  mode?.setAttribute("data-tooltip", "Modo edición");
+  mode?.setAttribute("aria-label", "Modo edición");
 
   // Header.
   text(doc.querySelector(".window-title"), data.name);
@@ -966,6 +980,21 @@ export function renderHoja(template: string, data: HojaData, estado: HojaEstado 
   specialTraitsTab(doc, data);
 
   // What the page's own script plays with: the rules text of each thing, the numbers, the saved state.
+  // The tab the player was on, and the edit switch as they left it.
+  if (ui.tab && doc.querySelector(`nav.tabs [data-action="tab"][data-tab="${ui.tab}"]`)) {
+    for (const link of doc.querySelectorAll('nav.tabs [data-action="tab"]')) {
+      link.classList.toggle("active", link.getAttribute("data-tab") === ui.tab);
+    }
+    for (const part of doc.querySelectorAll('.tab-body > .tab[data-group="primary"]')) {
+      part.classList.toggle("active", part.getAttribute("data-tab") === ui.tab);
+    }
+    if (form) form.className = form.className.replace(/\btab-\S+/, `tab-${ui.tab}`);
+  }
+  if (ui.editing) {
+    form?.classList.add("editable");
+    doc.querySelector(".window-header .mode-slider")?.setAttribute("checked", "");
+  }
+
   const datos = doc.createElement("script");
   datos.setAttribute("type", "application/json");
   datos.id = "hoja-datos";
@@ -1384,6 +1413,15 @@ export function hojaDataFor(
   const { size, multiplier } = sizeOf(sheet.sizeLabel);
   const carried = items.reduce((sum, item) => sum + (item.weight ?? 0) * item.quantity, 0);
 
+  // What the player took off the sheet by hand stays off.
+  const quitados = new Set(
+    (Array.isArray((state.hoja as HojaEstado | undefined)?.quitados) ? ((state.hoja as HojaEstado).quitados as string[]) : []).map((name) =>
+      name.toLowerCase(),
+    ),
+  );
+  const kept = (name: string) => !quitados.has(name.toLowerCase());
+  for (let index = items.length - 1; index >= 0; index -= 1) if (!kept(items[index]!.name)) items.splice(index, 1);
+
   // Spells, with what the index knows of each.
   const spells: HojaData["spells"] = sheet.spellsByLevel.map((bucket) => ({
     level: bucket.level,
@@ -1497,7 +1535,7 @@ export function hojaDataFor(
       };
     }
   }
-  const classFeatureNames = [...new Set([...classFeaturesFrom(rules, classes, rulesVersion), ...sheet.classFeatures])];
+  const classFeatureNames = [...new Set([...classFeaturesFrom(rules, classes, rulesVersion), ...sheet.classFeatures])].filter(kept);
   for (const name of classFeatureNames) {
     info[`feature:${name}`] = { title: name, subtitle: "Rasgo de clase", html: fromRecord(lastFeatureRecords.get(name) ?? null) };
   }
@@ -1575,7 +1613,12 @@ export function hojaDataFor(
     skills,
     tools,
     armorClass: sheet.armorClass,
-    initiative: sheet.initiative,
+    // Foundry's initiative: Dexterity, plus Alert (proficiency in 2024, +5 in 2014) and
+    // Jack of All Trades (half proficiency, rounded down). The Forge's number is Dexterity alone.
+    initiative:
+      sheet.initiative +
+      (sheet.feats.some((feat) => /^alert\b/i.test(feat)) ? (rulesVersion === "2024" ? sheet.proficiencyBonus : 5) : 0) +
+      ((classes.find((entry) => entry.classId === "bard")?.level ?? 0) >= 2 ? Math.floor(sheet.proficiencyBonus / 2) : 0),
     speed: sheet.speed,
     proficiencyBonus: sheet.proficiencyBonus,
     hitPoints: sheet.hitPoints,
@@ -1589,9 +1632,9 @@ export function hojaDataFor(
     languages: sheet.languages,
     classes,
     classFeatures: classFeatureNames,
-    speciesTraits: sheet.speciesTraits,
-    feats: sheet.feats,
-    backgroundFeatures: sheet.backgroundFeatures,
+    speciesTraits: sheet.speciesTraits.filter(kept),
+    feats: sheet.feats.filter(kept),
+    backgroundFeatures: sheet.backgroundFeatures.filter(kept),
     items,
     purse: { pp: sheet.purse.pp, gp: sheet.purse.gp, ep: sheet.purse.ep, sp: sheet.purse.sp, cp: sheet.purse.cp },
     encumbrance: {
@@ -1623,4 +1666,107 @@ export function hojaDataFor(
     biography: state.notes,
     traits: traitsOf(classes, sheet.feats, sheet.speciesLabel, rulesVersion),
   };
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Editing from the sheet                                                     */
+/* -------------------------------------------------------------------------- */
+
+/** What the sheet's edit mode asks for. Each one becomes a patch of the character. */
+export type HojaEdit =
+  | { tipo: "campo"; campo: string; valor: string }
+  | { tipo: "caracteristica"; habilidad: AbilityId; valor: number }
+  | { tipo: "nivel"; classId: string; valor: number }
+  | { tipo: "pericia"; skill: string; activa: boolean }
+  | { tipo: "quitar"; lista: "objeto" | "conjuro" | "rasgo"; nombre: string }
+  | { tipo: "agregar"; lista: "objeto" | "conjuro" | "rasgo"; nombre: string }
+  | { tipo: "vida-max"; valor: number };
+
+/** The text fields the sheet may write as typed. */
+const EDITABLE_FIELDS = new Set([
+  "characterName", "playerName", "alignment", "age", "height", "weight", "eyes", "hair", "skin", "gender", "faith",
+  "trait", "ideal", "bond", "flaw", "appearance", "notes",
+]);
+
+const sameName = (a: string, b: string) => slugOf(a) === slugOf(b) || a.trim().toLowerCase() === b.trim().toLowerCase();
+
+function withoutLine(text: string, name: string, strip: (line: string) => string = (line) => line): { text: string; removed: boolean } {
+  const lines = text.split("\n");
+  const kept = lines.filter((line) => !sameName(strip(line).replace(/\s*\(\d+\)\s*$/, "").replace(/^\d+\s*x?\s+/i, ""), name));
+  return { text: kept.join("\n"), removed: kept.length !== lines.length };
+}
+
+/**
+ * The patch an edit on the sheet makes to the character.
+ *
+ * Text the player wrote (equipment, spells, features) loses the line; what the character
+ * gets from its class, species, background or kit is not a line anywhere, so it goes on the
+ * sheet's own list of things taken off, and stays off until it is added again.
+ */
+export function applyHojaEdit(state: BuilderState, build: CharacterBuild, edit: HojaEdit): Partial<BuilderState> {
+  const estado = { ...((state.hoja ?? {}) as HojaEstado) };
+  const quitados = Array.isArray(estado.quitados) ? [...estado.quitados] : [];
+  const offSheet = (name: string): Partial<BuilderState> => ({
+    hoja: { ...estado, quitados: [...new Set([...quitados, name])] },
+  });
+  const backOn = (name: string): Partial<BuilderState> =>
+    quitados.some((entry) => sameName(entry, name)) ? { hoja: { ...estado, quitados: quitados.filter((entry) => !sameName(entry, name)) } } : {};
+
+  switch (edit.tipo) {
+    case "campo":
+      return EDITABLE_FIELDS.has(edit.campo) ? ({ [edit.campo]: edit.valor } as Partial<BuilderState>) : {};
+    case "caracteristica": {
+      const final = build.abilities.final[edit.habilidad];
+      const value = Math.max(1, Math.min(30, Math.round(edit.valor)));
+      return { [edit.habilidad]: state[edit.habilidad] + (value - final) } as Partial<BuilderState>;
+    }
+    case "nivel": {
+      const value = Math.max(1, Math.min(20, Math.round(edit.valor)));
+      if (edit.classId === state.classId) return { level: value };
+      return {
+        extraClasses: state.extraClasses.map((extra) => (extra.classId === edit.classId ? { ...extra, level: value } : extra)),
+      };
+    }
+    case "pericia": {
+      const lines = state.proficienciesText.split("\n").filter(Boolean);
+      const has = lines.some((line) => sameName(line, edit.skill));
+      if (edit.activa && !has) return { proficienciesText: [...lines, edit.skill].join("\n") };
+      if (!edit.activa && has) return { proficienciesText: lines.filter((line) => !sameName(line, edit.skill)).join("\n") };
+      return {};
+    }
+    case "vida-max":
+      return { hoja: { ...estado, hpMax: Math.max(1, Math.round(edit.valor)) } };
+    case "quitar": {
+      const name = edit.nombre;
+      if (edit.lista === "objeto") {
+        if (state.weaponId && sameName(state.weaponId, name)) return { weaponId: "" };
+        if (state.armorId && sameName(state.armorId, name)) return { armorId: "" };
+        const gear = withoutLine(state.extraEquipmentText, name);
+        return gear.removed ? { extraEquipmentText: gear.text } : offSheet(name);
+      }
+      if (edit.lista === "conjuro") {
+        const cantrips = withoutLine(state.cantripsText, name);
+        if (cantrips.removed) return { cantripsText: cantrips.text };
+        const spells = withoutLine(state.spellsText, name, (line) => line.replace(/^Nv\d+:\s*/i, ""));
+        if (spells.removed) return { spellsText: spells.text };
+        const book = withoutLine(state.spellbookText, name, (line) => line.replace(/^Nv\d+:\s*/i, ""));
+        return book.removed ? { spellbookText: book.text } : {};
+      }
+      const features = withoutLine(state.featuresText, name);
+      return features.removed ? { featuresText: features.text } : offSheet(name);
+    }
+    case "agregar": {
+      const name = edit.nombre.trim();
+      if (!name) return {};
+      const restored = backOn(name);
+      if (restored.hoja) return restored;
+      if (edit.lista === "objeto") return { extraEquipmentText: [state.extraEquipmentText, name].filter(Boolean).join("\n") };
+      if (edit.lista === "rasgo") return { featuresText: [state.featuresText, name].filter(Boolean).join("\n") };
+      const rulesVersion: RulesVersion = state.rulesVersion === "5e-2024" ? "2024" : "2014";
+      const info = spellInfoFor(name, rulesVersion);
+      const label = info?.label ?? name;
+      if ((info?.level ?? 1) === 0) return { cantripsText: [state.cantripsText, label].filter(Boolean).join("\n") };
+      return { spellsText: [state.spellsText, `Nv${info?.level ?? 1}: ${label}`].filter(Boolean).join("\n") };
+    }
+  }
 }
