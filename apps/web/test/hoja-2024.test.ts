@@ -81,6 +81,49 @@ describe("la hoja 2024", () => {
     expect(doc.querySelector(".sheet-header")?.textContent).not.toContain("Samara");
   });
 
+  const tabText = (doc: Document, name: string) => doc.querySelector(`section.tab[data-tab="${name}"]`)?.textContent ?? "";
+
+  test("ninguna pestaña conserva a la personaje de muestra", () => {
+    const { doc } = sheet();
+    for (const name of ["features", "inventory", "biography", "effects", "specialTraits"]) {
+      const text = tabText(doc, name);
+      for (const leftover of ["Samara", "Warlock", "Eldritch", "Kessig", "Inquisici", "Avacyn", "Healing Word"]) {
+        expect(text, `${name}: ${leftover}`).not.toContain(leftover);
+      }
+    }
+  });
+
+  test("Rasgos lleva la clase del personaje y sus rasgos", () => {
+    const { doc, data } = sheet();
+    expect(doc.querySelector('section.tab[data-tab="features"] .classes .class .title')?.textContent).toBe("Fighter");
+    const titles = [...doc.querySelectorAll('section.tab[data-tab="features"] .item-row .name .title')].map((node) => node.textContent);
+    for (const feature of data.classFeatures) expect(titles).toContain(feature);
+  });
+
+  test("Inventario imprime las monedas y las armas del personaje", () => {
+    const { doc, data } = sheet();
+    const gold = doc.querySelector('section.tab[data-tab="inventory"] input[name="system.currency.gp"]');
+    expect(gold?.getAttribute("value")).toBe(String(data.purse.gp));
+    const titles = [...doc.querySelectorAll('section.tab[data-tab="inventory"] .item-row .name .title')].map((node) => node.textContent);
+    for (const attack of data.attacks) expect(titles).toContain(attack.name);
+  });
+
+  test("un guerrero no lleva pestaña de conjuros", () => {
+    const { doc } = sheet();
+    expect(doc.querySelector('section.tab[data-tab="spells"]')).toBeNull();
+    expect(doc.querySelector('nav.tabs [data-tab="spells"]')).toBeNull();
+    expect(doc.querySelector('nav.tabs [data-tab="biography"]')).not.toBeNull();
+  });
+
+  test("Biografía imprime el alineamiento y la historia que el jugador escribió", () => {
+    const state = { ...fighter(), alignment: "Legal Bueno", backstory: "Primer párrafo.\n\nSegundo párrafo." };
+    const { doc } = sheet(state);
+    const text = tabText(doc, "biography");
+    expect(text).toContain("Legal Bueno");
+    expect(text).toContain("Primer párrafo.");
+    expect(text).toContain("Segundo párrafo.");
+  });
+
   test("el banner es el de la clase cuando no hay uno propio", () => {
     const { doc } = sheet();
     const style = doc.querySelector("form.application")?.getAttribute("style") ?? "";

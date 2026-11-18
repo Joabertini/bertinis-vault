@@ -49,6 +49,26 @@ export type HojaData = {
   armor: string[];
   weapons: string[];
   languages: string[];
+
+  /** One pill per class in the Features tab. */
+  classes: Array<{ name: string; subclass: string; level: number }>;
+  classFeatures: string[];
+  speciesTraits: string[];
+  feats: string[];
+  backgroundFeatures: string[];
+
+  attacks: Array<{ name: string; quantity: number; attackBonus: number; damage: string | null; note: string }>;
+  equipment: Array<{ label: string; quantity: number }>;
+  purse: { pp: number; gp: number; ep: number; sp: number; cp: number };
+
+  /** Absent for a character who casts nothing: the Spells tab goes. */
+  spellcasting: { ability: AbilityId; attackBonus: number; saveDC: number; slots: Record<string, number>; pactLevel: number | null } | null;
+  spells: Array<{ level: number; spells: Array<{ label: string; prepared: boolean }> }>;
+
+  alignment: string;
+  appearance: Array<{ label: string; value: string }>;
+  personality: { trait: string; ideal: string; bond: string; flaw: string };
+  backstory: string;
 };
 
 const ABILITIES: AbilityId[] = ["str", "dex", "con", "int", "wis", "cha"];
@@ -102,6 +122,253 @@ function pills(doc: Document, heading: string, values: string[]) {
       const pill = sample.cloneNode(true) as Element;
       text(pill.querySelector(".label"), value);
       return pill;
+    }),
+  );
+}
+
+const tab = (name: string) => `section.tab[data-tab="${name}"]`;
+
+type Row = { title: string; subtitle?: string; quantity?: number; roll?: number; formula?: string | null };
+
+const headingOf = (section: Element) => section.querySelector("h3.item-name")?.textContent?.trim() ?? "";
+
+function section(doc: Document, tabName: string, heading: string): Element | null {
+  return [...doc.querySelectorAll(`${tab(tabName)} .items-section`)].find((entry) => headingOf(entry) === heading) ?? null;
+}
+
+/** A row's columns the sheet prints from the item itself; we carry none of them, so they go. */
+function blankDetails(row: Element, keep: string[] = []) {
+  for (const detail of row.querySelectorAll(":scope > .item-row > .item-detail")) {
+    if (detail.classList.contains("item-controls") || keep.some((name) => detail.classList.contains(name))) continue;
+    detail.replaceChildren();
+    detail.classList.add("empty");
+  }
+}
+
+/**
+ * One row per value, cloned from the first row the section was saved with.
+ * A section with nothing to list is dropped rather than printed empty.
+ */
+function fillRows(target: Element | null, rows: Row[], keep: string[] = []) {
+  if (!target) return;
+  const list = target.querySelector("ol.item-list");
+  const sample = list?.querySelector(":scope > li.item");
+  if (!list || !sample || rows.length === 0) {
+    target.remove();
+    return;
+  }
+  list.replaceChildren(
+    ...rows.map((row) => {
+      const item = sample.cloneNode(true) as Element;
+      item.removeAttribute("data-item-id");
+      // The expanded description holds the sample item's own activities.
+      item.querySelector(".item-description .wrapper")?.replaceChildren();
+      for (const marked of item.querySelectorAll("[data-item-id]")) marked.removeAttribute("data-item-id");
+      text(item.querySelector(".item-row .name .title"), row.title);
+      const subtitle = item.querySelector(".item-row .name .subtitle");
+      if (row.subtitle) text(subtitle, row.subtitle);
+      else subtitle?.remove();
+      blankDetails(item, keep);
+      if (row.quantity !== undefined) {
+        const detail = item.querySelector(".item-quantity");
+        detail?.classList.remove("empty");
+        detail?.querySelector("input")?.setAttribute("value", String(row.quantity));
+      }
+      if (row.roll !== undefined) {
+        const detail = item.querySelector(".item-roll");
+        detail?.classList.remove("empty");
+        signed(detail?.querySelector(".value") ?? null, row.roll);
+      }
+      if (row.formula !== undefined) {
+        const detail = item.querySelector(".item-formula");
+        detail?.classList.remove("empty");
+        text(detail?.querySelector(".formula") ?? null, row.formula ?? "—");
+        // The sample weapon's damage-type icon.
+        for (const extra of detail?.querySelectorAll(".row > :not(.formula)") ?? []) extra.remove();
+      }
+      return item;
+    }),
+  );
+}
+
+function ordinal(level: number): string {
+  const suffix = level === 1 ? "st" : level === 2 ? "nd" : level === 3 ? "rd" : "th";
+  return `${level}${suffix}`;
+}
+
+function featuresTab(doc: Document, data: HojaData) {
+  const pillList = doc.querySelector(`${tab("features")} .classes`);
+  const pillSample = pillList?.querySelector(".class.pill-lg");
+  if (pillList && pillSample) {
+    pillList.replaceChildren(
+      ...data.classes.map((entry) => {
+        const pill = pillSample.cloneNode(true) as Element;
+        pill.removeAttribute("data-item-id");
+        pill.querySelector(".icons")?.remove();
+        text(pill.querySelector(".title"), entry.name);
+        const subtitle = pill.querySelector(".subtitle");
+        if (entry.subclass) text(subtitle, entry.subclass);
+        else subtitle?.remove();
+        text(pill.querySelector(".level span"), String(entry.level));
+        return pill;
+      }),
+    );
+  }
+
+  const all = [...doc.querySelectorAll(`${tab("features")} .items-section`)];
+  const classSection = all[0] ?? null;
+  const classTitle = classSection?.querySelector("h3.item-name");
+  text(classTitle ?? null, `${data.classes[0]?.name ?? "Class"} Features`);
+  fillRows(classSection, data.classFeatures.map((title) => ({ title })));
+  fillRows(section(doc, "features", "Species Features"), data.speciesTraits.map((title) => ({ title })));
+  fillRows(section(doc, "features", "Background Features"), data.backgroundFeatures.map((title) => ({ title })));
+  const other = section(doc, "features", "Other Features");
+  text(other?.querySelector("h3.item-name") ?? null, "Feats");
+  fillRows(other, data.feats.map((title) => ({ title })));
+  section(doc, "features", "Active Abilities")?.remove();
+  section(doc, "features", "Passive Abilities")?.remove();
+}
+
+function inventoryTab(doc: Document, data: HojaData) {
+  // Encumbrance and containers: the Forge weighs nothing and has no bags.
+  doc.querySelector(`${tab("inventory")} .top`)?.remove();
+  for (const coin of ["pp", "gp", "ep", "sp", "cp"] as const) {
+    doc.querySelector(`${tab("inventory")} input[name="system.currency.${coin}"]`)?.setAttribute("value", String(data.purse[coin]));
+  }
+
+  const weapons = section(doc, "inventory", "Weapons");
+  const equipment = section(doc, "inventory", "Equipment");
+  for (const entry of doc.querySelectorAll(`${tab("inventory")} .items-section`)) {
+    if (entry !== weapons && entry !== equipment) entry.remove();
+  }
+  fillRows(
+    weapons,
+    data.attacks.map((attack) => ({
+      title: attack.name,
+      subtitle: attack.note,
+      quantity: attack.quantity,
+      roll: attack.attackBonus,
+      formula: attack.damage,
+    })),
+    ["item-quantity", "item-roll", "item-formula"],
+  );
+  const armed = new Set(data.attacks.map((attack) => attack.name));
+  fillRows(
+    equipment,
+    data.equipment.filter((entry) => !armed.has(entry.label)).map((entry) => ({ title: entry.label, quantity: entry.quantity })),
+    ["item-quantity"],
+  );
+}
+
+function spellsTab(doc: Document, data: HojaData) {
+  const root = doc.querySelector(tab("spells"));
+  if (!data.spellcasting && data.spells.length === 0) {
+    root?.remove();
+    doc.querySelector('nav.tabs [data-action="tab"][data-tab="spells"]')?.remove();
+    return;
+  }
+
+  const casting = data.spellcasting;
+  const card = root?.querySelector(".spellcasting");
+  if (card && casting) {
+    card.setAttribute("data-ability", casting.ability);
+    text(card.querySelector(".header h3"), `${data.classes[0]?.name ?? ""} Spellcasting`.trim());
+    signed(card.querySelector(".ability .value"), data.abilities[casting.ability].modifier);
+    signed(card.querySelector(".attack .value"), casting.attackBonus);
+    text(card.querySelector(".save .value"), String(casting.saveDC));
+  } else card?.remove();
+  // How many are prepared today is not something the build knows.
+  card?.querySelector(".prepared")?.remove();
+
+  const list = root?.querySelector(".spells-list");
+  const sections = [...(list?.querySelectorAll(".items-section") ?? [])];
+  const sample = section(doc, "spells", "Cantrips") ?? sections[0] ?? null;
+  const pactSample = sections.find((entry) => entry.querySelector(".pips")) ?? null;
+  const pipSample = pactSample?.querySelector(".pips .pip") ?? null;
+  const pipsSample = pactSample?.querySelector(".pips") ?? null;
+  if (!list || !sample) return;
+
+  const built = data.spells.map((bucket) => {
+    const part = sample.cloneNode(true) as Element;
+    part.querySelector(".pips")?.remove();
+    const pact = casting?.pactLevel === bucket.level ? (casting.slots.pact ?? 0) : 0;
+    const slots = pact || (casting?.slots[String(bucket.level)] ?? 0);
+    text(
+      part.querySelector("h3.item-name"),
+      bucket.level === 0 ? "Cantrips" : pact ? `Pact Magic — ${ordinal(bucket.level)} Level` : `${ordinal(bucket.level)} Level`,
+    );
+    fillRows(
+      part,
+      bucket.spells.map((spell) => ({ title: spell.label, subtitle: spell.prepared ? "" : "Not prepared" })),
+    );
+    if (bucket.level > 0 && slots > 0 && pipsSample && pipSample) {
+      const pips = pipsSample.cloneNode(false) as Element;
+      pips.replaceChildren(...Array.from({ length: slots }, () => pipSample.cloneNode(true) as Element));
+      part.querySelector("ol.item-list")?.before(pips);
+    }
+    return part;
+  });
+  list.replaceChildren(...built);
+}
+
+function biographyTab(doc: Document, data: HojaData) {
+  const values = new Map<string, string>([["Alignment", data.alignment]]);
+  const keys: Array<[string, string]> = [
+    ["Edad", "Age"], ["Altura", "Height"], ["Peso", "Weight"], ["Ojos", "Eyes"],
+    ["Pelo", "Hair"], ["Piel", "Skin"], ["Genero", "Gender"], ["Fe", "Faith"],
+  ];
+  for (const [spanish, label] of keys) values.set(label, data.appearance.find((entry) => entry.label === spanish)?.value ?? "");
+  for (const row of doc.querySelectorAll(`${tab("biography")} ul.characteristics > li`)) {
+    const value = values.get(row.querySelector(".label")?.textContent?.trim() ?? "");
+    text(row.querySelector(".value"), value?.trim() ? value : "—");
+  }
+
+  const boxes: Record<string, string> = {
+    Ideals: data.personality.ideal,
+    Bonds: data.personality.bond,
+    Flaws: data.personality.flaw,
+    "Personality Traits": data.personality.trait,
+  };
+  for (const box of doc.querySelectorAll(`${tab("biography")} .textbox`)) {
+    const label = box.querySelector("h3 span")?.textContent?.trim() ?? "";
+    const value = boxes[label];
+    // The free-text "Appearance" has no field in the builder: the characteristics row carries it.
+    if (value === undefined) {
+      box.remove();
+      continue;
+    }
+    box.querySelector("p")?.replaceChildren(doc.createTextNode(value.trim() || "—"));
+  }
+
+  const editor = doc.querySelector(`${tab("biography")} .editor-content`);
+  if (editor) {
+    const paragraphs = data.backstory.split(/\n{2,}/).map((part) => part.trim()).filter(Boolean);
+    editor.replaceChildren(
+      ...(paragraphs.length ? paragraphs : ["—"]).map((part) => {
+        const paragraph = doc.createElement("p");
+        paragraph.textContent = part;
+        return paragraph;
+      }),
+    );
+  }
+}
+
+function effectsTab(doc: Document) {
+  for (const entry of doc.querySelectorAll(`${tab("effects")} .items-section`)) {
+    // The sheet's enchantments are items that enchant other items: nothing here makes one.
+    if (/Enchantments/.test(headingOf(entry))) entry.remove();
+    else entry.querySelector("ol.item-list")?.replaceChildren();
+  }
+}
+
+function specialTraitsTab(doc: Document, data: HojaData) {
+  const option = doc.querySelector(`${tab("specialTraits")} select[name="system.details.originalClass"]`);
+  option?.replaceChildren(
+    ...data.classes.slice(0, 1).map((entry) => {
+      const choice = doc.createElement("option");
+      choice.textContent = entry.name;
+      choice.setAttribute("selected", "");
+      return choice;
     }),
   );
 }
@@ -216,14 +483,32 @@ export function renderHoja(template: string, data: HojaData): string {
   pills(doc, "Weapons", data.weapons);
   pills(doc, "Languages", data.languages);
 
-  // Only Details is filled so far; the other tabs carry the sample character.
-  for (const tab of doc.querySelectorAll('nav.tabs [data-action="tab"]')) {
-    if (tab.getAttribute("data-tab") !== "details") tab.remove();
-  }
+  featuresTab(doc, data);
+  inventoryTab(doc, data);
+  spellsTab(doc, data);
+  effectsTab(doc);
+  biographyTab(doc, data);
+  specialTraitsTab(doc, data);
 
   return `<!doctype html>\n${doc.documentElement.outerHTML}`;
 }
 
+
+/**
+ * "Fighter 5 / Wizard 2" → one pill each; a single class is "Fighter" and its level is the character's.
+ * The subclass belongs to the first class: the builder keeps one.
+ */
+function classesOf(classLine: string, subclass: string, level: number): HojaData["classes"] {
+  const parts = classLine.split(" / ").map((part) => part.trim()).filter(Boolean);
+  return parts.map((part, index) => {
+    const match = /^(.*?)(?:\s+(\d+))?$/.exec(part);
+    return {
+      name: match?.[1] || part,
+      subclass: index === 0 ? subclass : "",
+      level: match?.[2] ? Number(match[2]) : level,
+    };
+  });
+}
 
 /** Everything the sheet prints, from the character and its derived build. */
 export function hojaDataFor(
@@ -286,5 +571,33 @@ export function hojaDataFor(
     armor,
     weapons: sheet.weaponProficiencies,
     languages: sheet.languages,
+    classes: classesOf(sheet.classLine, sheet.subclassLabel, sheet.level),
+    classFeatures: sheet.classFeatures,
+    speciesTraits: sheet.speciesTraits,
+    feats: sheet.feats,
+    backgroundFeatures: sheet.backgroundFeatures,
+    attacks: sheet.attacks.map((attack) => ({
+      name: attack.name,
+      quantity: attack.quantity,
+      attackBonus: attack.attackBonus,
+      damage: attack.damage,
+      note: [attack.damageType, ...attack.properties].filter(Boolean).join(" • "),
+    })),
+    equipment: sheet.equipment,
+    purse: { pp: sheet.purse.pp, gp: sheet.purse.gp, ep: sheet.purse.ep, sp: sheet.purse.sp, cp: sheet.purse.cp },
+    spellcasting: sheet.spellcasting
+      ? {
+          ability: sheet.spellcasting.ability,
+          attackBonus: sheet.spellcasting.attackBonus,
+          saveDC: sheet.spellcasting.saveDC,
+          slots: sheet.spellcasting.slots,
+          pactLevel: sheet.spellcasting.pactLevel ?? null,
+        }
+      : null,
+    spells: sheet.spellsByLevel,
+    alignment: sheet.alignment,
+    appearance: sheet.appearance,
+    personality: sheet.personality,
+    backstory: sheet.backstory,
   };
 }
