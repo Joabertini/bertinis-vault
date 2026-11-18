@@ -98,10 +98,14 @@ export type HojaRules = {
   background?: RulesTable;
   feat?: RulesTable;
   condition?: RulesTable;
+  itemProperty?: RulesTable;
+  mastery?: RulesTable;
 };
 
 /** The kinds `Hoja2024` fetches before it draws the sheet. */
-export const HOJA_RULE_KINDS = ["classFeature", "subclassFeature", "spell", "item", "race", "background", "feat", "condition"] as const;
+export const HOJA_RULE_KINDS = [
+  "classFeature", "subclassFeature", "spell", "item", "race", "background", "feat", "condition", "itemProperty", "mastery",
+] as const;
 
 /** What a click on something shows: its rules text, and the rolls it makes. */
 export type HojaInfo = {
@@ -1428,6 +1432,30 @@ export function hojaDataFor(
         .map((label) => `<li>${escapeHtml(label.replace(/(^|\s)[a-z]/g, (start) => start.toUpperCase()))}</li>`)
         .join("");
       html = `<p><strong>Contiene:</strong></p><ul>${list}</ul>${html}`;
+    }
+    // Plain weapons and armor carry no text of their own: Foundry describes them by their numbers.
+    if (record && !record["entries"]) {
+      const parts: string[] = [];
+      const kind = item.armor ? ITEM_TYPES[item.armor.kind]?.label : record["weaponCategory"] ? `${String(record["weaponCategory"])[0]!.toUpperCase()}${String(record["weaponCategory"]).slice(1)} ${String(record["type"]).startsWith("R") ? "Ranged" : "Melee"} Weapon` : "";
+      if (record["dmg1"]) {
+        const type = { S: "Slashing", P: "Piercing", B: "Bludgeoning" }[String(record["dmgType"])] ?? "";
+        parts.push(`<p><strong>${escapeHtml(kind)}.</strong> Damage ${escapeHtml(String(record["dmg1"]))} ${type}${record["dmg2"] ? ` (${escapeHtml(String(record["dmg2"]))} two-handed)` : ""}.</p>`);
+      } else if (item.armor) {
+        const dex = item.armor.kind === "LA" ? " + Dex modifier" : item.armor.kind === "MA" ? " + Dex modifier (max 2)" : "";
+        parts.push(`<p><strong>${escapeHtml(kind ?? "Armor")}.</strong> AC ${item.armor.kind === "S" ? "+" : ""}${item.armor.ac}${dex}.${record["stealth"] ? " Disadvantage on Dexterity (Stealth) checks." : ""}${record["strength"] ? ` Strength ${escapeHtml(String(record["strength"]))} required.` : ""}</p>`);
+      }
+      for (const code of (record["property"] as unknown[] | undefined) ?? []) {
+        const abbreviation = (typeof code === "string" ? code : ((code as { uid?: string }).uid ?? "")).split("|")[0] ?? "";
+        const property = Object.values(rules.itemProperty ?? {}).filter((entry) => entry["abbreviation"] === abbreviation);
+        const best = BOOKS[rulesVersion].map((book) => property.find((entry) => entry["source"] === book)).find(Boolean) ?? property[0];
+        if (best) parts.push(entriesHtml(best["entries"]));
+      }
+      for (const code of (record["mastery"] as unknown[] | undefined) ?? []) {
+        const name = String(code).split("|")[0] ?? "";
+        const mastery = recordNamed(rules.mastery, name, rulesVersion);
+        if (mastery) parts.push(entriesHtml(mastery["entries"]).replace(/^<p>/, `<p><strong>Mastery: ${escapeHtml(name)}.</strong> `));
+      }
+      html = parts.join("") + html;
     }
     const properties = ((record?.["property"] as unknown[] | undefined) ?? [])
       .map((entry) => (typeof entry === "string" ? entry : (entry as { uid?: string }).uid ?? ""))

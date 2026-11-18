@@ -6191,7 +6191,10 @@ svg { fill: var(--icon-fill, #000); width: var(--icon-width, var(--icon-size, 1e
       const fila = form.querySelector(`section.tab[data-tab="inventory"] li.item[data-hoja="${caja.dataset.hoja}"]`);
       if (fila) {
         if (!fila.classList.contains("expanded")) desplegar(fila);
-        fila.scrollIntoView({ block: "center", behavior: "smooth" });
+        // Only the list scrolls: scrolling the page would push the sidebar out of the window.
+        let lista = fila.parentElement;
+        while (lista && lista !== form && !(lista.scrollHeight > lista.clientHeight && /(auto|scroll)/.test(getComputedStyle(lista).overflowY))) lista = lista.parentElement;
+        if (lista && lista !== form) lista.scrollTop += fila.getBoundingClientRect().top - lista.getBoundingClientRect().top - 40;
       } else abrirInfo(info[caja.dataset.hoja], caja);
       return;
     }
