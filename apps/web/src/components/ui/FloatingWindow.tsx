@@ -97,7 +97,7 @@ export default function FloatingWindow({
               if (event.button === 0) dragControls.start(event);
             }}
             className="absolute left-0 top-0 z-10 hidden h-9 cursor-grab active:cursor-grabbing md:block"
-            style={{ right: 130 }}
+            style={{ width: 670 }}
           />
         )}
         {!bare && (

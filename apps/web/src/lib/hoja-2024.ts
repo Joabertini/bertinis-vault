@@ -452,7 +452,7 @@ export function renderHoja(template: string, data: HojaData): string {
     form.style.position = "relative";
     form.style.left = "0";
     form.style.top = "0";
-    form.style.margin = "0 auto";
+    form.style.margin = "0";
     form.style.setProperty("--dnd5e-character-background-image", `url("${data.banner}")`);
     form.style.setProperty("--dnd5e-character-header-image", "transparent");
   }
@@ -550,7 +550,7 @@ export function renderHoja(template: string, data: HojaData): string {
   text(background?.querySelector(".title") ?? null, data.background);
   background?.querySelector("img")?.setAttribute("alt", data.background);
 
-  setIcon(doc, type?.querySelector("img") ?? null, kindIconKey("species"));
+  setIcon(doc, type?.querySelector(".creature-type") ?? null, kindIconKey("species"));
   setIcon(doc, race?.querySelector("img") ?? null, speciesIconKey(data.species));
   setIcon(doc, background?.querySelector("img") ?? null, backgroundIconKey(data.background));
 

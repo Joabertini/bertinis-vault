@@ -407,7 +407,7 @@ function TomeWindow({
       title={state.characterName}
       subtitle={subtitle}
       accent={accent}
-      width={view === "hoja" ? (rulesVersion === "2024" ? 800 : 1040) : 900}
+      width={view === "hoja" ? (rulesVersion === "2024" ? 850 : 1040) : 900}
       bare={soloHoja}
       onClose={onClose}
     >
