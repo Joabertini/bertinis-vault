@@ -38,3 +38,6 @@ scripts/.fuentes-og/
 
 # Caché del generador de íconos
 .cache/
+
+# Hojas llenas que escribe el probe de capturas (solo CI)
+apps/web/public/hoja-2024/_capturas/

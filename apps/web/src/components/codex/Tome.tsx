@@ -196,6 +196,7 @@ export default function Tome({
             view={view}
             onSwitch={setView}
             onClose={() => setView("closed")}
+            onReforge={onReforge}
           />
         )}
       </AnimatePresence>
@@ -353,6 +354,7 @@ function TomeWindow({
   view,
   onSwitch,
   onClose,
+  onReforge,
 }: {
   character: SealedCharacter;
   accent: string;
@@ -361,6 +363,8 @@ function TomeWindow({
   view: "hoja" | "vision";
   onSwitch: (view: "hoja" | "vision") => void;
   onClose: () => void;
+  /** The sheet's edit switch opens the Forge on this character. */
+  onReforge: () => void;
 }) {
   const { state } = character;
 
@@ -440,7 +444,7 @@ function TomeWindow({
         snapshot ? (
           rulesVersion === "2024" ? (
             // C1: the 2024 sheet is Foundry's own (owner's decision, 2026-11-17).
-            <Hoja2024 state={state} build={snapshot} rulesVersion={rulesVersion} onClose={onClose} onVision={() => onSwitch("vision")} />
+            <Hoja2024 state={state} build={snapshot} rulesVersion={rulesVersion} onClose={onClose} onVision={() => onSwitch("vision")} onEdit={onReforge} />
           ) : (
             <CharacterSheet state={state} build={snapshot} accent={accent} />
           )
