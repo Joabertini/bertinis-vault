@@ -178,6 +178,14 @@
   .tn-name {
     font-size: 28px;
   }
+  .tn-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .tn-vit div {
+    min-width: 64px;
+    padding: 7px 10px;
+  }
 }
 
 .tn-sh {
@@ -265,12 +273,12 @@
   font-size: 14px;
 }
 .tn-opt .tx span {
-  display: block;
+  display: -webkit-box;
   overflow: hidden;
   color: var(--tn-mute);
   font-size: 12px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 .tn-opt .nu {
   display: flex;
@@ -354,6 +362,7 @@
 .tn-rs b {
   font-weight: 600;
   font-size: 13px;
+  white-space: nowrap;
 }
 .tn-rs small {
   display: block;
@@ -363,11 +372,12 @@
 .tn-pips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  justify-content: flex-end;
+  gap: 5px;
 }
 .tn-pip {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   padding: 0;
   cursor: pointer;
   border-radius: 50%;
