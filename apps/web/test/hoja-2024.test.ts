@@ -116,7 +116,7 @@ describe("la hoja 2024", () => {
   });
 
   test("Biografía imprime el alineamiento y la historia que el jugador escribió", () => {
-    const state = { ...fighter(), alignment: "Legal Bueno", backstory: "Primer párrafo.\n\nSegundo párrafo." };
+    const state = { ...fighter(), alignment: "Legal Bueno", appearance: "Primer párrafo.", notes: "Segundo párrafo." };
     const { doc } = sheet(state);
     const text = tabText(doc, "biography");
     expect(text).toContain("Legal Bueno");
