@@ -23,7 +23,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import ShareButton from "@/components/codex/ShareButton";
 import Sigil from "@/components/sigils/Sigil";
 import Vision from "@/components/codex/Vision";
-import CharacterSheet from "@/components/sheet/CharacterSheet";
+import RollTray from "@/components/tray/RollTray";
 import Hoja2024 from "@/components/sheet/Hoja2024";
 import FloatingWindow from "@/components/ui/FloatingWindow";
 import { playbookFor } from "@/lib/playbook";
@@ -443,12 +443,12 @@ function TomeWindow({
 
       {view === "hoja" ? (
         snapshot ? (
-          rulesVersion === "2024" ? (
-            // C1: the 2024 sheet is Foundry's own (owner's decision, 2026-11-17).
+          // The sheet is Foundry's own, for both editions: it is the same sheet there
+          // (owner's decision, 2026-11-17 and 2026-11-18). Its rolls land in the roll tray.
+          <>
             <Hoja2024 characterId={character.id} onPatch={(patch) => updateCharacter(character.id, patch)} state={state} build={snapshot} rulesVersion={rulesVersion} onClose={onClose} onVision={() => onSwitch("vision")} onEdit={onReforge} />
-          ) : (
-            <CharacterSheet state={state} build={snapshot} accent={accent} />
-          )
+            <RollTray accent={accent} />
+          </>
         ) : (
           <p className="px-8 py-10 font-body text-[15px] text-bone">
             Este tomo no se puede derivar: le falta especie, clase o trasfondo. Reforjalo y
