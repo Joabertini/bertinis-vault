@@ -6266,6 +6266,15 @@ svg { fill: var(--icon-fill, #000); width: var(--icon-width, var(--icon-size, 1e
   const puntajes = [...form.querySelectorAll(".ability-scores .ability-score")].map((caja) => [caja.querySelector(".score"), caja.dataset.ability]);
   for (const [el, habilidad] of puntajes) {
     if (!el) continue;
+    // Al tocar el puntaje queda seleccionado entero: se escribe encima, como en un campo de Foundry.
+    el.addEventListener("focus", () => {
+      if (!editando) return;
+      const rango = document.createRange();
+      rango.selectNodeContents(el);
+      const sel = getSelection();
+      sel.removeAllRanges();
+      sel.addRange(rango);
+    });
     el.addEventListener("keydown", (e) => {
       if (e.key === "Enter") { e.preventDefault(); el.blur(); }
       else if (e.key.length === 1 && !/\d/.test(e.key)) e.preventDefault();

@@ -97,7 +97,6 @@ await page.keyboard.press("End");
 await page.keyboard.type(" Venture");
 await page.keyboard.press("Enter");
 await page.click('.ability-scores .ability-score[data-ability="str"] .score');
-await page.keyboard.press("Control+A");
 await page.keyboard.type("12");
 await page.keyboard.press("Enter");
 await shot("edicion-detalles");
