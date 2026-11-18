@@ -107,6 +107,14 @@ function firstSentence(record: Record<string, unknown> | null, max = 140): strin
   return sentence.length > max ? `${sentence.slice(0, max - 1).trimEnd()}…` : sentence;
 }
 
+/** A feature's first clause: enough to know what it is, never a paragraph. */
+function shortLine(record: Record<string, unknown> | null, max = 72): string {
+  const sentence = firstSentence(record, 400);
+  const comma = sentence.indexOf(", ");
+  const clause = comma >= 25 ? sentence.slice(0, comma) : sentence;
+  return clause.length > max ? `${clause.slice(0, max - 1).trimEnd()}…` : clause;
+}
+
 /** Average of a dice formula: "2d10+3" is 14. Used only to order what to show first. */
 export function averageOf(formula: string): number {
   let total = 0;
@@ -296,7 +304,7 @@ export function turnoFor(
         const condition = (record?.["time"] as Array<{ condition?: string }> | undefined)?.[0]?.condition;
         reactions.push({
           id: spell.key,
-          when: condition ? plain(condition).replace(/^which you take /i, "").replace(/^when /i, "Cuando ") : "Cuando se dispara",
+          when: condition ? plain(condition).replace(/^which you take /i, "").replace(/^./, (first) => first.toUpperCase()).slice(0, 90) : "Cuando se dispara",
           name: spell.label,
           line: `${level} · ${spell.concentration ? "concentración" : reach}`,
           role: role === "util" ? "rxn" : role,
@@ -308,9 +316,9 @@ export function turnoFor(
         role,
         icon: spell.icon,
         name: spell.label,
-        line: [level, spell.target || reach, spell.concentration ? "concentración" : ""].filter(Boolean).join(" · "),
+        line: [level, reach, HAS_AREA.test(spell.target) ? spell.target : "", spell.concentration ? "concentración" : ""].filter(Boolean).join(" · "),
         big: damage ? damage.formula.replace(/\s+/g, "") : spell.save ? `CD ${spell.save.dc}` : spell.attack !== null ? signed(spell.attack) : "",
-        small: spell.save ? `${spell.save.ability} salv.` : spell.attack !== null ? "ataque" : "",
+        small: spell.save ? `${spell.save.ability} salv.` : spell.attack !== null ? `${signed(spell.attack)} ataque` : "",
         ...(attack ? { attack } : {}),
         ...(damage ? { damage } : {}),
       };
@@ -341,7 +349,10 @@ export function turnoFor(
     const damageColumn = tableValue(table, `${name} Damage`, classLevel);
     const rider = dice !== null && /^\d+d\d+$/.test(dice);
 
-    if (uses !== null && cost !== "reaction") {
+    // A count only means a resource when the text speaks of spending it: "Weapon Mastery" has a
+    // number in its table too, and nothing to spend.
+    const spendable = /expended|can't do so again|once per|regain (?:all|one)|until you finish a/i.test(text) && !/^(Spellcasting|Weapon Mastery|Pact Magic)$/i.test(name);
+    if (uses !== null && cost !== "reaction" && spendable) {
       resources.push({
         id: `f:${name}`,
         name,
@@ -360,7 +371,7 @@ export function turnoFor(
         role: "dmg",
         icon: kindIconKey("feature"),
         name,
-        line: /once per turn/i.test(text) ? "Una vez por turno" : plain(firstSentence(record, 70)),
+        line: /once per turn/i.test(text) ? "Una vez por turno" : shortLine(record),
         big: `+${dice}`,
         small: "extra",
         damage: { label: name, formula: dice! },
@@ -370,9 +381,9 @@ export function turnoFor(
       const trigger = typeof first === "string" ? /^(.*?),? you can (?:take|use) a \{@variantrule Reaction/.exec(first)?.[1] : null;
       reactions.push({
         id: `f:${name}`,
-        when: trigger ? plain(trigger).replace(/^When /, "Cuando ").slice(0, 80) : "Cuando se dispara",
+        when: trigger ? plain(trigger).slice(0, 90) : "Cuando se dispara",
         name,
-        line: plain(firstSentence(record, 90)),
+        line: shortLine(record, 90),
         role: roleOf(text, false),
       });
     } else if (cost === "bonus" || cost === "action") {
@@ -381,7 +392,7 @@ export function turnoFor(
         role: roleOf(text, damageColumn !== null),
         icon: kindIconKey("feature"),
         name,
-        line: plain(firstSentence(record, 90)),
+        line: shortLine(record),
         big: damageColumn ?? "",
         small: damageColumn ? "daño" : "",
       };
@@ -448,24 +459,24 @@ export function turnoFor(
   /* ---- the two lines under the banner ---- */
   const tips: string[] = [];
   const topBonus = bonus.find((option) => option.small === "daño");
-  const strongest = ordered.find((option) => option.role === "dmg" && !option.id.startsWith("f:"));
+  const single = ordered.find((option) => option.role === "dmg" && !option.id.startsWith("f:") && !HAS_AREA.test(option.line));
   if (topBonus) tips.push(`Activá ${topBonus.name} antes de atacar: ${topBonus.big} al daño.`);
-  else if (strongest) tips.push(`Tu mejor ataque: ${strongest.name} (${strongest.big}).`);
+  else if (single) tips.push(`Tu mejor ataque: ${single.name} (${single.big}).`);
   const rider = riders[0];
-  if (rider) tips.push(`${rider.name} suma ${rider.big.replace("+", "")} ${rider.line.toLowerCase()}.`);
   const area = ordered.find((option) => option.role === "dmg" && HAS_AREA.test(option.line));
-  if (area && !topBonus) tips.push(`Si hay varios enemigos juntos: ${area.name}.`);
-  const slotsLine = resources.filter((entry) => entry.id.startsWith("slot:") && entry.id !== "slot:pact");
-  if (slotsLine.length > 0) tips.push(`Tenés ${slotsLine.map((entry) => `${entry.max} de nv ${entry.id.split(":")[1]}`).join(", ")}.`);
+  if (rider) tips.push(`${rider.name} suma ${rider.big.replace("+", "")} ${rider.line.toLowerCase()}.`);
+  else if (area) tips.push(`Si hay varios enemigos juntos: ${area.name}.`);
   else {
-    const limited = resources.find((entry) => entry.kind === "pip");
+    const limited = resources.find((entry) => entry.kind === "pip" && !entry.id.startsWith("slot:"));
     if (limited) tips.push(`${limited.name}: ${limited.hint}.`);
   }
 
-  /* ---- a passive worth remembering: the last one gained ---- */
+  /* ---- a passive worth remembering: the last one gained that fits in a sentence ---- */
   const worth = passives.filter((entry) => !/Weapon Mastery|Spellcasting|Ability Score|Subclass|Epic Boon|Fighting Style|Expertise/i.test(entry.name));
-  const last = worth[worth.length - 1];
-  const feature = last ? { name: last.name, text: firstSentence(last.record, 160) } : null;
+  const feature = [...worth]
+    .reverse()
+    .map((entry) => ({ name: entry.name, text: firstSentence(entry.record, 400) }))
+    .find((entry) => entry.text && entry.text.length <= 150) ?? null;
 
   return {
     name: data.name,
@@ -484,7 +495,7 @@ export function turnoFor(
     ],
     reactions,
     resources,
-    feature: feature && feature.text ? feature : null,
+    feature,
   };
 }
 
