@@ -81,7 +81,7 @@ SIL = {
     "club": "delapouite/wood-club", "halberd": "lorc/halberd", "trident": "lorc/trident", "flail": "delapouite/flail",
     "sling": "delapouite/slingshot", "boomerang": "delapouite/boomerang", "scythe": "lorc/scythe",
     "magic-item": "delapouite/sparkles", "orb": "lorc/crystal-ball", "camp": "delapouite/camping-tent", "campfire": "lorc/campfire",
-    "hourglass": "lorc/hourglass", "backpack": "delapouite/backpack", "quill": "lorc/quill-ink", "mortar": "delapouite/mortar",
+    "hourglass": "lorc/hourglass", "backpack": "delapouite/backpack", "scimitar": "delapouite/katana", "quill": "lorc/quill-ink", "mortar": "delapouite/mortar",
     "crown": "lorc/crown", "cape": "delapouite/cape", "money": "delapouite/money-stack", "lockpicks": "delapouite/lockpicks",
     "spyglass": "lorc/spyglass", "bell": "lorc/ringing-bell", "banner": "delapouite/knight-banner", "paw": "lorc/paw-front",
     "water": "sbed/water-drop", "light": "lorc/sun-radiations", "trap": "lorc/mantrap",

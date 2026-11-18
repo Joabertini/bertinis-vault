@@ -96,8 +96,9 @@ export default function FloatingWindow({
             onPointerDown={(event) => {
               if (event.button === 0) dragControls.start(event);
             }}
-            className="absolute left-0 top-0 z-10 hidden h-9 cursor-grab active:cursor-grabbing md:block"
-            style={{ width: 670 }}
+            className="absolute top-0 z-10 hidden h-9 cursor-grab active:cursor-grabbing md:block"
+            // From the edit switch's right edge: the switch at the far left stays the sheet's.
+            style={{ left: 52, width: 618 }}
           />
         )}
         {!bare && (

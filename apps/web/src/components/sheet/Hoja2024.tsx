@@ -4,7 +4,7 @@ import type { CharacterBuild } from "@bertinis-vault/contracts";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "@/lib/builder";
-import { HOJA_BASE, hojaDataFor, renderHoja, type HojaRules } from "@/lib/hoja-2024";
+import { HOJA_BASE, HOJA_RULE_KINDS, hojaDataFor, renderHoja, type HojaEstado, type HojaRules } from "@/lib/hoja-2024";
 import { loadKind } from "@/lib/rules-text";
 
 /** The page is the same for every character; read it once. */
@@ -20,8 +20,8 @@ function loadTemplate(): Promise<string> {
 /** Class features and spell details come from the rules text; without it the sheet still opens. */
 let rulesText: Promise<HojaRules> | null = null;
 function loadRules(): Promise<HojaRules> {
-  rulesText ??= Promise.all([loadKind("classFeature"), loadKind("subclassFeature"), loadKind("spell")])
-    .then(([classFeature, subclassFeature, spell]) => ({ classFeature, subclassFeature, spell }) as HojaRules)
+  rulesText ??= Promise.all(HOJA_RULE_KINDS.map((kind) => loadKind(kind)))
+    .then((tables) => Object.fromEntries(HOJA_RULE_KINDS.map((kind, index) => [kind, tables[index]])) as HojaRules)
     .catch(() => {
       rulesText = null;
       return {};
@@ -30,10 +30,32 @@ function loadRules(): Promise<HojaRules> {
 }
 
 /**
+ * What the player changed while playing (hit points, hit dice, what is worn…), per character, in
+ * this browser. The sheet hands it over each time it changes; it comes back when the sheet opens.
+ */
+const estadoKey = (characterId: string) => `hoja-2024:estado:${characterId}`;
+function leerEstado(characterId: string): HojaEstado {
+  try {
+    const raw = localStorage.getItem(estadoKey(characterId));
+    return raw ? (JSON.parse(raw) as HojaEstado) : {};
+  } catch {
+    return {};
+  }
+}
+function guardarEstado(characterId: string, estado: HojaEstado) {
+  try {
+    localStorage.setItem(estadoKey(characterId), JSON.stringify(estado));
+  } catch {
+    // Private window or full storage: the sheet still plays, it just forgets on close.
+  }
+}
+
+/**
  * The 2024 sheet: Foundry's own, filled with this character, in an iframe so
  * its stylesheet and the app's never meet.
  */
 export default function Hoja2024({
+  characterId,
   state,
   build,
   rulesVersion,
@@ -41,6 +63,8 @@ export default function Hoja2024({
   onVision,
   onEdit,
 }: {
+  /** Whose play state this is. */
+  characterId: string;
   state: BuilderState;
   build: CharacterBuild;
   rulesVersion: RulesVersion;
@@ -68,11 +92,12 @@ export default function Hoja2024({
     if (!rules) return;
     let live = true;
     loadTemplate()
-      .then((html) => live && setPage(renderHoja(html, data)))
+      .then((html) => live && setPage(renderHoja(html, data, leerEstado(characterId))))
       .catch(() => live && setFailed(true));
     return () => {
       live = false;
     };
+    // characterId only changes with the character, and then data does too.
   }, [data, rules]);
 
   // The page inside the iframe asks for what only this page can do.
@@ -82,10 +107,11 @@ export default function Hoja2024({
       if (event.data?.hoja === "cerrar") onClose();
       else if (event.data?.hoja === "vision") onVision();
       else if (event.data?.hoja === "editar") onEdit();
+      else if (event.data?.hoja === "estado" && event.data.estado) guardarEstado(characterId, event.data.estado as HojaEstado);
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [onClose, onVision, onEdit]);
+  }, [onClose, onVision, onEdit, characterId]);
 
   if (failed) {
     return <p className="px-8 py-10 font-body text-[15px] text-bone">No pude cargar la hoja. Probá de nuevo.</p>;
