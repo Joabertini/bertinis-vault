@@ -58,3 +58,14 @@ export function rollFormula(formula: string, mode: RollMode = "normal", roll: (s
   }
   return { total, detalle: parts.join(" "), d20, pair };
 }
+
+/**
+ * The same formula with every group of dice multiplied: `scaleDice("1d6 + 4", 2)` is "2d6 + 4".
+ * Flat numbers stay as they are. A critical hit is `scaleDice(damage, 2)`: the dice are rolled
+ * twice and the modifier is added once, in 2014 and in 2024 alike.
+ */
+export function scaleDice(formula: string, factor: number): string {
+  return formula.replace(/(\d*)d(\d+)/gi, (_, count: string, sides: string) => `${Math.max(1, Number(count || 1)) * factor}d${sides}`);
+}
+
+export const critFormula = (formula: string): string => scaleDice(formula, 2);

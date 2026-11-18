@@ -7,7 +7,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import RollTray from "../src/components/tray/RollTray";
-import { isFormula, rollFormula } from "../src/lib/roll-formula";
+import { critFormula, isFormula, rollFormula, scaleDice } from "../src/lib/roll-formula";
 import { useRolls } from "../src/lib/roll-store";
 
 /** Dados que dan lo que se les pide, en orden, y 1 cuando se acaban. */
@@ -50,6 +50,20 @@ describe("fórmulas", () => {
     expect(isFormula("7")).toBe(false);
     expect(isFormula("1d20+hola")).toBe(false);
     expect(isFormula("alert(1)")).toBe(false);
+  });
+});
+
+describe("críticos", () => {
+  test("los dados se doblan y el modificador queda", () => {
+    expect(critFormula("1d8 + 3")).toBe("2d8 + 3");
+    expect(critFormula("2d6+4")).toBe("4d6+4");
+    expect(critFormula("1d6 + 1d4 + 2")).toBe("2d6 + 2d4 + 2");
+    expect(critFormula("d12")).toBe("2d12");
+  });
+
+  test("scaleDice escala el truco con el nivel", () => {
+    expect(scaleDice("1d10", 3)).toBe("3d10");
+    expect(scaleDice("8d6", 1)).toBe("8d6");
   });
 });
 
@@ -105,6 +119,19 @@ describe("la bandeja", () => {
     expect(roll!.formula).toBe("1d20");
     expect(roll!.total).toBeGreaterThanOrEqual(1);
     expect(roll!.total).toBeLessThanOrEqual(20);
+  });
+
+  test("el interruptor de crítico dobla los dados de lo que se tira", async () => {
+    const user = userEvent.setup();
+    render(<RollTray />);
+    await user.click(screen.getByRole("button", { name: /Crítico: dados dobles/ }));
+    await user.type(screen.getByLabelText("Fórmula de dados"), "1d8+3");
+    await user.click(screen.getByText("Tirar"));
+    const [roll] = useRolls.getState().rolls;
+    expect(roll!.formula).toBe("2d8+3");
+    expect(roll!.critico).toBe(true);
+    expect(roll!.titulo).toContain("Crítico");
+    expect(screen.getAllByText("¡Crítico!").length).toBeGreaterThan(0);
   });
 
   test("limpiar vacía el historial", async () => {

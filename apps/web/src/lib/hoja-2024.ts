@@ -33,6 +33,7 @@ import {
   type IconKey,
 } from "./icons";
 import { itemInfoFor, rowsBySlug, slugOf, spellInfoFor } from "./index-options";
+import { critFormula, scaleDice } from "./roll-formula";
 import { sheetDataFor } from "./sheet-data";
 
 export const HOJA_BASE = "/hoja-2024/";
@@ -1512,7 +1513,12 @@ export function hojaDataFor(
       rolls: item.attack
         ? [
             { label: "Ataque", formula: `1d20${item.attack.bonus >= 0 ? "+" : ""}${item.attack.bonus}` },
-            ...(item.attack.damage ? [{ label: "Daño", formula: item.attack.damage }] : []),
+            ...(item.attack.damage
+              ? [
+                  { label: "Daño", formula: item.attack.damage },
+                  { label: "Crítico", formula: critFormula(item.attack.damage) },
+                ]
+              : []),
           ]
         : [],
     };
@@ -1527,11 +1533,23 @@ export function hojaDataFor(
         spell.concentration ? "Concentración" : "",
         spell.ritual ? "Ritual" : "",
       ].filter(Boolean);
+      // The first damage the text names ("{@damage 8d6}"); a cantrip grows with the character's level.
+      const named = /\{@damage ([^}|]+)/.exec(JSON.stringify(record?.["entries"] ?? ""))?.[1]?.replace(/\s+/g, "");
+      const damage = named ? (bucket.level === 0 ? scaleDice(named, sheet.level >= 17 ? 4 : sheet.level >= 11 ? 3 : sheet.level >= 5 ? 2 : 1) : named) : null;
       info[spell.key] = {
         title: spell.label,
         subtitle: facts.join(" · "),
         html: fromRecord(record),
-        rolls: spell.attack !== null ? [{ label: "Ataque de conjuro", formula: `1d20+${spell.attack}` }] : [],
+        rolls: [
+          ...(spell.attack !== null ? [{ label: "Ataque de conjuro", formula: `1d20+${spell.attack}` }] : []),
+          ...(damage
+            ? [
+                { label: "Daño", formula: damage },
+                // A critical needs an attack roll to crit on: saving-throw spells do not have one.
+                ...(spell.attack !== null ? [{ label: "Crítico", formula: critFormula(damage) }] : []),
+              ]
+            : []),
+        ],
       };
     }
   }

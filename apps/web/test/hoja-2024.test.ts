@@ -215,8 +215,10 @@ describe("la hoja 2024", () => {
     const infos = [...doc.querySelectorAll("[data-info]")].map((node) => node.getAttribute("data-info")!);
     expect(keys.length).toBeGreaterThan(10);
     for (const key of [...keys, ...infos]) expect(datos.info[key], key).toBeTruthy();
-    const scimitar = Object.values(datos.info as Record<string, { title: string; rolls?: unknown[]; html: string }>).find((card) => card.title === "Scimitar");
-    expect(scimitar?.rolls).toHaveLength(2);
+    const scimitar = Object.values(datos.info as Record<string, { title: string; rolls?: Array<{ label: string; formula: string }>; html: string }>).find((card) => card.title === "Scimitar");
+    expect(scimitar?.rolls?.map((roll) => roll.label)).toEqual(["Ataque", "Daño", "Crítico"]);
+    const [, damage, crit] = scimitar!.rolls!;
+    expect(crit!.formula).toBe(damage!.formula.replace("1d6", "2d6"));
     expect(scimitar?.html).not.toContain("Las reglas no traen");
     const pack = Object.values(datos.info as Record<string, { title: string; html: string }>).find((card) => /pack/i.test(card.title));
     expect(pack?.html).toContain("Contiene");

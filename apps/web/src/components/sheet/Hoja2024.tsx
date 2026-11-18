@@ -154,6 +154,7 @@ export default function Hoja2024({
             modo: message.modo === "ventaja" || message.modo === "desventaja" ? message.modo : "normal",
             d20: typeof message.d20 === "number" ? message.d20 : null,
             aviso: typeof message.aviso === "string" ? message.aviso : null,
+            critico: message.critico === true,
           });
           return;
         case "ui":
