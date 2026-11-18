@@ -20,6 +20,7 @@ import { rulesVersionOf, type BuilderState, type ExtraClass } from "./builder-st
 import { allOptions, type CatalogEntry } from "./catalog";
 import { classEntriesFor, emptyExtraClass } from "./classing";
 import { resolveDraft } from "./derive";
+import { speciesFeatGrantFor } from "./feats";
 import { fromLines, toLines } from "./grants";
 import { levellingFor } from "./index-options";
 import { fixedLanguagesOf, grantedProficienciesOf } from "./settle";
@@ -231,7 +232,13 @@ export function releasedByPick(
     // re-checks it anyway and would ignore it; clearing it here is what makes
     // the Forge say so out loud instead of dropping it in silence.
     if (draft.sizeChoice) shed.push("el tamano elegido");
-    return { patch: { subraceId: "", sizeChoice: "", abilityBonuses: {} }, shed };
+    // The feat a species grants (human) is the old species' too.
+    const speciesFeat = speciesFeatGrantFor(draft) !== null && Boolean(draft.featId);
+    if (speciesFeat) shed.push("la dote de la especie");
+    return {
+      patch: { subraceId: "", sizeChoice: "", abilityBonuses: {}, ...(speciesFeat ? { featId: "" } : {}) },
+      shed,
+    };
   }
 
   const shed: string[] = [];
