@@ -5,7 +5,8 @@
 
 import { CoverImageError, MAX_SOURCE_BYTES, isCoverImage } from "@bertinis-vault/forge/cover-image";
 
-import { sessionCredentials, vaultBaseUrl } from "./vault-client";
+import { turnstileHeaders } from "./turnstile";
+import { TURNSTILE_REFUSED, isTurnstileRefusal, sessionCredentials, vaultBaseUrl } from "./vault-client";
 
 export * from "@bertinis-vault/forge/cover-image";
 
@@ -49,7 +50,7 @@ export async function fitCoverImage(file: File): Promise<string> {
   try {
     response = await fetch(`${vaultBaseUrl()}/images`, {
       method: "POST",
-      headers: { "Content-Type": body.type },
+      headers: { "Content-Type": body.type, ...(await turnstileHeaders()) },
       credentials: sessionCredentials(),
       body,
     });
@@ -58,6 +59,7 @@ export async function fitCoverImage(file: File): Promise<string> {
   }
   if (response.status === 401) throw new CoverImageError("Iniciá sesión con Discord para subir imágenes.");
   if (response.status === 429) throw new CoverImageError("Demasiadas subidas seguidas. Esperá un minuto.");
+  if (response.status === 403 && (await isTurnstileRefusal(response))) throw new CoverImageError(TURNSTILE_REFUSED);
   if (!response.ok) throw new CoverImageError("El almacén no aceptó la imagen.");
   const { url } = (await response.json()) as { url?: string };
   if (!isCoverImage(url)) throw new CoverImageError("El almacén respondió algo raro.");

@@ -14,6 +14,7 @@ import { importPayloadSchema, type ImportPayload } from "@bertinis-vault/contrac
 import { d1Store, type D1Like, type Store } from "./accounts.js";
 import { handleImageRead, handleImageUpload, type ImageStore } from "./images.js";
 import { blockedIdsOf, denyThresholdOf } from "./suspicion.js";
+import { checkTurnstile } from "./turnstile.js";
 import {
   accountFor,
   bearerTokenOf,
@@ -84,6 +85,11 @@ export type Env = {
    * `suspicion.ts`. Absent in development and in tests, where every registration goes through.
    */
   SUSPICION?: string;
+  /**
+   * The Turnstile secret key. When set, publishing and uploading need a token from the page
+   * (`X-Turnstile-Token`). A Worker secret, never in wrangler.toml. See `turnstile.ts`.
+   */
+  TURNSTILE_SECRET?: string;
   /** The score at which a first registration is held. Five when unset. */
   SUSPICION_DENY_AT?: string;
   /** Comma-separated Discord ids refused outright, whether or not they already have an account. */
@@ -240,7 +246,7 @@ function corsHeaders(env: Env, request: Request): Record<string, string> {
     "Access-Control-Allow-Origin": allowOrigin,
     ...(named ? { "Access-Control-Allow-Credentials": "true" } : {}),
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-Turnstile-Token",
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };
@@ -344,6 +350,41 @@ async function writerOf(
   const account = await accountFor(request, auth);
   if (!account) return error("Sign in with Discord to publish or upload.", 401, headers, { code: "signin_required" });
   return { by: account.id };
+}
+
+/**
+ * The Turnstile check on a write, or nothing.
+ *
+ * Only when `TURNSTILE_SECRET` is set. A missing token and a token Cloudflare rejects are both a 403,
+ * told apart by `code` so the page can say what to do: ask again for the first, reload for the second.
+ *
+ * Cloudflare being unreachable lets the write through and says so in the log. This is the second layer,
+ * behind the account and the rate limit, and a publish button that stops working whenever somebody
+ * else's service has a bad minute is a worse failure than one unchecked write.
+ */
+async function turnstileGate(
+  request: Request,
+  env: Env,
+  deps: Deps,
+  headers: Record<string, string>,
+): Promise<Response | null> {
+  if (!env.TURNSTILE_SECRET) return null;
+
+  const token = request.headers.get("X-Turnstile-Token");
+  if (!token) {
+    return error("Turnstile token missing.", 403, headers, { code: "turnstile_required" });
+  }
+
+  const outcome = await checkTurnstile(
+    env.TURNSTILE_SECRET,
+    token,
+    request.headers.get("CF-Connecting-IP"),
+    deps.fetchImpl ?? fetch,
+  );
+
+  if (outcome === "failed") return error("Turnstile check failed.", 403, headers, { code: "turnstile_failed" });
+  if (outcome === "unavailable") console.error("turnstile unreachable, letting the write through");
+  return null;
 }
 
 async function handleCreate(
@@ -568,6 +609,8 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
         return error("Too many publishes. Wait a minute and try again.", 429, headers);
       }
     }
+    const unverified = await turnstileGate(request, env, deps, headers);
+    if (unverified) return unverified;
     return handleCreate(request, env, headers, writer.by);
   }
 
@@ -584,6 +627,8 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
         return error("Too many uploads. Wait a minute and try again.", 429, headers);
       }
     }
+    const unverified = await turnstileGate(request, env, deps, headers);
+    if (unverified) return unverified;
     if (!env.BUILDS.getWithMetadata) return error("This store keeps no pictures.", 501, headers);
     return handleImageUpload(request, env.BUILDS as ImageStore, headers, writer.by);
   }
