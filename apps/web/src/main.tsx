@@ -5,6 +5,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { setBookLibrary } from "@bertinis-vault/vetools-ref";
 import Gate from "@/routes/Gate";
+import LanguageSwitch from "@/components/ui/LanguageSwitch";
+import { startLang } from "@/lib/translate";
 
 // Every book, so a saved character finds its picks wherever it is opened. The
 // Forge narrows this to what the character's table allows.
@@ -32,12 +34,16 @@ import "./styles/fonts.css";
 import "./styles/base.css";
 import "./styles/animations.css";
 
+// Restore the language the visitor chose last time (whole page, Google translator).
+startLang();
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     {/* Visitors who asked their system for less motion get opacity changes
         only: no sliding, spinning or scaling. */}
     <MotionConfig reducedMotion="user">
     <BrowserRouter>
+      <LanguageSwitch />
       {/* Nothing on purpose: the swap is a frame or two on a warm cache, and
           a spinner that flashes is worse than a beat of the page you left. */}
       <Suspense fallback={null}>
