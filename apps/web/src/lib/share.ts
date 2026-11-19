@@ -25,7 +25,8 @@ import type { BuilderState } from "./builder-state";
 
 export type ShareResult =
   | { kind: "shared"; code: string; link: string; share: CharacterShare }
-  | { kind: "refused"; reason: string };
+  /** `needsSignIn`: the store wants an account, so the refusal should come with the way in. */
+  | { kind: "refused"; reason: string; needsSignIn?: boolean };
 
 /**
  * Why a character cannot leave yet, said in one sentence.
@@ -89,6 +90,7 @@ export async function shareCharacter(
         error instanceof VaultRequestError
           ? error.message
           : "No se pudo alcanzar el almacen. Revisa la conexion.",
+      needsSignIn: error instanceof VaultRequestError && error.status === 401,
     };
   }
 }
