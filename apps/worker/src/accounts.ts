@@ -27,6 +27,23 @@ export type Store = {
    * player's characters behind on the first.
    */
   upsertAccount(input: Omit<AccountRecord, "id">): Promise<AccountRecord>;
+  /**
+   * Whether this provider identity already has an account. The suspicion check applies to a first
+   * registration only: somebody already in keeps their access unless they are on the blocked list.
+   * Absent on a store that cannot say, which is read as "already known" — the check then stands aside.
+   */
+  hasAccount?(provider: string, providerId: string): Promise<boolean>;
+  /**
+   * Keep a refused registration for whoever reads the appeal: who, the score, and why. Never required
+   * for the refusal itself — a store that cannot write it still refuses.
+   */
+  recordDenial?(input: {
+    provider: string;
+    providerId: string;
+    displayName: string;
+    score: number;
+    reasons: string[];
+  }): Promise<void>;
   createSession(input: { tokenHash: string; accountId: string; expiresAt: string }): Promise<void>;
   /** Null when there is no such session, or it has expired. */
   accountForSession(tokenHash: string, now: string): Promise<AccountRecord | null>;
@@ -58,6 +75,29 @@ const toRecord = (row: Record<string, unknown>): AccountRecord => ({
 
 export function d1Store(db: D1Like): Store {
   return {
+    async hasAccount(provider, providerId) {
+      const row = await db
+        .prepare(`select 1 as found from account where provider = ? and provider_id = ?`)
+        .bind(provider, providerId)
+        .first();
+      return row !== null;
+    },
+
+    async recordDenial({ provider, providerId, displayName, score, reasons }) {
+      await db
+        .prepare(
+          `insert into registration_denied (provider, provider_id, display_name, score, reasons, denied_at)
+           values (?, ?, ?, ?, ?, ?)
+           on conflict (provider, provider_id) do update set
+             display_name = excluded.display_name,
+             score = excluded.score,
+             reasons = excluded.reasons,
+             denied_at = excluded.denied_at`,
+        )
+        .bind(provider, providerId, displayName, score, JSON.stringify(reasons), new Date().toISOString())
+        .run();
+    },
+
     async upsertAccount(input) {
       const now = new Date().toISOString();
 

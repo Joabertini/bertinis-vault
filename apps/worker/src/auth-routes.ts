@@ -17,7 +17,8 @@ import {
 } from "@bertinis-vault/contracts";
 
 import type { AccountRecord, Store } from "./accounts.js";
-import { authorizeUrl, identify, type DiscordConfig } from "./discord.js";
+import { authorizeUrl, identify, type DiscordConfig, type DiscordUser } from "./discord.js";
+import { assess } from "./suspicion.js";
 import {
   clearCookieHeader,
   cookieHeader,
@@ -38,6 +39,16 @@ export type AuthEnv = {
   /** The registrable domain the cookie belongs to. Absent in local development. */
   cookieDomain?: string | undefined;
   fetchImpl?: typeof fetch;
+  /**
+   * The door check for first registrations. Absent, nothing is held back — which is what development and
+   * every deploy that has not asked for it keep doing.
+   */
+  suspicion?: {
+    /** The score at which a first registration is held. */
+    denyAt: number;
+    /** Discord ids refused outright, new or not. */
+    blocked: ReadonlySet<string>;
+  };
 };
 
 const json = (body: unknown, status: number, headers: Record<string, string>) =>
@@ -221,6 +232,19 @@ export async function handleCallback(
     return json({ error: "Discord did not confirm the sign-in." }, 502, headers);
   }
 
+  const held = await heldAtTheDoor(env, user);
+  if (held) {
+    const desktopApp = desktopReturnOf(unpackReturnPath(state));
+    const refused = desktopApp
+      ? json({ error: "Tu cuenta quedó en revisión.", code: "registration_held" }, 403, headers)
+      : new Response(null, {
+          status: 302,
+          headers: { ...headers, Location: new URL("/acceso", env.appOrigin).toString() },
+        });
+    refused.headers.append("Set-Cookie", clearCookieHeader(OAUTH_STATE_COOKIE, env.cookieDomain));
+    return refused;
+  }
+
   const account = await env.store.upsertAccount({
     provider: "discord",
     providerId: user.id,
@@ -265,6 +289,55 @@ export async function handleCallback(
   response.headers.append("Set-Cookie", clearCookieHeader(OAUTH_STATE_COOKIE, env.cookieDomain));
 
   return response;
+}
+
+/**
+ * Whether this sign-in is held for review instead of getting an account.
+ *
+ * A blocked id is refused every time. Anybody else is scored only on their first registration: an
+ * account that already exists keeps working, so turning this on never locks out a player who was in
+ * yesterday.
+ *
+ * It fails open. A check that throws — D1 down, a surprise in Discord's answer — lets the sign-in
+ * through and says so in the log, because a door that locks everybody out when it breaks is a worse
+ * failure than a door that lets one more account in.
+ */
+async function heldAtTheDoor(env: AuthEnv, user: DiscordUser): Promise<boolean> {
+  const rules = env.suspicion;
+  if (!rules) return false;
+
+  try {
+    if (rules.blocked.has(user.id)) return true;
+
+    const known = env.store.hasAccount ? await env.store.hasAccount("discord", user.id) : true;
+    if (known) return false;
+
+    const { score, reasons } = assess({
+      id: user.id,
+      username: user.username,
+      defaultAvatar: user.avatarUrl === null,
+      bot: user.bot,
+    });
+    if (score < rules.denyAt) return false;
+
+    try {
+      await env.store.recordDenial?.({
+        provider: "discord",
+        providerId: user.id,
+        displayName: user.displayName,
+        score,
+        reasons,
+      });
+    } catch (reason) {
+      // The refusal stands without the record; the table may simply not be migrated yet.
+      console.error("registration denial not recorded:", reason instanceof Error ? reason.message : reason);
+    }
+
+    return true;
+  } catch (reason) {
+    console.error("suspicion check failed, letting the sign-in through:", reason instanceof Error ? reason.message : reason);
+    return false;
+  }
 }
 
 export async function handleMe(
