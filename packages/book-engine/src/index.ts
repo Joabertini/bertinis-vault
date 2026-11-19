@@ -14,7 +14,7 @@ export {
 } from "./dictionary.js";
 export { fixSpacing } from "./spacing.js";
 export { joinHyphens } from "./hyphens.js";
-export { fixOcrToken, fixOcrLine } from "./ocr.js";
+export { fixOcrToken, fixOcrLine, wordCounts } from "./ocr.js";
 export { findRunningKeys, dropRunning } from "./running.js";
 export { classifyPage, type PageKind } from "./classify.js";
 export {

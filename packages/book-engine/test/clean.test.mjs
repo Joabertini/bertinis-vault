@@ -14,6 +14,7 @@ import {
   fixOcrToken,
   fixSpacing,
   joinHyphens,
+  wordCounts,
 } from "../dist/index.js";
 
 // All text below is invented for the tests; no book text is stored in the repo.
@@ -98,6 +99,24 @@ test("fixOcrToken fixes one confusion into a known word and nothing else", () =>
   assert.equal(fixOcrToken("Tenser's", dict), null); // unknown, no single fix
   assert.equal(fixOcrToken("cat", dict), null); // too short to trust
   assert.deepEqual(fixOcrLine("Cirele of Death", dict), { text: "Circle of Death", fixes: 1 });
+});
+
+test("a repeated unknown word is left alone unless its correction is in the book", () => {
+  const d = dictionaryFromWords(["dump", "warlock"]);
+  // "clump" is a real word the dictionary lacks: three sightings, no "dump" anywhere.
+  assert.equal(fixOcrToken("clump", d, new Map([["clump", 3]])), null);
+  // The same word seen only twice is not yet protected.
+  assert.equal(fixOcrToken("clump", d, new Map([["clump", 2]])), "dump");
+  // OCR repeats its own mistakes, but the clean form is in the book too.
+  assert.equal(fixOcrToken("warIock", d, new Map([["wariock", 10], ["warlock", 4]])), "warlock");
+  assert.equal(fixOcrToken("clump", d, new Map([["clump", 5], ["dump", 1]])), "dump");
+});
+
+test("wordCounts counts words folded, apostrophes kept", () => {
+  const c = wordCounts(["The Wizard's wizard", "THE end"]);
+  assert.equal(c.get("the"), 2);
+  assert.equal(c.get("wizard's"), 1);
+  assert.equal(c.get("wizard"), 1);
 });
 
 test("classifyPage tells empty, spell lists, tables and prose apart", () => {

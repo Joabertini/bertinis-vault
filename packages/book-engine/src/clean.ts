@@ -3,7 +3,7 @@ import { splitColumns } from "./columns.js";
 import type { Dictionary } from "./dictionary.js";
 import { joinHyphens } from "./hyphens.js";
 import { groupLines } from "./lines.js";
-import { fixOcrLine } from "./ocr.js";
+import { fixOcrLine, wordCounts } from "./ocr.js";
 import { dropRunning, findRunningKeys } from "./running.js";
 import { fixSpacing } from "./spacing.js";
 import type { PageText } from "./text-model.js";
@@ -52,7 +52,7 @@ export function cleanBook(
   const totals: Fixes = { spacingMerges: 0, hyphenJoins: 0, ocrFixes: 0, runningRowsDropped: 0 };
   const kinds: Record<PageKind, number> = { empty: 0, "spell-list": 0, table: 0, prose: 0 };
 
-  const out = pages.map((page): CleanPage => {
+  const staged = pages.map((page) => {
     const fixes: Fixes = { spacingMerges: 0, hyphenJoins: 0, ocrFixes: 0, runningRowsDropped: 0 };
     const { items, dropped } = dropRunning(page, running);
     fixes.runningRowsDropped = dropped;
@@ -66,22 +66,32 @@ export function cleanBook(
       });
       const joined = joinHyphens(lines, dict);
       fixes.hyphenJoins += joined.joins;
-      lines = joined.lines;
-      if (useOcr) {
-        lines = lines.map((line) => {
-          const r = fixOcrLine(line, dict);
-          fixes.ocrFixes += r.fixes;
-          return r.text;
-        });
-      }
-      return lines.join("\n");
+      return joined.lines;
     });
+    return { page: page.page, fixes, columns };
+  });
 
-    const text = columns.join("\n\n");
+  // OCR comes last because it needs the whole book: how often each word shows up.
+  const counts = useOcr ? wordCounts(staged.flatMap((s) => s.columns.flat())) : undefined;
+
+  const out = staged.map((s): CleanPage => {
+    const { fixes } = s;
+    const text = s.columns
+      .map((lines) =>
+        (useOcr
+          ? lines.map((line) => {
+              const r = fixOcrLine(line, dict, counts);
+              fixes.ocrFixes += r.fixes;
+              return r.text;
+            })
+          : lines
+        ).join("\n"),
+      )
+      .join("\n\n");
     const kind = classifyPage(text);
     kinds[kind]++;
     for (const k of Object.keys(totals) as (keyof Fixes)[]) totals[k] += fixes[k];
-    return { page: page.page, kind, text, fixes };
+    return { page: s.page, kind, text, fixes };
   });
 
   return {
