@@ -14,6 +14,7 @@ import { importPayloadSchema, type ImportPayload } from "@bertinis-vault/contrac
 import { d1Store, type D1Like, type Store } from "./accounts.js";
 import { handleImageRead, handleImageUpload, type ImageStore } from "./images.js";
 import {
+  accountFor,
   bearerTokenOf,
   handleCallback,
   handleLogout,
@@ -36,7 +37,7 @@ import {
 /** The slice of Workers KV this handler uses. */
 export type BuildStore = {
   get(key: string, type: "text"): Promise<string | null>;
-  put(key: string, value: string, options?: { expirationTtl?: number }): Promise<void>;
+  put(key: string, value: string, options?: { expirationTtl?: number; metadata?: unknown }): Promise<void>;
 } & Partial<ImageStore>;
 
 /**
@@ -70,6 +71,13 @@ export type Env = {
    * this a script could spend the day's KV writes and fill the store.
    */
   WRITE_LIMIT?: RateLimiter;
+  /**
+   * "1" to ask for a signed-in account before a build is published or a picture is uploaded.
+   *
+   * Reading stays open: a DM importing a code into Foundry has no account and needs none. Absent in
+   * development and in tests, where publishing stays anonymous as it was.
+   */
+  REQUIRE_SIGNIN?: string;
   /** Comma-separated origins allowed to call this. `*` in development. */
   ALLOWED_ORIGINS?: string;
   /** Accounts, sessions and saved characters. Absent until D1 is bound. */
@@ -298,7 +306,33 @@ function envelopeOf(parsed: unknown): {
  * code and the write token it was given, and the character is replaced where it
  * already lives.
  */
-async function handleCreate(request: Request, env: Env, headers: Record<string, string>): Promise<Response> {
+/**
+ * Who is writing, when the store asks to know.
+ *
+ * A signed-in account is what turns "somebody uploaded this" into "this account uploaded this": the id goes
+ * down beside what was stored, so an abuse report has a name to follow. Without the setting the answer is
+ * nobody, and the write goes ahead as it always did.
+ */
+async function writerOf(
+  request: Request,
+  env: Env,
+  deps: Deps,
+  headers: Record<string, string>,
+): Promise<{ by: string | null } | Response> {
+  if (env.REQUIRE_SIGNIN !== "1") return { by: null };
+  const auth = authEnvFor(env, request, deps);
+  if (!auth) return error("This store asks for a signed-in account, and accounts are not available here.", 503, headers);
+  const account = await accountFor(request, auth);
+  if (!account) return error("Sign in with Discord to publish or upload.", 401, headers, { code: "signin_required" });
+  return { by: account.id };
+}
+
+async function handleCreate(
+  request: Request,
+  env: Env,
+  headers: Record<string, string>,
+  by: string | null = null,
+): Promise<Response> {
   const body = await request.text();
 
   if (body.length > MAX_PAYLOAD_BYTES) {
@@ -357,7 +391,7 @@ async function handleCreate(request: Request, env: Env, headers: Record<string, 
     // owner if the second write fails, and a build with no owner is one nobody
     // can ever replace.
     await env.BUILDS.put(ownerKey(normalized), await hashToken(token));
-    await env.BUILDS.put(key, serialized);
+    await env.BUILDS.put(key, serialized, by ? { metadata: { by } } : undefined);
 
     return json(
       {
@@ -507,13 +541,15 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
   }
 
   if (url.pathname === "/builds" && request.method === "POST") {
+    const writer = await writerOf(request, env, deps, headers);
+    if (writer instanceof Response) return writer;
     if (env.WRITE_LIMIT) {
       const caller = request.headers.get("CF-Connecting-IP") ?? "unknown";
       if (!(await env.WRITE_LIMIT.limit({ key: caller })).success) {
         return error("Too many publishes. Wait a minute and try again.", 429, headers);
       }
     }
-    return handleCreate(request, env, headers);
+    return handleCreate(request, env, headers, writer.by);
   }
 
   /*
@@ -521,6 +557,8 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
    * a build; read by anyone holding the address (Foundry downloads it).
    */
   if (url.pathname === "/images" && request.method === "POST") {
+    const writer = await writerOf(request, env, deps, headers);
+    if (writer instanceof Response) return writer;
     if (env.WRITE_LIMIT) {
       const caller = request.headers.get("CF-Connecting-IP") ?? "unknown";
       if (!(await env.WRITE_LIMIT.limit({ key: caller })).success) {
@@ -528,7 +566,7 @@ export async function handle(request: Request, env: Env, deps: Deps = {}): Promi
       }
     }
     if (!env.BUILDS.getWithMetadata) return error("This store keeps no pictures.", 501, headers);
-    return handleImageUpload(request, env.BUILDS as ImageStore, headers);
+    return handleImageUpload(request, env.BUILDS as ImageStore, headers, writer.by);
   }
   const picture = /^\/images\/([^/]+)$/.exec(url.pathname);
   if (picture && request.method === "GET") {

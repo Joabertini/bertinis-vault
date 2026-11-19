@@ -259,6 +259,7 @@ export async function handleImageUpload(
   request: Request,
   store: ImageStore,
   headers: Record<string, string>,
+  by: string | null = null,
 ): Promise<Response> {
   const type = (request.headers.get("Content-Type") ?? "").split(";")[0]!.trim().toLowerCase();
   if (!ACCEPTED_TYPES.has(type)) {
@@ -284,7 +285,7 @@ export async function handleImageUpload(
   if (!isWholePicture(type, clean)) return json({ error: "That picture could not be cleaned." }, 422, headers);
 
   const id = newId();
-  await store.put(imageKey(id), clean.slice().buffer as ArrayBuffer, { metadata: { type } });
+  await store.put(imageKey(id), clean.slice().buffer as ArrayBuffer, { metadata: { type, ...(by ? { by } : {}) } });
   const url = `${new URL(request.url).origin}/images/${id}`;
   return json({ url }, 201, headers);
 }

@@ -45,11 +45,25 @@ export class VaultRequestError extends Error {
 }
 
 /** What went wrong, said to the person waiting rather than to a log. */
+/**
+ * Whether this page may send its session cookie to the store.
+ *
+ * Only a page on the site's own domain can hold the session, and a browser refuses a credentialed request
+ * to a store that answers `*`, which is what it answers to any other origin (a preview, localhost). So
+ * publishing from there stays anonymous instead of failing outright.
+ */
+export function sessionCredentials(host: string = globalThis.location?.hostname ?? ""): RequestCredentials {
+  return /(^|\.)bertinilabs\.xyz$/.test(host) ? "include" : "same-origin";
+}
+
 function messageForStatus(status: number): string {
   if (status === 400 || status === 422) {
     return "El almacen rechazo el personaje: algun dato no paso su validacion.";
   }
-  if (status === 401 || status === 403) {
+  if (status === 401) {
+    return "Inicia sesion con Discord para publicar tu personaje.";
+  }
+  if (status === 403) {
     return "El almacen rechazo la credencial de este front.";
   }
   if (status === 404) {
@@ -144,6 +158,7 @@ export async function publishBuild(
     response = await fetch(`${root}/builds`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
+      credentials: sessionCredentials(),
       body: JSON.stringify({
         payload,
         ...(state === undefined ? {} : { state }),
