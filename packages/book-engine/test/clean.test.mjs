@@ -40,6 +40,15 @@ test("fixSpacing leaves two real words alone", () => {
   assert.deepEqual(fixSpacing("no thing", dict), { text: "no thing", merged: 0 });
 });
 
+test("a lone 'a' is a word, so it is not glued to its neighbour", () => {
+  const d = dictionaryFromWords(["to", "in", "creature", "toa", "ina", "house"]);
+  assert.equal(fixSpacing("damage to a creature", d).text, "damage to a creature");
+  assert.equal(fixSpacing("grew up in a house", d).text, "grew up in a house");
+  assert.ok(d.knownToken("a"));
+  assert.ok(d.knownToken("I"));
+  assert.ok(!d.knownToken("s"));
+});
+
 test("joinHyphens joins a cut word and keeps a real compound", () => {
   assert.deepEqual(joinHyphens(["The crum-", "bling wall here"], dict), {
     lines: ["The crumbling", "wall here"],
@@ -135,4 +144,15 @@ test("the dictionary learns clean repeated words from a book, not damaged ones",
   assert.ok(d.has("fireball")); // repeated and spelled normally
   assert.ok(!d.has("iliusion")); // damaged
   assert.ok(!d.has("once")); // seen once
+});
+
+test("a piece of a longer known word is not learned from the book", () => {
+  const d = dictionaryFromWords(["because", "hands", "process"]);
+  addBookVocabulary(d, ["beca beca beca ands ands ands cess cess cess strixhaven strixhaven strixhaven"]);
+  assert.ok(!d.has("beca")); // starts "because"
+  assert.ok(!d.has("ands")); // ends "hands"
+  assert.ok(!d.has("cess")); // ends "process"
+  assert.ok(d.has("strixhaven")); // a name the rules text lacks
+  // With the pieces unknown, a split word can be joined again.
+  assert.equal(fixSpacing("beca use", d).text, "because");
 });
