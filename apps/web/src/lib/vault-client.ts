@@ -8,6 +8,8 @@
 
 import type { CharacterShare, ImportPayload } from "@bertinis-vault/contracts";
 
+import { turnstileHeaders } from "./turnstile";
+
 export type PublishedBuild = {
   code: string;
   /**
@@ -104,9 +106,27 @@ export function vaultBaseUrl(): string {
  */
 const requestTimeoutMs = 15_000;
 
+/** What to tell the player when Turnstile did not vouch for the write. */
+export const TURNSTILE_REFUSED =
+  "No pudimos comprobar que sos una persona. Recargá la página y volvé a intentar.";
+
+/** Whether a 403 is Turnstile saying no (as opposed to the front's credential, say). Reads a copy. */
+export async function isTurnstileRefusal(response: Response): Promise<boolean> {
+  try {
+    const body = await response.clone().json();
+    return body?.code === "turnstile_required" || body?.code === "turnstile_failed";
+  } catch {
+    return false;
+  }
+}
+
 async function readError(response: Response): Promise<VaultRequestError> {
   let serverDetail: string | undefined;
   let issues: ValidationIssue[] = [];
+
+  if (response.status === 403 && (await isTurnstileRefusal(response))) {
+    return new VaultRequestError(TURNSTILE_REFUSED, 403);
+  }
 
   try {
     const body = await response.json();
@@ -157,7 +177,7 @@ export async function publishBuild(
   try {
     response = await fetch(`${root}/builds`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json", ...(await turnstileHeaders()) },
       credentials: sessionCredentials(),
       body: JSON.stringify({
         payload,

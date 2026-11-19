@@ -51,6 +51,11 @@ REQUIRE_SIGNIN = "1"
 # SUSPICION = "1"
 # SUSPICION_DENY_AT = "5"
 
+# Cloudflare Turnstile on publishing and uploading (see src/turnstile.ts). Not a variable: the secret key is
+# set with `wrangler secret put TURNSTILE_SECRET`, and only then does the Worker ask for a token. Put the
+# widget's PUBLIC site key in apps/web/.env.production as VITE_TURNSTILE_SITEKEY and deploy the front FIRST:
+# a Worker that asks for a token the page does not send refuses every publish.
+
 # This Worker's own address, as Discord has it registered.
 #
 # Not derived from the request: the Worker answers to two names and only this
