@@ -5,7 +5,7 @@
 
 import { CoverImageError, MAX_SOURCE_BYTES, isCoverImage } from "@bertinis-vault/forge/cover-image";
 
-import { vaultBaseUrl } from "./vault-client";
+import { sessionCredentials, vaultBaseUrl } from "./vault-client";
 
 export * from "@bertinis-vault/forge/cover-image";
 
@@ -50,11 +50,13 @@ export async function fitCoverImage(file: File): Promise<string> {
     response = await fetch(`${vaultBaseUrl()}/images`, {
       method: "POST",
       headers: { "Content-Type": body.type },
+      credentials: sessionCredentials(),
       body,
     });
   } catch {
     throw new CoverImageError("No pude subir la imagen. Revisá la conexión.");
   }
+  if (response.status === 401) throw new CoverImageError("Iniciá sesión con Discord para subir imágenes.");
   if (response.status === 429) throw new CoverImageError("Demasiadas subidas seguidas. Esperá un minuto.");
   if (!response.ok) throw new CoverImageError("El almacén no aceptó la imagen.");
   const { url } = (await response.json()) as { url?: string };

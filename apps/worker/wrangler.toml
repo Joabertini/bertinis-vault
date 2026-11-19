@@ -39,6 +39,11 @@ ALLOWED_ORIGINS = "*,https://alba.bertinilabs.xyz"
 
 APP_ORIGIN = "https://alba.bertinilabs.xyz"
 
+# Publishing a build or uploading a picture needs a signed-in Discord account, and the account's id is kept
+# beside what it stored. Reading stays open: a DM importing a code into Foundry has no account.
+# Deploy the front before the Worker: the front sends its session cookie, and the Worker now asks for it.
+REQUIRE_SIGNIN = "1"
+
 # This Worker's own address, as Discord has it registered.
 #
 # Not derived from the request: the Worker answers to two names and only this
