@@ -18,6 +18,7 @@
 
 import { useState } from "react";
 
+import SignInButton from "@/components/SignInButton";
 import { shareCharacter } from "@/lib/share";
 import { useVault, type SealedCharacter } from "@/lib/vault-store";
 
@@ -25,7 +26,7 @@ type Phase =
   | { kind: "idle" }
   | { kind: "sharing" }
   | { kind: "done"; code: string; link: string; copied: boolean }
-  | { kind: "refused"; reason: string };
+  | { kind: "refused"; reason: string; needsSignIn: boolean };
 
 export default function ShareButton({
   character,
@@ -44,7 +45,7 @@ export default function ShareButton({
     const result = await shareCharacter(character.state, character.share);
 
     if (result.kind === "refused") {
-      setPhase({ kind: "refused", reason: result.reason });
+      setPhase({ kind: "refused", reason: result.reason, needsSignIn: result.needsSignIn === true });
       return;
     }
 
@@ -95,9 +96,16 @@ export default function ShareButton({
       )}
 
       {phase.kind === "refused" && (
-        <p className="max-w-md font-body text-[14px] leading-relaxed text-ember">
-          {phase.reason}
-        </p>
+        <>
+          <p className="max-w-md font-body text-[14px] leading-relaxed text-ember">
+            {phase.reason}
+          </p>
+          {phase.needsSignIn && (
+            <div className="self-start">
+              <SignInButton />
+            </div>
+          )}
+        </>
       )}
     </div>
   );

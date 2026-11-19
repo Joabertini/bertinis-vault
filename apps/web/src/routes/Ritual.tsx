@@ -23,6 +23,7 @@ import GrainOverlay from "@/components/fx/GrainOverlay";
 import SummoningCircle from "@/components/fx/SummoningCircle";
 import Sigil from "@/components/sigils/Sigil";
 import RuneButton from "@/components/ui/RuneButton";
+import SignInButton from "@/components/SignInButton";
 
 import { entryById } from "@/lib/catalog";
 import { characterLevelFor, classingLabelFor } from "@/lib/builder";
@@ -46,7 +47,7 @@ type Phase =
   | { kind: "select" }
   | { kind: "channeling" }
   | { kind: "arrived"; code?: string }
-  | { kind: "refused"; reason: string };
+  | { kind: "refused"; reason: string; needsSignIn?: boolean };
 
 export default function Ritual() {
   const [params] = useSearchParams();
@@ -161,6 +162,7 @@ export default function Ritual() {
           error instanceof VaultRequestError
             ? error.message
             : "No se pudo alcanzar el almacen de builds. Revisa la conexion.",
+        needsSignIn: error instanceof VaultRequestError && error.status === 401,
       });
     }
   };
@@ -406,6 +408,11 @@ export default function Ritual() {
                 <p className="mt-4 font-body leading-relaxed text-bone">
                   {phase.reason}
                 </p>
+                {phase.needsSignIn && (
+                  <div className="mt-6">
+                    <SignInButton />
+                  </div>
+                )}
               </div>
 
               <div className="flex flex-wrap justify-center gap-6">
