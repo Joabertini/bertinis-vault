@@ -57,6 +57,15 @@ test("pieces that are words join only when the whole is much more common", () =>
   assert.equal(fixSpacing("to day", d).text, "to day");
 });
 
+test("between two cuts that both make words, the more common words win", () => {
+  const d = new Dictionary();
+  d.add("for", 5000);
+  d.add("fort", 40);
+  d.add("that", 5000);
+  d.add("hat", 30);
+  assert.equal(fixSpacing("for t ha t", d).text, "for that");
+});
+
 test("a lone 'a' is a word, so it is not glued to its neighbour", () => {
   const d = dictionaryFromWords(["to", "in", "creature", "toa", "ina", "house"]);
   assert.equal(fixSpacing("damage to a creature", d).text, "damage to a creature");

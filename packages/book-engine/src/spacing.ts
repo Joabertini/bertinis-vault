@@ -45,7 +45,8 @@ export function fixSpacing(line: string, dict: Dictionary): { text: string; merg
 function groupCost(group: readonly string[], dict: Dictionary): number {
   if (group.length === 1) {
     const t = group[0] ?? "";
-    if (!hasLetter(t) || hasDigit(t) || dict.knownToken(t)) return 0;
+    if (!hasLetter(t) || hasDigit(t)) return 0;
+    if (dict.knownToken(t)) return commonness(dict.frequency(letters(t)));
     return 2;
   }
   if (group.some((t) => hasDigit(t) || !hasLetter(t))) return Number.POSITIVE_INFINITY;
@@ -63,7 +64,15 @@ function groupCost(group: readonly string[], dict: Dictionary): number {
     // Better than leaving the pieces apart (which cost nothing).
     return -0.1 * (group.length - 1);
   }
-  return 0.01 * (group.length - 1);
+  return 0.01 * (group.length - 1) + commonness(dict.frequency(letters(joined)));
 }
+
+/**
+ * A tie-breaker, never more than 0.003: between two ways of cutting a line
+ * that both make words, the one made of more common words wins ("for that"
+ * over "fort hat").
+ */
+const commonness = (frequency: number): number =>
+  0.003 * (1 - Math.min(1, Math.log10(frequency + 1) / 6));
 
 const letters = (t: string): string => t.replace(/[^\p{L}']/gu, "");
