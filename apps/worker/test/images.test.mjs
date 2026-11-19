@@ -40,6 +40,27 @@ const WEBP = riff(...ascii("VP8 "), 4, 0, 0, 0, 9, 9, 9, 9);
 const withTail = (bytes, tail) => new Uint8Array([...bytes, ...tail]);
 const EXE = ascii("MZ this program cannot be run in DOS mode");
 
+/** An EXIF segment as a phone writes it: orientation 6 (turned a quarter) and a location. */
+const exifSegment = (orientation) => {
+  const tiff = [0x4d, 0x4d, 0, 0x2a, 0, 0, 0, 8, 0, 1, 0x01, 0x12, 0, 3, 0, 0, 0, 1, 0, orientation, 0, 0, 0, 0, 0, 0, ...ascii("GPS 48.1,11.5")];
+  const body = [...ascii("Exif"), 0, 0, ...tiff];
+  return [0xff, 0xe1, ...[(body.length + 2) >> 8, (body.length + 2) & 255], ...body];
+};
+const comment = (text) => [0xff, 0xfe, ...[(text.length + 2) >> 8, (text.length + 2) & 255], ...ascii(text)];
+const JPEG_PHOTO = new Uint8Array([...JPEG.slice(0, 8), ...exifSegment(6), ...comment("shot at home"), ...JPEG.slice(8)]);
+const PNG_PHOTO = new Uint8Array([...PNG.slice(0, PNG.length - 12), ...chunk("tEXt", ascii("Location\0GPS 48.1,11.5")), ...PNG.slice(PNG.length - 12)]);
+const WEBP_PHOTO = riff(
+  ...ascii("VP8X"), 10, 0, 0, 0, 0x08, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  ...ascii("EXIF"), 4, 0, 0, 0, 1, 2, 3, 4,
+  ...ascii("VP8 "), 4, 0, 0, 0, 9, 9, 9, 9,
+);
+const includes = (bytes, needle) => Buffer.from(bytes).includes(Buffer.from(needle));
+const stored = async (body, type) => {
+  const env = { BUILDS: makeStore() };
+  const { url } = await (await handle(upload(body, type), env)).json();
+  return new Uint8Array(await (await handle(new Request(url), env)).arrayBuffer());
+};
+
 const upload = (body, type = "image/png") =>
   new Request("https://api.bertinilabs.xyz/images", { method: "POST", headers: { "Content-Type": type }, body });
 
@@ -97,6 +118,29 @@ test("anything stored with a type that is not a picture's is served as a downloa
   const read = await handle(new Request(`https://api.bertinilabs.xyz/images/${id}`), env);
   assert.equal(read.headers.get("Content-Type"), "application/octet-stream");
   assert.equal(read.headers.get("Content-Disposition"), "attachment");
+});
+
+test("a photo loses its location and its notes but keeps how it is turned, and the pixels are untouched", async () => {
+  const jpeg = await stored(JPEG_PHOTO, "image/jpeg");
+  assert.equal(includes(jpeg, "GPS"), false);
+  assert.equal(includes(jpeg, "shot at home"), false);
+  assert.equal(includes(jpeg, [0x01, 0x12, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, 0x06]), true);
+  assert.equal(includes(jpeg, [0xff, 0xda, 0x00, 0x04, 0x01, 0x02, 0x11, 0x22, 0xff, 0x00, 0x33, 0xff, 0xd9]), true);
+
+  const png = await stored(PNG_PHOTO, "image/png");
+  assert.equal(includes(png, "tEXt"), false);
+  assert.deepEqual(png, PNG);
+
+  const webp = await stored(WEBP_PHOTO, "image/webp");
+  assert.equal(includes(webp, "EXIF"), false);
+  assert.equal(includes(webp, "VP8 "), true);
+  assert.equal(webp[20] & 0x0c, 0);
+});
+
+test("a picture with nothing to clean comes back byte for byte", async () => {
+  assert.deepEqual(await stored(PNG, "image/png"), PNG);
+  assert.deepEqual(await stored(JPEG, "image/jpeg"), JPEG);
+  assert.deepEqual(await stored(WEBP, "image/webp"), WEBP);
 });
 
 test("an unknown address is a 404 and a malformed one a 400", async () => {

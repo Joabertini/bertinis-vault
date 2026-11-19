@@ -123,6 +123,129 @@ export function isWholePicture(type: string, bytes: Uint8Array): boolean {
   return false;
 }
 
+const joined = (parts: Uint8Array[]): Uint8Array => {
+  const out = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0));
+  let at = 0;
+  for (const part of parts) {
+    out.set(part, at);
+    at += part.length;
+  }
+  return out;
+};
+
+/** PNG chunks that say where and when a picture was taken, or carry free text. The pixels are in none of them. */
+const PNG_METADATA = new Set(["eXIf", "tEXt", "zTXt", "iTXt", "tIME"]);
+
+function stripPng(bytes: Uint8Array): Uint8Array {
+  const parts = [bytes.subarray(0, 8)];
+  let at = 8;
+  while (at + 12 <= bytes.length) {
+    const end = at + 12 + u32be(bytes, at);
+    const name = String.fromCharCode(bytes[at + 4]!, bytes[at + 5]!, bytes[at + 6]!, bytes[at + 7]!);
+    if (!PNG_METADATA.has(name)) parts.push(bytes.subarray(at, end));
+    at = end;
+  }
+  return joined(parts);
+}
+
+/** The orientation a camera recorded (1 to 8), read from an EXIF segment; 1 when there is none worth keeping. */
+function exifOrientation(segment: Uint8Array): number {
+  const isExif = [0x45, 0x78, 0x69, 0x66, 0, 0].every((value, index) => segment[4 + index] === value);
+  if (!isExif) return 1;
+  const tiff = segment.subarray(10);
+  const little = tiff[0] === 0x49;
+  const at16 = (at: number) => (at + 2 > tiff.length ? 0 : little ? tiff[at]! | (tiff[at + 1]! << 8) : (tiff[at]! << 8) | tiff[at + 1]!);
+  const at32 = (at: number) => (at + 4 > tiff.length ? 0 : little ? (at16(at) | (at16(at + 2) << 16)) >>> 0 : ((at16(at) << 16) | at16(at + 2)) >>> 0);
+  const ifd = at32(4);
+  const entries = at16(ifd);
+  for (let index = 0; index < entries; index += 1) {
+    const entry = ifd + 2 + index * 12;
+    if (entry + 12 > tiff.length) break;
+    if (at16(entry) === 0x0112) {
+      const value = at16(entry + 8);
+      return value >= 2 && value <= 8 ? value : 1;
+    }
+  }
+  return 1;
+}
+
+/** An EXIF segment that says only how the picture is turned, so it still shows the right way up. */
+const orientationOnly = (orientation: number): Uint8Array =>
+  new Uint8Array([
+    0xff, 0xe1, 0x00, 0x22, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+    0x4d, 0x4d, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x08,
+    0x00, 0x01, 0x01, 0x12, 0x00, 0x03, 0x00, 0x00, 0x00, 0x01, 0x00, orientation, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00,
+  ]);
+
+/**
+ * The segments before the first scan, without EXIF/XMP (APP1), Photoshop (APP13) or comments, and with the
+ * orientation kept. The scan itself, where the pixels are, is copied as it came. Only the first picture of a
+ * multi-picture file is cleaned: the others are the small previews a camera adds.
+ */
+function stripJpeg(bytes: Uint8Array): Uint8Array {
+  const parts = [bytes.subarray(0, 2)];
+  let orientation = 1;
+  let at = 2;
+  while (at + 4 <= bytes.length && bytes[at] === 0xff) {
+    const marker = bytes[at + 1]!;
+    if (marker === 0xda || marker === 0xd9) break;
+    if (marker === 0xff) {
+      at += 1;
+      continue;
+    }
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+      parts.push(bytes.subarray(at, at + 2));
+      at += 2;
+      continue;
+    }
+    const end = at + 2 + ((bytes[at + 2]! << 8) | bytes[at + 3]!);
+    if (end > bytes.length) break;
+    const segment = bytes.subarray(at, end);
+    if (marker === 0xe1) orientation = Math.max(orientation, exifOrientation(segment) > 1 ? exifOrientation(segment) : 1);
+    if (marker !== 0xe1 && marker !== 0xed && marker !== 0xfe) parts.push(segment);
+    at = end;
+  }
+  if (orientation > 1) parts.splice(parts.length > 1 && parts[1]![1] === 0xe0 ? 2 : 1, 0, orientationOnly(orientation));
+  parts.push(bytes.subarray(at));
+  return joined(parts);
+}
+
+/** WebP carries EXIF and XMP as chunks of their own, and says so in the flags of its VP8X header. */
+function stripWebp(bytes: Uint8Array): Uint8Array {
+  const parts: Uint8Array[] = [];
+  let at = 12;
+  while (at + 8 <= bytes.length) {
+    const name = String.fromCharCode(bytes[at]!, bytes[at + 1]!, bytes[at + 2]!, bytes[at + 3]!);
+    const size = u32le(bytes, at + 4);
+    const end = Math.min(at + 8 + size + (size & 1), bytes.length);
+    if (name !== "EXIF" && name !== "XMP ") {
+      const chunk = bytes.slice(at, end);
+      if (name === "VP8X" && chunk.length > 8) chunk[8] = chunk[8]! & ~0x0c;
+      parts.push(chunk);
+    }
+    at = end;
+  }
+  const body = joined(parts);
+  const out = new Uint8Array(12 + body.length);
+  out.set(bytes.subarray(0, 4), 0);
+  new DataView(out.buffer).setUint32(4, 4 + body.length, true);
+  out.set(bytes.subarray(8, 12), 8);
+  out.set(body, 12);
+  return out;
+}
+
+/**
+ * The same picture without what its camera or editor wrote into it: location, time, device, free text. The
+ * pixels are not touched or recompressed. The address of a picture is public, so a photo's GPS would be too.
+ */
+export function stripMetadata(type: string, bytes: Uint8Array): Uint8Array {
+  if (type === "image/png") return stripPng(bytes);
+  if (type === "image/jpeg") return stripJpeg(bytes);
+  if (type === "image/webp") return stripWebp(bytes);
+  return bytes;
+}
+
 function newId(random: Crypto = crypto): string {
   const bytes = new Uint8Array(24);
   random.getRandomValues(bytes);
@@ -157,8 +280,11 @@ export async function handleImageUpload(
     return json({ error: "That file carries more than the picture: it is refused." }, 415, headers);
   }
 
+  const clean = stripMetadata(type, new Uint8Array(body));
+  if (!isWholePicture(type, clean)) return json({ error: "That picture could not be cleaned." }, 422, headers);
+
   const id = newId();
-  await store.put(imageKey(id), body, { metadata: { type } });
+  await store.put(imageKey(id), clean.slice().buffer as ArrayBuffer, { metadata: { type } });
   const url = `${new URL(request.url).origin}/images/${id}`;
   return json({ url }, 201, headers);
 }
