@@ -141,6 +141,12 @@ importers:
         specifier: ^5.8.2
         version: 5.9.3
 
+  packages/book-engine:
+    devDependencies:
+      typescript:
+        specifier: ^5.8.2
+        version: 5.9.3
+
   packages/contracts:
     dependencies:
       zod:

@@ -59,5 +59,8 @@ jobs:
       - name: Verify 5etools Index
         run: corepack pnpm --filter @bertinis-vault/vetools-index test
 
+      - name: Verify Book Engine
+        run: corepack pnpm --filter @bertinis-vault/book-engine test
+
       - name: Verify Foundry Baseline
         run: corepack pnpm foundry:verify
