@@ -41,3 +41,12 @@ test("the original travels by address, and the token apart from the portrait", (
   assert.equal(tokenSource({ identity: { portrait: original } }), null);
   assert.equal(portraitSource({ identity: { portrait: "https://elsewhere.example/x.png" } }), null);
 });
+
+test("an address in the store's shape but on another host is not taken", () => {
+  const id = "c".repeat(32);
+  assert.equal(portraitSource({ identity: { portrait: `https://attacker.example/images/${id}` } }), null);
+  assert.equal(portraitSource({ identity: { portrait: `https://api.bertinilabs.xyz.attacker.example/images/${id}` } }), null);
+  assert.equal(portraitSource({ identity: { portrait: `http://api.bertinilabs.xyz/images/${id}` } }), null);
+  const ours = `https://bertinis-vault.bertinisdnd.workers.dev/images/${id}`;
+  assert.equal(portraitSource({ identity: { portrait: ours } }), ours);
+});

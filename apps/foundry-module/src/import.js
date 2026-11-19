@@ -480,11 +480,21 @@ async function writeItem(actor, document) {
 }
 
 const PORTRAIT_URL = /^data:image\/(webp|jpeg|png);base64,[A-Za-z0-9+/=]+$/;
-/** The original, stored whole in the build store and named by its address. */
-const STORED_URL = /^https?:\/\/[^\s/]+\/images\/[A-Za-z0-9_-]{32}$/;
+/**
+ * The original, stored whole in the build store and named by its address. Only that store's own host: a build
+ * code is something a stranger can write, and this module fetches whatever address it names with the GM's browser.
+ */
+export const IMAGE_HOSTS = ["api.bertinilabs.xyz", "bertinis-vault.bertinisdnd.workers.dev"];
+const STORED_URL = /^https:\/\/([A-Za-z0-9.-]+)\/images\/[A-Za-z0-9_-]{32}$/;
+const isStoredUrl = (value) => {
+  const found = STORED_URL.exec(value);
+  return Boolean(found && IMAGE_HOSTS.includes(found[1]));
+};
+/** The only types stored in the world, and the extension each one gets. The type comes from the server's answer, which is not ours. */
+const EXTENSION_OF = { "image/png": "png", "image/jpeg": "jpg", "image/webp": "webp" };
 
 const pictureOf = (value) =>
-  typeof value === "string" && (PORTRAIT_URL.test(value) || STORED_URL.test(value)) ? value : null;
+  typeof value === "string" && (PORTRAIT_URL.test(value) || isStoredUrl(value)) ? value : null;
 
 /** The picture the player gave the character in the builder, or null. */
 export function portraitSource(payload) {
@@ -512,7 +522,8 @@ export async function storePortrait(dataUrl, name) {
     const response = await fetch(dataUrl);
     if (!response.ok) throw new Error(`the picture answered ${response.status}`);
     const blob = await response.blob();
-    const ext = blob.type === "image/jpeg" ? "jpg" : (blob.type.split("/")[1] ?? "webp");
+    const ext = EXTENSION_OF[blob.type];
+    if (!ext) throw new Error(`the answer is not a picture this module stores (${blob.type || "no type"})`);
     const slug = String(name).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") || "retrato";
     const dir = `worlds/${game.world.id}/vault-portraits`;
     try {
@@ -525,7 +536,8 @@ export async function storePortrait(dataUrl, name) {
     return uploaded?.path || dataUrl;
   } catch (error) {
     console.warn("bertinis-vault | portrait could not be stored, using it inline:", error);
-    return dataUrl;
+    // A stored address that did not check out is not shown either: only a data URL is safe to hand to the actor as it is.
+    return PORTRAIT_URL.test(dataUrl) ? dataUrl : null;
   }
 }
 
@@ -548,10 +560,12 @@ export async function importPayload(payload, { folderId = null, onProgress = () 
   const token = tokenSource(payload);
   const name = payload.identity.characterName;
   if (portrait) {
-    actorData.img = await storePortrait(portrait, name);
+    const stored = await storePortrait(portrait, name);
+    if (stored) actorData.img = stored;
   }
-  if (token) {
-    actorData.prototypeToken = { texture: { src: await storePortrait(token, `${name}-token`) } };
+  const storedToken = token ? await storePortrait(token, `${name}-token`) : null;
+  if (storedToken) {
+    actorData.prototypeToken = { texture: { src: storedToken } };
   } else if (actorData.img) {
     actorData.prototypeToken = { texture: { src: actorData.img } };
   }
