@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 
 import {
   addBookVocabulary,
+  Dictionary,
   classifyPage,
   cleanBook,
   dictionaryFromRules,
@@ -38,6 +39,22 @@ test("fixSpacing joins letters spread apart, only into dictionary words", () => 
 
 test("fixSpacing leaves two real words alone", () => {
   assert.deepEqual(fixSpacing("no thing", dict), { text: "no thing", merged: 0 });
+});
+
+test("pieces that are words join only when the whole is much more common", () => {
+  const d = new Dictionary();
+  d.add("frightened", 50);
+  d.add("frighten", 3);
+  d.add("ed", 1);
+  d.add("takes", 200);
+  d.add("tak", 2);
+  d.add("es", 5);
+  d.add("today", 5);
+  d.add("to", 1000);
+  d.add("day", 300);
+  assert.equal(fixSpacing("the frighten ed target", d).text, "the frightened target");
+  assert.equal(fixSpacing("it tak es damage", d).text, "it takes damage");
+  assert.equal(fixSpacing("to day", d).text, "to day");
 });
 
 test("a lone 'a' is a word, so it is not glued to its neighbour", () => {

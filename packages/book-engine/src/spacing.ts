@@ -15,10 +15,6 @@ const hasDigit = (t: string): boolean => /[0-9]/.test(t);
  */
 export function fixSpacing(line: string, dict: Dictionary): { text: string; merged: number } {
   const tokens = line.split(" ").filter((t) => t.length > 0);
-  if (tokens.every((t) => !hasLetter(t) || dict.knownToken(t))) {
-    return { text: tokens.join(" "), merged: 0 };
-  }
-
   const n = tokens.length;
   const cost = new Array<number>(n + 1).fill(Number.POSITIVE_INFINITY);
   const from = new Array<number>(n + 1).fill(0);
@@ -53,7 +49,21 @@ function groupCost(group: readonly string[], dict: Dictionary): number {
     return 2;
   }
   if (group.some((t) => hasDigit(t) || !hasLetter(t))) return Number.POSITIVE_INFINITY;
-  if (group.every((t) => dict.knownToken(t))) return Number.POSITIVE_INFINITY;
-  if (!dict.knownToken(group.join(""))) return Number.POSITIVE_INFINITY;
+  const joined = group.join("");
+  if (!dict.knownToken(joined)) return Number.POSITIVE_INFINITY;
+
+  // Every piece is a word by itself: "frighten ed", "no thing", "to day".
+  // The joined word wins only if it is much more common than any piece:
+  // "frightened" is far more common than "frighten" and "ed"; "today" is not
+  // more common than "to".
+  if (group.every((t) => dict.knownToken(t))) {
+    const whole = dict.frequency(letters(joined));
+    const biggestPiece = Math.max(...group.map((t) => dict.frequency(letters(t))));
+    if (whole < 2 * biggestPiece) return Number.POSITIVE_INFINITY;
+    // Better than leaving the pieces apart (which cost nothing).
+    return -0.1 * (group.length - 1);
+  }
   return 0.01 * (group.length - 1);
 }
+
+const letters = (t: string): string => t.replace(/[^\p{L}']/gu, "");

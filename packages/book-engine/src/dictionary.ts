@@ -14,7 +14,8 @@ export class Dictionary {
    * to its neighbour ("to a" → "toa"); other single letters stay unknown.
    */
   constructor(singleLetterWords: readonly string[] = ["a", "i"]) {
-    for (const w of singleLetterWords) this.add(w, 1);
+    // As common as a word can be: a lone "a" must never be absorbed by a neighbour.
+    for (const w of singleLetterWords) this.add(w, 1_000_000);
   }
 
   add(word: string, times = 1): void {
