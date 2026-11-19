@@ -44,6 +44,13 @@ APP_ORIGIN = "https://alba.bertinilabs.xyz"
 # Deploy the front before the Worker: the front sends its session cookie, and the Worker now asks for it.
 REQUIRE_SIGNIN = "1"
 
+# Hold a first registration whose suspicion score reaches SUSPICION_DENY_AT (default 5), see src/suspicion.ts.
+# Off until somebody turns it on on purpose: apply migration 0003 first (`wrangler d1 migrations apply alba
+# --remote`), then set SUSPICION = "1". BLOCKED_DISCORD_IDS (comma-separated) refuses those ids outright and
+# works without it.
+# SUSPICION = "1"
+# SUSPICION_DENY_AT = "5"
+
 # This Worker's own address, as Discord has it registered.
 #
 # Not derived from the request: the Worker answers to two names and only this

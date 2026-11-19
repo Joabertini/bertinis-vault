@@ -13,6 +13,7 @@ import { importPayloadSchema, type ImportPayload } from "@bertinis-vault/contrac
 
 import { d1Store, type D1Like, type Store } from "./accounts.js";
 import { handleImageRead, handleImageUpload, type ImageStore } from "./images.js";
+import { blockedIdsOf, denyThresholdOf } from "./suspicion.js";
 import {
   accountFor,
   bearerTokenOf,
@@ -78,6 +79,15 @@ export type Env = {
    * development and in tests, where publishing stays anonymous as it was.
    */
   REQUIRE_SIGNIN?: string;
+  /**
+   * "1" to hold a first registration whose suspicion score reaches `SUSPICION_DENY_AT`. See
+   * `suspicion.ts`. Absent in development and in tests, where every registration goes through.
+   */
+  SUSPICION?: string;
+  /** The score at which a first registration is held. Five when unset. */
+  SUSPICION_DENY_AT?: string;
+  /** Comma-separated Discord ids refused outright, whether or not they already have an account. */
+  BLOCKED_DISCORD_IDS?: string;
   /** Comma-separated origins allowed to call this. `*` in development. */
   ALLOWED_ORIGINS?: string;
   /** Accounts, sessions and saved characters. Absent until D1 is bound. */
@@ -158,6 +168,15 @@ function authEnvFor(env: Env, request: Request, deps: Deps): AuthEnv | null {
     },
     appOrigin: env.APP_ORIGIN ?? new URL(request.url).origin,
     ...(env.COOKIE_DOMAIN ? { cookieDomain: env.COOKIE_DOMAIN } : {}),
+    // The blocked list works on its own; the score only when asked for.
+    ...(env.SUSPICION === "1" || env.BLOCKED_DISCORD_IDS
+      ? {
+          suspicion: {
+            denyAt: env.SUSPICION === "1" ? denyThresholdOf(env.SUSPICION_DENY_AT) : Number.POSITIVE_INFINITY,
+            blocked: blockedIdsOf(env.BLOCKED_DISCORD_IDS),
+          },
+        }
+      : {}),
   };
 }
 

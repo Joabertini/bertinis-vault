@@ -24,6 +24,7 @@ const Ritual = lazy(() => import("@/routes/Ritual"));
 // rest — most visits never reach it, and it pulls the whole Vision with it.
 const SharedTome = lazy(() => import("@/routes/SharedTome"));
 const Credits = lazy(() => import("@/routes/Credits"));
+const AccessHeld = lazy(() => import("@/routes/AccessHeld"));
 // Order is the cascade: Tailwind's layers first, then the rules that override
 // its preflight. See the note at the top of globals.css.
 import "./styles/globals.css";
@@ -47,6 +48,7 @@ createRoot(document.getElementById("root")!).render(
           <Route path="/ritual" element={<Ritual />} />
           <Route path="/tomo/:code" element={<SharedTome />} />
           <Route path="/creditos" element={<Credits />} />
+          <Route path="/acceso" element={<AccessHeld />} />
         </Routes>
       </Suspense>
     </BrowserRouter>

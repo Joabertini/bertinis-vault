@@ -24,6 +24,9 @@ export type DiscordConfig = {
 
 export type DiscordUser = {
   id: string;
+  /** The handle underneath the display name. Read by the suspicion score, never shown. */
+  username: string;
+  bot: boolean;
   displayName: string;
   avatarUrl: string | null;
 };
@@ -97,12 +100,15 @@ export async function identify(
     username?: string;
     global_name?: string | null;
     avatar?: string | null;
+    bot?: boolean;
   };
 
   if (!user.id) throw new Error("Discord returned no user id.");
 
   return {
     id: user.id,
+    username: user.username ?? "",
+    bot: user.bot === true,
     // `global_name` is the display name Discord moved to; `username` is the
     // handle underneath it. A player who set one expects to see it.
     displayName: user.global_name || user.username || "Aventurero",
