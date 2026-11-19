@@ -16,7 +16,8 @@ export interface NoiseStats {
 const WORD = /\p{L}{2,}/gu;
 const LETTER_SPACED = /(?<![\p{L}])(?:\p{L} ){4,}\p{L}(?![\p{L}])/gu;
 const HYPHEN_BREAK = /\p{Ll}-\n\p{Ll}/gu;
-const SUSPECT = /\p{Ll}(?:Il|lI|II)\p{Ll}|\b(?:Il|lI|II)\p{Ll}{3,}/gu;
+// A capital I right after a lowercase letter and before another letter: "IlIusion".
+const SUSPECT = /\p{Ll}I(?=\p{L})/gu;
 
 export function measureNoise(text: string, vocabulary?: ReadonlySet<string>): NoiseStats {
   const words = text.match(WORD) ?? [];

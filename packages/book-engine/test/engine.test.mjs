@@ -29,7 +29,7 @@ test("fold and squash make different spellings comparable", () => {
 
 test("editDistance counts wrong letters and gives up past the limit", () => {
   assert.equal(editDistance("circle", "circle", 2), 0);
-  assert.equal(editDistance("cirele", "circle", 2), 2);
+  assert.equal(editDistance("cirele", "circle", 2), 1);
   assert.equal(editDistance("abcdef", "uvwxyz", 2), 3);
 });
 
