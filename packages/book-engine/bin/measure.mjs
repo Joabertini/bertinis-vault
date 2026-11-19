@@ -13,10 +13,18 @@
  * The book is read from disk and never copied anywhere. Only the numbers and
  * the names that were not found are written to the report.
  */
-import { readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { measureBook, referenceFromRules, vocabularyFromRules } from "../dist/index.js";
+import {
+  addBookVocabulary,
+  cleanBook,
+  dictionaryFromRules,
+  measureBook,
+  pageToText,
+  referenceFromRules,
+  vocabularyFromRules,
+} from "../dist/index.js";
 
 function args() {
   const out = {};
@@ -66,16 +74,50 @@ for (let n = 1; n <= doc.numPages; n++) {
 
 const rules = JSON.parse(readFileSync(join(a.rules, `${type}.json`), "utf8"));
 const refs = referenceFromRules(rules, new Set(a.sources.split(",")));
-const vocabulary = vocabularyFromRules(rules);
 
-const reports = [false, true].map((columns) => measureBook(pages, refs, { columns, vocabulary }));
-const result = { pdf: a.pdf.split(/[\\/]/).pop(), type, sources: a.sources, reports };
+// The vocabulary is every word in every rules file there is (the builder's own text).
+const allRules = readdirSync(a.rules)
+  .filter((f) => f.endsWith(".json"))
+  .map((f) => JSON.parse(readFileSync(join(a.rules, f), "utf8")));
+const vocabulary = vocabularyFromRules(...allRules);
+
+// P1: the dictionary also learns the words this book repeats cleanly.
+const dict = dictionaryFromRules(...allRules);
+addBookVocabulary(dict, pages.map((p) => pageToText(p, true)));
+const cleaned = cleanBook(pages, dict);
+
+const reports = [
+  { label: "plano", ...measureBook(pages, refs, { columns: false, vocabulary }) },
+  { label: "columnas", ...measureBook(pages, refs, { columns: true, vocabulary }) },
+  {
+    label: "limpio",
+    ...measureBook(pages, refs, {
+      columns: true,
+      vocabulary,
+      reader: () => cleaned.pages.map((p) => ({ page: p.page, text: p.text })),
+    }),
+  },
+];
+const result = {
+  pdf: a.pdf.split(/[\\/]/).pop(),
+  type,
+  sources: a.sources,
+  clean: { totals: cleaned.totals, kinds: cleaned.kinds, textless: cleaned.textless },
+  reports,
+};
 if (a.out) writeFileSync(a.out, JSON.stringify(result, null, 2));
 
 const pct = (x) => `${(x * 100).toFixed(1)} %`;
+console.log(
+  `${result.pdf} | limpieza: ${cleaned.totals.spacingMerges} uniones de letras, ` +
+    `${cleaned.totals.hyphenJoins} cortes unidos, ${cleaned.totals.ocrFixes} OCR corregidos, ` +
+    `${cleaned.totals.runningRowsDropped} encabezados/pies quitados | páginas: ` +
+    `${cleaned.kinds.prose} texto, ${cleaned.kinds["spell-list"]} listas de conjuros, ` +
+    `${cleaned.kinds.table} tablas, ${cleaned.kinds.empty} vacías | sin texto: ${cleaned.textless ? "SÍ" : "no"}`,
+);
 for (const r of reports) {
   console.log(
-    `${result.pdf} | columnas ${r.columns ? "sí" : "no"} | ${r.pages} págs, ${r.emptyPages} vacías, ` +
+    `${result.pdf} | ${r.label} | ${r.pages} págs, ${r.emptyPages} vacías, ` +
       `${r.meanColumns.toFixed(2)} col/pág | ${r.refs} ${type}: encontrados ${pct(r.recall)} ` +
       `(exacto ${pct(r.recallExact)}), página coincide ${pct(r.pageConsistent.rate)} ` +
       `(desfase ${r.pageOffset}) | ruido: ${r.noise.letterSpacedRuns} letras separadas, ` +

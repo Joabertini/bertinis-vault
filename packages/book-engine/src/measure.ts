@@ -29,6 +29,8 @@ export interface BookReport {
 export interface MeasureOptions {
   columns: boolean;
   vocabulary?: ReadonlySet<string>;
+  /** Replaces the plain page text: the cleaned text of P1. */
+  reader?: (pages: readonly PageText[]) => { page: number; text: string }[];
 }
 
 /**
@@ -44,7 +46,9 @@ export function measureBook(
   refs: readonly RefEntry[],
   options: MeasureOptions,
 ): BookReport {
-  const texts = pages.map((p) => ({ page: p.page, text: pageToText(p, options.columns) }));
+  const texts = options.reader
+    ? options.reader(pages)
+    : pages.map((p) => ({ page: p.page, text: pageToText(p, options.columns) }));
   const withText = texts.filter((t) => t.text.length >= 20).length;
 
   let columnCount = 0;
