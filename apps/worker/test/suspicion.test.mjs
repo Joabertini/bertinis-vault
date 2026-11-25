@@ -12,8 +12,8 @@ import { assess, blockedIdsOf, createdAtOf, denyThresholdOf } from "../dist/susp
 const NOW = new Date("2026-11-19T12:00:00Z");
 const DAY = 24 * 60 * 60 * 1000;
 
-/** A Discord id for an account created `days` before NOW. */
-const snowflakeAged = (days) => String((BigInt(NOW.getTime() - days * DAY - 1420070400000) << 22n));
+/** A Discord id for an account created `days` before `from`. The tests that go through `handle` use the real clock. */
+const snowflakeAged = (days, from = NOW) => String((BigInt(from.getTime() - days * DAY - 1420070400000) << 22n));
 
 /* ---------------- the score ---------------- */
 
@@ -120,7 +120,7 @@ const hasSessionCookie = (response) => response.headers.getSetCookie().some((lin
 
 test("a new account that looks automated is held: no account, no session, a record for the appeal", async () => {
   const store = makeStore();
-  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(3), avatar: null }), { ...ENV, SUSPICION: "1" });
+  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(3, new Date()), avatar: null }), { ...ENV, SUSPICION: "1" });
 
   assert.equal(back.status, 302);
   assert.equal(back.headers.get("Location"), "https://alba.bertinilabs.xyz/acceso");
@@ -134,7 +134,7 @@ test("a new account that looks automated is held: no account, no session, a reco
 
 test("the same kind of account that is already registered is let in", async () => {
   const store = makeStore({ known: true });
-  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(3), avatar: null }), { ...ENV, SUSPICION: "1" });
+  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(3, new Date()), avatar: null }), { ...ENV, SUSPICION: "1" });
 
   assert.equal(back.headers.get("Location"), "https://alba.bertinilabs.xyz/codex");
   assert.equal(hasSessionCookie(back), true);
@@ -143,14 +143,14 @@ test("the same kind of account that is already registered is let in", async () =
 
 test("an old account with its own avatar registers normally", async () => {
   const store = makeStore();
-  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(900), avatar: "abc" }), { ...ENV, SUSPICION: "1" });
+  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(900, new Date()), avatar: "abc" }), { ...ENV, SUSPICION: "1" });
 
   assert.equal(hasSessionCookie(back), true);
   assert.equal(store.accounts.length, 1);
 });
 
 test("a blocked id is refused even when it already has an account, and without turning the score on", async () => {
-  const id = snowflakeAged(900);
+  const id = snowflakeAged(900, new Date());
   const store = makeStore({ known: true });
   const back = await comeBackFromDiscord(store, discordWith({ id, avatar: "abc" }), { ...ENV, BLOCKED_DISCORD_IDS: `1,${id}` });
 
@@ -160,7 +160,7 @@ test("a blocked id is refused even when it already has an account, and without t
 
 test("with the setting off nothing is held, however new the account", async () => {
   const store = makeStore();
-  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(1), avatar: null }), ENV);
+  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(1, new Date()), avatar: null }), ENV);
 
   assert.equal(hasSessionCookie(back), true);
   assert.equal(store.denied.length, 0);
@@ -168,7 +168,7 @@ test("with the setting off nothing is held, however new the account", async () =
 
 test("when the check itself breaks the sign-in goes through", async () => {
   const store = makeStore({ hasAccountThrows: true });
-  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(1), avatar: null }), { ...ENV, SUSPICION: "1" });
+  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(1, new Date()), avatar: null }), { ...ENV, SUSPICION: "1" });
 
   assert.equal(hasSessionCookie(back), true);
 });
@@ -178,7 +178,7 @@ test("a refusal still stands when the record cannot be written", async () => {
   store.recordDenial = async () => {
     throw new Error("no such table: registration_denied");
   };
-  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(3), avatar: null }), { ...ENV, SUSPICION: "1" });
+  const back = await comeBackFromDiscord(store, discordWith({ id: snowflakeAged(3, new Date()), avatar: null }), { ...ENV, SUSPICION: "1" });
 
   assert.equal(back.headers.get("Location"), "https://alba.bertinilabs.xyz/acceso");
   assert.equal(hasSessionCookie(back), false);
