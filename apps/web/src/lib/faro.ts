@@ -5,6 +5,7 @@
  * `/personajes` and everything that would open the Codex goes back to it. Off unless the build sets
  * `VITE_FARO_APP`, so alba.bertinilabs.xyz is untouched.
  */
+import type { FichaFaro } from "./faro-ficha";
 import type { SealedCharacter } from "./vault-store";
 
 export const FARO_APP = import.meta.env.VITE_FARO_APP?.trim() ?? "";
@@ -15,7 +16,7 @@ const shelfKey = (owner: string) => `faro:estante:${owner}`;
 export const framed = () => window.top !== window;
 
 /** What the frame tells the profile. Only to that origin. */
-export function tellFaro(message: { alto: number } | { abierto: boolean } | { sinSesion: true }): void {
+export function tellFaro(message: { alto: number } | { abierto: boolean } | { sinSesion: true } | { listo: true } | { fichas: FichaFaro[]; ids: string[] }): void {
   if (FARO_APP && framed()) window.parent.postMessage({ faro: message }, FARO_APP);
 }
 

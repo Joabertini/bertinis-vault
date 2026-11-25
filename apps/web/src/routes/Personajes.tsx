@@ -13,7 +13,9 @@ import OpenCode from "@/components/codex/OpenCode";
 import AshBurst from "@/components/fx/AshBurst";
 import RuneButton from "@/components/ui/RuneButton";
 import { useCodexSync } from "@/lib/codex-sync";
-import { claimShelf, tellFaro } from "@/lib/faro";
+import { loadHojaRules } from "@/components/sheet/Hoja2024";
+import { claimShelf, FARO_APP, tellFaro } from "@/lib/faro";
+import { fichasNuevas } from "@/lib/faro-ficha";
 import { useVault } from "@/lib/vault-store";
 
 const CodexShelf = lazy(() => import("@/components/codex/shelf/CodexShelf"));
@@ -37,6 +39,33 @@ export default function Personajes() {
   useEffect(() => {
     if (accountsAvailable !== null && !account) tellFaro({ sinSesion: true });
   }, [account, accountsAvailable]);
+
+  /*
+   * The account keeps each character's computed sheet so Discord can show it without a world. Once the shelf is
+   * in step with the account, the profile says which versions it already holds and only the rest is computed.
+   */
+  const shelf = characters.map((entry) => `${entry.id}@${entry.sealedAt}`).join("|");
+  useEffect(() => {
+    if (!FARO_APP || status.state !== "done") return;
+    let alive = true;
+    const onMessage = (event: MessageEvent) => {
+      const stored = event.data?.faro?.versiones;
+      if (event.source !== window.parent || event.origin !== FARO_APP || !stored || typeof stored !== "object") return;
+      const now = useVault.getState().characters;
+      void loadHojaRules()
+        .then((rules) => fichasNuevas(now, stored as Record<string, string>, rules))
+        .then((fichas) => {
+          if (alive) tellFaro({ fichas, ids: now.map((entry) => entry.id) });
+        })
+        .catch(() => undefined);
+    };
+    window.addEventListener("message", onMessage);
+    tellFaro({ listo: true });
+    return () => {
+      alive = false;
+      window.removeEventListener("message", onMessage);
+    };
+  }, [status.state, shelf]);
 
   useEffect(() => {
     document.documentElement.classList.add("en-faro");
