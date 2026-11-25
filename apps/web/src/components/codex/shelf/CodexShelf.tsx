@@ -234,10 +234,15 @@ export default function CodexShelf({
   characters,
   onBurn,
   onReforge,
+  onOpenChange,
+  noun = ["tomo", "tomos"],
 }: {
   characters: SealedCharacter[];
   onBurn: (id: string) => (origin: { x: number; y: number }) => void;
   onReforge: (id: string) => () => void;
+  onOpenChange?: (open: boolean) => void;
+  /** One and many, for the count above the shelf. */
+  noun?: [string, string];
 }) {
   const pictures = usePictures(characters);
   // The 3D scene is built once per set of books, so wait for the pictures
@@ -246,7 +251,11 @@ export default function CodexShelf({
     () => (pictures ? characters.map((entry) => bookFor(entry, pictures.get(entry.id))) : []),
     [characters, pictures],
   );
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpenState] = useState<string | null>(null);
+  const setOpen = (id: string | null) => {
+    setOpenState(id);
+    onOpenChange?.(id !== null);
+  };
   const openCharacter = characters.find((entry) => entry.id === open);
 
   return (
@@ -255,7 +264,7 @@ export default function CodexShelf({
         <BooksShowcase
           books={books}
           heroTitle=""
-          navTitle={`${characters.length} ${characters.length === 1 ? "tomo" : "tomos"}`}
+          navTitle={`${characters.length} ${noun[characters.length === 1 ? 0 : 1]}`}
           className="!font-display"
           themeColors={{
             navy: "#0B0B0B",

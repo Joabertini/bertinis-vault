@@ -5,7 +5,9 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 
 import { setBookLibrary } from "@bertinis-vault/vetools-ref";
 import Gate from "@/routes/Gate";
+import FaroGate, { ToProfile } from "@/components/FaroGate";
 import LanguageSwitch from "@/components/ui/LanguageSwitch";
+import { FARO_APP, framed } from "@/lib/faro";
 import { startLang } from "@/lib/translate";
 
 // Every book, so a saved character finds its picks wherever it is opened. The
@@ -26,6 +28,7 @@ const Ritual = lazy(() => import("@/routes/Ritual"));
 // rest — most visits never reach it, and it pulls the whole Vision with it.
 const SharedTome = lazy(() => import("@/routes/SharedTome"));
 const Credits = lazy(() => import("@/routes/Credits"));
+const Personajes = lazy(() => import("@/routes/Personajes"));
 const AccessHeld = lazy(() => import("@/routes/AccessHeld"));
 // Order is the cascade: Tailwind's layers first, then the rules that override
 // its preflight. See the note at the top of globals.css.
@@ -43,20 +46,23 @@ createRoot(document.getElementById("root")!).render(
         only: no sliding, spinning or scaling. */}
     <MotionConfig reducedMotion="user">
     <BrowserRouter>
-      <LanguageSwitch />
+      <FaroGate>
+      {!(FARO_APP && framed()) && <LanguageSwitch />}
       {/* Nothing on purpose: the swap is a frame or two on a warm cache, and
           a spinner that flashes is worse than a beat of the page you left. */}
       <Suspense fallback={null}>
         <Routes>
           <Route path="/" element={<Gate />} />
           <Route path="/forge" element={<Forge />} />
-          <Route path="/codex" element={<Codex />} />
+          <Route path="/codex" element={FARO_APP && !framed() ? <ToProfile /> : <Codex />} />
+          {FARO_APP && <Route path="/personajes" element={framed() ? <Personajes /> : <ToProfile />} />}
           <Route path="/ritual" element={<Ritual />} />
           <Route path="/tomo/:code" element={<SharedTome />} />
           <Route path="/creditos" element={<Credits />} />
           <Route path="/acceso" element={<AccessHeld />} />
         </Routes>
       </Suspense>
+      </FaroGate>
     </BrowserRouter>
     </MotionConfig>
   </StrictMode>,
