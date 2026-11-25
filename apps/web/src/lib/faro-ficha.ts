@@ -181,7 +181,7 @@ export async function fichaDe(entry: SealedCharacter, rules: HojaRules): Promise
   const vista = vistaDeHoja(data);
   return {
     id: entry.id,
-    version: entry.sealedAt,
+    version: versionDe(entry),
     nombre: data.name.slice(0, 100),
     clase: vista.claseNombre.slice(0, 100),
     nivel: vista.nivel,
@@ -197,6 +197,9 @@ const tick = () => new Promise<void>((done) => setTimeout(done, 0));
  * The plates the account does not have yet: those whose version differs from the stored one.
  * One at a time, giving the page a turn between each, so opening the shelf does not freeze it.
  */
+/** The sealed date plus the plate format: bumping the suffix makes every plate be computed again (2 = with its own images). */
+const versionDe = (entry: SealedCharacter): string => `${entry.sealedAt}|2`;
+
 export async function fichasNuevas(
   characters: SealedCharacter[],
   stored: Record<string, string>,
@@ -204,7 +207,7 @@ export async function fichasNuevas(
 ): Promise<FichaFaro[]> {
   const out: FichaFaro[] = [];
   for (const entry of characters) {
-    if (stored[entry.id] === entry.sealedAt) continue;
+    if (stored[entry.id] === versionDe(entry)) continue;
     await tick();
     try {
       const ficha = await fichaDe(entry, rules);
