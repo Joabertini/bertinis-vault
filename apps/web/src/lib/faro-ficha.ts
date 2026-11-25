@@ -4,6 +4,7 @@
  * The Forge is the only place that can compute a character's sheet, so it hands the compact result to the profile,
  * which stores it with the account. A character that was never in a world can then be shown in Discord.
  */
+import { isStoredImage } from "@/lib/cover-image";
 import { resolveDraft } from "@/lib/derive";
 import { hojaDataFor, type HojaData, type HojaRules } from "@/lib/hoja-2024";
 import { rulesVersionOf, type SealedCharacter } from "@/lib/vault-store";
@@ -45,7 +46,9 @@ export type FichaFaro = {
   nombre: string;
   clase: string;
   nivel: number | null;
-  retrato: string | null;
+  /** The portrait and the player's own banner, already reduced to JPEG data URLs: what the plate draws. */
+  retratoDatos: string | null;
+  fondoDatos: string | null;
   vista: Vista;
 };
 
@@ -134,12 +137,44 @@ export function vistaDeHoja(data: HojaData): Vista {
   };
 }
 
-/** Only a picture the plate's Worker may fetch: https, and short. */
-export const portraitUrl = (value: string | undefined): string | null =>
-  value && /^https:\/\/[^\s]{1,400}$/.test(value) ? value : null;
+const MAX_CHARS = 450_000;
+
+/**
+ * A picture reduced to what the plate can use: a JPEG no larger than the box, as a data URL.
+ *
+ * The plate's renderer does not read WebP and a whole portrait made every plate slow to draw, so the browser —
+ * which reads anything — hands over a small JPEG. Only the player's own images (inline, or kept in the build
+ * store) are taken. Null when it cannot be read or will not fit.
+ */
+export async function jpegDe(src: string, box: { w: number; h: number }): Promise<string | null> {
+  if (!(src.startsWith("data:image/") || isStoredImage(src))) return null;
+  try {
+    const image = new Image();
+    image.crossOrigin = "anonymous";
+    image.src = src;
+    await image.decode();
+    const k = Math.min(1, box.w / image.naturalWidth, box.h / image.naturalHeight);
+    const w = Math.max(1, Math.round(image.naturalWidth * k)), h = Math.max(1, Math.round(image.naturalHeight * k));
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    ctx.fillStyle = "#0b0f17";
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(image, 0, 0, w, h);
+    for (const quality of [0.86, 0.72, 0.58]) {
+      const uri = canvas.toDataURL("image/jpeg", quality);
+      if (uri.length <= MAX_CHARS) return uri;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 /** The plate for one sealed character, or null when it does not derive (an old tome missing a pick). */
-export function fichaDe(entry: SealedCharacter, rules: HojaRules): FichaFaro | null {
+export async function fichaDe(entry: SealedCharacter, rules: HojaRules): Promise<FichaFaro | null> {
   const resolved = resolveDraft(entry.state);
   if (resolved.status !== "ready") return null;
   const data = hojaDataFor(entry.state, resolved.snapshot, rulesVersionOf(entry.state), rules);
@@ -150,7 +185,8 @@ export function fichaDe(entry: SealedCharacter, rules: HojaRules): FichaFaro | n
     nombre: data.name.slice(0, 100),
     clase: vista.claseNombre.slice(0, 100),
     nivel: vista.nivel,
-    retrato: portraitUrl(data.portrait),
+    retratoDatos: entry.state.coverImage ? await jpegDe(entry.state.coverImage, { w: 820, h: 1000 }) : null,
+    fondoDatos: isStoredImage(entry.state.bannerImage) ? await jpegDe(entry.state.bannerImage, { w: 1860, h: 1000 }) : null,
     vista,
   };
 }
@@ -171,7 +207,7 @@ export async function fichasNuevas(
     if (stored[entry.id] === entry.sealedAt) continue;
     await tick();
     try {
-      const ficha = fichaDe(entry, rules);
+      const ficha = await fichaDe(entry, rules);
       if (ficha) out.push(ficha);
     } catch {
       // One character that does not compute must not keep the others from reaching Discord.

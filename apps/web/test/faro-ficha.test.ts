@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import type { HojaData } from "@/lib/hoja-2024";
-import { portraitUrl, vistaDeHoja } from "@/lib/faro-ficha";
+import { jpegDe, vistaDeHoja } from "@/lib/faro-ficha";
 
 const check = (modifier: number, proficient = false) => ({ modifier, proficient, expert: false });
 const ability = (score: number, modifier: number, save = modifier, proficient = false) => ({ score, modifier, save: check(save, proficient) });
@@ -82,12 +82,10 @@ describe("the sheet as Discord's plate reads it", () => {
   });
 });
 
-describe("the portrait the plate may fetch", () => {
-  it("is https and short, and nothing else", () => {
-    expect(portraitUrl("https://api.bertinilabs.xyz/images/x")).toBe("https://api.bertinilabs.xyz/images/x");
-    expect(portraitUrl("data:image/png;base64,AAAA")).toBeNull();
-    expect(portraitUrl("http://example.com/x.png")).toBeNull();
-    expect(portraitUrl("https://x/" + "a".repeat(500))).toBeNull();
-    expect(portraitUrl(undefined)).toBeNull();
+describe("the pictures the plate draws", () => {
+  it("only takes the player's own images, never an arbitrary address", async () => {
+    expect(await jpegDe("https://example.com/x.png", { w: 820, h: 1000 })).toBeNull();
+    expect(await jpegDe("http://api.bertinilabs.xyz/images/x", { w: 820, h: 1000 })).toBeNull();
+    expect(await jpegDe("", { w: 820, h: 1000 })).toBeNull();
   });
 });
