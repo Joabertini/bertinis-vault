@@ -23,6 +23,19 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Framed by Faro's profile: its background shows through. */
+html.en-faro,
+html.en-faro body {
+  min-height: 0;
+  background: transparent;
+}
+
+/* With a character open the frame is the whole screen: only the sheet, the menu and the dice. */
+html.con-tomo main > :not(.fixed) {
+  opacity: 0;
+  pointer-events: none;
+}
+
 ::selection {
   background: #6e0f0f;
   color: #FFFFFF;
