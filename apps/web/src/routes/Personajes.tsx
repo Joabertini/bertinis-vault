@@ -52,7 +52,9 @@ export default function Personajes() {
       const stored = event.data?.faro?.versiones;
       if (event.source !== window.parent || event.origin !== FARO_APP || !stored || typeof stored !== "object") return;
       const now = useVault.getState().characters;
-      void loadHojaRules()
+      // El estante se dibuja primero; las fichas se calculan cuando ya pasó un rato y el navegador está libre.
+      void new Promise<void>((done) => setTimeout(() => ((window as any).requestIdleCallback ? (window as any).requestIdleCallback(() => done(), { timeout: 5000 }) : done()), 2500))
+        .then(() => loadHojaRules())
         .then((rules) => fichasNuevas(now, stored as Record<string, string>, rules))
         .then((fichas) => {
           if (alive) tellFaro({ fichas, ids: now.map((entry) => entry.id) });
