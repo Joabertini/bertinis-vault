@@ -25,7 +25,7 @@ const SHARED = {
   backgroundGlow: 0.04,
   headGlow: 0.15,
   bloom: 0.65,
-  mouseInteraction: true,
+  mouseInteraction: false,
   streakLength: 1.4,
   glow: 2,
   depth: 1.8,
