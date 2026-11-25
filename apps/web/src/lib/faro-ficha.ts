@@ -88,22 +88,17 @@ export function vistaDeHoja(data: HojaData): Vista {
     velocidad: data.speed === null || data.speed === undefined ? "—" : `${data.speed} ft.`,
     competencia: data.proficiencyBonus,
     percepcion: 10 + (data.skills.prc?.modifier ?? 0),
-    atributos: ORDEN.map((key) => ({
-      clave: key.toUpperCase(),
-      valor: data.abilities[key].score,
-      mod: data.abilities[key].modifier,
-      salva: data.abilities[key].save.modifier,
-      competente: data.abilities[key].save.proficient,
-    })),
+    atributos: ORDEN.map((key) => {
+      const ability = data.abilities[key];
+      return { clave: key.toUpperCase(), valor: ability?.score ?? null, mod: ability?.modifier ?? null, salva: ability?.save.modifier ?? null, competente: ability?.save.proficient ?? false };
+    }),
     salvacionesPf2e: [],
-    habilidades: Object.entries(HABILIDADES)
-      .filter(([key]) => data.skills[key])
-      .map(([key, nombre]) => ({
-        nombre,
-        total: data.skills[key].modifier,
-        rango: data.skills[key].expert ? 2 : data.skills[key].proficient ? 1 : 0,
-        atributo: data.skills[key].ability.toUpperCase(),
-      })),
+    habilidades: Object.entries(HABILIDADES).flatMap(([key, nombre]) => {
+      const skill = data.skills[key];
+      return skill
+        ? [{ nombre, total: skill.modifier, rango: skill.expert ? 2 : skill.proficient ? 1 : 0, atributo: skill.ability.toUpperCase() }]
+        : [];
+    }),
     ataques: items
       .filter((item) => item.attack)
       .map((item) => ({
