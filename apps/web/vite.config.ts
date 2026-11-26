@@ -28,6 +28,9 @@ export default defineConfig({
       "@bertinis-vault/vetools-ref": vaultPackage("vetools-ref"),
     },
   },
+  // The index's JSON ships as `JSON.parse("…")`: the browser parses a string far
+  // faster than it compiles the same data as an object literal.
+  json: { stringify: true },
   build: {
     rollupOptions: {
       output: {

@@ -5,18 +5,19 @@
  * sheet cannot disagree about order or spelling.
  */
 
-import { abilityLabels as builderAbilityLabels } from "./builder";
-
 export const ABILITY_IDS = ["str", "dex", "con", "int", "wis", "cha"] as const;
 
 export type AbilityId = (typeof ABILITY_IDS)[number];
 
-/** Spanish names, taken from the repo's builder rather than restated here. */
+/**
+ * Spanish names. The one source: `builder-state` re-exports these, so this
+ * file imports nothing — the Gate reaches it and must not reach the index.
+ */
 export const abilityLabels: Record<AbilityId, string> = {
-  str: builderAbilityLabels.str ?? "Fuerza",
-  dex: builderAbilityLabels.dex ?? "Destreza",
-  con: builderAbilityLabels.con ?? "Constitucion",
-  int: builderAbilityLabels.int ?? "Inteligencia",
-  wis: builderAbilityLabels.wis ?? "Sabiduria",
-  cha: builderAbilityLabels.cha ?? "Carisma",
+  str: "Fuerza",
+  dex: "Destreza",
+  con: "Constitucion",
+  int: "Inteligencia",
+  wis: "Sabiduria",
+  cha: "Carisma",
 };

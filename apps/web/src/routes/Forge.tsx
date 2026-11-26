@@ -111,7 +111,11 @@ import {
   seedSpeciesBonus,
   speciesBonusBudgetFor,
 } from "@/lib/improvements";
-import { useVault, rulesVersionOf, type Pace } from "@/lib/vault-store";
+import { useVault, rulesVersionOf, registerActions, type Pace } from "@/lib/vault-store";
+import { applyAction } from "@/lib/actions";
+
+// The store keeps the index out of the first paint; the Forge brings it.
+registerActions(applyAction);
 import { chamberOrder, firstChamber, type ChamberKey } from "@/lib/chambers";
 import {
   settleBackgroundFeat,
