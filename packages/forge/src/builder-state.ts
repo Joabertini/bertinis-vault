@@ -13,7 +13,7 @@
 import { isCoverImage, isStoredImage } from "./cover-image";
 import type { AbilityBonusMap, ExpertiseAnswer, LevelChoice } from "@bertinis-vault/domain";
 
-import { ABILITY_IDS, type AbilityId } from "./abilities";
+import { ABILITY_IDS, abilityLabels as sixLabels, type AbilityId } from "./abilities";
 
 /** Which edition's rules a draft is written against. */
 export type BuilderRulesVersion = "5e-2014" | "5e-2024";
@@ -73,14 +73,7 @@ export const generationMethodByStatMethod = {
 } as const;
 
 /** Spanish labels for the six abilities, for anything the sheet displays. */
-export const abilityLabels: Record<string, string> = {
-  str: "Fuerza",
-  dex: "Destreza",
-  con: "Constitucion",
-  int: "Inteligencia",
-  wis: "Sabiduria",
-  cha: "Carisma",
-};
+export const abilityLabels: Record<string, string> = sixLabels;
 
 export type BuilderState = {
   createdAt: string;
@@ -821,4 +814,24 @@ export function freshDraft(rulesVersion: BuilderRulesVersion, supplements = true
     grantedSpellChoices: {},
     featuresText: "",
   };
+}
+
+/**
+ * Whether the anvil currently holds work worth losing.
+ *
+ * `beginDraft` replaces the draft outright, so anyone who returns to the Gate
+ * mid-forge and presses the button out of habit loses a whole character with
+ * no confirmation and no way back. Knowing whether there is anything there is
+ * what lets the Gate offer to continue instead of silently discarding.
+ *
+ * The name alone counts: someone who has typed who this is has started.
+ */
+export function hasProgress(state: BuilderState): boolean {
+  return Boolean(
+    state.characterName.trim() ||
+      state.raceId ||
+      state.classId ||
+      state.backgroundId ||
+      state.level > 1,
+  );
 }

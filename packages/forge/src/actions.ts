@@ -169,25 +169,8 @@ function withStrays(anvil: Anvil, patch: Partial<BuilderState>): Outcome {
   };
 }
 
-/**
- * Whether the anvil currently holds work worth losing.
- *
- * `beginDraft` replaces the draft outright, so anyone who returns to the Gate
- * mid-forge and presses the button out of habit loses a whole character with
- * no confirmation and no way back. Knowing whether there is anything there is
- * what lets the Gate offer to continue instead of silently discarding.
- *
- * The name alone counts: someone who has typed who this is has started.
- */
-export function hasProgress(state: BuilderState): boolean {
-  return Boolean(
-    state.characterName.trim() ||
-      state.raceId ||
-      state.classId ||
-      state.backgroundId ||
-      state.level > 1,
-  );
-}
+// Lives with the state it reads, so the Gate can ask without loading the index.
+export { hasProgress } from "./builder-state";
 
 /**
  * What a species or class change has to let go of.

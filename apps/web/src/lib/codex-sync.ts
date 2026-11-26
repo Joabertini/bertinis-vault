@@ -133,7 +133,9 @@ export function useCodexSync() {
     const now = signatureOf(characters, burned);
     if (now === synced.current) return;
 
-    const timer = setTimeout(() => void run(), 1200);
+    // The first sync of a load has nothing to batch with: it goes at once, so a fresh
+    // browser does not stare at an empty shelf for the length of the pause.
+    const timer = setTimeout(() => void run(), synced.current === null ? 0 : 1200);
     return () => clearTimeout(timer);
   }, [account, characters, burned, run]);
 

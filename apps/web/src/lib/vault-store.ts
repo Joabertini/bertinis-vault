@@ -27,7 +27,17 @@ import {
 import type { Pace } from "./chambers";
 import type { Account, CharacterShare, StoredCharacter } from "@bertinis-vault/contracts";
 
-import { applyAction, type ForgeAction, type Outcome } from "./actions";
+/*
+ * Only the types: `actions` reaches the whole index through the forge package,
+ * and the Gate reads this store on the first paint. The Forge — the only room
+ * that dispatches — hands the store `applyAction` when it loads.
+ */
+import type { ForgeAction, Outcome, applyAction as ApplyAction } from "./actions";
+
+let applyAction: typeof ApplyAction | null = null;
+export function registerActions(apply: typeof ApplyAction) {
+  applyAction = apply;
+}
 import { mergeCodex, type CodexMerge, type SealedCharacter } from "./codex-file";
 
 export type { SealedCharacter } from "./codex-file";
@@ -215,6 +225,7 @@ export const useVault = create<VaultStore>()(
 
       dispatch: (action) => {
         const { draft, scratch } = get();
+        if (!applyAction) throw new Error("dispatch before the Forge registered its actions");
         const outcome = applyAction({ draft, scratch }, action);
         // An action that changes nothing hands the anvil back as it was.
         if (outcome.draft !== draft || outcome.scratch !== scratch) {
