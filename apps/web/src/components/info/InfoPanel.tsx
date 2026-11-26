@@ -9,7 +9,7 @@
  * the bottom. Both open only on a deliberate choice: a click or a pick.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 
 import RulesBody, { Block, Inline } from "@/components/info/RulesBody";
@@ -216,9 +216,63 @@ function Content({ ref_, accent }: { ref_: RuleRef; accent: string }) {
   );
 }
 
+/*
+ * Below 1500px the panel is a sheet along the bottom. It opens short, so the
+ * Forge stays usable in a window that is not maximised, and a handle on its top
+ * edge drags it taller or shorter. The height is remembered between opens.
+ */
+const SHEET_KEY = "faro-info-alto";
+const SHEET_MIN = 0.15;
+const SHEET_MAX = 0.85;
+const SHEET_START = 0.28;
+
+function readSheetHeight(): number {
+  try {
+    const stored = Number(localStorage.getItem(SHEET_KEY));
+    if (stored >= SHEET_MIN && stored <= SHEET_MAX) return stored;
+  } catch {
+    // Storage blocked: start from the default.
+  }
+  return SHEET_START;
+}
+
 export default function InfoPanel({ accent }: { accent: string }) {
   const { stack, back, close } = useInfo();
   const top = stack[stack.length - 1];
+  const [sheet, setSheet] = useState(readSheetHeight);
+
+  const startDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const handle = event.currentTarget;
+    handle.setPointerCapture(event.pointerId);
+    const move = (e: PointerEvent) => {
+      const share = (window.innerHeight - e.clientY) / window.innerHeight;
+      setSheet(Math.min(SHEET_MAX, Math.max(SHEET_MIN, share)));
+    };
+    const end = () => {
+      handle.removeEventListener("pointermove", move);
+      handle.removeEventListener("pointerup", end);
+      handle.removeEventListener("pointercancel", end);
+      setSheet((h) => {
+        try {
+          localStorage.setItem(SHEET_KEY, String(h));
+        } catch {
+          // Not remembered; it still works for this visit.
+        }
+        return h;
+      });
+    };
+    handle.addEventListener("pointermove", move);
+    handle.addEventListener("pointerup", end);
+    handle.addEventListener("pointercancel", end);
+  };
+
+  const nudge = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const step = event.key === "ArrowUp" ? 0.05 : event.key === "ArrowDown" ? -0.05 : 0;
+    if (!step) return;
+    event.preventDefault();
+    setSheet((h) => Math.min(SHEET_MAX, Math.max(SHEET_MIN, h + step)));
+  };
 
   return (
     <AnimatePresence>
@@ -230,9 +284,23 @@ export default function InfoPanel({ accent }: { accent: string }) {
           exit={{ opacity: 0, x: -12 }}
           transition={{ duration: 0.16 }}
           aria-label="Información"
-          className="fixed inset-x-0 bottom-0 z-40 flex max-h-[45vh] flex-col border bg-[#0B0B0B] min-[1500px]:inset-x-auto min-[1500px]:bottom-6 min-[1500px]:left-5 min-[1500px]:top-24 min-[1500px]:max-h-none min-[1500px]:w-[380px]"
-          style={{ borderColor: `${accent}44` }}
+          className="fixed inset-x-0 bottom-0 z-40 flex h-[var(--info-alto)] flex-col border bg-[#0B0B0B] min-[1500px]:inset-x-auto min-[1500px]:bottom-6 min-[1500px]:left-5 min-[1500px]:top-24 min-[1500px]:h-auto min-[1500px]:w-[380px]"
+          style={{ borderColor: `${accent}44`, ["--info-alto" as string]: `${Math.round(sheet * 100)}vh` }}
         >
+          <div
+            role="separator"
+            aria-orientation="horizontal"
+            aria-label="Cambiar el alto del panel"
+            aria-valuemin={SHEET_MIN * 100}
+            aria-valuemax={SHEET_MAX * 100}
+            aria-valuenow={Math.round(sheet * 100)}
+            tabIndex={0}
+            onPointerDown={startDrag}
+            onKeyDown={nudge}
+            className="flex h-4 shrink-0 cursor-ns-resize touch-none items-center justify-center min-[1500px]:hidden"
+          >
+            <span className="h-1 w-12 rounded-full bg-bone/40" />
+          </div>
           <header className="flex items-start justify-between gap-3 border-b border-iron/50 px-5 py-4">
             <div className="min-w-0">
               <p className="font-mono text-[13px] uppercase tracking-[0.1em] text-bone">{KIND_LABEL[top.kind]}</p>
