@@ -235,12 +235,17 @@ export default function CodexShelf({
   onBurn,
   onReforge,
   onOpenChange,
+  disponibles = null,
+  onDisponible,
   noun = ["tomo", "tomos"],
 }: {
   characters: SealedCharacter[];
   onBurn: (id: string) => (origin: { x: number; y: number }) => void;
   onReforge: (id: string) => () => void;
   onOpenChange?: (open: boolean) => void;
+  /** Faro del Alba: which characters can be used in missions. Null hides the switch. */
+  disponibles?: Record<string, boolean> | null;
+  onDisponible?: (id: string, value: boolean) => void;
   /** One and many, for the count above the shelf. */
   noun?: [string, string];
 }) {
@@ -278,12 +283,36 @@ export default function CodexShelf({
           }}
           renderActions={(book) =>
             book ? (
-              <button
-                onClick={() => setOpen(book.id)}
-                className="border border-[#F2C14E] bg-[#17120A] px-10 py-4 font-display text-[15px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-[#241C0D] hover:text-[#F2C14E]"
-              >
-                Abrir el tomo
-              </button>
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  onClick={() => setOpen(book.id)}
+                  className="border border-[#F2C14E] bg-[#17120A] px-10 py-4 font-display text-[15px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-[#241C0D] hover:text-[#F2C14E]"
+                >
+                  Abrir el tomo
+                </button>
+                {disponibles && onDisponible && (
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={disponibles[book.id] === true}
+                    title="Disponible: se puede postular a misiones del Faro"
+                    onClick={() => onDisponible(book.id, disponibles[book.id] !== true)}
+                    className={`flex items-center gap-3 border px-5 py-4 font-display text-[15px] font-semibold uppercase tracking-[0.1em] transition-colors ${
+                      disponibles[book.id] ? "border-[#F2C14E] bg-[#241C0D] text-[#F2C14E]" : "border-iron bg-[#0B0B0B] text-bone hover:text-white"
+                    }`}
+                  >
+                    <span
+                      aria-hidden="true"
+                      className={`relative h-4 w-8 rounded-full transition-colors ${disponibles[book.id] ? "bg-[#F2C14E]" : "bg-iron"}`}
+                    >
+                      <span
+                        className={`absolute top-0.5 h-3 w-3 rounded-full bg-[#0B0B0B] transition-[left] ${disponibles[book.id] ? "left-[18px]" : "left-0.5"}`}
+                      />
+                    </span>
+                    Disponible
+                  </button>
+                )}
+              </div>
             ) : null
           }
         />

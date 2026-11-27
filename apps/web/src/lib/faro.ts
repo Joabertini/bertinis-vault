@@ -16,8 +16,37 @@ const shelfKey = (owner: string) => `faro:estante:${owner}`;
 export const framed = () => window.top !== window;
 
 /** What the frame tells the profile. Only to that origin. */
-export function tellFaro(message: { alto: number } | { abierto: boolean } | { sinSesion: true } | { listo: true } | { fichas: FichaFaro[]; ids: string[] }): void {
+export function tellFaro(
+  message:
+    | { alto: number }
+    | { abierto: boolean }
+    | { sinSesion: true }
+    | { listo: true }
+    | { fichas: FichaFaro[]; ids: string[] }
+    | { disponible: { id: string; v: boolean } },
+): void {
   if (FARO_APP && framed()) window.parent.postMessage({ faro: message }, FARO_APP);
+}
+
+const CHARACTER_ID = /^[A-Za-z0-9_-]{1,64}$/;
+
+/**
+ * Which characters the profile has marked Disponible (usable in missions), from its message.
+ * Null when the message carries no map: the switch stays hidden rather than showing everything off.
+ */
+export function leerDisponibles(data: unknown): Record<string, boolean> | null {
+  const map = (data as { faro?: { disponibles?: unknown } } | null)?.faro?.disponibles;
+  if (!map || typeof map !== "object" || Array.isArray(map)) return null;
+  const out: Record<string, boolean> = {};
+  let count = 0;
+  for (const [id, value] of Object.entries(map)) {
+    if (count >= 200) break;
+    if (value === true && CHARACTER_ID.test(id)) {
+      out[id] = true;
+      count++;
+    }
+  }
+  return out;
 }
 
 type Shelf = { characters: SealedCharacter[]; burned: string[] };

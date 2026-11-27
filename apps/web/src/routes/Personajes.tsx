@@ -4,7 +4,7 @@
  * Same shelf, sheet, reminders and dice tray. The profile draws the title, the background and the
  * sign-in, so none of them are here.
  */
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import CodexBackup from "@/components/codex/CodexBackup";
@@ -14,7 +14,7 @@ import AshBurst from "@/components/fx/AshBurst";
 import RuneButton from "@/components/ui/RuneButton";
 import { useCodexSync } from "@/lib/codex-sync";
 import { loadHojaRules } from "@/components/sheet/Hoja2024";
-import { claimShelf, FARO_APP, tellFaro } from "@/lib/faro";
+import { claimShelf, FARO_APP, framed, leerDisponibles, tellFaro } from "@/lib/faro";
 import { fichasNuevas } from "@/lib/faro-ficha";
 import { useVault } from "@/lib/vault-store";
 
@@ -27,6 +27,22 @@ export default function Personajes() {
   const [query, setQuery] = useState("");
   const [burnOrigin, setBurnOrigin] = useState<{ x: number; y: number } | null>(null);
   const page = useRef<HTMLElement>(null);
+  // Disponible lives in the Faro account; the profile sends the map and corrects it if a change fails.
+  const [disponibles, setDisponibles] = useState<Record<string, boolean> | null>(null);
+  useEffect(() => {
+    if (!FARO_APP || !framed()) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.source !== window.parent || event.origin !== FARO_APP) return;
+      const map = leerDisponibles(event.data);
+      if (map) setDisponibles(map);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+  const toggleDisponible = (id: string, value: boolean) => {
+    setDisponibles((current) => ({ ...(current ?? {}), [id]: value }));
+    tellFaro({ disponible: { id, v: value } });
+  };
 
   // Before the first sync, which waits a moment after the account is known.
   useEffect(() => {
@@ -80,7 +96,11 @@ export default function Personajes() {
     };
   }, []);
 
-  const filtered = characters.filter((entry) => entry.state.characterName.toLowerCase().includes(query.toLowerCase()));
+  // The same list between renders: the 3D shelf rebuilds its scene whenever it gets a new one.
+  const filtered = useMemo(
+    () => characters.filter((entry) => entry.state.characterName.toLowerCase().includes(query.toLowerCase())),
+    [characters, query],
+  );
   const note =
     status.state === "failed"
       ? status.reason
@@ -124,6 +144,8 @@ export default function Personajes() {
               document.documentElement.classList.toggle("con-tomo", abierto);
               tellFaro({ abierto });
             }}
+            disponibles={disponibles}
+            onDisponible={toggleDisponible}
             noun={["personaje", "personajes"]}
           />
         </Suspense>
