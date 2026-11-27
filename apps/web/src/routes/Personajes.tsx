@@ -4,7 +4,7 @@
  * Same shelf, sheet, reminders and dice tray. The profile draws the title, the background and the
  * sign-in, so none of them are here.
  */
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 import CodexBackup from "@/components/codex/CodexBackup";
@@ -96,7 +96,11 @@ export default function Personajes() {
     };
   }, []);
 
-  const filtered = characters.filter((entry) => entry.state.characterName.toLowerCase().includes(query.toLowerCase()));
+  // The same list between renders: the 3D shelf rebuilds its scene whenever it gets a new one.
+  const filtered = useMemo(
+    () => characters.filter((entry) => entry.state.characterName.toLowerCase().includes(query.toLowerCase())),
+    [characters, query],
+  );
   const note =
     status.state === "failed"
       ? status.reason
