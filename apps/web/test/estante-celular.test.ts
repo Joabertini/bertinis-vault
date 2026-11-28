@@ -27,7 +27,7 @@ describe("el estante en celular", () => {
     };
 
     // The panel goes to the bottom and the close button to the corner.
-    expect(under("(max-width:760px)")).toEqual(expect.arrayContaining(["bottom:3.5%", "right:18px"]));
+    expect(under("(max-width:760px)")).toEqual(expect.arrayContaining(["bottom:3.5%", "right:12px"]));
     // The arrows grow on a wide shelf.
     expect(under("(min-width:768px)")).toContain("height:3rem");
     // No variant left that the plugin ignores.
