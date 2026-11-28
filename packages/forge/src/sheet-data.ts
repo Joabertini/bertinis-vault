@@ -19,10 +19,9 @@ import { characterLevelFor, classesFor, classingLabelFor } from "./builder";
 import type { BuilderState } from "./builder";
 import { entryById, hitDieFor } from "./catalog";
 import { savingThrowChecksFor, skillChecksFor, type Check } from "./checks";
-import { featIdsFor } from "./feats";
 import { gearProficienciesFor, type GearProficiencies } from "./gear-proficiencies";
-import { featGearGrantsFor } from "./index-options";
 import { attackLinesFor, type AttackLine } from "./sheet-attacks";
+import { gearGrantsFor } from "./printed-choices";
 import { speciesProficienciesFor, speciesTraitsFor } from "./species";
 import {
   initiativeFor,
@@ -141,7 +140,7 @@ export function sheetDataFor(
         classEntries,
         rulesVersion,
         speciesGrant ? { id: state.raceId, ...speciesGrant } : null,
-        featGearGrantsFor(featIdsFor(state), rulesVersion),
+        gearGrantsFor(state, rulesVersion),
       )
     : null;
 
@@ -253,9 +252,12 @@ export function sheetDataFor(
     classFeatures: features
       .filter((entry) => entry.source === "class" || entry.source === "subclass")
       .map((entry) => entry.label),
-    speciesTraits: state.raceId
-      ? speciesTraitsFor(state.raceId, state.subraceId, rulesVersion, state.sourceBooks)
-      : [],
+    speciesTraits: [
+      ...(state.raceId
+        ? speciesTraitsFor(state.raceId, state.subraceId, rulesVersion, state.sourceBooks)
+        : []),
+      ...features.filter((entry) => entry.source === "race").map((entry) => entry.label),
+    ],
     feats: features.filter((entry) => entry.source === "feat").map((entry) => entry.label),
     backgroundFeatures: features
       .filter((entry) => entry.source === "background")

@@ -11,7 +11,7 @@
  * the same rule the domain module states, and the reason it takes a boolean.
  */
 
-import { weaponAttackFor, type WeaponAttack } from "@bertinis-vault/domain";
+import { hasFightingStyle, isRangedWeapon, weaponAttackFor, type WeaponAttack } from "@bertinis-vault/domain";
 import type { CharacterBuild } from "@bertinis-vault/contracts";
 import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
@@ -75,18 +75,22 @@ export function attackLinesFor(
     // looks like an attack and answers nothing.
     if (!row) continue;
 
-    const attack = weaponAttackFor({
-      weapon: {
-        type: row.type ?? null,
-        properties: row.properties ?? null,
-        damage: row.damage ?? null,
-        versatileDamage: row.versatileDamage ?? null,
-        damageType: row.damageType ?? null,
-      },
+    const weapon = {
+      type: row.type ?? null,
+      properties: row.properties ?? null,
+      damage: row.damage ?? null,
+      versatileDamage: row.versatileDamage ?? null,
+      damageType: row.damageType ?? null,
+    };
+    const rolled = weaponAttackFor({
+      weapon,
       scores: { str: build.abilities.final.str, dex: build.abilities.final.dex },
       proficiencyBonus: build.derived.proficiencyBonus,
       proficient: isWeaponProficient(row, proficiencies),
     });
+    // The Archery fighting style: +2 to attack rolls with ranged weapons.
+    const archery = hasFightingStyle(build.choices, "archery") && isRangedWeapon(weapon);
+    const attack = archery ? { ...rolled, attackBonus: rolled.attackBonus + 2 } : rolled;
 
     const facts = weaponFacts(row);
     const hasMastery = masteryIds.includes(foundryWeaponId(row.name));

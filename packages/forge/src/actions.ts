@@ -21,6 +21,8 @@ import { allOptions, type CatalogEntry } from "./catalog";
 import { classEntriesFor, emptyExtraClass } from "./classing";
 import { resolveDraft } from "./derive";
 import { speciesFeatGrantFor } from "./feats";
+import { styleToggle } from "./fighting-style";
+import { printedToggle } from "./printed-choices";
 import { fromLines, toLines } from "./grants";
 import { levellingFor } from "./index-options";
 import { fixedLanguagesOf, grantedProficienciesOf } from "./settle";
@@ -311,8 +313,14 @@ export function applyAction(anvil: Anvil, action: ForgeAction): Outcome {
         extraEquipmentText: fromLines(toLines(draft.extraEquipmentText).filter((entry) => entry !== action.id)),
       });
 
-    case "toggleTalent":
+    case "toggleTalent": {
+      // A 2024 fighting style is a feat answered per grant, not an optional feature.
+      const styles = styleToggle(draft, action.id);
+      if (styles) return write({ styleFeatIds: styles });
+      const printed = printedToggle(draft, action.id);
+      if (printed) return write({ printedChoices: printed });
       return write({ optionalFeatureIds: toggled(draft.optionalFeatureIds, action.id) });
+    }
 
     case "pick": {
       const { prop, entry } = action;

@@ -114,6 +114,14 @@ export function skillChecksFor(build: CharacterBuild): Check[] {
     entries.filter((entry) => entry.kind === "expertise").map((entry) => keyOf(entry.label)),
   );
 
+  // Thaumaturge and Magician add the Wisdom modifier (at least +1) to two skills.
+  const features = new Set((build.choices.normalized?.features ?? []).map((entry) => entry.label));
+  const wisdomSkills = [
+    ...(features.has("Divine Order: Thaumaturge") ? ["arcana", "religion"] : []),
+    ...(features.has("Primal Order: Magician") ? ["arcana", "nature"] : []),
+  ];
+  const wisdomBonus = Math.max(1, modifierOf(build.abilities.final.wis));
+
   return Object.keys(skillIdByName)
     .sort()
     .map((name) => {
@@ -126,6 +134,7 @@ export function skillChecksFor(build: CharacterBuild): Check[] {
         ability,
         modifier:
           modifierOf(build.abilities.final[ability]) +
+          (wisdomSkills.includes(name) ? wisdomBonus : 0) +
           (proficient ? build.derived.proficiencyBonus * (expert ? 2 : 1) : 0),
         proficient,
         expert,

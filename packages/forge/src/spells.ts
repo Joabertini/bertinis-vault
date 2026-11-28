@@ -122,6 +122,7 @@ export function spellPlan(input: {
   snapshot: CharacterBuild | null;
   /** What the wizard has written down, as `"Nv1: Shield"` lines. Ignored otherwise. */
   spellbook?: string[];
+  cantripBonus?: number;
   /**
    * This class's own casting ability, when the character has more than one.
    *
@@ -242,6 +243,7 @@ export function spellPlan(input: {
     rulesVersion,
     maxLevel: 9,
   });
+  if (input.cantripBonus) profile.cantripLimit = (profile.cantripLimit ?? 0) + input.cantripBonus;
   const cantripOptions = rows.filter((row) => row.level === 0).map((row) => row.name);
   const levelled = rows.filter((row) => row.level > 0);
 
@@ -324,6 +326,8 @@ export function spellPlansFor(input: {
   rulesVersion: RulesVersion;
   snapshot: CharacterBuild | null;
   spellbook?: string[];
+  /** Extra cantrips by class, from a printed choice such as Thaumaturge. */
+  cantripBonus?: Record<string, number>;
 }): ClassSpellPlan[] {
   const plans: ClassSpellPlan[] = [];
 
@@ -345,6 +349,7 @@ export function spellPlansFor(input: {
       ...(own.pactLevel === undefined ? {} : { ownPactLevel: own.pactLevel }),
       ...(entry.spellcastingAbility ? { castingAbility: entry.spellcastingAbility } : {}),
       ...(input.spellbook ? { spellbook: input.spellbook } : {}),
+      ...(input.cantripBonus?.[entry.classId] ? { cantripBonus: input.cantripBonus[entry.classId] } : {}),
     });
 
     if (!plan.caster) continue;

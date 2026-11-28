@@ -8,6 +8,7 @@ import {
 import { getArmorCatalogEntry } from "@bertinis-vault/data-engine";
 import { abilityModifierMap } from "./abilities.js";
 import { bestArmorClass } from "./armor-class.js";
+import { hasFightingStyle } from "./fighting-style.js";
 import {
   multiclassHitPoints,
   multiclassSpellSlots,
@@ -93,15 +94,19 @@ export function deriveCharacterBuild(
   // parameter for it has existed since the beginning and nothing ever passed
   // it, so a barbarian with 16 Constitution was shown three lower than they
   // are, with nothing on the sheet to say a number had gone missing.
-  const { ac } = bestArmorClass({
+  const isWearingArmor = Boolean(indexedArmor ?? armorEntry);
+  const best = bestArmorClass({
     options: parsedInput.choices.normalized?.armorClassOptions ?? [],
     modifiers,
     wornArmorClass,
-    isWearingArmor: Boolean(indexedArmor ?? armorEntry),
+    isWearingArmor,
     hasShield,
     level,
     variantsTaken: parsedInput.choices.features,
   });
+  // The Defense fighting style: +1 while wearing armour. A 2014 optional feature
+  // or a 2024 feat, both under the id "defense".
+  const ac = best.ac + (isWearingArmor && hasFightingStyle(parsedInput.choices, "defense") ? 1 : 0);
 
   // Keyed by the level the slot is, which is the payload's shape rather than
   // Foundry's field names. The two were confused, and the result was a path

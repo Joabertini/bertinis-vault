@@ -22,8 +22,7 @@ import Checks from "@/components/forge/Checks";
 import GearProficienciesPanel from "@/components/forge/GearProficiencies";
 import { savingThrowChecksFor, skillChecksFor } from "@/lib/checks";
 import { gearProficienciesFor } from "@/lib/gear-proficiencies";
-import { featGearGrantsFor } from "@/lib/index-options";
-import { featIdsFor } from "@/lib/feats";
+import { gearGrantsFor } from "@/lib/printed-choices";
 import { grantedSpellsFor } from "@/lib/granted-spells";
 import { speciesProficienciesFor, speciesTraitsFor } from "@/lib/species";
 import { coinLabel } from "@/lib/starting-kit";
@@ -157,7 +156,7 @@ export default function LiveSheet({
     : null;
   // And the ones a feat grants: Heavily Armored is a level spent on plate, and
   // until now the sheet said the character could not wear it.
-  const featGrants = featGearGrantsFor(featIdsFor(state), rulesVersion);
+  const featGrants = gearGrantsFor(state, rulesVersion);
   const gearProficiencies = classEntries.length
     ? gearProficienciesFor(
         classEntries,

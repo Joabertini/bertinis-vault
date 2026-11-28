@@ -43,8 +43,10 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder-state";
 import { classEntriesFor } from "./classing";
-import { featIdsFor } from "./feats";
-import { slugOf, subclassInfoFor } from "./index-options";
+import { backgroundFeatIdsFor, featIdsFor } from "./feats";
+import { styleFeatIdsFor } from "./fighting-style";
+import { GNOME_LINEAGE_SPELLS } from "./printed-choices";
+import { featChoiceForBackground, slugOf, subclassInfoFor } from "./index-options";
 
 /** One thing that grants spells, and everything needed to read what it grants. */
 export type SpellGrantSource = {
@@ -76,6 +78,28 @@ export type SpellGrantSource = {
   pactSlotLevel: number;
 };
 
+/**
+ * A background that prints which list its feat draws from — `Magic Initiate (Druid)`
+ * on the guide — leaves nothing to ask: only that list's entries apply.
+ */
+function fixedByBackground<Entry extends { variant?: string | null }>(
+  state: BuilderState,
+  featId: string,
+  entries: Entry[],
+): Entry[] {
+  if (!backgroundFeatIdsFor(state).includes(featId)) return entries;
+  const choice = featChoiceForBackground(
+    state.backgroundId,
+    state.rulesVersion === "5e-2024" ? "2024" : "2014",
+    state.sourceBooks[`background:${state.backgroundId}`],
+  );
+  const qualifier = choice?.options.find((option) => slugOf(option.name) === featId)?.qualifier;
+  const variant = qualifier ? `${qualifier} spells`.toLowerCase() : "";
+  const kept = entries.filter((entry) => entry.variant?.toLowerCase() === variant);
+  if (!variant || kept.length === 0) return entries;
+  return kept.map((entry) => ({ ...entry, variant: null }));
+}
+
 /** Every source of granted spells this draft has, in the order it picked them. */
 export function spellGrantsFor(
   state: BuilderState,
@@ -90,13 +114,18 @@ export function spellGrantsFor(
 
   const races = forRulesVersion(collections.race ?? [], rulesVersion) as RaceRow[];
   const race = pickRow(races, state.raceId, state.sourceBooks[`race:${state.raceId}`]);
-  if (race?.spells?.length) {
+  // The index carries no spells for the gnome: its two lineages are printed in `printed-choices.ts`.
+  const raceSpells =
+    rulesVersion === "2024" && state.raceId === "gnome"
+      ? (GNOME_LINEAGE_SPELLS as unknown as RaceRow["spells"])
+      : race?.spells;
+  if (race && raceSpells?.length) {
     sources.push({
       key: "race",
       label: race.name,
       chamber: "species",
-      entries: race.spells,
-      variants: spellVariantsOf(race.spells),
+      entries: raceSpells,
+      variants: spellVariantsOf(raceSpells),
       // The character's level, not a class's: the species does not care which
       // class the level was taken in.
       level,
@@ -148,16 +177,19 @@ export function spellGrantsFor(
   }
 
   const feats = forRulesVersion(collections.feat ?? [], rulesVersion) as FeatRow[];
+  const styleFeats = new Set(styleFeatIdsFor(state));
   for (const featId of featIdsFor(state)) {
     const feat = pickRow(feats, featId, state.sourceBooks[`feat:${featId}`]);
     if (!feat?.spells?.length) continue;
+    const entries = fixedByBackground(state, featId, feat.spells);
 
     sources.push({
       key: `feat:${featId}`,
       label: feat.name,
-      chamber: "growth",
-      entries: feat.spells,
-      variants: spellVariantsOf(feat.spells),
+      // A fighting style's cantrips are asked where the style was chosen.
+      chamber: styleFeats.has(featId) ? "class" : "growth",
+      entries,
+      variants: spellVariantsOf(entries),
       level,
       pactSlotLevel: 0,
     });

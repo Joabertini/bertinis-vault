@@ -22,6 +22,7 @@ import { CUSTOM_BACKGROUND_ID } from "@bertinis-vault/contracts";
 import { collections, forRulesVersion, type FeatRow } from "@bertinis-vault/vetools-index";
 
 import type { BuilderState } from "./builder";
+import { classEntriesFor } from "./classing";
 import { featIdsFor } from "./feats";
 import { speciesProficienciesFor } from "./species";
 import {
@@ -211,6 +212,35 @@ export function proficiencyPlan(
       kind: "skill",
       from: "multiclase",
     });
+  }
+
+  /*
+   * The 2024 class features that hand over a proficiency, which the class's
+   * level 1 block does not list. After the bounded offers: the bard's is open.
+   */
+  if (rulesVersion === "2024" && state.classId) {
+    const entries = classEntriesFor(
+      { classId: state.classId, subclassId: state.subclassId, level: state.level },
+      state.extraClasses,
+      "2024",
+    );
+    const reached = (classId: string, subclassId = "") =>
+      entries.some(
+        (entry) => entry.classId === classId && entry.level >= 3 && (!subclassId || entry.subclassId === subclassId),
+      );
+    const classSkills = (classId: string) => skillChoiceForClass(classId, rulesVersion)?.options ?? [];
+    const owe = (offer: Omit<SkillOffer, "from">) => offers.push({ ...offer, from: "clase" });
+
+    if (reached("bard", "college-of-lore")) {
+      owe({ options: [...ALL_SKILLS], count: 3, isOpen: true, kind: "skill", label: "Bonus Proficiencies" });
+    }
+    if (reached("fighter", "battle-master")) {
+      owe({ options: classSkills("fighter"), count: 1, isOpen: false, kind: "skill", label: "Student of War" });
+      owe({ options: [], count: 1, isOpen: true, scope: "artisan", kind: "tool", label: "Student of War" });
+    }
+    if (reached("barbarian")) {
+      owe({ options: classSkills("barbarian"), count: 1, isOpen: false, kind: "skill", label: "Primal Knowledge" });
+    }
   }
 
   /*

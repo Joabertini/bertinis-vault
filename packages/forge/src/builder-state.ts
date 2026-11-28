@@ -211,6 +211,14 @@ export type BuilderState = {
    */
   spellVariantChoices: Record<string, string>;
   /**
+   * The 2024 fighting style feat chosen for each grant, keyed `"<class>:<level>"`
+   * (`"fighter:1"`, `"fighter:7"` for the champion's second). See `fighting-style.ts`.
+   * Optional because every draft saved before it existed has none.
+   */
+  styleFeatIds?: Record<string, string>;
+  /** The answers to the choices in `printed-choices.ts`, keyed by choice. Optional for older drafts. */
+  printedChoices?: Record<string, string>;
+  /**
    * Which ability a grant's spells are cast with, per thing that offers a
    * choice of one.
    *
@@ -378,6 +386,8 @@ export const initialState: BuilderState = {
   spellsText: "Nv1: Shield\nNv1: Magic Missile\nNv2: Misty Step",
   spellbookText: "",
   spellVariantChoices: {},
+  styleFeatIds: {},
+  printedChoices: {},
   spellAbilityChoices: {},
   grantedSpellChoices: {},
   featuresText: "Arcane Recovery\nSculpt Spells",
@@ -473,6 +483,8 @@ export function coerceBuilderState(value: unknown): BuilderState {
         ? candidate.spellbookText
         : initialState.spellbookText,
     spellVariantChoices: coerceVariantChoices(candidate.spellVariantChoices),
+    styleFeatIds: coerceVariantChoices(candidate.styleFeatIds),
+    printedChoices: coerceVariantChoices(candidate.printedChoices),
     spellAbilityChoices: coerceVariantChoices(candidate.spellAbilityChoices),
     grantedSpellChoices: coerceSpellChoices(candidate.grantedSpellChoices),
     featuresText:
