@@ -100,6 +100,8 @@ void main() {
 
 const STREAKS = `#version 300 es
 precision highp float;
+// En celular los enteros nacen en 16 bits y el sorteo de cada estela da siempre lo mismo.
+precision highp int;
 uniform vec2 uView;
 uniform float uZoom;
 uniform float uPhase;

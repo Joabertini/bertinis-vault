@@ -124,7 +124,7 @@ export default function Personajes() {
         />
         <p role="status" className="font-body text-[15px] text-bone">{note}</p>
         <Link to="/">
-          <RuneButton variant="blood">Crear personaje</RuneButton>
+          <RuneButton variant="blood" className="max-[760px]:px-6 max-[760px]:py-2.5 max-[760px]:text-[12px]">Crear personaje</RuneButton>
         </Link>
       </div>
 

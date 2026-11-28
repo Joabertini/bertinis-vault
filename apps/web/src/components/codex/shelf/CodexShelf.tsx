@@ -265,7 +265,8 @@ export default function CodexShelf({
 
   return (
     <>
-      <div className="relative h-[56vh] max-h-[620px] min-h-[380px] w-full">
+      {/* A narrow shelf stacks the chosen book over its details, which needs the height. */}
+      <div className="relative h-[56vh] max-h-[620px] min-h-[380px] w-full max-[760px]:min-h-[600px]">
         <BooksShowcase
           books={books}
           heroTitle=""
@@ -283,10 +284,10 @@ export default function CodexShelf({
           }}
           renderActions={(book) =>
             book ? (
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3 max-[760px]:gap-2">
                 <button
                   onClick={() => setOpen(book.id)}
-                  className="border border-[#F2C14E] bg-[#17120A] px-10 py-4 font-display text-[15px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-[#241C0D] hover:text-[#F2C14E]"
+                  className="border max-[760px]:px-3 max-[760px]:py-2 max-[760px]:text-[12px] max-[760px]:tracking-[0.06em] border-[#F2C14E] bg-[#17120A] px-10 py-4 font-display text-[15px] font-semibold uppercase tracking-[0.1em] text-white transition-colors hover:bg-[#241C0D] hover:text-[#F2C14E]"
                 >
                   Abrir el tomo
                 </button>
@@ -297,7 +298,7 @@ export default function CodexShelf({
                     aria-checked={disponibles[book.id] === true}
                     title="Disponible: se puede postular a misiones del Faro"
                     onClick={() => onDisponible(book.id, disponibles[book.id] !== true)}
-                    className={`flex items-center gap-3 border px-5 py-4 font-display text-[15px] font-semibold uppercase tracking-[0.1em] transition-colors ${
+                    className={`flex items-center gap-3 border px-5 py-4 max-[760px]:gap-2 max-[760px]:px-3 max-[760px]:py-2 max-[760px]:text-[12px] max-[760px]:tracking-[0.06em] font-display text-[15px] font-semibold uppercase tracking-[0.1em] transition-colors ${
                       disponibles[book.id] ? "border-[#F2C14E] bg-[#241C0D] text-[#F2C14E]" : "border-iron bg-[#0B0B0B] text-bone hover:text-white"
                     }`}
                   >
