@@ -1134,6 +1134,9 @@ export function BooksShowcase({
         book.orbPhase = 'return';
         book.orbTarget = 0;
         book.orbXs.set(0);
+        // ADAPTED: measured again, because above the panel was still empty and
+        // on a phone the book sits in whatever room the panel leaves.
+        computeSlots();
         applyMode();
         camTo('detail');
       }, 760);
@@ -1756,7 +1759,7 @@ export function BooksShowcase({
             type="button"
             aria-label="Previous books"
             onClick={() => shiftCarouselRef.current(-1)}
-            className={`absolute left-3 top-1/2 z-30 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#F2C14E] bg-[#17120A] text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[#241C0D] hover:text-[#F2C14E] @min-[768px]:left-6 @min-[768px]:h-12 @min-[768px]:w-12 ${uiMode === 'hero' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+            className={`absolute left-3 top-1/2 z-30 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#F2C14E] bg-[#17120A] text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[#241C0D] hover:text-[#F2C14E] @[768px]:left-6 @[768px]:h-12 @[768px]:w-12 ${uiMode === 'hero' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
               }`}
           >
             <ChevronLeft />
@@ -1765,7 +1768,7 @@ export function BooksShowcase({
             type="button"
             aria-label="Next books"
             onClick={() => shiftCarouselRef.current(1)}
-            className={`absolute right-3 top-1/2 z-30 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#F2C14E] bg-[#17120A] text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[#241C0D] hover:text-[#F2C14E] @min-[768px]:right-6 @min-[768px]:h-12 @min-[768px]:w-12 ${uiMode === 'hero' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+            className={`absolute right-3 top-1/2 z-30 -translate-y-1/2 inline-flex h-11 w-11 items-center justify-center rounded-full border border-[#F2C14E] bg-[#17120A] text-white shadow-lg transition-all duration-300 hover:scale-105 hover:bg-[#241C0D] hover:text-[#F2C14E] @[768px]:right-6 @[768px]:h-12 @[768px]:w-12 ${uiMode === 'hero' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
               }`}
           >
             <ChevronRight />
@@ -1794,7 +1797,7 @@ export function BooksShowcase({
       <button
         ref={closeBtnRef}
         aria-label="Cerrar"
-        className={`absolute left-1/2 top-[30px] z-40 -translate-x-1/2 inline-flex h-[52px] w-[52px] items-center justify-center rounded-full border-[1.5px] border-[var(--bs-cream)]/40 bg-transparent text-[17px] leading-none text-[var(--bs-cream)] transition-[opacity,border-color] duration-300 delay-150 hover:border-[var(--bs-cream)]/90 @max-[760px]:left-auto @max-[760px]:right-[18px] @max-[760px]:top-[18px] @max-[760px]:translate-x-0 [-webkit-tap-highlight-color:transparent] ${uiMode === 'detail' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
+        className={`absolute left-1/2 top-[30px] z-40 -translate-x-1/2 inline-flex h-[52px] w-[52px] items-center justify-center rounded-full border-[1.5px] border-[var(--bs-cream)]/40 bg-transparent text-[17px] leading-none text-[var(--bs-cream)] transition-[opacity,border-color] duration-300 delay-150 hover:border-[var(--bs-cream)]/90 [@container_(max-width:760px)]:left-auto [@container_(max-width:760px)]:right-[18px] [@container_(max-width:760px)]:top-[18px] [@container_(max-width:760px)]:translate-x-0 [-webkit-tap-highlight-color:transparent] ${uiMode === 'detail' ? 'pointer-events-auto opacity-100' : 'pointer-events-none opacity-0'
           }`}
       >
         &#10005;
@@ -1804,22 +1807,22 @@ export function BooksShowcase({
         <div
           ref={dpRef}
           aria-live="polite"
-          className={`absolute right-[7%] top-1/2 z-[15] w-[min(560px,42%)] -translate-y-1/2 pointer-events-none @max-[760px]:right-auto @max-[760px]:left-1/2 @max-[760px]:top-auto @max-[760px]:bottom-[3.5%] @max-[760px]:w-[min(560px,92cqw)] @max-[760px]:-translate-x-1/2 @max-[760px]:translate-y-0 ${panelVisible ? 'visible' : 'invisible delay-[500ms]'
+          className={`absolute right-[7%] top-1/2 z-[15] w-[min(560px,42%)] -translate-y-1/2 pointer-events-none [@container_(max-width:760px)]:right-auto [@container_(max-width:760px)]:left-1/2 [@container_(max-width:760px)]:top-auto [@container_(max-width:760px)]:bottom-[3.5%] [@container_(max-width:760px)]:w-[min(560px,92cqw)] [@container_(max-width:760px)]:-translate-x-1/2 [@container_(max-width:760px)]:translate-y-0 ${panelVisible ? 'visible' : 'invisible delay-[500ms]'
             }`}
         >
-          <h1 className={`m-0 text-[var(--bs-pink)] text-[clamp(52px,5.6cqw,92px)] font-extrabold leading-[0.98] tracking-[-0.015em] @max-[760px]:text-[clamp(36px,9.5cqw,54px)] ${dpChild(50)}`}>
+          <h1 className={`m-0 text-[var(--bs-pink)] text-[clamp(52px,5.6cqw,92px)] font-extrabold leading-[0.98] tracking-[-0.015em] [@container_(max-width:760px)]:text-[clamp(36px,9.5cqw,54px)] ${dpChild(50)}`}>
             {selectedCfg?.title}
           </h1>
-          <p className={`mt-[26px] max-w-[54ch] text-[var(--bs-lav)] text-[clamp(16px,1.25cqw,19px)] leading-[1.65] @max-[760px]:mt-4 @max-[760px]:line-clamp-4 @max-[760px]:text-[15px] ${dpChild(130)}`}>
+          <p className={`mt-[26px] max-w-[54ch] text-[var(--bs-lav)] text-[clamp(16px,1.25cqw,19px)] leading-[1.65] [@container_(max-width:760px)]:mt-4 [@container_(max-width:760px)]:line-clamp-4 [@container_(max-width:760px)]:text-[15px] ${dpChild(130)}`}>
             {selectedCfg?.desc}
           </p>
           {/* ADAPTED: was stars / Goodreads / Buy Now. */}
-          <div className={`mt-[34px] flex items-center gap-[18px] @max-[760px]:mt-[18px] ${dpChild(210)}`}>
+          <div className={`mt-[34px] flex items-center gap-[18px] [@container_(max-width:760px)]:mt-[18px] ${dpChild(210)}`}>
             <div className="text-[19px] text-[var(--bs-lav)]">{selectedCfg?.author}</div>
             <div className="ml-auto text-[19px] text-[var(--bs-lav)]">{selectedCfg?.year}</div>
           </div>
-          <div className={`mt-[26px] border-t border-[var(--bs-lav)]/[0.18] @max-[760px]:mt-4 ${dpChild(270)}`} />
-          <div className={`pointer-events-auto mt-8 @max-[760px]:mt-[18px] ${dpChild(330)}`}>
+          <div className={`mt-[26px] border-t border-[var(--bs-lav)]/[0.18] [@container_(max-width:760px)]:mt-4 ${dpChild(270)}`} />
+          <div className={`pointer-events-auto mt-8 [@container_(max-width:760px)]:mt-[18px] ${dpChild(330)}`}>
             {renderActions?.(selectedCfg)}
           </div>
         </div>

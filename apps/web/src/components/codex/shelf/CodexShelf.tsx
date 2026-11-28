@@ -265,7 +265,8 @@ export default function CodexShelf({
 
   return (
     <>
-      <div className="relative h-[56vh] max-h-[620px] min-h-[380px] w-full">
+      {/* A narrow shelf stacks the chosen book over its details, which needs the height. */}
+      <div className="relative h-[56vh] max-h-[620px] min-h-[380px] w-full max-[760px]:min-h-[600px]">
         <BooksShowcase
           books={books}
           heroTitle=""
