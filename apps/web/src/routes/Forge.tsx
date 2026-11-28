@@ -54,13 +54,12 @@ import {
 } from "@/lib/catalog";
 import {
   featChoiceForBackground,
-  featGearGrantsFor,
   levellingFor,
   optionsFor,
   slugOf,
   startingEquipmentForClass,
 } from "@/lib/index-options";
-import { backgroundFeatIdsFor, featIdsFor, unansweredFeatBenefits } from "@/lib/feats";
+import { backgroundFeatIdsFor, unansweredFeatBenefits } from "@/lib/feats";
 import { collapseGearLines } from "@/lib/gear-lines";
 import { factsFor, nameFor } from "@/lib/item-facts";
 import { armorWarningFor, weaponWarningFor } from "@/lib/gear-warnings";
@@ -104,6 +103,13 @@ import {
 import { expertisePlanFor } from "@/lib/expertise";
 import { classesFor, unmetMulticlassRequirementsFor } from "@/lib/builder";
 import { talentPools, talentsSatisfied } from "@/lib/optional-features";
+import { stylePoolsFor, styleTalentIdsFor } from "@/lib/fighting-style";
+import {
+  gearGrantsFor,
+  printedCantripBonusFor,
+  printedPoolsFor,
+  printedTalentIdsFor,
+} from "@/lib/printed-choices";
 import {
   originAbilityAllowanceFor,
   bonusShape,
@@ -438,6 +444,7 @@ export default function Forge() {
         rulesVersion,
         snapshot,
         spellbook: toLines(draft.spellbookText),
+        cantripBonus: printedCantripBonusFor(draft),
       }),
     [
       draft.classId,
@@ -445,6 +452,7 @@ export default function Forge() {
       draft.level,
       draft.extraClasses,
       draft.spellbookText,
+      draft.printedChoices,
       allClasses,
       rulesVersion,
       snapshot,
@@ -628,6 +636,8 @@ export default function Forge() {
    */
   const pools = useMemo(
     () => [
+      ...stylePoolsFor(draft),
+      ...printedPoolsFor(draft, "class"),
       ...talentPools(draft, rulesVersion, selectedClass?.label ?? "", selectedSubclass?.label ?? ""),
       ...draft.extraClasses
         .filter((extra) => extra.classId && extra.level >= 1)
@@ -648,6 +658,11 @@ export default function Forge() {
         }),
     ],
     [draft, rulesVersion, selectedClass, selectedSubclass],
+  );
+  /** What the pools count as chosen: the optional features and, in 2024, the style feats. */
+  const chosenTalents = useMemo(
+    () => [...styleTalentIdsFor(draft), ...printedTalentIdsFor(draft), ...draft.optionalFeatureIds],
+    [draft],
   );
 
   const carried = useMemo(() => toLines(draft.extraEquipmentText), [draft.extraEquipmentText]);
@@ -758,7 +773,7 @@ export default function Forge() {
       // A feat counts here too, and this is the warning that used to be wrong
       // about it: the wizard who spent a level on Lightly Armored was still
       // being told the leather they just bought would cost them their spells.
-      featGearGrantsFor(featIdsFor(draft), rulesVersion),
+      gearGrantsFor(draft, rulesVersion),
     );
   }, [draft, rulesVersion, speciesGrant]);
 
@@ -863,13 +878,16 @@ export default function Forge() {
   };
 
   const answered: Record<ChamberKey, boolean> = {
-    ancestry: Boolean(draft.raceId) && grantsSettled("species"),
+    ancestry:
+      Boolean(draft.raceId) &&
+      grantsSettled("species") &&
+      talentsSatisfied(printedPoolsFor(draft, "species"), chosenTalents),
     // The pools moved here with the picker that fills them. A fighting style
     // is a level 1 class feature, so the chamber that owes it is the one that
     // chose the class.
     calling:
       Boolean(draft.classId) &&
-      talentsSatisfied(pools, draft.optionalFeatureIds) &&
+      talentsSatisfied(pools, chosenTalents) &&
       grantsSettled("class"),
     // A background that offers several feats owes an answer; one that grants a
     // single one has already been recorded above.
@@ -1261,6 +1279,10 @@ export default function Forge() {
                   onToggleGrantedSpell={toggleGrantedSpell}
                   onChooseVariant={chooseVariant}
                   onChooseSpellAbility={chooseSpellAbility}
+                  pools={printedPoolsFor(draft, "species")}
+                  chosenTalents={chosenTalents}
+                  accent={accent}
+                  onToggleTalent={toggleTalent}
                 />
               )}
 
@@ -1280,6 +1302,7 @@ export default function Forge() {
                   variantSources={spellGrants.filter((source) => source.chamber === "class")}
                   spellChoices={spellChoices}
                   pools={pools}
+                  chosenTalents={chosenTalents}
                   hitPointLevels={hitPointLevels}
                   firstHitDie={firstHitDie}
                   constitutionModifier={Math.floor((snapshot?.abilities.final.con ?? 10) / 2) - 5}

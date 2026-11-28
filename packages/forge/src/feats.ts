@@ -18,6 +18,7 @@ import type { RulesVersion } from "@bertinis-vault/vetools-ref";
 
 import type { BuilderState } from "./builder-state";
 import { featChoiceForBackground, slugOf } from "./index-options";
+import { styleFeatIdsFor } from "./fighting-style";
 import { levelFeatsFor } from "./level-choices";
 
 /**
@@ -171,6 +172,7 @@ export function featIdsFor(state: BuilderState): string[] {
       [
         ...backgroundFeatIdsFor(state),
         state.featId,
+        ...styleFeatIdsFor(state),
         ...levelFeatsFor(state),
       ].filter(Boolean),
     ),

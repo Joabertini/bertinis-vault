@@ -35,7 +35,8 @@ import { classEntriesFor } from "./classing";
 import { counselFor } from "./counsel";
 import { resolveDraft, type ResolvedDraft } from "./derive";
 import { expertisePlanFor } from "./expertise";
-import { featIdsFor } from "./feats";
+import { stylePoolsFor, styleTalentIdsFor } from "./fighting-style";
+import { gearGrantsFor, printedCantripBonusFor, printedPoolsFor, printedTalentIdsFor } from "./printed-choices";
 import { collapseGearLines } from "./gear-lines";
 import { gearProficienciesFor, type ProficiencyLine } from "./gear-proficiencies";
 import {
@@ -56,7 +57,7 @@ import {
   scoresBefore,
   speciesBonusBudgetFor,
 } from "./improvements";
-import { featAbilityGrantsFor, featGearGrantsFor } from "./index-options";
+import { featAbilityGrantsFor } from "./index-options";
 import { factsFor, nameFor } from "./item-facts";
 import { assignLanguages, languagePlanFor } from "./languages";
 import { talentPools } from "./optional-features";
@@ -283,6 +284,8 @@ export function callingView(draft: BuilderState) {
   const classLabel = label("class", draft.classId);
   const subclassLabel = label("subclass", draft.subclassId, draft.sourceBooks[`subclass:${draft.subclassId}`]);
   const pools = [
+    ...stylePoolsFor(draft),
+    ...printedPoolsFor(draft),
     ...talentPools(draft, rulesVersion, classLabel, subclassLabel),
     ...draft.extraClasses
       .filter((extra) => extra.classId && extra.level >= 1)
@@ -299,7 +302,7 @@ export function callingView(draft: BuilderState) {
   const con = snapshot ? snapshot.abilities.final.con : draft.con;
   return {
     pools,
-    talents: draft.optionalFeatureIds,
+    talents: [...styleTalentIdsFor(draft), ...printedTalentIdsFor(draft), ...draft.optionalFeatureIds],
     hitPoints: hitPointLevelsFor(draft),
     firstHitDie: classesFor(draft)[0]?.hitDie ?? hitDieFor(draft.classId, rulesVersion) ?? 8,
     conModifier: Math.floor(con / 2) - 5,
@@ -351,6 +354,7 @@ export function spellsView(draft: BuilderState) {
     rulesVersion,
     snapshot: snapshotOf(draft),
     spellbook: toLines(draft.spellbookText),
+    cantripBonus: printedCantripBonusFor(draft),
   });
   const cantrips = toLines(draft.cantripsText);
   const spells = toLines(draft.spellsText);
@@ -406,7 +410,7 @@ export function recordView(draft: BuilderState) {
   const speciesGrant = draft.raceId
     ? speciesProficienciesFor(draft.raceId, draft.subraceId, rulesVersion, books)
     : null;
-  const featGrants = featGearGrantsFor(featIdsFor(draft), rulesVersion);
+  const featGrants = gearGrantsFor(draft, rulesVersion);
   const gear = classEntries.length
     ? gearProficienciesFor(
         classEntries,

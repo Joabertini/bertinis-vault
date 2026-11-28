@@ -5,6 +5,7 @@ import { speciesIconKey } from "@/lib/icons";
 import ScryPicker from "@/components/forge/ScryPicker";
 import SizeChoice from "@/components/forge/SizeChoice";
 import SubChoice from "@/components/forge/SubChoice";
+import TalentPools from "@/components/forge/TalentPools";
 import VariantChoices from "@/components/forge/VariantChoices";
 import type { BuilderState } from "@/lib/builder-state";
 import type { CatalogEntry } from "@/lib/catalog";
@@ -29,6 +30,10 @@ export default function AncestryChamber({
   onToggleGrantedSpell,
   onChooseVariant,
   onChooseSpellAbility,
+  pools,
+  chosenTalents,
+  accent,
+  onToggleTalent,
 }: {
   draft: BuilderState;
   patchDraft: (patch: Partial<BuilderState>) => void;
@@ -44,6 +49,11 @@ export default function AncestryChamber({
   onToggleGrantedSpell: ComponentProps<typeof VariantChoices>["onToggleSpell"];
   onChooseVariant: ComponentProps<typeof VariantChoices>["onPick"];
   onChooseSpellAbility: ComponentProps<typeof VariantChoices>["onPickAbility"];
+  /** The species' printed choices: a dragonborn's ancestry, a goliath's giant. */
+  pools: ComponentProps<typeof TalentPools>["pools"];
+  chosenTalents: string[];
+  accent: string;
+  onToggleTalent: ComponentProps<typeof TalentPools>["onToggle"];
 }) {
   const featGrant = speciesFeatGrantFor(draft);
   const edition = draft.rulesVersion === "5e-2024" ? "2024" : "2014";
@@ -82,6 +92,8 @@ export default function AncestryChamber({
         onPick={onChooseVariant}
         onPickAbility={onChooseSpellAbility}
       />
+
+      <TalentPools pools={pools} chosen={chosenTalents} accent={accent} onToggle={onToggleTalent} />
 
       {/* Only 2014 has these; 2024 folded them into the species. */}
       {subraces.length > 0 && (

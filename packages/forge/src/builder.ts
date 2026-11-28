@@ -38,6 +38,8 @@ import {
 } from "./feats";
 import { grantedSpellsFor } from "./granted-spells";
 import { hitPointsInputFor } from "./hit-points";
+import { styleFeatIdsFor } from "./fighting-style";
+import { gearGrantsFor, printedFeaturesFor } from "./printed-choices";
 import { levelBonusesFor, levelFeatsFor } from "./level-choices";
 export { backgroundFeatIdsFor } from "./feats";
 import { foundrySizeFor } from "./table-numbers";
@@ -73,7 +75,6 @@ import {
   armorFormulaOf,
   featAbilityGrantsFor,
   featChoiceForBackground,
-  featGearGrantsFor,
   isWeaponRow,
   itemInfoFor,
   slugOf,
@@ -641,7 +642,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
         speciesGrant ? { id: state.raceId, ...speciesGrant } : null,
         // And the ones a *feat* grants. Heavily Armored is a whole level spent
         // on plate; before this it reached the exported actor as nothing.
-        featGearGrantsFor(featIdsFor(state), rulesVersionOf(state)),
+        gearGrantsFor(state, rulesVersionOf(state)),
       )
     : null;
   /*
@@ -744,7 +745,7 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
   // the background's. Both land in the same list, and a feat the background
   // already granted is not counted twice.
   const chosenFeatIds = uniqueEntries(
-    [state.featId, ...levelFeatsFor(state)].filter(
+    [state.featId, ...styleFeatIdsFor(state), ...levelFeatsFor(state)].filter(
       (featId) => featId && !backgroundGrantedFeatIds.includes(featId),
     ),
   );
@@ -918,7 +919,10 @@ export function buildCanonicalSnapshot(state: BuilderState): CharacterBuild {
           ),
         ),
           features: (() => {
-            const featEntries = featFeatureEntriesFor(state, rulesVersionOf(state));
+            const featEntries = [
+              ...featFeatureEntriesFor(state, rulesVersionOf(state)),
+              ...printedFeaturesFor(state),
+            ];
             // A feat's label reaches the sheet from the index now, not from
             // the features box. A player who also typed its name there —
             // muscle memory from before this existed — would otherwise print

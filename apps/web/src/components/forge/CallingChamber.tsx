@@ -27,6 +27,7 @@ export default function CallingChamber({
   variantSources,
   spellChoices,
   pools,
+  chosenTalents,
   hitPointLevels,
   firstHitDie,
   constitutionModifier,
@@ -57,6 +58,8 @@ export default function CallingChamber({
   variantSources: ComponentProps<typeof VariantChoices>["sources"];
   spellChoices: ComponentProps<typeof VariantChoices>["questions"];
   pools: ComponentProps<typeof TalentPools>["pools"];
+  /** The optional features and the 2024 style feats, as the pools count them. */
+  chosenTalents: string[];
   hitPointLevels: ComponentProps<typeof HitPoints>["levels"];
   firstHitDie: number;
   constitutionModifier: number;
@@ -169,7 +172,7 @@ export default function CallingChamber({
           </p>
           <TalentPools
             pools={pools}
-            chosen={draft.optionalFeatureIds}
+            chosen={chosenTalents}
             accent={accent}
             onToggle={onToggleTalent}
           />
